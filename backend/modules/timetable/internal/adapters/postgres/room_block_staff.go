@@ -9,7 +9,7 @@ import (
 )
 
 // ListRoomBlockStaff reads, in one statement, the staff rows of the planned
-// blocks of the caller's school in roomID from through until (#8234), with
+// or active blocks of the caller's school in roomID from through until (#8234), with
 // whether the member is marked absent.
 func (s *Store) ListRoomBlockStaff(ctx context.Context, roomID int64, from, until calendar.Date) ([]timetable.RoomBlockStaffRow, domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
@@ -30,7 +30,7 @@ func (s *Store) ListRoomBlockStaff(ctx context.Context, roomID int64, from, unti
 		Where(`"activity_instance".room_id = ?`, roomID).
 		Where(`"activity_instance".date >= ?`, from).
 		Where(`"activity_instance".date <= ?`, until).
-		Where(`"activity_instance".status = ?`, timetable.InstanceStatusPlanned).
+		Where(`"activity_instance".status IN (?, ?)`, timetable.InstanceStatusPlanned, timetable.InstanceStatusActive).
 		OrderExpr(`"instance_staff".staff_id ASC`)
 	stats, err := scanAllInto(ctx, query, &rows, "list room block staff")
 	if err != nil {

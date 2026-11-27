@@ -56,6 +56,13 @@ func TestRoomClosureOfOwnBlockConcernsYou(t *testing.T) {
 		assert.Empty(t, roomClosureLines(t, body))
 	})
 
+	t.Run("without schedules:read the closure does not disclose an own block", func(t *testing.T) {
+		_, body := read(t, router, plannedAccount.ID, tenantID, "rooms:read")
+		lines := roomClosureLines(t, body)
+		require.Len(t, lines, 1, body)
+		assert.Equal(t, "school", lines[0].Section)
+	})
+
 	t.Run("the own blocks cost no statement", func(t *testing.T) {
 		counter := testpkg.CaptureQueries(t, db)
 		counter.Reset()

@@ -7,7 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// RoomBlockStaffQuery names the staff planned on the blocks of one room
+// RoomBlockStaffQuery names the staff on planned or active blocks of one room
 // between two days, both included (#8234): the people a closure of the room
 // concerns. A block that is cancelled, completed or that the staff member
 // misses (absent) does not count. The read applies no visibility of its own;
@@ -30,8 +30,8 @@ func RoomBlockStaffOf(references RoomReferenceQuery) (RoomBlockStaffQuery, error
 	return staff, nil
 }
 
-// RoomBlockStaffRow is one staff row of a planned block in the room: the
-// member and whether it is marked absent on the block.
+// RoomBlockStaffRow is one staff row of a planned or active block in the room:
+// the member and whether it is marked absent on the block.
 type RoomBlockStaffRow struct {
 	StaffID int64
 	Absent  bool

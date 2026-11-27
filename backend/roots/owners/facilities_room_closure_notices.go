@@ -27,9 +27,11 @@ type roomClosureStaffAccounts interface {
 	ListAccountIDsByStaffIDs(ctx context.Context, staffIDs []int64) (map[int64]int64, error)
 }
 
-// roomClosurePreferences drops the explicit declines of the push.
+// roomClosurePreferences keeps recipients authorized for the type and drops
+// explicit declines of its push.
 type roomClosurePreferences interface {
 	FilterNotOptedOut(ctx context.Context, notificationType string, accountIDs []int64) ([]int64, error)
+	FilterPermitted(ctx context.Context, notificationType string, accountIDs []int64) ([]int64, error)
 }
 
 // facilitiesRoomClosureNotices binds Facilities' notice about a closed room
@@ -73,6 +75,13 @@ func (n facilitiesRoomClosureNotices) NotifyRoomClosed(ctx context.Context, noti
 	if err != nil || len(recipients) == 0 {
 		return err
 	}
+	recipients, err = n.preferences.FilterPermitted(ctx, deliveryContract.NotificationRoomClosed, recipients)
+	if err != nil {
+		return fmt.Errorf("room closure notice: filter permitted recipients: %w", err)
+	}
+	if len(recipients) == 0 {
+		return nil
+	}
 	var push []int64
 	if notice.Push {
 		if push, err = n.preferences.FilterNotOptedOut(ctx, deliveryContract.NotificationRoomClosed, recipients); err != nil {
@@ -98,7 +107,7 @@ func (n facilitiesRoomClosureNotices) NotifyRoomClosed(ctx context.Context, noti
 }
 
 // recipients are the accounts of the staff planned in the room within the
-// closure, without the account of the request; one read each.
+// closure, without the account of the request.
 func (n facilitiesRoomClosureNotices) recipients(ctx context.Context, notice facilitiesModule.RoomClosureNotice) ([]int64, error) {
 	staffIDs, err := n.staff.RoomBlockStaffIDs(ctx, notice.RoomID, notice.StartsOn, notice.EndsOn)
 	if err != nil {
@@ -136,6 +145,7 @@ func roomClosureNoticeCopy(notice facilitiesModule.RoomClosureNotice) (title, bo
 	}
 	body = fmt.Sprintf("%s ist %s gesperrt", room, days)
 	if reason := strings.TrimSpace(notice.Reason); reason != "" {
+		reason = strings.TrimSuffix(reason, ".")
 		body += ": " + reason
 	}
 	return "Raum gesperrt", body + ". Du hast in dieser Zeit dort einen Termin. Er bleibt in diesem Raum, bis die Leitung ihn verlegt."

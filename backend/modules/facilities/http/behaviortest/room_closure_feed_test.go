@@ -25,6 +25,7 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/facilities/http"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -78,10 +79,11 @@ func (f *roomClosureFeed) staff(t *testing.T, tenantID int64, name string) (int6
 }
 
 // plan puts the staff member on a block in the room on the day.
-func (f *roomClosureFeed) plan(t *testing.T, tenantID, roomID int64, day calendar.Date, staffID int64, opts testpkg.InstanceStaffOpts) {
+func (f *roomClosureFeed) plan(t *testing.T, tenantID, roomID int64, day calendar.Date, staffID int64, opts testpkg.InstanceStaffOpts) int64 {
 	t.Helper()
 	block := testpkg.CreateTestActivityInstanceForTenant(t, f.db, tenantID, day, roomID, testpkg.ActivityInstanceOpts{Title: "Werken"})
 	testpkg.CreateTestInstanceStaffForTenant(t, f.db, tenantID, block.ID, staffID, opts)
+	return block.ID
 }
 
 type roomClosureFeedEntry struct {
@@ -138,12 +140,25 @@ func TestRoomClosureFeedReachesTheStaffPlannedInTheRoomOnly(t *testing.T) {
 
 	planned, plannedAccount := f.staff(t, school, "Pia")
 	f.plan(t, school, werkraum.ID, inside, planned, testpkg.InstanceStaffOpts{IsPrimary: true})
+	active, activeAccount := f.staff(t, school, "Ada")
+	activeBlock := f.plan(t, school, werkraum.ID, inside, active, testpkg.InstanceStaffOpts{IsPrimary: true})
+	testpkg.SetActivityInstanceLifecycle(t, testpkg.Ctx(t), f.db, activeBlock, timetable.InstanceStatusActive)
 	later, laterAccount := f.staff(t, school, "Leo")
 	f.plan(t, school, werkraum.ID, calendar.NewDate(2026, 12, 5), later, testpkg.InstanceStaffOpts{IsPrimary: true})
 	elsewhere, elsewhereAccount := f.staff(t, school, "Elli")
 	f.plan(t, school, musik.ID, inside, elsewhere, testpkg.InstanceStaffOpts{IsPrimary: true})
 	absent, absentAccount := f.staff(t, school, "Abe")
 	f.plan(t, school, werkraum.ID, inside, absent, testpkg.InstanceStaffOpts{IsAbsent: true})
+	noActivities, noActivitiesAccount := f.staff(t, school, "Nora")
+	f.plan(t, school, werkraum.ID, inside, noActivities, testpkg.InstanceStaffOpts{IsPrimary: true})
+	_, err := f.db.ExecContext(testpkg.Ctx(t), `DELETE FROM auth.account_roles AS account_role
+		USING auth.role_permissions AS role_permission, auth.permissions AS permission
+		WHERE account_role.role_id = role_permission.role_id
+		  AND role_permission.permission_id = permission.id
+		  AND account_role.account_id = ?
+		  AND account_role.tenant_id = ?
+		  AND permission.name = 'activities:read'`, noActivitiesAccount, school)
+	require.NoError(t, err)
 	_, bystanderAccount := f.staff(t, school, "Udo")
 	testpkg.GrantTestPermission(t, f.db, school, leitung.ID, "activities:read")
 	f.plan(t, school, werkraum.ID, inside, leitungStaff.ID, testpkg.InstanceStaffOpts{})
@@ -155,7 +170,7 @@ func TestRoomClosureFeedReachesTheStaffPlannedInTheRoomOnly(t *testing.T) {
 	stranger, strangerAccount := f.staff(t, foreign, "Fremd")
 	f.plan(t, foreign, foreignRoom.ID, inside, stranger, testpkg.InstanceStaffOpts{IsPrimary: true})
 
-	rr := f.call.do(t, http.MethodPost, fmt.Sprintf("/%d/closures", werkraum.ID), closureBody("2026-11-30", "2026-12-02", "Wasserschaden"))
+	rr := f.call.do(t, http.MethodPost, fmt.Sprintf("/%d/closures", werkraum.ID), closureBody("2026-11-30", "2026-12-02", "Wasserschaden."))
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 
 	entries := f.entries(t, plannedAccount, school, "staff")
@@ -165,16 +180,19 @@ func TestRoomClosureFeedReachesTheStaffPlannedInTheRoomOnly(t *testing.T) {
 	assert.Equal(t, "Der Raum „"+werkraum.Name+"“ ist vom 30.11.2026 bis 02.12.2026 gesperrt: Wasserschaden. Du hast in dieser Zeit dort einen Termin. Er bleibt in diesem Raum, bis die Leitung ihn verlegt.", entries[0].Body)
 	assert.Equal(t, "/mein-dienstplan?d=2026-11-30", entries[0].DeepLink)
 	assert.Equal(t, 1, f.pushes(t, plannedAccount), "the closure begins within 14 days")
+	assert.Len(t, f.entries(t, activeAccount, school, "staff"), 1, "an active block still takes place in the room")
+	assert.Equal(t, 1, f.pushes(t, activeAccount))
 
 	assert.Empty(t, f.entries(t, laterAccount, school, "staff"), "a block after the closure is not concerned")
 	assert.Empty(t, f.entries(t, elsewhereAccount, school, "staff"), "a block in another room is not concerned")
 	assert.Empty(t, f.entries(t, absentAccount, school, "staff"), "an absent supervisor is not in the room")
+	assert.Empty(t, f.entries(t, noActivitiesAccount, school, "staff"), "staff without activities:read cannot read the notice")
 	assert.Empty(t, f.entries(t, bystanderAccount, school, "staff"), "staff without a block hear nothing")
 	assert.Empty(t, f.entries(t, leitung.ID, school, "staff"), "who closed the room gets nothing")
 	assert.Empty(t, f.entries(t, family.AccountID, 0, "parent"), "the families see no room closure")
 	assert.Empty(t, f.entries(t, strangerAccount, foreign, "staff"), "another school hears nothing")
 	assert.Empty(t, f.entries(t, plannedAccount, foreign, "staff"), "a session of another school shows nothing of this one")
-	assert.Zero(t, f.pushes(t, laterAccount)+f.pushes(t, bystanderAccount)+f.pushes(t, leitung.ID)+f.pushes(t, strangerAccount))
+	assert.Zero(t, f.pushes(t, laterAccount)+f.pushes(t, noActivitiesAccount)+f.pushes(t, bystanderAccount)+f.pushes(t, leitung.ID)+f.pushes(t, strangerAccount))
 }
 
 // TestRoomClosureFeedFollowsTheWindowAndTheSchoolSwitch: a closure that

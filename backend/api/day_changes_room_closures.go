@@ -97,7 +97,7 @@ func (s dayChangesRoomClosures) RoomClosures(ctx context.Context, day calendar.D
 // day's staff rows the block sources took answer it (#7666), so the closure
 // costs no statement of its own there.
 func (s dayChangesRoomClosures) ownRooms(ctx context.Context, day calendar.Date, closures int) (map[int64]bool, error) {
-	if closures == 0 || s.planned == nil || s.caller == nil {
+	if closures == 0 || s.planned == nil || s.caller == nil || !readsDayPlan(ctx) {
 		return nil, nil
 	}
 	staffID, isStaff, err := s.caller.CurrentStaffID(ctx)
