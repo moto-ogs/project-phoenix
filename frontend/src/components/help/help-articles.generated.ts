@@ -15029,10 +15029,10 @@ export const traegerInvoiceJournalTopic =
           title: "Liste öffnen und lesen",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Rechnungsausgangsbuch`.",
-            "Pro Dokument steht eine Zeile mit Nummer, Datum, Dokumentart, Empfänger, Lauf und den Beträgen. Das neueste Dokument steht oben.",
-            "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört.",
+            "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Das neueste Dokument steht oben.",
+            "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört. Wähle diese Nummer. Die Liste zeigt die Rechnung und alles, was sich auf sie bezieht.",
             "Wähle den Namen in der Spalte `Lauf`. Du kommst zum Lauf mit seinen Schreiben.",
-            "Über der Liste stehen die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen.",
+            "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen.",
           ],
         },
         {
@@ -15040,8 +15040,9 @@ export const traegerInvoiceJournalTopic =
           description: "Zahl und Summen folgen immer der Suche und dem Filter.",
           steps: [
             "Tippe in die Suche eine Nummer oder den Namen des Empfängers.",
-            "Wähle oben rechts `Zeitraum wählen` für die Dokumente eines Monats oder Jahres.",
-            "Wähle das Filter-Symbol neben der Suche. Du filterst nach `Dokumentart`, `Nummernkreis` und `Lauf`.",
+            "Wähle neben der Suche `Zeitraum wählen` für die Dokumente eines Monats oder Jahres.",
+            "Daneben filterst du nach Dokumentart, Nummernkreis und Lauf. Auf dem Handy wählst du dafür das Filter-Symbol.",
+            "Jeder Filter steht als Marke unter der Suche. Mit dem Kreuz an der Marke nimmst du ihn wieder weg.",
             "Stellen mehrere Stellen für deine Schulen Rechnungen aus, filterst du auch nach `Rechnungssteller`.",
           ],
         },
@@ -15050,9 +15051,10 @@ export const traegerInvoiceJournalTopic =
           description:
             "Ein Nummernkreis zählt je Rechnungssteller, Leistung und Jahr. moto vergibt jede Nummer nur einmal und ohne Lücke.",
           steps: [
-            "Fehlt eine Nummer, steht über der Liste eine Warnung. Sie nennt den Nummernkreis und zwischen welchen Dokumenten die Nummern fehlen.",
-            "Wähle `Nummernkreis zeigen`. Die Liste zeigt nur die Dokumente dieses Nummernkreises.",
-            "Wende dich an das moto-Team und nenne die fehlenden Nummern. Wir klären die Ursache mit dir.",
+            "Fehlt eine Nummer, steht über der Liste eine Warnung. Sie nennt den Nummernkreis und die Nummern, die fehlen.",
+            "In der Liste steht die Warnung auch am Dokument neben der Lücke, zum Beispiel `Lücke: 2 Nummern`.",
+            "Wähle `Nur diesen Nummernkreis zeigen`. Die Liste zeigt nur die Dokumente dieses Nummernkreises.",
+            "Wende dich an das moto-Team und nenne die Nummern. Wir klären die Ursache mit dir.",
           ],
         },
         {
@@ -15060,7 +15062,7 @@ export const traegerInvoiceJournalTopic =
           steps: [
             "Wähle oben rechts das Menü mit den drei Punkten.",
             "Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
-            "Die Datei enthält alle Dokumente zu Suche und Filter, sortiert nach Nummer. Am Ende stehen die Summen.",
+            "Die Datei enthält alle Dokumente zu Suche und Filter, aufsteigend nach Nummer. Am Ende stehen die Summen. Das Menü nennt vorher, wie viele Dokumente es sind.",
             "Die Liste enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -15078,7 +15080,7 @@ export const traegerInvoiceJournalTopic =
       ],
       troubleshootingDetails: [
         "Ein Dokument fehlt in der Liste: Der Lauf ist noch nicht freigegeben. Entwürfe haben keine Nummer und stehen nur im Lauf.",
-        "Die Liste ist leer: Prüfe Suche, Zeitraum und Filter. Wähle `Filter zurücksetzen`.",
+        "Die Liste zeigt `Kein Dokument passt …`: Prüfe Suche, Zeitraum und Filter. Wähle `Filter zurücksetzen`.",
         "Du siehst den Reiter nicht: Dir fehlt die Rolle Abrechnung. Wende dich an die Person, die bei deinem Träger die Mitglieder verwaltet.",
       ],
       related: [

@@ -108,7 +108,10 @@ export interface JournalNumberGap {
   issuer: BillingIssuer;
   service: string;
   year: number;
+  first_missing: number;
   missing_count: number;
+  first_missing_number: string;
+  last_missing_number: string;
   after_number: string;
   before_number: string;
 }
@@ -117,7 +120,10 @@ export const JournalNumberGapSchema: z.ZodType<JournalNumberGap, unknown> = obje
   issuer: BillingIssuerSchema,
   service: str,
   year: safeInt,
+  first_missing: safeInt,
   missing_count: safeInt,
+  first_missing_number: str,
+  last_missing_number: str,
   after_number: str,
   before_number: str,
 });

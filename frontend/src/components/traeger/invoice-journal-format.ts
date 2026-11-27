@@ -44,9 +44,9 @@ export const JOURNAL_DOCUMENT_TYPES: readonly JournalDocumentType[] = [
 export const JOURNAL_DOCUMENT_TYPE_TONES: Readonly<
   Record<JournalDocumentType, StatusBadgeTone>
 > = {
-  invoice: "outline",
-  fee_notice: "outline",
-  confirmation: "outline",
+  invoice: "gray",
+  fee_notice: "gray",
+  confirmation: "gray",
   cancellation: "red",
   credit: "blue",
 };
@@ -72,14 +72,11 @@ export function journalIssuerLabel(issuer: JournalIssuer): string {
 }
 
 /**
- * „zu FE-0001“ beside a Storno or a Gutschrift, „ersetzt FE-0001“ beside an
- * invoice issued again; empty without a reference.
+ * How a document refers to another one: „zu“ beside a Storno or a
+ * Gutschrift, „ersetzt“ beside an invoice issued again.
  */
-export function journalReferenceLabel(
-  reference: JournalReference | null,
-): string {
-  if (!reference) return "";
-  return `${labelOf(REFERENCE_LABELS, reference.kind, "zu")} ${reference.number}`;
+export function journalReferenceWord(reference: JournalReference): string {
+  return labelOf(REFERENCE_LABELS, reference.kind, "zu");
 }
 
 /** A run as the lists of the runs name it. */
@@ -183,15 +180,77 @@ export function journalIssuers(
   );
 }
 
-/** „Es fehlen 2 Nummern zwischen FE-0004 und FE-0007.“ */
+/**
+ * A gap in words and figures. `first` and `last` are the missing numbers as
+ * documents would carry them („FE-2026-0005“), or the running numbers when
+ * the range does not let them be written. The missing numbers lead; the
+ * documents beside the gap follow in brackets, by number and not by „the
+ * last document“: the list shows the newest number first.
+ */
+export interface JournalGapWording {
+  /** „Es fehlen die Nummern“, „Es fehlt die laufende Nummer“. */
+  readonly lead: string;
+  readonly first: string;
+  /** „und“ or „bis“ before `last`; empty for one number. */
+  readonly joint: "" | "und" | "bis";
+  readonly last: string;
+  /** „nach“, „vor“ or „zwischen“. */
+  readonly place: string;
+  /** The documents beside the gap: one, or two joined by „und“. */
+  readonly anchors: readonly string[];
+}
+
+/** „Es fehlen die Nummern FE-0005 und FE-0006 (nach FE-0004).“ in parts. */
+export function journalGapWording(gap: JournalNumberGap): JournalGapWording {
+  const written = gap.firstMissingNumber !== "";
+  const one = gap.missingCount === 1;
+  const kind = written ? "" : one ? "laufende " : "laufenden ";
+  let place = "zwischen";
+  let anchors = [gap.afterNumber, gap.beforeNumber];
+  if (gap.beforeNumber === "") {
+    place = "nach";
+    anchors = [gap.afterNumber];
+  } else if (gap.afterNumber === "") {
+    place = "vor";
+    anchors = [gap.beforeNumber];
+  }
+  return {
+    lead: one ? `Es fehlt die ${kind}Nummer` : `Es fehlen die ${kind}Nummern`,
+    first: written ? gap.firstMissingNumber : String(gap.firstMissing),
+    joint: one ? "" : gap.missingCount === 2 ? "und" : "bis",
+    last: one
+      ? ""
+      : written
+        ? gap.lastMissingNumber
+        : String(gap.firstMissing + gap.missingCount - 1),
+    place,
+    anchors,
+  };
+}
+
+/** The wording of a gap as one sentence. */
 export function journalGapText(gap: JournalNumberGap): string {
-  const count =
-    gap.missingCount === 1
-      ? "Es fehlt 1 Nummer"
-      : `Es fehlen ${gap.missingCount} Nummern`;
-  if (gap.afterNumber === "") return `${count} vor ${gap.beforeNumber}.`;
-  if (gap.beforeNumber === "") return `${count} nach ${gap.afterNumber}.`;
-  return `${count} zwischen ${gap.afterNumber} und ${gap.beforeNumber}.`;
+  const { lead, first, joint, last, place, anchors } = journalGapWording(gap);
+  const numbers = joint ? `${first} ${joint} ${last}` : first;
+  return `${lead} ${numbers} (${place} ${anchors.join(" und ")}).`;
+}
+
+/** „2 Nummern fehlen“, „1 Nummer fehlt“. */
+export function journalMissingCountLabel(count: number): string {
+  return count === 1 ? "1 Nummer fehlt" : `${count} Nummern fehlen`;
+}
+
+/**
+ * The key of a document as a gap names it: the document after the gap, or
+ * the last document of a range whose counter went on.
+ */
+export function journalGapAnchor(
+  issuerKey: string,
+  service: JournalService | undefined,
+  year: number,
+  number: string,
+): string {
+  return `${issuerKey}|${service ?? ""}|${year}|${number}`;
 }
 
 /** „01.01.2026 bis 31.12.2026“, „ab 01.01.2026“ or „bis 31.12.2026“. */

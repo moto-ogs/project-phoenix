@@ -3,12 +3,13 @@
 // Rechnungsausgangsbuch (#4819): jedes ausgestellte Dokument der
 // Elternabrechnung in einer Liste, über alle Läufe, Rechnungssteller und
 // Nummernkreise. Träger-Büro und Prüfung lesen sie nach Nummer: Fehlt in
-// einem Nummernkreis eine Nummer, steht das als Warnung über der Liste. Ein
+// einem Nummernkreis eine Nummer, steht das als Warnung über der Liste und
+// an der Stelle in der Liste. Ein
 // Dokument steht hier, sobald es seine Nummer hat; Entwürfe eines Laufs
 // haben keine. Nur zum Lesen. Filter, Summen und Seiten rechnet der Server;
 // jedes Lesen steht im Protokoll der gezeigten Läufe.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
@@ -21,14 +22,16 @@ import {
   JOURNAL_DOCUMENT_TYPE_LABELS,
   JOURNAL_DOCUMENT_TYPE_TONES,
   JOURNAL_DOCUMENT_TYPES,
-  journalGapText,
+  journalGapAnchor,
+  journalGapWording,
   journalIssuerLabel,
   journalIssuers,
+  journalMissingCountLabel,
   journalPeriodLabel,
   journalRangeLabel,
   journalRangeOf,
   journalRangeValue,
-  journalReferenceLabel,
+  journalReferenceWord,
   journalRunHref,
   journalRunLabel,
   journalRunOf,
@@ -53,11 +56,11 @@ import {
   ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
-import { StatCard } from "~/components/ui/stat-card";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { billingConcept } from "~/lib/concepts/billing";
+import { documentsConcept } from "~/lib/concepts/documents";
 import {
   berlinTodayISO,
   formatDate,
@@ -82,22 +85,57 @@ const logger = createLogger({ component: "TraegerInvoiceJournalPage" });
 
 const NO_RANGES: InvoiceJournalPage["numberRanges"] = [];
 const NO_RUNS: InvoiceJournalPage["runs"] = [];
+const NO_GAPS: InvoiceJournalPage["gaps"] = [];
 
 /** Typing a number or a name asks the server once the person pauses. */
 const SEARCH_PAUSE_MS = 300;
 
+/** A document number, set like the numbers of the neighbouring pages. */
+function DocumentNumber({ children }: Readonly<{ children: string }>) {
+  return <span className="font-mono whitespace-nowrap">{children}</span>;
+}
+
+/** „Es fehlen die Nummern FE-2026-0005 und FE-2026-0006 (nach FE-2026-0004).“ */
+function GapSentence({ gap }: Readonly<{ gap: JournalNumberGap }>) {
+  const { lead, first, joint, last, place, anchors } = journalGapWording(gap);
+  const [anchor, second] = anchors;
+  return (
+    <>
+      {lead} <DocumentNumber>{first}</DocumentNumber>
+      {joint ? (
+        <>
+          {" "}
+          {joint} <DocumentNumber>{last}</DocumentNumber>
+        </>
+      ) : null}{" "}
+      ({place} <DocumentNumber>{anchor ?? ""}</DocumentNumber>
+      {second ? (
+        <>
+          {" "}
+          und <DocumentNumber>{second}</DocumentNumber>
+        </>
+      ) : null}
+      ).
+    </>
+  );
+}
+
 /** A cancellation and a credit take money back: their amount stays signed. */
 function amountCell(cents: number) {
   return (
-    <span
-      className={
-        cents === 0
-          ? "text-gray-500 tabular-nums"
-          : "text-gray-900 tabular-nums"
-      }
-    >
-      {formatEuro(cents)}
-    </span>
+    <span className="text-gray-900 tabular-nums">{formatEuro(cents)}</span>
+  );
+}
+
+/**
+ * The tax of a document. Elternbeiträge carry none, so the column stays
+ * quiet; an amount of 0,00 € in Netto or Brutto is a real, issued value.
+ */
+function taxCell(cents: number) {
+  return cents === 0 ? (
+    <span className="text-gray-500 tabular-nums">{formatEuro(0)}</span>
+  ) : (
+    amountCell(cents)
   );
 }
 
@@ -129,23 +167,65 @@ function runCell(document: JournalDocument) {
   );
 }
 
-function journalColumns(
-  severalIssuers: boolean,
-): DataTableColumn<JournalDocument>[] {
+/** What the table needs beside its rows. */
+interface JournalColumnContext {
+  readonly severalIssuers: boolean;
+  /** The gap a document stands at, by `journalGapAnchor`. */
+  readonly gapAt: ReadonlyMap<string, string>;
+  /** Shows a document and everything that refers to it. */
+  readonly onShowReference: (number: string) => void;
+}
+
+function journalColumns({
+  severalIssuers,
+  gapAt,
+  onShowReference,
+}: JournalColumnContext): DataTableColumn<JournalDocument>[] {
+  const gapOf = (document: JournalDocument) =>
+    gapAt.get(
+      journalGapAnchor(
+        document.issuer.key,
+        document.service,
+        document.numberYear,
+        document.number,
+      ),
+    );
+  const reference = (document: JournalDocument) =>
+    document.reference ? (
+      <Button
+        type="button"
+        variant="link"
+        size="compact"
+        className="whitespace-nowrap"
+        tooltip="Zeigt dieses Dokument und alle Dokumente, die sich darauf beziehen."
+        onClick={() => onShowReference(document.reference?.number ?? "")}
+      >
+        {journalReferenceWord(document.reference)}{" "}
+        <DocumentNumber>{document.reference.number}</DocumentNumber>
+      </Button>
+    ) : null;
   return [
     {
       key: "number",
       header: "Nummer",
-      render: (document) => (
-        <span className="font-mono font-medium whitespace-nowrap text-gray-900">
-          {document.number}
-        </span>
-      ),
+      render: (document) => {
+        const gap = gapOf(document);
+        return (
+          <span className="flex flex-col items-start gap-1">
+            <span className="font-mono font-medium whitespace-nowrap text-gray-900">
+              {document.number}
+            </span>
+            {/* The gap stands where the numbers are missing, not only in
+                the notice above the list. */}
+            {gap ? <StatusBadge tone="warning" size="xs" label={gap} /> : null}
+          </span>
+        );
+      },
       stacked: "title",
     },
     {
       key: "issued",
-      header: "Datum",
+      header: "Ausgestellt",
       render: (document) => (
         <span className="whitespace-nowrap tabular-nums">
           {formatDate(document.issuedOn)}
@@ -162,11 +242,7 @@ function journalColumns(
       render: (document) => (
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {typeBadge(document)}
-          {document.reference ? (
-            <span className="whitespace-nowrap text-gray-600">
-              {journalReferenceLabel(document.reference)}
-            </span>
-          ) : null}
+          {reference(document)}
         </span>
       ),
       stackedLabel: false,
@@ -178,12 +254,15 @@ function journalColumns(
           {typeBadge(document)}
           {document.reference ? (
             <span className="whitespace-nowrap">
-              {journalReferenceLabel(document.reference)}
+              {journalReferenceWord(document.reference)}{" "}
+              <DocumentNumber>{document.reference.number}</DocumentNumber>
             </span>
           ) : null}
           <span className="basis-full text-gray-900">
             {document.recipientName || "–"}
           </span>
+          {/* The run leads to the letters of the document, on a phone too. */}
+          <span className="basis-full">{runCell(document)}</span>
         </span>
       ),
     },
@@ -206,7 +285,8 @@ function journalColumns(
           } satisfies DataTableColumn<JournalDocument>,
         ]
       : []),
-    { key: "run", header: "Lauf", render: runCell },
+    // The phone line under the number already carries the run.
+    { key: "run", header: "Lauf", render: runCell, stacked: "hidden" },
     {
       key: "net",
       header: "Netto",
@@ -217,7 +297,7 @@ function journalColumns(
       key: "tax",
       header: "Steuer",
       align: "right",
-      render: (document) => amountCell(document.taxCents),
+      render: (document) => taxCell(document.taxCents),
     },
     {
       key: "gross",
@@ -228,6 +308,13 @@ function journalColumns(
       ),
       stacked: "meta",
       stackedTone: "figure",
+      // One amount beside the number on a phone: it says which one.
+      stackedRender: (document) => (
+        <span className="flex flex-col items-end">
+          {amountCell(document.grossCents)}
+          <span className="text-xs font-normal text-gray-500">brutto</span>
+        </span>
+      ),
     },
   ];
 }
@@ -264,7 +351,7 @@ function rangePresets() {
 
 /** The gap of a number range, named by its range. */
 function gapKey(gap: JournalNumberGap): string {
-  return `${gap.service ?? ""}|${gap.year}|${gap.issuer.key}|${gap.afterNumber}|${gap.beforeNumber}`;
+  return `${gap.service ?? ""}|${gap.year}|${gap.issuer.key}|${gap.firstMissing}`;
 }
 
 function gapRange(gap: JournalNumberGap): JournalRangeFilter | null {
@@ -273,62 +360,116 @@ function gapRange(gap: JournalNumberGap): JournalRangeFilter | null {
     : null;
 }
 
-const GAP_NEXT_STEP =
-  "moto vergibt jede Nummer nur einmal und ohne Lücke. Wende dich an das moto-Team und nenne die fehlenden Nummern. Wir klären die Ursache mit dir.";
+/** Where each gap stands in the list: at the document beside it. */
+function gapAnchors(
+  gaps: readonly JournalNumberGap[],
+): ReadonlyMap<string, string> {
+  const anchors = new Map<string, string>();
+  for (const gap of gaps) {
+    // The document after the gap carries it; a gap at the end of the range
+    // stands at its last document. The badge names no direction: the list
+    // shows the newest number first.
+    const number = gap.beforeNumber === "" ? gap.afterNumber : gap.beforeNumber;
+    anchors.set(
+      journalGapAnchor(gap.issuer.key, gap.service, gap.year, number),
+      `Lücke: ${gap.missingCount} ${gap.missingCount === 1 ? "Nummer" : "Nummern"}`,
+    );
+  }
+  return anchors;
+}
+
+// „moto‑Team“ with a hyphen that keeps the word on one line.
+const GAP_NEXT_STEP = "Wende dich an das moto\u2011Team und nenne die Nummern.";
 
 /**
- * The gaps of the number ranges in view. One gap is one notice; several
- * stand as rows of one card (frontend-ui-kit, „Several notices of the same
- * kind“). The step to the range shows the numbers around the gap.
+ * The gaps of the number ranges, whatever the filter. One gap is one
+ * notice; several stand as rows of one card (frontend-ui-kit, „Several
+ * notices of the same kind“). The step to a range shows the numbers around
+ * its gap and brings the list into view; its row keeps its place.
  */
 function NumberGaps({
   gaps,
   severalIssuers,
   shownRange,
+  checkedCount,
   onShowRange,
 }: Readonly<{
   gaps: readonly JournalNumberGap[];
   severalIssuers: boolean;
   shownRange: string;
+  /**
+   * Every document of the Träger while a search or filter narrows the list
+   * below; null while the list shows them all.
+   */
+  checkedCount: number | null;
   onShowRange: (range: JournalRangeFilter) => void;
 }>) {
+  // The list follows the notice: after „Nummernkreis zeigen“ its start
+  // comes into view, also when the notice fills a phone screen.
+  const endRef = useRef<HTMLSpanElement>(null);
+  const [jumpTo, setJumpTo] = useState("");
+  useEffect(() => {
+    if (jumpTo === "" || jumpTo !== shownRange) return;
+    endRef.current?.scrollIntoView({ block: "start" });
+    setJumpTo("");
+  }, [jumpTo, shownRange]);
   if (gaps.length === 0) return null;
+  const inView = (gap: JournalNumberGap) => {
+    const range = gapRange(gap);
+    return range !== null && journalRangeValue(range) === shownRange;
+  };
   const showButton = (gap: JournalNumberGap) => {
     const range = gapRange(gap);
-    if (!range || journalRangeValue(range) === shownRange) return null;
+    if (!range || inView(gap)) return null;
     const name = journalRangeLabel(gap, severalIssuers);
     return (
       <Button
         type="button"
         variant="surface"
         size="compact"
-        aria-label={`Nummernkreis zeigen: ${name}`}
-        tooltip="Zeigt nur die Dokumente dieses Nummernkreises, damit du die Stelle der Lücke siehst."
-        onClick={() => onShowRange(range)}
+        aria-label={`Nur Nummernkreis ${name} zeigen`}
+        tooltip="Filtert die Liste auf diesen Nummernkreis, damit du die Stelle der Lücke siehst."
+        onClick={() => {
+          setJumpTo(journalRangeValue(range));
+          onShowRange(range);
+        }}
       >
-        Nummernkreis zeigen
+        Nur diesen Nummernkreis zeigen
       </Button>
     );
   };
+  // The check covers the whole book, whatever the list below shows.
+  const nextStep =
+    checkedCount === null
+      ? GAP_NEXT_STEP
+      : `Geprüft sind alle ${checkedCount} Dokumente, nicht nur die gefundenen. ${GAP_NEXT_STEP}`;
   const [only] = gaps;
   if (gaps.length === 1 && only) {
     return (
-      <Alert
-        type="warning"
-        title={`Lücke im Nummernkreis ${journalRangeLabel(only, severalIssuers)}`}
-        message={`${journalGapText(only)} ${GAP_NEXT_STEP}`}
-        action={showButton(only)}
-        actionLayout="responsive"
-      />
+      <>
+        <Alert
+          type="warning"
+          title={`Lücke im Nummernkreis ${journalRangeLabel(only, severalIssuers)}`}
+          message={
+            <>
+              <GapSentence gap={only} /> {nextStep}
+            </>
+          }
+          action={showButton(only)}
+          actionLayout="responsive"
+        />
+        <span ref={endRef} className="hidden" aria-hidden="true" />
+      </>
     );
   }
+  const missing = gaps.reduce((sum, gap) => sum + gap.missingCount, 0);
   return (
     <SectionCard
       title="Lücken in den Nummernkreisen"
       titleBadge={
-        <StatusBadge tone="warning" label={`${gaps.length} Lücken`} />
+        <StatusBadge tone="warning" label={journalMissingCountLabel(missing)} />
       }
-      description={GAP_NEXT_STEP}
+      description={nextStep}
       leading={
         <TriangleAlert
           className="text-moto-orange-strong mt-0.5 size-5 shrink-0"
@@ -340,44 +481,93 @@ function NumberGaps({
         {gaps.map((gap) => (
           <ResponsiveActionRow key={gapKey(gap)}>
             <div className="min-w-0">
+              {/* „Nummernkreis“ in the name: its service and year also name
+                  runs („Monatsbeiträge Oktober 2026“). */}
               <p className="font-medium text-gray-900">
-                {journalRangeLabel(gap, severalIssuers)}
+                Nummernkreis {journalRangeLabel(gap, severalIssuers)}
               </p>
-              <p className="text-sm text-gray-600">{journalGapText(gap)}</p>
+              <p className="text-sm text-gray-600">
+                <GapSentence gap={gap} />
+              </p>
             </div>
-            <ResponsiveRowActions>{showButton(gap)}</ResponsiveRowActions>
+            <ResponsiveRowActions>
+              {inView(gap) ? (
+                // The row keeps its place; it says why its button is gone.
+                <StatusBadge tone="gray" label="In der Liste gezeigt" />
+              ) : (
+                showButton(gap)
+              )}
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>
+      <span ref={endRef} aria-hidden="true" />
     </SectionCard>
   );
 }
 
+/** „Summen für 6 von 25 Dokumenten“, „Summen für alle 25 Dokumente“. */
+function totalsTitle(count: number, allCount: number, filtered: boolean) {
+  if (filtered) return `Summen für ${count} von ${allCount} Dokumenten`;
+  return count === 1
+    ? "Summen für 1 Dokument"
+    : `Summen für alle ${count} Dokumente`;
+}
+
 /**
  * The sums of every document the filter keeps, not only of the rows shown.
- * They follow search and filter like the count in the head; the info of the
- * page says so.
+ * The heading says what they cover and `scope` which search and filter
+ * narrow them: an audit asks first what a sum is of.
  */
-function JournalTotals({ page }: Readonly<{ page: InvoiceJournalPage }>) {
+function JournalTotals({
+  page,
+  allCount,
+  scope,
+}: Readonly<{
+  page: InvoiceJournalPage;
+  /** Every document of the Träger, without search and filter. */
+  allCount: number;
+  /** The search and the filters in words; empty for the whole book. */
+  scope: string;
+}>) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-      <StatCard
-        variant="inline"
-        label="Summe netto"
-        value={formatEuro(page.totals.netCents)}
-      />
-      <StatCard
-        variant="inline"
-        label="Summe Steuer"
-        value={formatEuro(page.totals.taxCents)}
-      />
-      <StatCard
-        variant="inline"
-        label="Summe brutto"
-        value={formatEuro(page.totals.grossCents)}
-      />
-    </div>
+    <SectionCard
+      title={totalsTitle(page.totalCount, allCount, scope !== "")}
+      description={scope || undefined}
+    >
+      <DataGrid columns={4}>
+        <DataField label="Netto">
+          <span className="tabular-nums">
+            {formatEuro(page.totals.netCents)}
+          </span>
+        </DataField>
+        <DataField label="Steuer">
+          <span className="tabular-nums">
+            {formatEuro(page.totals.taxCents)}
+          </span>
+        </DataField>
+        <DataField label="Brutto">
+          <span className="tabular-nums">
+            {formatEuro(page.totals.grossCents)}
+          </span>
+        </DataField>
+      </DataGrid>
+    </SectionCard>
   );
+}
+
+/** „Keines der 25 Dokumente passt zur Suche.“, „… zum Filter.“ or to both. */
+function noHitTitle(
+  allCount: number,
+  searching: boolean,
+  filtering: boolean,
+): string {
+  const none =
+    allCount === 1
+      ? "Das eine Dokument passt nicht"
+      : `Keines der ${allCount} Dokumente passt`;
+  if (searching && filtering) return `${none} zu Suche und Filter.`;
+  return searching ? `${none} zur Suche.` : `${none} zum Filter.`;
 }
 
 export default function TraegerInvoiceJournalPage() {
@@ -425,14 +615,19 @@ export default function TraegerInvoiceJournalPage() {
       dedupingInterval: 0,
     },
   );
-  // The filter choices outlive a change of the filter, so a select never
-  // empties while the next answer loads.
-  const [choices, setChoices] = useState<InvoiceJournalPage | null>(null);
-  if (first && first !== choices) setChoices(first);
-  const numberRanges = choices?.numberRanges ?? NO_RANGES;
-  const runs = choices?.runs ?? NO_RUNS;
+  // What does not follow the filter (choices, gaps) outlives its change, so
+  // a select never empties and a warning never blinks while an answer loads.
+  const [latest, setLatest] = useState<InvoiceJournalPage | null>(null);
+  if (first && first !== latest) setLatest(first);
+  const numberRanges = latest?.numberRanges ?? NO_RANGES;
+  const runs = latest?.runs ?? NO_RUNS;
+  const gaps = latest?.gaps ?? NO_GAPS;
   const issuers = useMemo(() => journalIssuers(numberRanges), [numberRanges]);
   const severalIssuers = issuers.length > 1;
+  const allCount = numberRanges.reduce(
+    (sum, numberRange) => sum + numberRange.documentCount,
+    0,
+  );
 
   // Later pages belong to the first page they continue; a new filter starts
   // a new list and drops them.
@@ -495,6 +690,27 @@ export default function TraegerInvoiceJournalPage() {
   const issuerValue = issuerKey === null ? "" : issuerKey || "traeger";
 
   const filters: FilterConfig[] = [
+    {
+      // The period stands with the other filters: it narrows this list,
+      // not the runs of the other registers.
+      id: "period",
+      label: "Ausgestellt im Zeitraum",
+      type: "custom",
+      value: "",
+      onChange: () => undefined,
+      options: [],
+      render: (
+        <DateRangePicker
+          value={range}
+          onChange={setRange}
+          presets={rangePresets()}
+          toMax={parseISODate(berlinTodayISO())}
+          fieldLabel="Ausgestellt im Zeitraum"
+          className="w-full sm:w-auto"
+          triggerClassName="w-full sm:w-auto"
+        />
+      ),
+    },
     {
       id: "type",
       label: "Dokumentart",
@@ -600,7 +816,13 @@ export default function TraegerInvoiceJournalPage() {
   const period = journalPeriodLabel(from, to);
   const activeFilters: ActiveFilter[] = [
     ...(period
-      ? [{ id: "period", label: period, onRemove: () => setRange(undefined) }]
+      ? [
+          {
+            id: "period",
+            label: `Ausgestellt ${period}`,
+            onRemove: () => setRange(undefined),
+          },
+        ]
       : []),
     ...(documentType
       ? [
@@ -626,7 +848,7 @@ export default function TraegerInvoiceJournalPage() {
       ? [
           {
             id: "run",
-            label: shownRun ? journalRunLabel(shownRun) : "Lauf",
+            label: shownRun ? `Lauf ${journalRunLabel(shownRun)}` : "Lauf",
             onRemove: () => setRun(null),
           },
         ]
@@ -654,25 +876,34 @@ export default function TraegerInvoiceJournalPage() {
     setSearch("");
     clearFilters();
   };
-  const filtered = search.trim() !== "" || activeFilters.length > 0;
+  const searching = search.trim() !== "";
+  const filtering = activeFilters.length > 0;
+  const filtered = searching || filtering;
   const emptySearch = emptySearchText(
     search,
     activeFilters.map((active) => active.label),
-    "Prüfe die Schreibweise der Nummer oder des Namens.",
+    "Prüfe die Nummer des Dokuments oder den Namen des Empfängers.",
   );
+  // Search and filters in words, for the sums and the download: both must
+  // say which documents they cover where the person decides.
+  const scope = [
+    searching ? `Suche „${search.trim()}“` : "",
+    ...activeFilters.map((active) => active.label),
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const gapAt = useMemo(() => gapAnchors(gaps), [gaps]);
   const columns = useMemo(
-    () => journalColumns(severalIssuers),
-    [severalIssuers],
+    () => journalColumns({ severalIssuers, gapAt, onShowReference: setSearch }),
+    [severalIssuers, gapAt],
   );
   const totalCount = first?.totalCount ?? 0;
-  // Before the first document there is nothing to sum, filter or download.
-  const neverIssued = Boolean(first) && !filtered && totalCount === 0;
 
   const exportItems = useTraegerListExportItems({
     download: (format) => downloadInvoiceJournal(filter, format),
     scope: filtered
-      ? "Die Dokumente mit Suche und Filter der Seite, nach Nummer sortiert. Jeder Download wird protokolliert."
-      : "Alle Dokumente, nach Nummer sortiert. Jeder Download wird protokolliert.",
+      ? `${totalCount} von ${allCount} Dokumenten: ${scope}. Als Liste, aufsteigend nach Nummer. Jeder Download wird protokolliert.`
+      : `Alle ${allCount} Dokumente. Als Liste, aufsteigend nach Nummer. Jeder Download wird protokolliert.`,
     fallbackName: "rechnungsausgangsbuch",
     errorObject: "das Rechnungsausgangsbuch",
     unavailable: !first || totalCount === 0,
@@ -681,65 +912,35 @@ export default function TraegerInvoiceJournalPage() {
   return (
     <TenantPage
       title={billingAreaTitle("rechnungsausgangsbuch")}
-      info="Hier steht jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Stornos und Gutschriften. Ein Dokument steht hier, sobald es seine Nummer hat. Entwürfe siehst du im Lauf. moto prüft jeden Nummernkreis auf fehlende Nummern. Die Summen folgen Suche und Filter, Stornos und Gutschriften sind abgezogen. Elternbeiträge stellt moto ohne Steuer aus. Ob eine Familie gezahlt hat, prüfst du in deiner Buchhaltung."
+      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus."
       tabs={billingTabs("rechnungsausgangsbuch")}
-      stats={
-        first && !neverIssued ? (
-          <TenantPageStats
-            items={[
-              {
-                value: totalCount,
-                label: totalCount === 1 ? "Dokument" : "Dokumente",
-              },
-            ]}
-          />
-        ) : null
-      }
-      statsLoading={!first && !error}
-      actions={
-        neverIssued ? undefined : (
-          <DateRangePicker
-            value={range}
-            onChange={setRange}
-            presets={rangePresets()}
-            toMax={parseISODate(berlinTodayISO())}
-            fieldLabel="Ausgestellt im Zeitraum"
-            className="w-full sm:w-auto"
-            triggerClassName="w-full sm:w-auto"
-          />
-        )
-      }
       overflowMenu={exportItems}
-      search={
-        neverIssued
-          ? undefined
-          : {
-              value: search,
-              onChange: setSearch,
-              placeholder: "Nummer oder Empfänger",
-              debounceMs: SEARCH_PAUSE_MS,
-            }
-      }
-      filters={neverIssued ? undefined : filters}
-      filterPanel
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: "Nummer oder Empfänger",
+        debounceMs: SEARCH_PAUSE_MS,
+      }}
+      filters={filters}
       activeFilters={activeFilters}
       onClearAllFilters={clearFilters}
       error={error}
     >
-      {neverIssued ? null : (
-        <>
-          <NumberGaps
-            gaps={first?.gaps ?? []}
-            severalIssuers={severalIssuers}
-            shownRange={rangeValue}
-            onShowRange={(next) => {
-              setNumberRange(next);
-              setIssuerKey(null);
-            }}
-          />
-          {first && totalCount > 0 ? <JournalTotals page={first} /> : null}
-        </>
-      )}
+      <NumberGaps
+        gaps={gaps}
+        severalIssuers={severalIssuers}
+        shownRange={rangeValue}
+        checkedCount={filtered ? allCount : null}
+        onShowRange={(next) => {
+          setNumberRange(next);
+          setIssuerKey(null);
+        }}
+      />
+      {/* Without a hit the way back comes first; its title says how many
+          documents the book holds. */}
+      {first && totalCount > 0 ? (
+        <JournalTotals page={first} allCount={allCount} scope={scope} />
+      ) : null}
       <DataTable
         columns={columns}
         rows={documents}
@@ -749,6 +950,7 @@ export default function TraegerInvoiceJournalPage() {
         dense
         stackedLayout="row"
         stackedDetailKey="type"
+        rowHasInteractiveControls
         moreAction={
           hasMore
             ? {
@@ -763,7 +965,7 @@ export default function TraegerInvoiceJournalPage() {
         emptyState={
           filtered ? (
             <EmptyState
-              title="Kein Dokument passt zu Suche und Filter."
+              title={noHitTitle(allCount, searching, filtering)}
               description={emptySearch.description}
               action={
                 <Button
@@ -779,9 +981,9 @@ export default function TraegerInvoiceJournalPage() {
             />
           ) : (
             <EmptyState
-              icon={<MotoConceptIcon concept={billingConcept} size={48} />}
+              icon={<MotoConceptIcon concept={documentsConcept} size={48} />}
               title="Noch kein Dokument ausgestellt."
-              description="Ein Dokument steht hier, sobald du einen Lauf freigibst. Dann bekommt es seine Nummer."
+              description="Sobald ein Lauf freigegeben ist, stehen seine Dokumente hier. Die Läufe findest du unter „Ferien“, „Monatsbeiträge“ und „Jahresbescheide“."
             />
           )
         }

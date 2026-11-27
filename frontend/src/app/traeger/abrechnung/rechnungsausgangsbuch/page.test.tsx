@@ -53,6 +53,8 @@ const INVOICE: JournalDocument = {
   documentType: "invoice",
   recipientName: "Eva Muster",
   issuer: TRAEGER,
+  service: "holiday",
+  numberYear: 2026,
   run: {
     kind: "holiday",
     id: "4",
@@ -73,6 +75,8 @@ const CANCELLATION: JournalDocument = {
   documentType: "cancellation",
   recipientName: "Paul Muster",
   issuer: TRAEGER,
+  service: "care",
+  numberYear: 2026,
   run: { kind: "care", id: "9", name: "", month: "2026-09-01", year: 0 },
   grossCents: -4500,
   taxCents: 0,
@@ -84,7 +88,10 @@ const GAP: JournalNumberGap = {
   issuer: TRAEGER,
   service: "holiday",
   year: 2026,
+  firstMissing: 2,
   missingCount: 2,
+  firstMissingNumber: "FE-2026-0002",
+  lastMissingNumber: "FE-2026-0003",
   afterNumber: "FE-2026-0001",
   beforeNumber: "FE-2026-0004",
 };
@@ -154,7 +161,9 @@ describe("TraegerInvoiceJournalPage", () => {
     expect(within(table).getByText("01.09.2026")).toBeInTheDocument();
     expect(within(table).getByText("Eva Muster")).toBeInTheDocument();
     expect(within(table).getByText("Storno")).toBeInTheDocument();
-    expect(within(table).getByText("zu MB-2026-0001")).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: "zu MB-2026-0001" }),
+    ).toBeInTheDocument();
     expect(within(table).getAllByText("-45,00 €")).toHaveLength(2);
     // The run leads to its page, where its letters lie.
     expect(
@@ -183,7 +192,9 @@ describe("TraegerInvoiceJournalPage", () => {
     );
     // The sums are the server's, over every document of the filter.
     expect(screen.getAllByText("75,00 €")).toHaveLength(2);
-    expect(screen.getByText("Summe brutto")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Summen für alle 2 Dokumente" }),
+    ).toBeInTheDocument();
   });
 
   it("warns about a gap of a number range and shows that range on request", async () => {
@@ -193,15 +204,15 @@ describe("TraegerInvoiceJournalPage", () => {
     expect(
       await screen.findByText("Lücke im Nummernkreis Ferienbetreuung 2026"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Es fehlen 2 Nummern zwischen FE-2026-0001 und FE-2026-0004\./,
-      ),
-    ).toBeInTheDocument();
+    // The notice names the missing numbers as documents would carry them.
+    const notice = screen.getByRole("alert");
+    expect(notice).toHaveTextContent(
+      "Es fehlen die Nummern FE-2026-0002 und FE-2026-0003 (zwischen FE-2026-0001 und FE-2026-0004).",
+    );
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Nummernkreis zeigen: Ferienbetreuung 2026",
+        name: "Nur Nummernkreis Ferienbetreuung 2026 zeigen",
       }),
     );
     await waitFor(() =>
@@ -215,7 +226,9 @@ describe("TraegerInvoiceJournalPage", () => {
     // The range in view needs no button to itself.
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: /Nummernkreis zeigen/ }),
+        screen.queryByRole("button", {
+          name: /Nur diesen Nummernkreis zeigen/,
+        }),
       ).not.toBeInTheDocument(),
     );
     expect(
@@ -231,7 +244,10 @@ describe("TraegerInvoiceJournalPage", () => {
           {
             ...GAP,
             service: "care",
+            firstMissing: 1,
             missingCount: 1,
+            firstMissingNumber: "MB-2026-0001",
+            lastMissingNumber: "MB-2026-0001",
             afterNumber: "",
             beforeNumber: "MB-2026-0002",
           },
@@ -245,12 +261,18 @@ describe("TraegerInvoiceJournalPage", () => {
         name: /Lücken in den Nummernkreisen/,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("2 Lücken")).toBeInTheDocument();
+    expect(screen.getByText("3 Nummern fehlen")).toBeInTheDocument();
+    expect(screen.getByText(/fehlt die Nummer/)).toHaveTextContent(
+      "Es fehlt die Nummer MB-2026-0001 (vor MB-2026-0002).",
+    );
     expect(
-      screen.getByText("Es fehlt 1 Nummer vor MB-2026-0002."),
+      screen.getByText("Nummernkreis Ferienbetreuung 2026"),
     ).toBeInTheDocument();
+    // The gap also stands at its place in the list.
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Lücke: 1 Nummer")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: /Nummernkreis zeigen/ }),
+      screen.getAllByRole("button", { name: /Nur Nummernkreis .* zeigen/ }),
     ).toHaveLength(2);
   });
 
@@ -373,7 +395,7 @@ describe("TraegerInvoiceJournalPage", () => {
       await screen.findByText("Noch kein Dokument ausgestellt."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
-    expect(screen.queryByText("Summe brutto")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Summen für/)).not.toBeInTheDocument();
   });
 
   it("shows the load error instead of an empty list", async () => {

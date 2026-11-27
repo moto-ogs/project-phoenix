@@ -62,11 +62,14 @@ type journalBody struct {
 		NetCents   int64 `json:"net_cents"`
 	} `json:"totals"`
 	Gaps []struct {
-		Service      string `json:"service"`
-		Year         int    `json:"year"`
-		MissingCount int64  `json:"missing_count"`
-		AfterNumber  string `json:"after_number"`
-		BeforeNumber string `json:"before_number"`
+		Service            string `json:"service"`
+		Year               int    `json:"year"`
+		FirstMissing       int64  `json:"first_missing"`
+		MissingCount       int64  `json:"missing_count"`
+		FirstMissingNumber string `json:"first_missing_number"`
+		LastMissingNumber  string `json:"last_missing_number"`
+		AfterNumber        string `json:"after_number"`
+		BeforeNumber       string `json:"before_number"`
 	} `json:"gaps"`
 	NumberRanges []struct {
 		Service       string `json:"service"`
@@ -135,6 +138,7 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	require.NoError(t, err)
 	tail := invoiceJournal(t, f.traeger, billing, nil)
 	require.Len(t, tail.Gaps, 1, "the counter went past the last document")
+	assert.EqualValues(t, 5, tail.Gaps[0].FirstMissing, "the gap names its first running number")
 	assert.EqualValues(t, 2, tail.Gaps[0].MissingCount)
 	assert.Equal(t, "FE-0004", tail.Gaps[0].AfterNumber)
 	assert.Empty(t, tail.Gaps[0].BeforeNumber)
@@ -182,12 +186,14 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Len(t, journal.Runs, 2)
 
 	require.Len(t, journal.Gaps, 1, "the lost numbers now lie between two documents")
+	assert.EqualValues(t, 5, journal.Gaps[0].FirstMissing)
+	assert.Equal(t, "FE-0005", journal.Gaps[0].FirstMissingNumber, "the gap names the missing numbers as documents would carry them")
+	assert.Equal(t, "FE-0006", journal.Gaps[0].LastMissingNumber)
 	assert.EqualValues(t, 2, journal.Gaps[0].MissingCount)
 	assert.Equal(t, "FE-0004", journal.Gaps[0].AfterNumber)
 	assert.Equal(t, "FE-0007", journal.Gaps[0].BeforeNumber)
 
-	// The filters narrow the list and its sums; the gaps follow only the
-	// number range.
+	// The filters narrow the list and its sums, never the gaps.
 	only := invoiceJournal(t, f.traeger, billing, url.Values{"document_type": {"cancellation"}})
 	assert.Equal(t, []string{"FE-0003"}, journalNumbers(only))
 	assert.Equal(t, cancellation.GrossCents, only.Totals.GrossCents)
@@ -195,7 +201,8 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Len(t, only.Runs, 2, "the filters keep every run to choose from")
 	ofRun := invoiceJournal(t, f.traeger, billing, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(secondRun)}})
 	assert.Equal(t, []string{"FE-0007"}, journalNumbers(ofRun))
-	assert.Equal(t, []string{"FE-0002"}, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})))
+	assert.ElementsMatch(t, []string{"FE-0002", "FE-0004"}, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})),
+		"a number finds its document and what refers to it")
 	byName := invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(cancellation.RecipientLastName)}})
 	assert.Contains(t, journalNumbers(byName), "FE-0003", "the search finds a recipient by name")
 	issued := byNumber["FE-0001"].IssuedOn
@@ -204,7 +211,7 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Equal(t, 5, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"traeger"}, "service": {"holiday"}, "year": {"0"}}).TotalCount)
 	otherRange := invoiceJournal(t, f.traeger, billing, url.Values{"service": {"care"}})
 	assert.Zero(t, otherRange.TotalCount)
-	assert.Empty(t, otherRange.Gaps, "another number range shows no gap of this one")
+	assert.Len(t, otherRange.Gaps, 1, "a gap stays in view under every filter")
 	assert.Zero(t, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"DE98ZZZ09999999999"}}).TotalCount)
 	for _, query := range []string{"from=gestern", "to=2026-13-01", "from=2026-02-01&to=2026-01-01", "service=mensa", "document_type=brief",
 		"run_kind=ferien", "run_id=5", "run_kind=holiday", "year=-1", "page=0", "search=" + strings.Repeat("a", 101)} {
@@ -240,7 +247,7 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	// the sums.
 	lines := billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export")
 	require.Len(t, lines, 7, "the header, five documents and the sums")
-	assert.Equal(t, "Nummer;Datum;Dokumentart;Empfänger;Rechnungssteller;Nummernkreis;Lauf;Bezug;Netto (Euro);Steuer (Euro);Brutto (Euro)", lines[0])
+	assert.Equal(t, "Nummer;Ausgestellt am;Dokumentart;Empfänger;Rechnungssteller;Nummernkreis;Lauf;Bezug;Netto (Euro);Steuer (Euro);Brutto (Euro)", lines[0])
 	for i, number := range []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"} {
 		assert.True(t, strings.HasPrefix(lines[i+1], number+";"), "the file counts by number: %s", lines[i+1])
 	}

@@ -23,7 +23,7 @@ import {
   type TraegerListFormat,
 } from "./traeger-list-export";
 
-export type { JournalDocumentType, JournalRunKind, JournalReferenceKind };
+export type { JournalDocumentType };
 
 /** The services whose counters number documents. */
 const JOURNAL_SERVICE_VALUES = ["holiday", "care"] as const;
@@ -67,6 +67,9 @@ export interface JournalDocument {
   readonly documentType: JournalDocumentType | undefined;
   readonly recipientName: string;
   readonly issuer: JournalIssuer;
+  /** The service whose counter numbered it; with issuer and year its range. */
+  readonly service: JournalService | undefined;
+  readonly numberYear: number;
   readonly run: JournalRun;
   readonly grossCents: number;
   readonly taxCents: number;
@@ -74,7 +77,7 @@ export interface JournalDocument {
   readonly reference: JournalReference | null;
 }
 
-export interface JournalTotals {
+interface JournalTotals {
   readonly grossCents: number;
   readonly taxCents: number;
   readonly netCents: number;
@@ -97,7 +100,15 @@ export interface JournalNumberGap {
   readonly issuer: JournalIssuer;
   readonly service: JournalService | undefined;
   readonly year: number;
+  /** The running number of the first missing number. */
+  readonly firstMissing: number;
   readonly missingCount: number;
+  /**
+   * The first and the last missing number as a document would carry them;
+   * empty when the range does not let them be written.
+   */
+  readonly firstMissingNumber: string;
+  readonly lastMissingNumber: string;
   /** The document before the gap; empty when the range starts with it. */
   readonly afterNumber: string;
   /** The document after the gap; empty when nothing follows it yet. */
@@ -189,6 +200,8 @@ function toDocument(
     recipientName:
       `${document.recipient_first_name} ${document.recipient_last_name}`.trim(),
     issuer: toIssuer(document.issuer),
+    service: knownEnum(JOURNAL_SERVICE_VALUES, document.service),
+    numberYear: document.number_year,
     run: toRun(document.run),
     grossCents: document.gross_cents,
     taxCents: document.tax_cents,
@@ -228,7 +241,10 @@ export async function fetchInvoiceJournal(
       issuer: toIssuer(gap.issuer),
       service: knownEnum(JOURNAL_SERVICE_VALUES, gap.service),
       year: gap.year,
+      firstMissing: gap.first_missing,
       missingCount: gap.missing_count,
+      firstMissingNumber: gap.first_missing_number,
+      lastMissingNumber: gap.last_missing_number,
       afterNumber: gap.after_number,
       beforeNumber: gap.before_number,
     })),

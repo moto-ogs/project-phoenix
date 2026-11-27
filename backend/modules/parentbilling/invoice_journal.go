@@ -98,7 +98,8 @@ type InvoiceJournalFilter struct {
 	// RunKind and RunID name one run; RunID zero is every run.
 	RunKind string
 	RunID   int64
-	// Search matches a part of the number or of the recipient's name.
+	// Search matches a part of the number, of the number of the document it
+	// refers to or of the recipient's name.
 	Search string
 	Page   int
 }
@@ -167,18 +168,27 @@ type JournalNumberRange struct {
 // counter went on past the last document. A jump the Träger-Büro set as a
 // start value (#7358) is no gap.
 type JournalNumberGap struct {
-	Issuer       BillingIssuer `json:"issuer"`
-	Service      string        `json:"service"`
-	Year         int           `json:"year"`
-	MissingCount int64         `json:"missing_count" contract:"number"`
-	AfterNumber  string        `json:"after_number"`
-	BeforeNumber string        `json:"before_number"`
+	Issuer  BillingIssuer `json:"issuer"`
+	Service string        `json:"service"`
+	Year    int           `json:"year"`
+	// FirstMissing is the running number of the first number that is
+	// missing; MissingCount numbers are missing from there on.
+	FirstMissing int64 `json:"first_missing" contract:"number"`
+	MissingCount int64 `json:"missing_count" contract:"number"`
+	// FirstMissingNumber and LastMissingNumber are the first and the last
+	// missing number as a document would carry them, written like the
+	// document beside the gap; empty when that document does not end its
+	// number with its running number.
+	FirstMissingNumber string `json:"first_missing_number"`
+	LastMissingNumber  string `json:"last_missing_number"`
+	AfterNumber        string `json:"after_number"`
+	BeforeNumber       string `json:"before_number"`
 }
 
 // InvoiceJournalPage is one page of the journal with what the page around it
-// needs: how many documents pass the filter and their sums, the gaps of the
-// number ranges in view, and every number range and run of the Träger for
-// the filters.
+// needs: how many documents pass the filter and their sums, and, whatever
+// the filter, every gap of the number ranges and every number range and run
+// of the Träger. A gap stays in view while a filter narrows the list.
 type InvoiceJournalPage struct {
 	Documents    []JournalDocument    `json:"documents"`
 	TotalCount   int                  `json:"total_count"`

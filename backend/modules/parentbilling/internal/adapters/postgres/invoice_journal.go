@@ -74,11 +74,11 @@ const (
 	journalByNumber    = `number_year, issuer_key, service, number_sequence`
 )
 
-// journalHeadSQL and journalTailSQL read one page of the journal, the sums of every document that
-// passes the filter, the gaps of the number ranges in view and the number
-// ranges and runs of the Träger, and records the read of the page in the
-// trail of each of its runs, all in one statement. The order stands between
-// its head and its tail.
+// journalHeadSQL and journalTailSQL read one page of the journal, the sums
+// of every document that passes the filter, every gap of the number ranges
+// whatever the filter, and the number ranges and runs of the Träger, and
+// record the read of the page in the trail of each of its runs, all in one
+// statement. The order stands between its head and its tail.
 //
 // A gap is a step between two neighbouring numbers of a range that is wider
 // than one, from zero for the first document, unless the document after it
@@ -93,7 +93,7 @@ const journalTailSQL = `, source, id) AS position
 	WHERE (?1::date IS NULL OR issued_on >= ?1::date) AND (?2::date IS NULL OR issued_on <= ?2::date)
 		AND (?3 OR issuer_key = ?4) AND (?5 = '' OR service = ?5) AND (?6 OR number_year = ?7)
 		AND (?8 = '' OR document_type = ?8) AND (?9 = '' OR run_kind = ?9) AND (?10 = 0 OR run_id = ?10)
-		AND (?11 = '' OR position(lower(?11) IN lower(number)) > 0
+		AND (?11 = '' OR position(lower(?11) IN lower(number)) > 0 OR position(lower(?11) IN lower(reference_number)) > 0
 			OR position(lower(?11) IN lower(recipient_first_name || ' ' || recipient_last_name)) > 0)),
  page AS MATERIALIZED (
 	SELECT * FROM filtered WHERE position > ?13 AND (?12 = 0 OR position <= ?13 + ?12)),
@@ -142,8 +142,7 @@ const journalTailSQL = `, source, id) AS position
 	WHERE counter.last_number > ranges.last_sequence),
  named_gaps AS (
 	SELECT gaps.*, ranges.issuer_body, ranges.issuer_name
-	FROM gaps JOIN ranges USING (issuer_key, service, number_year)
-	WHERE (?3 OR gaps.issuer_key = ?4) AND (?5 = '' OR gaps.service = ?5) AND (?6 OR gaps.number_year = ?7)),
+	FROM gaps JOIN ranges USING (issuer_key, service, number_year)),
  run_options AS (
 	SELECT run_kind, run_id, max(run_name) AS run_name, max(run_month) AS run_month, max(run_year) AS run_year,
 		max(issued_on) AS last_issued_on
@@ -197,6 +196,7 @@ type journalRangeRow struct {
 	DocumentCount int    `json:"document_count"`
 	FirstNumber   string `json:"first_number"`
 	LastNumber    string `json:"last_number"`
+	FirstMissing  int64  `json:"first_missing"`
 	MissingCount  int64  `json:"missing_count"`
 	AfterNumber   string `json:"after_number"`
 	BeforeNumber  string `json:"before_number"`
@@ -278,7 +278,7 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 	}
 	for i, row := range rows.Gaps {
 		page.Gaps[i] = parentbilling.JournalNumberGap{Issuer: journalIssuer(row.IssuerKey, row.IssuerBody, row.IssuerName),
-			Service: row.Service, Year: row.NumberYear, MissingCount: row.MissingCount, AfterNumber: row.AfterNumber, BeforeNumber: row.BeforeNumber}
+			Service: row.Service, Year: row.NumberYear, FirstMissing: row.FirstMissing, MissingCount: row.MissingCount, AfterNumber: row.AfterNumber, BeforeNumber: row.BeforeNumber}
 	}
 	for i, row := range rows.NumberRanges {
 		page.NumberRanges[i] = parentbilling.JournalNumberRange{Issuer: journalIssuer(row.IssuerKey, row.IssuerBody, row.IssuerName),

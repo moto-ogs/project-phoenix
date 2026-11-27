@@ -72435,9 +72435,27 @@
           }
         },
         {
+          "name": "first_missing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "missing_count",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "first_missing_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_missing_number",
+          "schema": {
+            "kind": "string"
           }
         },
         {

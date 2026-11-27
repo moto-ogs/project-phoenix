@@ -240,24 +240,27 @@ func journalRunText(run capability.JournalRun) string {
 	}
 }
 
-// journalGapText names a gap of a number range in one sentence.
+// journalGapText names a gap of a number range in one sentence: the missing
+// numbers as a document would carry them, else their running numbers.
 func journalGapText(gap capability.JournalNumberGap) string {
-	count := "fehlen " + strconv.FormatInt(gap.MissingCount, 10) + " Nummern"
-	if gap.MissingCount == 1 {
-		count = "fehlt 1 Nummer"
+	first, last := gap.FirstMissingNumber, gap.LastMissingNumber
+	one, many := "die Nummer", "die Nummern"
+	if first == "" {
+		first, last = strconv.FormatInt(gap.FirstMissing, 10), strconv.FormatInt(gap.FirstMissing+gap.MissingCount-1, 10)
+		one, many = "die laufende Nummer", "die laufenden Nummern"
 	}
-	where := "zwischen " + gap.AfterNumber + " und " + gap.BeforeNumber
-	switch {
-	case gap.AfterNumber == "":
-		where = "vor " + gap.BeforeNumber
-	case gap.BeforeNumber == "":
-		where = "nach " + gap.AfterNumber
+	missing := "fehlen " + many + " " + first + " bis " + last
+	switch gap.MissingCount {
+	case 1:
+		missing = "fehlt " + one + " " + first
+	case 2:
+		missing = "fehlen " + many + " " + first + " und " + last
 	}
 	name := journalRangeText(gap.Service, gap.Year)
 	if !gap.Issuer.IsTraeger() {
 		name += " (" + gap.Issuer.Name + ")"
 	}
-	return "Lücke im Nummernkreis " + name + ": " + count + " " + where + "."
+	return "Lücke im Nummernkreis " + name + ": Es " + missing + "."
 }
 
 // journalFilterTexts is the head of the file: what the filter kept, and
@@ -317,7 +320,7 @@ func journalFilterIssuer(filter capability.InvoiceJournalFilter, page capability
 // range and number, and the sums at its end.
 func journalTable(filter capability.InvoiceJournalFilter, page capability.InvoiceJournalPage) common.ListTable {
 	table := newListTable("Rechnungsausgangsbuch", "rechnungsausgangsbuch", true,
-		column("number", "Nummer"), column("issued", "Datum"), column("type", "Dokumentart"), column("recipient", "Empfänger"),
+		column("number", "Nummer"), column("issued", "Ausgestellt am"), column("type", "Dokumentart"), column("recipient", "Empfänger"),
 		column("issuer", "Rechnungssteller"), column("range", "Nummernkreis"), column("run", "Lauf"), column("reference", "Bezug"),
 		euroColumn("net", "Netto"), euroColumn("tax", "Steuer"), euroColumn("gross", "Brutto"))
 	table.Filters = journalFilterTexts(filter, page)

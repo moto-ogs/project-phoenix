@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -47,6 +49,9 @@ func (f *BillingFamilies) InvoiceJournal(ctx context.Context, reviewer parentbil
 		page.Documents[i].TaxCents, page.Documents[i].NetCents = 0, page.Documents[i].GrossCents
 	}
 	page.Totals.TaxCents, page.Totals.NetCents = 0, page.Totals.GrossCents
+	for i := range page.Gaps {
+		page.Gaps[i].FirstMissingNumber, page.Gaps[i].LastMissingNumber = missingNumbers(page.Gaps[i])
+	}
 	// A file holds every document; a page says whether more follow it.
 	shown := (filter.Page-1)*parentbilling.InvoiceJournalPageSize + len(page.Documents)
 	page.HasMore = filter.Page > 0 && shown < page.TotalCount
@@ -78,4 +83,29 @@ func journalFilterErrors(filter parentbilling.InvoiceJournalFilter) validation.E
 		errs["page"] = errors.New("must not be negative")
 	}
 	return errs
+}
+
+// trailingDigits finds the digits a number ends with.
+var trailingDigits = regexp.MustCompile(`[0-9]+$`)
+
+// missingNumbers writes the first and the last missing number of a gap like
+// the document beside it: the document before the gap, else the one after
+// it. A number range writes its running number at the end of the number
+// with leading zeros; a document that does not end with its own running
+// number gives no way to write its neighbours, and the answer is empty.
+func missingNumbers(gap parentbilling.JournalNumberGap) (first, last string) {
+	neighbour, sequence := gap.AfterNumber, gap.FirstMissing-1
+	if neighbour == "" {
+		neighbour, sequence = gap.BeforeNumber, gap.FirstMissing+gap.MissingCount
+	}
+	digits := trailingDigits.FindString(neighbour)
+	if value, err := strconv.ParseInt(digits, 10, 64); digits == "" || err != nil || value != sequence {
+		return "", ""
+	}
+	prefix := strings.TrimSuffix(neighbour, digits)
+	write := func(number int64) string {
+		text := strconv.FormatInt(number, 10)
+		return prefix + strings.Repeat("0", max(0, len(digits)-len(text))) + text
+	}
+	return write(gap.FirstMissing), write(gap.FirstMissing + gap.MissingCount - 1)
 }
