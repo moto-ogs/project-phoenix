@@ -16,9 +16,9 @@ import (
 
 // schoolDaysSQL reads the closing days and the opening changes of a school
 // set on one day, in one statement: the schools' own closing days, those the
-// Träger ?1 planned for them (#7672), and the schools' opening changes
-// (#8146). The school set is the Träger's current schools, so a Träger
-// closing day counts only while the school belongs to that Träger (ADR
+// Träger ?1 planned for them (#7672), and the schools' and Träger's opening
+// changes (#8146, #8202). The school set is the Träger's current schools, so
+// a Träger day counts only while the school belongs to that Träger (ADR
 // 0194). An opening change carries its hours, never its reason. The
 // administrative transaction has no row security; both filters are the
 // boundary.
@@ -36,6 +36,12 @@ const schoolDaysSQL = `SELECT tenant_id AS school_id, start_date, end_date, reas
 	SELECT tenant_id, start_date, end_date, '', false, opens_at::text, closes_at::text
 	FROM schedule.opening_changes
 	WHERE tenant_id = ANY(?0) AND start_date <= ?2 AND end_date >= ?2
+	UNION ALL
+	SELECT school.id, traeger_change.start_date, traeger_change.end_date, '', true, traeger_change.opens_at::text, traeger_change.closes_at::text
+	FROM schedule.traeger_opening_changes AS traeger_change
+	CROSS JOIN LATERAL unnest(traeger_change.school_ids) AS school(id)
+	WHERE traeger_change.organization_id = ?1 AND traeger_change.school_ids && ?0 AND school.id = ANY(?0)
+		AND traeger_change.start_date <= ?2 AND traeger_change.end_date >= ?2
 	ORDER BY school_id, opens_at NULLS FIRST, closes_at, traeger, start_date, reason`
 
 type schoolDayRow struct {
@@ -49,8 +55,8 @@ type schoolDayRow struct {
 }
 
 // ListSchoolDays reads the closing days and the opening changes of the
-// schools on day (#7672, #8146), only in the administrative transaction of
-// the Träger projection.
+// schools on day (#7672, #8146, #8202), only in the administrative
+// transaction of the Träger projection.
 func (s *TraegerClosingDayStore) ListSchoolDays(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) ([]domain.SchoolClosing, []domain.SchoolOpening, error) {
 	if organizationID <= 0 || !tenant.IsAdminTx(ctx) {
 		return nil, nil, errors.New("school calendar postgres: the days of a Träger's schools need the administrative transaction")
