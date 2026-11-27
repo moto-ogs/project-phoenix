@@ -289,6 +289,13 @@ export function AppTenantHead({
             // mit dem Titel und den Kennzahlen darüber. Unten 8 px wie
             // zwischen Kopfzeile und Leiste.
             "phone:rounded-t-none phone:border-t-0 phone:px-4 phone:pt-0 phone:pb-2",
+            // Runde 21: Rollen Reiter mit weg und stehen direkt unter der
+            // Titelzeile, überlappten ihre 44-px-Trefferflächen sonst 2 px
+            // mit denen der Kopfknöpfe (Lupe, „…“).
+            !toolbarSticks &&
+              tabs != null &&
+              (statusLine == null || statsInline) &&
+              "phone:pt-0.5",
             printHideHeader && "print:hidden",
           )}
           style={toolbarSticks ? { top: stickyTop } : undefined}
