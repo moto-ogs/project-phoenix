@@ -5081,6 +5081,17 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
+      "reason": "Platform protocol participation (scope): school-calendar registers the compensating notice with tenant.RegisterUnitOfWorkOutcomeCallback (tenant-runtime) through roots/owners.traegerOpeningChangeNotices.NotifySchool (#8231). The callback observes the enclosing Träger unit's final outcome and, only after a non-commit, opens the named school's own tenant unit for the precomputed counter-notice; transaction correctness stays with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterUnitOfWorkOutcomeCallback",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinTenant (tenant-runtime) through roots/owners.traegerOpeningChangeNotices.NotifySchool (#8231). The Träger request holds no school, so the binding opens a tenant transaction of each named school on its own, as the holiday closures do; it commits before the caller's Träger transaction, and transaction correctness stays with the platform behavior tests (ADR 0098).",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",

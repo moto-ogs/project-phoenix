@@ -3722,7 +3722,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "0e08852378935927403fc6a53ae0d034",
+      "binding_digest": "f3611fd92368475e1e8155d4a2af3440",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.SchoolAudience.SchoolAudience",
@@ -3730,7 +3730,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "738e9e84b8dac45c1d8f2c3d799f9313",
+      "binding_digest": "0e406346fc548ea561f693ab6bbc5c1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger",
@@ -3738,7 +3738,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "4a684880ebf7f00691d44cd2883a2660",
+      "binding_digest": "f53da2e45636fba981d3c5095201179c",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -3746,7 +3746,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "8bdf47afaee2105351a0bc7c13d8176a",
+      "binding_digest": "7b60b38d1aecb81c95f1fd3c914813fa",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
@@ -3754,7 +3754,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "192831fa8483c4e1b3d362042df8f4c4",
+      "binding_digest": "66a17d0e5f46eac6017487b7fab72cd0",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
@@ -3762,7 +3762,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "c4c1a83ce966513b0b3e3eb120f6533d",
+      "binding_digest": "9132dde40d11e3b50462102993bdc495",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
@@ -3770,7 +3770,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "06093b6482e49308e825b099b780eb1c",
+      "binding_digest": "00c3c23c53edbfd46c8d2dd4f116f4b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
@@ -3778,7 +3778,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "binding_digest": "0d09e09398b90f66403b43791aed13f4",
+      "binding_digest": "252b96de695588ac919d05fbc0be1f76",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterUnitOfWorkOutcomeCallback",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
+      "binding_digest": "bcdb61a659539e387551e2dd84c5e790",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",

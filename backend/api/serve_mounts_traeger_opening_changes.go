@@ -14,6 +14,7 @@ import (
 	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // mountTraegerOpeningChangeRoutes serves the opening changes of a Träger
@@ -52,10 +53,10 @@ func TraegerOpeningChangeRoutes(r chi.Router, fn func(chi.Router, common.Middlew
 func TraegerTxWithOpeningChangeRetractions(next http.Handler) http.Handler {
 	inTx := common.TraegerTxMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
-		owners.TraegerOpeningChangeHandled(r.Context())
+		tenant.MarkUnitOfWorkHandlerReturned(r.Context())
 	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, settle := owners.WithTraegerOpeningChangeRetractions(r.Context())
+		ctx, settle := tenant.WithUnitOfWorkOutcomeCallbacks(r.Context())
 		defer settle(context.WithoutCancel(ctx))
 		inTx.ServeHTTP(w, r.WithContext(ctx))
 	})
