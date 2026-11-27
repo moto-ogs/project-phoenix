@@ -331,9 +331,14 @@ function roomClosedText(change: DayChange): string {
   const room = change.roomName?.trim();
   if (!room) return "";
   const reason = change.roomClosure?.reason.trim().replace(/\.$/, "");
-  return reason
+  const closed = reason
     ? `Der Raum „${room}“ ist heute gesperrt: ${reason}.`
     : `Der Raum „${room}“ ist heute gesperrt.`;
+  // Unter „Betrifft dich“ steht die Sperre, weil ein eigener Termin dort
+  // liegt (#8234).
+  return change.section === "you"
+    ? `${closed} Du hast dort heute einen Termin.`
+    : closed;
 }
 
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */

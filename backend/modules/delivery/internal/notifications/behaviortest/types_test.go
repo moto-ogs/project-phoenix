@@ -31,7 +31,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("staff catalogue is grouped and ordered", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalStaff)
-		require.Len(t, defs, 26)
+		require.Len(t, defs, 27)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -61,6 +61,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeSchoolClosingDayChanged,
 			notifications.TypeInstanceRoomChangedLater,
 			notifications.TypeOpeningChangeChanged,
+			notifications.TypeRoomClosed,
 			notifications.TypeStaffingChanged,
 			notifications.TypeGroupStaffingChanged,
 			notifications.TypeTeamMemberAbsent,
@@ -132,6 +133,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeOpeningChangeChanged:          "notifications.opening_change_enabled",
 			notifications.TypeParentOpeningChangeChanged:    "notifications.opening_change_enabled",
 			notifications.TypeTraegerOpeningChangeChanged:   "notifications.opening_change_enabled",
+			notifications.TypeRoomClosed:                    "notifications.room_closed_enabled",
 		}
 		for key, expected := range gated {
 			def, ok := notifications.GetType(key)

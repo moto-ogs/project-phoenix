@@ -55,6 +55,8 @@ func (c *Closures) CloseRoom(ctx context.Context, input facilities.CloseRoom) (r
 		}
 		result, queryStats, err = c.store.InsertClosure(txCtx, input)
 		stats.Add(queryStats)
+		// The notice of the closure names the room (#8234).
+		result.RoomName = room.Name
 		return err
 	})
 	return result, err

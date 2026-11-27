@@ -45,3 +45,11 @@ func NewRoomReferenceQueries(db *bun.DB, observe func(Observation), today func()
 		return application.NewRoomReferenceQueries(store, observe, today)
 	})
 }
+
+// NewRoomBlockStaffQueries names the staff planned in a room over a period,
+// for the notice of a Facilities room closure (#8234).
+func NewRoomBlockStaffQueries(db *bun.DB, observe func(Observation)) (timetable.RoomBlockStaffQuery, error) {
+	return storeService(db, observe, "room block staff queries", func(store *postgres.Store) timetable.RoomBlockStaffQuery {
+		return application.NewRoomBlockStaffQueries(store, observe)
+	})
+}

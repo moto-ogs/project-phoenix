@@ -433,7 +433,71 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "6f8ddfff82c258b245ab278c95d43c2b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.AccountIDsByStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "a08fe17d5992117ac1ac23e2a33f92e9",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "230789f5260354afa692925bbc2ec00f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "b5ab39b010114e221326d1232488b1ae",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "5871dab7f5bb9131184ee68f23e58196",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "4b49c0d636a7fcbdcd80a1ff7f2f27aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "binding_digest": "6009334c034ceedf68a9047c54fa08a9",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomBlockStaffQuery.RoomBlockStaffIDs",
+      "target_owner": "timetable-activities"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.CloseRoom",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.CloseRoom",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.CloseRoom",
       "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.CloseRoom",
       "source_owner": "facilities",
@@ -449,7 +513,23 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.ListRoomClosures",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ListRoomClosures",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ReopenRoom",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ReopenRoom",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.ReopenRoom",
       "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ReopenRoom",
       "source_owner": "facilities",
@@ -465,7 +545,23 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.RoomClosedOn",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosureRanges",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.RoomClosureRanges",
       "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
       "source_owner": "facilities",

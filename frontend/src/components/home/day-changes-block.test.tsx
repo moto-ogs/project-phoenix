@@ -528,6 +528,28 @@ describe("DayChangesBlock: Speiseplan (#7666)", () => {
     expect(screen.getByText("bis 11.9.")).toBeInTheDocument();
   });
 
+  it("stellt die Sperre des Raums eines eigenen Termins unter „Betrifft dich“ (#8234)", () => {
+    serve({
+      entries: [
+        change({
+          kind: "room_closed",
+          section: "you",
+          roomName: "Werkraum",
+          roomClosure: { reason: "Wasserschaden" },
+          link: { target: "room", staffId: null, roomId: "42" },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    expect(screen.getByText("Betrifft dich")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: /Der Raum „Werkraum“ ist heute gesperrt: Wasserschaden\. Du hast dort heute einen Termin\./,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("nennt eine ausgefallene Quelle Räume und gibt keine Entwarnung", () => {
     serve({ failedSources: ["room_closures"] });
     render(<DayChangesBlock />);

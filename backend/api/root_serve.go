@@ -304,6 +304,10 @@ func composeServeRoot(
 				consent, identity, people, structure, workTime, messaging, membership)
 			return
 		},
+		func() (err error) { // after Delivery: a closed room tells the staff planned there (#8234)
+			facilitiesRooms.Closures, err = owners.NoticeRoomClosures(db, facilitiesRooms.Closures, notifications, people.Staff, roomClosureActor, env.Now)
+			return
+		},
 		func() (err error) { // after Delivery: a changed menu tells the families (#7145)
 			mealPlan, err = owners.BuildServeMealPlan(db, mealPlanSettings, owners.NewStudentRootReads(people.Students), persons, calendar, owners.NewMealPlanChangeNotices(persons, notifications))
 			return

@@ -404,6 +404,7 @@ func init() {
 	registerRoomChangeTypes()
 	registerSchoolClosingDayTypes()
 	registerOpeningChangeTypes()
+	registerRoomClosureTypes()
 	registerCatererTypes()
 }
 
