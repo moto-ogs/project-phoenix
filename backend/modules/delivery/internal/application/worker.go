@@ -251,6 +251,34 @@ func (w *Worker) finalizeFailure(ctx context.Context, intent domain.Intent, toke
 	w.observe(domain.Observation{Operation: "retry", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: sendErr})
 }
 
+func (w *Worker) finalizeSynchronousSend(ctx context.Context, intent domain.Intent, token string, result deliveryContract.ProviderResult) error {
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("delivery: encode synchronous %s result: %w", intent.Transport, err)
+	}
+	done, err := w.store.FinalizeSent(ctx, intent.Transport, intent.ID, token, encoded, w.now())
+	if err != nil {
+		return err
+	}
+	if !done {
+		return fmt.Errorf("delivery: %s finalization lost its lease", intent.Transport)
+	}
+	return nil
+}
+
+// The synchronous caller keeps its existing deadline, which may exceed the
+// background provider timeout. Its fence must survive that full operation.
+// The deadline counts on the worker clock, which the stored lease is compared with.
+func synchronousDispatchLease(ctx context.Context, now time.Time, duration time.Duration) time.Time {
+	expires := now.Add(duration)
+	if deadline, ok := ctx.Deadline(); ok {
+		if fence := now.Add(time.Until(deadline) + providerTimeout); fence.After(expires) {
+			return fence
+		}
+	}
+	return expires
+}
+
 func leaseToken(intent domain.Intent) string {
 	if intent.LeaseToken == nil {
 		panic("delivery worker: claimed intent has no lease token")

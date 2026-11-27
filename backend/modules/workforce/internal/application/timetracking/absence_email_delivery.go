@@ -11,7 +11,7 @@ type AbsenceEmailContent struct {
 }
 type AbsenceEmailMessage struct {
 	TenantID, ReferenceID int64
-	Type, Recipient       string
+	Type                  string
 	To                    AbsenceEmailAddress
 	Subject, Template     string
 	Content               AbsenceEmailContent

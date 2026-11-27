@@ -76,7 +76,7 @@ func (e messageIDError) MessageID() string { return e.id }
 // #2108: a rejected recipient must not reach the log or the returned error in
 // clear text. The fake server echoes the mailbox in its 550 reply the way real
 // SMTP servers do, and go-mail appends it again as "affected recipient(s)".
-func TestSMTPMailer_RejectedRecipientStaysOutOfLogsAndError(t *testing.T) {
+func TestSMTPMailer_RejectedRecipientAndSubjectStayOutOfLogs(t *testing.T) {
 	t.Parallel()
 
 	for _, recipient := range []string{
@@ -139,9 +139,10 @@ func TestSMTPMailer_RejectedRecipientStaysOutOfLogsAndError(t *testing.T) {
 				defaultFrom: mailcontract.NewEmail("moto", "system@example.invalid"),
 			}
 
+			const subject = "Die Betreuung von Lina Muster ist jetzt im Elternportal sichtbar"
 			sendErr := mailer.SendContext(context.Background(), mailcontract.Message{
 				To:       mailcontract.NewEmail("Erika Muster", recipient),
-				Subject:  "Einladung zum Eltern-Portal",
+				Subject:  subject,
 				Template: "regression.html",
 				Content:  map[string]string{"Message": "Hallo"},
 			})
@@ -153,6 +154,7 @@ func TestSMTPMailer_RejectedRecipientStaysOutOfLogsAndError(t *testing.T) {
 			require.ErrorAs(t, sendErr, &sendError, "callers can still inspect the go-mail error")
 			assert.Contains(t, sendErr.Error(), sendError.MessageID(), "the Message-ID survives the redaction")
 			assert.NotContains(t, logs.String(), recipient)
+			assert.NotContains(t, logs.String(), subject, "the subject can include a child's name")
 			assert.Contains(t, logs.String(), "message_id=", "the Message-ID identifies the mail instead")
 		})
 	}

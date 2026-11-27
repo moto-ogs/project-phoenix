@@ -20,7 +20,10 @@ func RestrictToDemoMails(mailer mailcontract.Mailer, appEnv string, logger *slog
 	if mailer == nil || !mailcontract.IsDemoEnvironment(appEnv) {
 		return mailer
 	}
-	return demoRestrictedMailer{mailer: mailer, logger: loggerOrDefault(logger), codeAddress: demoCodeAddress}
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return demoRestrictedMailer{mailer: mailer, logger: logger, codeAddress: demoCodeAddress}
 }
 
 type demoRestrictedMailer struct {
