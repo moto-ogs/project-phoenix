@@ -58,6 +58,7 @@ import { PastBlocksSection } from "~/components/active-supervisions/past-blocks-
 import {
   PlannedNowSection,
   PlannedOverdueChip,
+  usePlannedOverdueCount,
 } from "~/components/active-supervisions/planned-now-section";
 import { SpontaneousActivityStart } from "~/components/active-supervisions/spontaneous-activity-start";
 import { TransitStudentsSection } from "~/components/rooms/transit-students-section";
@@ -480,8 +481,14 @@ function MeinRaumPageContent() {
   // „13 da · max. 20“ statt „13 / 20 da“: Die zweite Zahl ist die
   // Teilnehmergrenze, nicht die Zahl der Kinder in der Liste; als Bruch las
   // sie sich wie „7 fehlen“.
+  // Steht der Chip „überfällig“ in der Zeile, entfällt „max. 20“: Sonst
+  // bricht die Chipzeile auch am iPhone 15 in eine dritte Zeile um. Die
+  // Grenze zählt nur bei Überbuchung, und dafür steht ein eigener Chip.
+  const appOverdueCount = usePlannedOverdueCount(plannedNow);
   const appCountLabel =
-    supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
+    supervisionOccupancy.limit != null &&
+    supervisionOccupancy.limit > 0 &&
+    appOverdueCount === 0
       ? `${supervisionCount} da · max. ${supervisionOccupancy.limit}`
       : `${supervisionCount} da`;
   const appSupervisionSummaryFor = (hideSoleOwnSupervisor: boolean) =>

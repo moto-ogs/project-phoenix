@@ -87,13 +87,20 @@ function visiblePlanned(
  * Zeile schöbe die Kinder aus dem ersten Bild. Ohne Symbol passt er am
  * iPhone 15 noch in die Zeile; am SE rückt er in eine zweite.
  */
+/** Zahl der überfälligen Blöcke, minütlich neu (Chip und Kopfzeile). */
+export function usePlannedOverdueCount(
+  plannedNow: readonly PlannedTimetableInstance[],
+): number {
+  const now = useMinuteClock();
+  return visiblePlanned(plannedNow, now).filter(
+    (instance) => instance.isOverdue,
+  ).length;
+}
+
 export function PlannedOverdueChip({
   plannedNow,
 }: Readonly<{ plannedNow: readonly PlannedTimetableInstance[] }>) {
-  const now = useMinuteClock();
-  const overdueCount = visiblePlanned(plannedNow, now).filter(
-    (instance) => instance.isOverdue,
-  ).length;
+  const overdueCount = usePlannedOverdueCount(plannedNow);
   if (overdueCount === 0) return null;
   return (
     <span
