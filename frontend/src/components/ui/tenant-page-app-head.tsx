@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Search } from "lucide-react";
+import { MoreHorizontal, Search, SlidersVertical } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -20,6 +20,7 @@ import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { Z_LAYER } from "./overlay-styles";
 import { ListRow } from "./list-row";
 import { MobilePageHelpTarget } from "./mobile-page-help-target";
+import { NotificationBadge } from "./notification-badge";
 import NavigationLink from "./navigation-link";
 import { OverlaySheet } from "./overlay-sheet";
 import type { OverflowMenuEntry } from "./page-header/types";
@@ -142,6 +143,12 @@ export function AppTenantHead({
   const statsRef = useRef<HTMLDivElement>(null);
   const statsScroll = useScrollsSideways(statsRef);
   const veiled = useStuck(toolbarRef, scrolledAway);
+  // Filtert die Seite, bleibt ihr Filterknopf auch im schmalen Kopf (Runde
+  // 21): er öffnet dieselben Filter wie der Knopf in der Leiste.
+  const compactFilter = useToolbarFilter(
+    toolbarRef,
+    scrolledAway && shrinkToTitle,
+  );
   const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
   // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
   const hasMenu = hasMenuEntries || info != null || actions != null;
@@ -364,6 +371,37 @@ export function AppTenantHead({
             }}
           >
             <Search className="size-5" aria-hidden="true" />
+          </Button>
+        ) : null}
+        {shrinkToTitle && compactFilter ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={compactFilter.label}
+            className={cn("relative", hasMenu && "mr-2")}
+            tooltip="Zeigt die Filter für diese Liste."
+            onClick={() =>
+              toolbarRef.current
+                ?.querySelector<HTMLButtonElement>(TOOLBAR_FILTER_BUTTON)
+                ?.click()
+            }
+          >
+            <SlidersVertical className="size-5" aria-hidden="true" />
+            {compactFilter.count > 0 ? (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 -right-1 flex"
+              >
+                <NotificationBadge
+                  count={compactFilter.count}
+                  tone="blue"
+                  size="sm"
+                  ariaLabel={`${compactFilter.count} aktive Filter`}
+                  className="tabular-nums shadow-sm"
+                />
+              </span>
+            ) : null}
           </Button>
         ) : null}
         {compactActions != null && compactActions !== false ? (
@@ -649,6 +687,7 @@ export function AppTenantTabs({
   const navRef = useRef<HTMLElement>(null);
   useScrollActiveIntoView(navRef, value);
   const chipPadding = useTabPeekPadding(navRef, items);
+  const fade = useScrollFade(navRef);
   // Reiter ohne eigene Adresse sind echte Reiter (`tablist`): Pfeiltasten
   // wechseln reihum, nur der gewählte liegt in der Tab-Reihenfolge (#6579).
   const asTabs = items.every((item) => !item.href);
@@ -679,9 +718,20 @@ export function AppTenantTabs({
         // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
         // Telefon: Die Reihe scrollt bis zum Kartenrand (Leiste `px-4`), der
         // erste Reiter beginnt bündig mit dem Titel. Am Kartenrand schaut
-        // nur der Rand des nächsten Reiters hervor: Die Reihe geht sichtbar
-        // weiter, ohne dass ein Wort halb ausgeblendet ist.
-        className="phone:-mx-4 phone:px-4 -mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
+        // der Anfang des nächsten Reiters hervor und blendet aus (Runde 21):
+        // Die Reihe geht sichtbar weiter, statt hart am Rand zu enden.
+        className={cn(
+          "phone:-mx-4 phone:px-4 -mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5",
+          fade.right &&
+            !fade.left &&
+            "[mask-image:linear-gradient(to_right,#000_calc(100%-0.75rem),transparent)]",
+          fade.left &&
+            !fade.right &&
+            "[mask-image:linear-gradient(to_left,#000_calc(100%-0.75rem),transparent)]",
+          fade.left &&
+            fade.right &&
+            "[mask-image:linear-gradient(to_right,transparent,#000_0.75rem,#000_calc(100%-0.75rem),transparent)]",
+        )}
         style={
           chipPadding === null
             ? undefined
@@ -746,11 +796,13 @@ export function AppTenantTabs({
 // Reihe seitlich scrollt (Grundwert wie `variant="chip"`: 14 px).
 const TAB_CHIP_PADDING = "px-[var(--app-tab-px,0.875rem)]";
 const TAB_BASE_PADDING_PX = 14;
-// Mindestens so weit schaut der erste nicht ganz sichtbare Reiter am Rand
-// hervor: sein Rahmen und ein Stück Innenabstand, kein angeschnittener
-// Buchstabe.
-const TAB_PEEK_MIN_PX = 10;
-const TAB_MIN_PADDING_PX = 10;
+// So weit schaut der erste nicht ganz sichtbare Reiter am Rand hervor:
+// Rahmen, Innenabstand und die ersten Buchstaben, die im Verlauf am
+// Kartenrand ausblenden (Runde 21: kein leerer Rand, der wie ein harter
+// Schnitt wirkt).
+const TAB_PEEK_MIN_PX = 24;
+const TAB_PEEK_MAX_PX = 52;
+const TAB_MIN_PADDING_PX = 9;
 const TAB_MAX_PADDING_PX = 24;
 
 /**
@@ -788,17 +840,19 @@ function useTabPeekPadding(
         return;
       }
       // Für jede Zahl ganz sichtbarer Reiter (k) die Innenabstände, bei denen
-      // vom nächsten Reiter mindestens `TAB_PEEK_MIN_PX`, aber nur Rahmen und
-      // Innenabstand hervorschauen (kein Buchstabe). Gewählt wird der Wert,
-      // der dem Grundwert am nächsten liegt und in den Grenzen bleibt.
+      // vom nächsten Reiter `TAB_PEEK_MIN_PX` bis `TAB_PEEK_MAX_PX` (Rahmen,
+      // Innenabstand und ein Wortanfang) hervorschauen. Gewählt wird der
+      // Wert, der dem Grundwert am nächsten liegt und in den Grenzen bleibt.
       const contents = widths.map((width) => width - 2 * TAB_BASE_PADDING_PX);
       let best: number | null = null;
       let used = start;
       for (let k = 1; k < contents.length; k += 1) {
         used += contents[k - 1]! + gap;
         const room = node.clientWidth - used;
-        // Rand: 1 px Rahmen, danach beginnt der Text.
-        const low = Math.max(TAB_MIN_PADDING_PX, (room - 1) / (2 * k + 1));
+        const low = Math.max(
+          TAB_MIN_PADDING_PX,
+          (room - TAB_PEEK_MAX_PX) / (2 * k),
+        );
         const high = Math.min(
           TAB_MAX_PADDING_PX,
           (room - TAB_PEEK_MIN_PX) / (2 * k),
@@ -822,6 +876,71 @@ function useTabPeekPadding(
     return () => observer.disconnect();
   }, [ref, key]);
   return padding;
+}
+
+/** Der Filterknopf der Such- und Filterzeile (`TenantPageSearchRow`). */
+const TOOLBAR_FILTER_BUTTON = '[data-testid="mobile-filter-button"]';
+
+/**
+ * Trägt die Leiste einen Filterknopf, liest beim Einblenden des schmalen
+ * Kopfs dessen Namen („Filter, 2 aktiv“) und die Zahl aktiver Filter.
+ */
+function useToolbarFilter(
+  ref: RefObject<HTMLElement | null>,
+  active: boolean,
+): { label: string; count: number } | null {
+  const [filter, setFilter] = useState<{
+    label: string;
+    count: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!active) return;
+    const button = ref.current?.querySelector<HTMLButtonElement>(
+      TOOLBAR_FILTER_BUTTON,
+    );
+    if (!button) {
+      setFilter(null);
+      return;
+    }
+    const label = button.getAttribute("aria-label") ?? "Filter";
+    const count = Number(/(\d+) aktiv/.exec(label)?.[1] ?? 0);
+    setFilter((prev) =>
+      prev?.label === label && prev.count === count ? prev : { label, count },
+    );
+  }, [ref, active]);
+  return filter;
+}
+
+/**
+ * Ob links bzw. rechts noch Inhalt außerhalb der seitlich scrollenden Reihe
+ * liegt: Dort blendet die Reihe am Kartenrand aus.
+ */
+function useScrollFade(ref: RefObject<HTMLElement | null>): {
+  left: boolean;
+  right: boolean;
+} {
+  const [fade, setFade] = useState({ left: false, right: false });
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const update = () => {
+      const left = node.scrollLeft > 1;
+      const right = node.scrollWidth - node.clientWidth - node.scrollLeft > 1;
+      setFade((prev) =>
+        prev.left === left && prev.right === right ? prev : { left, right },
+      );
+    };
+    update();
+    node.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    for (const chip of node.children) observer.observe(chip);
+    return () => {
+      node.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [ref]);
+  return fade;
 }
 
 /** Schiebt den aktiven Reiter beim Wechsel in den sichtbaren Bereich. */

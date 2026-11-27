@@ -3140,7 +3140,10 @@ function SearchPageContent() {
       // App (#8070): Die Gesamtzahl steht wie am Desktop als Zähler in der
       // Suchzeile; ohne Tageszahlen bleibt die Titelzeile frei.
       if (appView) return null;
-      return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
+      return {
+        summary: `${total} ${total === 1 ? "Kind" : "Kinder"}`,
+        compact: null,
+      };
     }
     // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
     // ist (Ort vor Status, #6371). Entschuldigt oder auf Klassenfahrt zählt
@@ -3180,15 +3183,15 @@ function SearchPageContent() {
     }
     // App (#8070): Die Chips stehen in der Titelzeile neben „Alle Kinder“,
     // also kurz: „16 von 118 da · 0 krank“. Die Gesamtzahl steht im ersten
-    // Chip statt als zweiter, knopfartiger Zähler neben dem Filter.
-    return (
+    // Chip statt als zweiter, knopfartiger Zähler neben dem Filter. „krank“
+    // steht wie am Desktop immer im Kopf, auch mit 0 (Runde 21).
+    const summary = (
       <TenantPageStats
         items={
           appView
             ? [
                 { value: inCare, label: `von ${total} da` },
-                // „0 krank“ sagte nichts und kostete Platz (Runde 19).
-                ...(sick > 0 ? [{ value: sick, label: "krank" }] : []),
+                { value: sick, label: "krank" },
               ]
             : [
                 { value: total, label: total === 1 ? "Kind" : "Kinder" },
@@ -3198,6 +3201,12 @@ function SearchPageContent() {
         }
       />
     );
+    // Schmaler Kopf beim Rollen: ein Kurzstatus, die Zahl der Kinder, die
+    // da sind; daneben brauchen Lupe und Filter ihren Platz.
+    const compact = appView ? (
+      <TenantPageStats items={[{ value: inCare, label: "da" }]} />
+    ) : null;
+    return { summary, compact };
   }, [isToday, students, rowsLoaded, appView]);
 
   const selectedStudentsForBulk = useMemo(
@@ -3493,7 +3502,8 @@ function SearchPageContent() {
         appShrinkToTitle
         info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
-        stats={studentSummary}
+        stats={studentSummary?.summary}
+        appCompactStats={studentSummary?.compact ?? undefined}
         statsLoading={!hasFetchedOnce || isDateTransition}
         actions={
           <>
