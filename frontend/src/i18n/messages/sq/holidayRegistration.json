@@ -244,5 +244,8 @@
   "extraDayIncludedText": "Kjo ditë përfshihet në pagesën mujore. Nuk paguani asgjë shtesë.",
   "extraDayPriceText": "Çmimi vlen për këtë ditë dhe për një fëmijë, pa zbritje ose përjashtim. Pagesën tuaj e shihni te përmbledhja.",
   "parallelDayHint": "Kjo ditë ofrohet në disa shkolla. Zgjidhni një shkollë.",
-  "contributionTextExtraDay": "Kaq kushton dita shtesë. Pagesa vlen sapo organizatori ta konfirmojë regjistrimin."
+  "contributionTextExtraDay": "Kaq kushton dita shtesë. Pagesa vlen sapo organizatori ta konfirmojë regjistrimin.",
+  "extraDayLunchText": "Mund të porositni edhe drekë. Ajo paguhet shtesë.",
+  "extraDayLunchIncludedText": "Mund të zgjidhni edhe drekë. Ajo përfshihet në pagesën mujore.",
+  "lunchHintIncluded": "Përfshihet në pagesën mujore."
 }

@@ -119,7 +119,12 @@ func TestExtraCareDayIsPlannedForSeveralSchoolsAndBooked(t *testing.T) {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Zusatztag Brücke", identityaccess.TraegerRoleAdministration)
 
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", extraDay(extraDayBridge, true, 0, office.schools...))
+	// The day offers lunch; on an included day it costs nothing.
+	planned := extraDay(extraDayBridge, true, 0, office.schools...)
+	for _, day := range planned["weeks"].([]map[string]any) {
+		day["lunch_price_cents"] = 0
+	}
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", planned)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[extraDayPeriodBody](t, rec.Body.Bytes())
 	assert.Equal(t, enrollment.HolidayPeriodKindExtraDay, created.Kind)
@@ -143,7 +148,19 @@ func TestExtraCareDayIsPlannedForSeveralSchoolsAndBooked(t *testing.T) {
 	require.Len(t, offer.Weeks, 2)
 	assert.Zero(t, offer.Weeks[0].TimeModels[0].PriceCents)
 
-	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(published.PublicToken), extraDayRegistration(offer, "eva.zusatz@example.org", "Mia"))
+	// Parents registered under the fee mode of the published day: it stays.
+	paid := extraDay(extraDayBridge, false, 1800, office.schools...)
+	for i, day := range paid["weeks"].([]map[string]any) {
+		day["id"] = fmt.Sprint(published.Weeks[i].ID)
+		day["time_models"].([]map[string]any)[0]["id"] = fmt.Sprint(published.Weeks[i].TimeModels[0].ID)
+	}
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(created.ID)), paid)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "included_in_fee", "the fee mode of a published day never changes")
+
+	withLunch := extraDayRegistration(offer, "eva.zusatz@example.org", "Mia")
+	withLunch["children"].([]map[string]any)[0]["bookings"].([]map[string]any)[0]["lunch"] = true
+	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(published.PublicToken), withLunch)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	receipt := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes())
 	require.Len(t, receipt.Placements, 1)
@@ -168,6 +185,22 @@ func TestExtraCareDayIsPlannedForSeveralSchoolsAndBooked(t *testing.T) {
 	list := host.participants(t, staff, int64(hosted[0].ID))
 	require.Len(t, list.Participants, 1)
 	assert.Equal(t, "Mia", list.Participants[0].FirstName)
+	// Her lunch is in the meal count of the day the school orders from.
+	rec = host.get(t, staff, fmt.Sprintf("/%d/participants", hosted[0].ID))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	meals := decodeSchoolPortalData[struct {
+		Week struct {
+			LunchOffered bool `json:"lunch_offered"`
+			Lunches      []struct {
+				Date         string `json:"date"`
+				Participants int    `json:"participants"`
+			} `json:"lunches"`
+		} `json:"week"`
+	}](t, rec.Body.Bytes())
+	assert.True(t, meals.Week.LunchOffered)
+	require.Len(t, meals.Week.Lunches, 1, "an extra day has one day of lunches")
+	assert.Equal(t, extraDayBridge, meals.Week.Lunches[0].Date)
+	assert.Equal(t, 1, meals.Week.Lunches[0].Participants)
 
 	// The office reads the figures of each school in the list and its export.
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(created.ID)), nil)
@@ -284,13 +317,23 @@ func TestExtraCareDayKeepsItsShape(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, code)
 	assert.Contains(t, fields(problem), "weeks.0.time_models.0.price_cents", "an included day has no price")
 
+	code, problem = post(extraDay(extraDayBridge, false, 0, office.schools[0]))
+	assert.Equal(t, http.StatusBadRequest, code)
+	assert.Contains(t, fields(problem), "weeks.0.time_models.0.price_cents", "a day at a price needs a price")
+
+	pricedLunch := extraDay(extraDayBridge, true, 0, office.schools[0])
+	pricedLunch["weeks"].([]map[string]any)[0]["lunch_price_cents"] = 450
+	code, problem = post(pricedLunch)
+	assert.Equal(t, http.StatusBadRequest, code)
+	assert.Contains(t, fields(problem), "weeks.0.lunch_price_cents", "an included day charges no lunch")
+
 	holidays := extraDay(extraDayBridge, true, 0, office.schools[0])
 	holidays["kind"] = enrollment.HolidayPeriodKindHoliday
 	code, problem = post(holidays)
 	assert.Equal(t, http.StatusBadRequest, code)
 	assert.Contains(t, fields(problem), "included_in_fee", "only an extra day is included in the monthly contribution")
 
-	unknown := extraDay(extraDayBridge, false, 0, office.schools[0])
+	unknown := extraDay(extraDayBridge, false, 1800, office.schools[0])
 	unknown["kind"] = "trip"
 	code, problem = post(unknown)
 	assert.Equal(t, http.StatusBadRequest, code)

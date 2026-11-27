@@ -29,6 +29,10 @@ export interface ExtraDayDraft {
   readonly feeMode: ExtraDayFeeMode;
   /** Price of the day as typed, in euro; kept while the day is included. */
   readonly price: string;
+  /** The day offers lunch; the host school then reads the meal counts. */
+  readonly lunchOffered: boolean;
+  /** Price of the lunch as typed, in euro; an included day charges none. */
+  readonly lunchPrice: string;
   readonly binding: boolean;
   readonly notes: string;
 }
@@ -50,6 +54,8 @@ export function emptyExtraDay(today: string): ExtraDayDraft {
     registrationClosesOn: "",
     feeMode: "included",
     price: "",
+    lunchOffered: false,
+    lunchPrice: "",
     binding: true,
     notes: "",
   };
@@ -66,6 +72,9 @@ function offeredCareTime(period: HolidayPeriod) {
 
 export function draftFromExtraDay(period: HolidayPeriod): ExtraDayDraft {
   const careTime = offeredCareTime(period);
+  const lunchPrice = period.weeks.find(
+    (week) => week.lunchPriceCents != null,
+  )?.lunchPriceCents;
   return {
     name: period.name,
     date: period.weeks[0]?.startsOn ?? "",
@@ -79,6 +88,11 @@ export function draftFromExtraDay(period: HolidayPeriod): ExtraDayDraft {
       period.includedInFee || !careTime
         ? ""
         : centsToEuroInput(careTime.priceCents),
+    lunchOffered: lunchPrice != null,
+    lunchPrice:
+      period.includedInFee || lunchPrice == null
+        ? ""
+        : centsToEuroInput(lunchPrice),
     binding: period.binding,
     notes: period.notes,
   };
@@ -95,6 +109,8 @@ export function inputFromExtraDay(
 ): HolidayPeriodInput {
   const included = draft.feeMode === "included";
   const priceCents = included ? 0 : (euroInputToCents(draft.price) ?? 0);
+  // On an included day the lunch costs nothing; the school still counts it.
+  const lunchCents = included ? 0 : (euroInputToCents(draft.lunchPrice) ?? 0);
   return {
     kind: "extra_day",
     includedInFee: included,
@@ -120,6 +136,7 @@ export function inputFromExtraDay(
         endsOn: draft.date,
         hostSchoolId: schoolId,
         bookingUnit: "week" as const,
+        lunchPriceCents: draft.lunchOffered ? lunchCents : null,
         timeModels: [
           {
             id: current?.id,
@@ -204,6 +221,12 @@ function checkFee(draft: ExtraDayDraft, errors: Record<string, string>) {
     errors.price =
       "Bitte gib einen Preis ein. Kostet der Tag nichts extra, wähle „Im Monatsbeitrag enthalten“.";
   }
+  if (!draft.lunchOffered) return;
+  const lunch = euroInputToCents(draft.lunchPrice);
+  if (lunch === null || lunch > MAX_PRICE_CENTS) {
+    errors.lunch_price =
+      "Bitte gib einen Preis in Euro ein, zum Beispiel 4,30.";
+  }
 }
 
 /**
@@ -243,7 +266,11 @@ export function extraDayServerFields(
     case "ends_at":
       return perSchool(["time_models.0.ends_at"]);
     case "price":
-      return ["included_in_fee", ...perSchool(["time_models.0.price_cents"])];
+      return perSchool(["time_models.0.price_cents"]);
+    case "fee_mode":
+      return ["included_in_fee"];
+    case "lunch_price":
+      return perSchool(["lunch_price_cents"]);
     default:
       return [control];
   }

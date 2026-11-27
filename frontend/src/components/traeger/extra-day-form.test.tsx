@@ -196,13 +196,30 @@ describe("ExtraDayForm", () => {
       "15.05.2099",
     );
 
+    // Parents registered under the fee of the published day: it stays.
+    expect(
+      screen.getByRole("radio", { name: /Mit Tagespreis/ }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/deshalb lässt er sich nicht mehr umstellen/),
+    ).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("checkbox", { name: "OGS Lindenweg" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: /Mittagessen anbieten/ }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     const [id, input, version] = mockUpdate.mock.calls[0] as [
       string,
-      { weeks: { id?: string; hostSchoolId: string }[] },
+      {
+        weeks: {
+          id?: string;
+          hostSchoolId: string;
+          lunchPriceCents: number | null;
+        }[];
+      },
       string,
     ];
     expect(id).toBe("7");
@@ -212,5 +229,7 @@ describe("ExtraDayForm", () => {
       expect.objectContaining({ id: "71", hostSchoolId: "31" }),
       expect.objectContaining({ id: undefined, hostSchoolId: "32" }),
     ]);
+    // Lunch on an included day costs nothing and is counted at each school.
+    expect(input.weeks.map((week) => week.lunchPriceCents)).toEqual([0, 0]);
   });
 });

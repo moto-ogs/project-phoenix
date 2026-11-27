@@ -244,5 +244,8 @@
   "extraDayIncludedText": "Bu gün aylık ücrete dahildir. Ek bir ücret ödemezsiniz.",
   "extraDayPriceText": "Fiyat bu gün ve bir çocuk içindir, indirim veya muafiyet hariç. Ücretinizi özette görürsünüz.",
   "parallelDayHint": "Bu gün birkaç okulda sunuluyor. Bir okul seçin.",
-  "contributionTextExtraDay": "Ek gün bu kadar tutar. Ücret, kurum kaydı onayladığında geçerli olur."
+  "contributionTextExtraDay": "Ek gün bu kadar tutar. Ücret, kurum kaydı onayladığında geçerli olur.",
+  "extraDayLunchText": "Ek olarak öğle yemeği seçebilirsiniz. Ayrıca ücretlidir.",
+  "extraDayLunchIncludedText": "Ek olarak öğle yemeği seçebilirsiniz. Aylık ücrete dahildir.",
+  "lunchHintIncluded": "Aylık ücrete dahildir."
 }

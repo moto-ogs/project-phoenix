@@ -1,6 +1,7 @@
 package enrollmenthttp
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -68,6 +69,12 @@ func (rs *HolidayPeriodResource) exportPeriods(w http.ResponseWriter, r *http.Re
 	}
 	school := holidayNames(r)
 	kind := r.URL.Query().Get("kind")
+	switch kind {
+	case "", capability.HolidayPeriodKindHoliday, capability.HolidayPeriodKindExtraDay:
+	default:
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("kind must be holiday or extra_day")))
+		return
+	}
 	if kind == capability.HolidayPeriodKindExtraDay {
 		common.WriteList(w, r, rs.lists, format, extraDayTable(periods, school))
 		return
@@ -146,7 +153,7 @@ func extraDayFee(period capability.HolidayPeriod, week capability.HolidayWeek) s
 	}
 	for _, model := range week.TimeModels {
 		if !model.Archived {
-			return fmt.Sprintf("%d,%02d € je Tag", model.PriceCents/100, model.PriceCents%100)
+			return fmt.Sprintf("%d,%02d € pro Tag", model.PriceCents/100, model.PriceCents%100)
 		}
 	}
 	return ""

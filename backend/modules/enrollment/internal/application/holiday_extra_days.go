@@ -49,6 +49,12 @@ func validateHolidayKind(input enrollment.HolidayPeriodInput, current enrollment
 	if current.Kind != "" && input.Kind != current.Kind {
 		errs["kind"] = errors.New("the kind of a period never changes")
 	}
+	// Parents register for a published day under its fee mode: a day booked
+	// as included is never charged later, and a day booked at a price never
+	// loses its frozen contributions from the billing.
+	if current.Status == enrollment.HolidayPeriodPublished && input.IncludedInFee != current.IncludedInFee {
+		errs["included_in_fee"] = errors.New("the fee mode of a published extra day never changes")
+	}
 }
 
 // validateExtraDay holds an extra day to its shape: by arrival, without a
@@ -93,15 +99,23 @@ func validateExtraDayWeek(week, first enrollment.HolidayWeekInput, included bool
 			errs["starts_on"] = errors.New("every school of an extra day has the same date")
 		}
 	}
-	if !included {
-		return
+	validateExtraDayPrices(week, included, errs)
+}
+
+// validateExtraDayPrices holds a school's day to its fee mode: an included
+// day charges nothing, neither for care nor for lunch; a day at a price
+// charges its care time. An archived care time takes no booking and keeps
+// its price.
+func validateExtraDayPrices(week enrollment.HolidayWeekInput, included bool, errs validation.Errors) {
+	if included && week.LunchPriceCents != nil && *week.LunchPriceCents != 0 {
+		errs["lunch_price_cents"] = errors.New("a lunch of a day included in the monthly contribution has no price")
 	}
 	models, _ := errs["time_models"].(validation.Errors)
 	if models == nil {
 		models = validation.Errors{}
 	}
 	for j, model := range week.TimeModels {
-		if model.PriceCents == 0 {
+		if model.Archived || (model.PriceCents == 0) == included {
 			continue
 		}
 		key := fmt.Sprint(j)
@@ -109,7 +123,11 @@ func validateExtraDayWeek(week, first enrollment.HolidayWeekInput, included bool
 		if own == nil {
 			own = validation.Errors{}
 		}
-		own["price_cents"] = errors.New("a day included in the monthly contribution has no price")
+		if included {
+			own["price_cents"] = errors.New("a day included in the monthly contribution has no price")
+		} else {
+			own["price_cents"] = errors.New("a day at a price per day needs a price above zero")
+		}
 		models[key] = own
 	}
 	if len(models) > 0 {

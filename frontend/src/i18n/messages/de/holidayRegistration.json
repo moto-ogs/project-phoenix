@@ -244,5 +244,8 @@
   "extraDayIncludedText": "Der Tag ist im Monatsbeitrag enthalten. Du zahlst nichts extra.",
   "extraDayPriceText": "Der Preis gilt für diesen Tag und pro Kind, ohne Ermäßigung oder Befreiung. Deinen Beitrag siehst du in der Zusammenfassung.",
   "parallelDayHint": "Diesen Tag gibt es an mehreren Schulen. Wähle eine Schule.",
-  "contributionTextExtraDay": "So viel kostet der Zusatztag. Der Beitrag gilt, sobald der Träger die Anmeldung bestätigt."
+  "contributionTextExtraDay": "So viel kostet der Zusatztag. Der Beitrag gilt, sobald der Träger die Anmeldung bestätigt.",
+  "extraDayLunchText": "Mittagessen kannst du dazu buchen. Es kostet extra.",
+  "extraDayLunchIncludedText": "Du kannst Mittagessen dazu wählen. Es ist im Monatsbeitrag enthalten.",
+  "lunchHintIncluded": "Im Monatsbeitrag enthalten."
 }

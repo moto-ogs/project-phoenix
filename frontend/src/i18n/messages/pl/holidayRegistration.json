@@ -244,5 +244,8 @@
   "extraDayIncludedText": "Ten dzień jest wliczony w opłatę miesięczną. Nie płacisz nic dodatkowo.",
   "extraDayPriceText": "Cena dotyczy tego dnia i jednego dziecka, bez zniżki ani zwolnienia. Twoją opłatę zobaczysz w podsumowaniu.",
   "parallelDayHint": "Ten dzień jest oferowany w kilku szkołach. Wybierz jedną szkołę.",
-  "contributionTextExtraDay": "Tyle kosztuje dodatkowy dzień. Opłata obowiązuje, gdy organizator potwierdzi zgłoszenie."
+  "contributionTextExtraDay": "Tyle kosztuje dodatkowy dzień. Opłata obowiązuje, gdy organizator potwierdzi zgłoszenie.",
+  "extraDayLunchText": "Możesz dodatkowo zamówić obiad. Jest dodatkowo płatny.",
+  "extraDayLunchIncludedText": "Możesz dodatkowo wybrać obiad. Jest wliczony w opłatę miesięczną.",
+  "lunchHintIncluded": "Wliczone w opłatę miesięczną."
 }

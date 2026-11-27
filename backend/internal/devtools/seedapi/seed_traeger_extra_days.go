@@ -93,7 +93,7 @@ func seedExtraDayRegistrations(rt *Runtime, auth AuthRef, periodID int64, publis
 			"guardian": map[string]any{"first_name": family.first, "last_name": family.last, "email": family.email, "phone": fmt.Sprintf("0151 000020%d", i)},
 			"children": []map[string]any{{
 				"first_name": family.child, "last_name": family.last, "birth_date": "2017-09-21", "home_school_id": ident.ID(rt.Bootstrap.SchoolID),
-				"bookings": []map[string]any{{"week_id": day.ID, "time_model_id": day.TimeModels[0].ID}},
+				"bookings": []map[string]any{{"week_id": day.ID, "time_model_id": day.TimeModels[0].ID, "lunch": i == 0}},
 			}},
 			"emergency_contacts": []map[string]any{{"name": "Opa " + family.last, "phone": "05402 000020", "relationship": "Großvater"}},
 			"privacy_consent":    true, "binding_confirmed": true, "custody_confirmed": true,
@@ -153,10 +153,15 @@ func seedExtraDay(name string, today, date calendar.Date, included bool, priceCe
 			"starts_on": date.String(), "ends_on": date.String(), "host_school_id": ident.ID(school),
 			"time_models": []map[string]any{{"name": "Betreuung", "starts_at": "07:30", "ends_at": "16:00", "price_cents": priceCents}},
 		}
+		// The included day offers lunch at no charge, so the hosting school
+		// reads its meal count.
+		if included {
+			days[i]["lunch_price_cents"] = 0
+		}
 	}
 	return map[string]any{
 		"kind": "extra_day", "included_in_fee": included, "name": name,
 		"registration_opens_on": today.String(), "registration_closes_on": date.AddDays(-7).String(),
-		"binding": true, "notes": "Bitte gebt eurem Kind ein Frühstück und ein Mittagessen mit.", "weeks": days,
+		"binding": true, "notes": "Bitte gebt eurem Kind ein Frühstück mit.", "weeks": days,
 	}
 }

@@ -101,6 +101,7 @@ describe("extra day model", () => {
           priceCents: 0,
         },
       ]);
+      expect(week.lunchPriceCents).toBeNull();
     }
     expect(input.weeks.map((week) => week.hostSchoolId)).toEqual(["31", "32"]);
   });
@@ -138,6 +139,30 @@ describe("extra day model", () => {
     expect(draftFromExtraDay(storedDay({ includedInFee: true }))).toMatchObject(
       { feeMode: "included", price: "" },
     );
+  });
+
+  it("offers lunch without a price on an included day, with one otherwise", () => {
+    const included = inputFromExtraDay({ ...bridgeDay(), lunchOffered: true });
+    expect(included.weeks.map((week) => week.lunchPriceCents)).toEqual([0, 0]);
+    const paid = inputFromExtraDay({
+      ...bridgeDay(),
+      feeMode: "day_price",
+      price: "18",
+      lunchOffered: true,
+      lunchPrice: "4,30",
+    });
+    expect(paid.weeks.map((week) => week.lunchPriceCents)).toEqual([430, 430]);
+    expect(
+      inputFromExtraDay(bridgeDay()).weeks.map((week) => week.lunchPriceCents),
+    ).toEqual([null, null]);
+    expect(
+      validateExtraDay({
+        ...bridgeDay(),
+        feeMode: "day_price",
+        price: "18",
+        lunchOffered: true,
+      }).lunch_price,
+    ).toBe("Bitte gib einen Preis in Euro ein, zum Beispiel 4,30.");
   });
 
   it("accepts a complete day", () => {
@@ -189,6 +214,11 @@ describe("extra day model", () => {
     expect(extraDayServerFields("price", 1)).toContain(
       "weeks.0.time_models.0.price_cents",
     );
+    expect(extraDayServerFields("fee_mode", 1)).toEqual(["included_in_fee"]);
+    expect(extraDayServerFields("lunch_price", 2)).toEqual([
+      "weeks.0.lunch_price_cents",
+      "weeks.1.lunch_price_cents",
+    ]);
     expect(extraDayServerFields("name", 3)).toEqual(["name"]);
   });
 

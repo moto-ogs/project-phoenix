@@ -20,7 +20,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { WeekdayToggleGroup } from "~/components/ui/weekday-toggle-group";
-import { formatDate, parseISODate } from "~/lib/date-helpers";
+import { formatDate } from "~/lib/date-helpers";
 import {
   holidayCareDays,
   holidayDayLabel,
@@ -82,19 +82,13 @@ export function useWeekLabels() {
       style: "currency",
       currency: "EUR",
     });
-    const weekday = new Intl.DateTimeFormat(locale, {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
     return {
       locale,
       range: (week: HolidayRegistrationWeek) =>
         // A week of a single day, such as an extra care day (#4817), is that
         // day with its weekday.
         week.startsOn === week.endsOn
-          ? weekday.format(parseISODate(week.startsOn))
+          ? formatDate(week.startsOn, true, locale)
           : t("weekRange", {
               starts: formatDate(week.startsOn, false, locale),
               ends: formatDate(week.endsOn, false, locale),
@@ -263,7 +257,11 @@ function WeekChoice({
             checked={lunch}
             onChange={(next) => onLunchChange(booked.id, next)}
             label={t("lunchLabel")}
-            hint={labels.lunch(booked, days)}
+            hint={
+              includedInFee
+                ? t("lunchHintIncluded")
+                : labels.lunch(booked, days)
+            }
           />
         </div>
       ) : null}
@@ -514,7 +512,13 @@ export function ChildCard({
             )
               .concat(
                 offer.weeks.some((week) => week.lunchPriceCents != null)
-                  ? t("weeksLunchText")
+                  ? t(
+                      offer.includedInFee
+                        ? "extraDayLunchIncludedText"
+                        : offer.extraDay
+                          ? "extraDayLunchText"
+                          : "weeksLunchText",
+                    )
                   : "",
               )
               .filter(Boolean)

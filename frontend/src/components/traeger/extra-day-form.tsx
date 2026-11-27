@@ -21,6 +21,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
+import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { TimeField } from "~/components/ui/time-field";
 import { useApiFormError } from "~/contexts/ToastContext";
@@ -280,6 +281,10 @@ export function ExtraDayForm({
     }
   };
 
+  // Parents register under the fee mode of a published day: it stays.
+  const feeLocked = period?.status === "published";
+  const lunchBooked = (period?.weeks ?? []).some((week) => week.lunchBooked);
+  const included = draft.feeMode === "included";
   const startsError = fieldError("starts_at");
   const endsError = fieldError("ends_at");
   return (
@@ -338,8 +343,15 @@ export function ExtraDayForm({
                   id="date"
                   label="Tag"
                   required
-                  min={today}
-                  minDateError="Der Zusatztag liegt in der Vergangenheit."
+                  // Only a new day must lie ahead: a stored day that has
+                  // passed stays editable, for example its name.
+                  {...(period
+                    ? {}
+                    : {
+                        min: today,
+                        minDateError:
+                          "Der Zusatztag liegt in der Vergangenheit.",
+                      })}
                   value={draft.date}
                   error={fieldError("date")}
                   onValidityChange={dayValidity}
@@ -529,18 +541,25 @@ export function ExtraDayForm({
             <FormFieldset
               legend="Beitrag"
               required
-              hint="Was kostet der Zusatztag die Eltern?"
+              hint={
+                feeLocked
+                  ? "Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen, deshalb lässt er sich nicht mehr umstellen."
+                  : "Was kostet der Zusatztag die Eltern?"
+              }
+              error={fieldError("fee_mode")}
             >
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {FEE_MODES.map((mode) => (
                   <ChoiceTile
                     key={mode.value}
                     selected={draft.feeMode === mode.value}
+                    disabled={feeLocked}
                     className="items-start p-3"
                   >
                     <Radio
                       name="fee_mode"
                       value={mode.value}
+                      disabled={feeLocked}
                       checked={draft.feeMode === mode.value}
                       className="mt-0.5"
                       onChange={() =>
@@ -581,6 +600,41 @@ export function ExtraDayForm({
                 </span>
               </InsetPanel>
             )}
+          </div>
+
+          <div className="space-y-4 border-t border-gray-200 pt-6">
+            <SectionLabel as="h3">Mittagessen</SectionLabel>
+            <SwitchRow
+              label="Mittagessen anbieten"
+              description={
+                lunchBooked
+                  ? "Für diesen Tag ist schon Mittagessen gebucht. Das Angebot bleibt deshalb."
+                  : included
+                    ? "Eltern wählen das Essen pro Kind dazu. Es kostet nichts extra. Die Schule sieht, wie viele Essen sie braucht."
+                    : "Eltern wählen das Essen pro Kind dazu. Es steht als eigener Betrag auf der Rechnung. Die Schule sieht, wie viele Essen sie braucht."
+              }
+              checked={draft.lunchOffered}
+              disabled={lunchBooked}
+              onCheckedChange={(lunchOffered) =>
+                setDraft({ ...draft, lunchOffered })
+              }
+            />
+            {draft.lunchOffered && !included ? (
+              <Input
+                controlSize="compact"
+                name="lunch_price"
+                label="Preis für ein Essen in Euro"
+                required
+                inputMode="decimal"
+                placeholder="z. B. 4,30"
+                className="sm:max-w-xs"
+                value={draft.lunchPrice}
+                error={fieldError("lunch_price") ?? undefined}
+                onChange={(event) =>
+                  setDraft({ ...draft, lunchPrice: event.target.value })
+                }
+              />
+            ) : null}
           </div>
 
           <div className="border-t border-gray-200 pt-6">
