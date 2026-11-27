@@ -1,0 +1,367 @@
+// Router-level tests for the Rechnungsausgangsbuch (#4819): every issued
+// document across runs in one list, its filters, the gaps of a number
+// range, the right "Abrechnung", the Träger boundary, the trail of every
+// run a page shows and the export.
+package api
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
+)
+
+const invoiceJournalPath = "/traeger/invoice-journal"
+
+type journalDocumentBody struct {
+	Key                string `json:"key"`
+	Number             string `json:"number"`
+	IssuedOn           string `json:"issued_on"`
+	DocumentType       string `json:"document_type"`
+	RecipientFirstName string `json:"recipient_first_name"`
+	RecipientLastName  string `json:"recipient_last_name"`
+	Issuer             struct {
+		Key  string `json:"key"`
+		Body string `json:"body"`
+	} `json:"issuer"`
+	Service    string `json:"service"`
+	NumberYear int    `json:"number_year"`
+	Run        struct {
+		Kind  string  `json:"kind"`
+		ID    wireID  `json:"id"`
+		Name  string  `json:"name"`
+		Month *string `json:"month"`
+		Year  int     `json:"year"`
+	} `json:"run"`
+	GrossCents int64 `json:"gross_cents"`
+	TaxCents   int64 `json:"tax_cents"`
+	NetCents   int64 `json:"net_cents"`
+	Reference  *struct {
+		Kind   string `json:"kind"`
+		Number string `json:"number"`
+	} `json:"reference"`
+}
+
+type journalBody struct {
+	Documents  []journalDocumentBody `json:"documents"`
+	TotalCount int                   `json:"total_count"`
+	HasMore    bool                  `json:"has_more"`
+	Totals     struct {
+		GrossCents int64 `json:"gross_cents"`
+		TaxCents   int64 `json:"tax_cents"`
+		NetCents   int64 `json:"net_cents"`
+	} `json:"totals"`
+	Gaps []struct {
+		Service      string `json:"service"`
+		Year         int    `json:"year"`
+		MissingCount int64  `json:"missing_count"`
+		AfterNumber  string `json:"after_number"`
+		BeforeNumber string `json:"before_number"`
+	} `json:"gaps"`
+	NumberRanges []struct {
+		Service       string `json:"service"`
+		Year          int    `json:"year"`
+		DocumentCount int    `json:"document_count"`
+		FirstNumber   string `json:"first_number"`
+		LastNumber    string `json:"last_number"`
+	} `json:"number_ranges"`
+	Runs []struct {
+		Kind string `json:"kind"`
+		ID   wireID `json:"id"`
+	} `json:"runs"`
+}
+
+// invoiceJournal reads a page of the journal with the query.
+func invoiceJournal(t *testing.T, router http.Handler, token string, query url.Values) journalBody {
+	t.Helper()
+	path := invoiceJournalPath
+	if len(query) > 0 {
+		path += "?" + query.Encode()
+	}
+	rec := traegerJSON(t, router, token, http.MethodGet, path, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return decodeSchoolPortalData[journalBody](t, rec.Body.Bytes())
+}
+
+func journalNumbers(journal journalBody) []string {
+	numbers := make([]string, len(journal.Documents))
+	for i, document := range journal.Documents {
+		numbers[i] = document.Number
+	}
+	return numbers
+}
+
+func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Ausgangsbuch")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+
+	// A calculated run has no number yet: the journal stays empty.
+	for _, id := range []int64{f.siblings, f.again} {
+		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
+	}
+	setNumberRange(t, f, billing, "FE-{NNNN}")
+	draft := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	empty := invoiceJournal(t, f.traeger, billing, nil)
+	assert.Empty(t, empty.Documents, "a draft without a number is no document of the journal")
+	assert.Zero(t, empty.TotalCount)
+	assert.Empty(t, empty.NumberRanges)
+
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(draft.ID), "/release"), releaseBody(draft))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	released := correctedRun(t, f, billing, int64(draft.ID))
+	first, second := documentByNumber(t, released, "FE-0001"), documentByNumber(t, released, "FE-0002")
+	child := second.Children[0]
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(draft.ID), int64(first.ID)), map[string]any{"reason": "Anschrift falsch"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(draft.ID), int64(second.ID)),
+		map[string]any{"child_id": fmt.Sprint(child.ChildID), "amount_cents": 500, "reason": "Erster Tag krank"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	// Two numbers of the range are lost: the counter went on, no document
+	// carries them.
+	_, err := f.db.ExecContext(context.Background(), `UPDATE parent_billing.number_range_counters SET last_number = last_number + 2
+		WHERE organization_id = ? AND service = 'holiday'`, f.office.organization)
+	require.NoError(t, err)
+	tail := invoiceJournal(t, f.traeger, billing, nil)
+	require.Len(t, tail.Gaps, 1, "the counter went past the last document")
+	assert.EqualValues(t, 2, tail.Gaps[0].MissingCount)
+	assert.Equal(t, "FE-0004", tail.Gaps[0].AfterNumber)
+	assert.Empty(t, tail.Gaps[0].BeforeNumber)
+
+	secondRun := releaseSecondPeriodFor(t, f, billing, "neu.familie@example.org")
+	journal := invoiceJournal(t, f.traeger, billing, nil)
+	require.Equal(t, 5, journal.TotalCount)
+	assert.False(t, journal.HasMore)
+	assert.ElementsMatch(t, []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"}, journalNumbers(journal))
+	byNumber := map[string]journalDocumentBody{}
+	var gross int64
+	for _, document := range journal.Documents {
+		byNumber[document.Number] = document
+		gross += document.GrossCents
+		assert.Zero(t, document.TaxCents, document.Number)
+		assert.Equal(t, document.GrossCents, document.NetCents, document.Number)
+		assert.Equal(t, "holiday", document.Service)
+		assert.Equal(t, "traeger", document.Issuer.Body, "the Träger issues without a body of its own")
+		assert.Empty(t, document.Issuer.Key)
+		assert.NotEmpty(t, document.RecipientLastName, document.Number)
+		assert.NotEmpty(t, document.Run.Name, document.Number)
+	}
+	assert.Equal(t, gross, journal.Totals.GrossCents, "the sums cover every document of the filter")
+	assert.Equal(t, gross, journal.Totals.NetCents)
+	assert.Zero(t, journal.Totals.TaxCents)
+	assert.Equal(t, "confirmation", byNumber["FE-0001"].DocumentType, "an invoice carries the kind its release froze")
+	assert.Nil(t, byNumber["FE-0001"].Reference)
+	cancellation, credit := byNumber["FE-0003"], byNumber["FE-0004"]
+	assert.Equal(t, "cancellation", cancellation.DocumentType)
+	assert.Equal(t, -first.TotalCents, cancellation.GrossCents, "a cancellation takes its invoice back")
+	require.NotNil(t, cancellation.Reference)
+	assert.Equal(t, "cancels", cancellation.Reference.Kind)
+	assert.Equal(t, "FE-0001", cancellation.Reference.Number)
+	assert.Equal(t, "credit", credit.DocumentType)
+	assert.EqualValues(t, -500, credit.GrossCents)
+	require.NotNil(t, credit.Reference)
+	assert.Equal(t, "credits", credit.Reference.Kind)
+	assert.Equal(t, "FE-0002", credit.Reference.Number)
+	assert.EqualValues(t, secondRun, byNumber["FE-0007"].Run.ID, "the journal reaches across runs")
+	assert.Equal(t, "holiday", byNumber["FE-0007"].Run.Kind)
+	require.Len(t, journal.NumberRanges, 1)
+	assert.Equal(t, 5, journal.NumberRanges[0].DocumentCount)
+	assert.Equal(t, "FE-0001", journal.NumberRanges[0].FirstNumber)
+	assert.Equal(t, "FE-0007", journal.NumberRanges[0].LastNumber)
+	assert.Len(t, journal.Runs, 2)
+
+	require.Len(t, journal.Gaps, 1, "the lost numbers now lie between two documents")
+	assert.EqualValues(t, 2, journal.Gaps[0].MissingCount)
+	assert.Equal(t, "FE-0004", journal.Gaps[0].AfterNumber)
+	assert.Equal(t, "FE-0007", journal.Gaps[0].BeforeNumber)
+
+	// The filters narrow the list and its sums; the gaps follow only the
+	// number range.
+	only := invoiceJournal(t, f.traeger, billing, url.Values{"document_type": {"cancellation"}})
+	assert.Equal(t, []string{"FE-0003"}, journalNumbers(only))
+	assert.Equal(t, cancellation.GrossCents, only.Totals.GrossCents)
+	assert.Len(t, only.Gaps, 1, "a filter on the document type hides no gap")
+	assert.Len(t, only.Runs, 2, "the filters keep every run to choose from")
+	ofRun := invoiceJournal(t, f.traeger, billing, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(secondRun)}})
+	assert.Equal(t, []string{"FE-0007"}, journalNumbers(ofRun))
+	assert.Equal(t, []string{"FE-0002"}, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})))
+	byName := invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(cancellation.RecipientLastName)}})
+	assert.Contains(t, journalNumbers(byName), "FE-0003", "the search finds a recipient by name")
+	issued := byNumber["FE-0001"].IssuedOn
+	assert.Equal(t, 5, invoiceJournal(t, f.traeger, billing, url.Values{"from": {issued}, "to": {issued}}).TotalCount)
+	assert.Zero(t, invoiceJournal(t, f.traeger, billing, url.Values{"to": {"2000-01-01"}}).TotalCount)
+	assert.Equal(t, 5, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"traeger"}, "service": {"holiday"}, "year": {"0"}}).TotalCount)
+	otherRange := invoiceJournal(t, f.traeger, billing, url.Values{"service": {"care"}})
+	assert.Zero(t, otherRange.TotalCount)
+	assert.Empty(t, otherRange.Gaps, "another number range shows no gap of this one")
+	assert.Zero(t, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"DE98ZZZ09999999999"}}).TotalCount)
+	for _, query := range []string{"from=gestern", "to=2026-13-01", "from=2026-02-01&to=2026-01-01", "service=mensa", "document_type=brief",
+		"run_kind=ferien", "run_id=5", "run_kind=holiday", "year=-1", "page=0", "search=" + strings.Repeat("a", 101)} {
+		rec = traegerJSON(t, f.traeger, billing, http.MethodGet, invoiceJournalPath+"?"+query, nil)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", query, rec.Body.String())
+	}
+
+	// A start value the Träger-Büro set explains the jump to it.
+	_, err = f.db.ExecContext(context.Background(), `INSERT INTO parent_billing.number_range_starts
+		(organization_id, issuer_key, service, year, next_number) VALUES (?, '', 'holiday', 0, 7)`, f.office.organization)
+	require.NoError(t, err)
+	assert.Empty(t, invoiceJournal(t, f.traeger, billing, nil).Gaps, "a jump to a start value is no gap")
+
+	// Every page stands in the trail of each run it showed.
+	var views []string
+	require.NoError(t, f.db.NewRaw(`SELECT DISTINCT details->>'view' FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' IS NOT NULL`, secondRun).Scan(context.Background(), &views))
+	assert.Equal(t, []string{"journal"}, views)
+	var shown []int64
+	require.NoError(t, f.db.NewRaw(`SELECT jsonb_array_elements_text(details->'document_ids')::bigint FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal' ORDER BY id DESC LIMIT 1`, secondRun).
+		Scan(context.Background(), &shown))
+	assert.Len(t, shown, 1, "the trail names the documents of the run the reader saw")
+	var filteredOut int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, draft.ID).Scan(context.Background(), &filteredOut))
+	var readsOfSecond int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, secondRun).Scan(context.Background(), &readsOfSecond))
+	assert.NotEqual(t, filteredOut, readsOfSecond, "a page that shows no document of a run leaves its trail alone")
+
+	// #4718: the file lists every document of the filter by number, then
+	// the sums.
+	lines := billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export")
+	require.Len(t, lines, 7, "the header, five documents and the sums")
+	assert.Equal(t, "Nummer;Datum;Dokumentart;Empfänger;Rechnungssteller;Nummernkreis;Lauf;Bezug;Netto (Euro);Steuer (Euro);Brutto (Euro)", lines[0])
+	for i, number := range []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"} {
+		assert.True(t, strings.HasPrefix(lines[i+1], number+";"), "the file counts by number: %s", lines[i+1])
+	}
+	assert.Contains(t, lines[3], ";Storno;")
+	assert.Contains(t, lines[3], ";Träger;Ferienbetreuung;")
+	assert.Contains(t, lines[3], ";Storno zu FE-0001;")
+	assert.True(t, strings.HasPrefix(lines[6], "Summe;"))
+	lines = billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?document_type=credit")
+	require.Len(t, lines, 3, "the file follows the filter")
+	assert.Contains(t, lines[1], ";Gutschrift zu FE-0002;")
+	assertTraegerListFormats(t, f.traeger, billing, invoiceJournalPath+"/export", "rechnungsausgangsbuch")
+}
+
+func TestInvoiceJournalNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Ausgangsbuch Recht")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Ausgangsbuch Fremd", identityaccess.TraegerRoleBilling)
+	run := releasedBillingRun(t, f, billing)
+
+	for _, path := range []string{invoiceJournalPath, invoiceJournalPath + "/export"} {
+		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, path, nil)
+		assert.Equal(t, http.StatusForbidden, rec.Code, "GET %s without the right Abrechnung: %s", path, rec.Body.String())
+	}
+	other := invoiceJournal(t, f.traeger, foreign.token, nil)
+	assert.Empty(t, other.Documents, "another Träger lists none of these documents")
+	assert.Empty(t, other.NumberRanges)
+	assert.Empty(t, other.Runs)
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, invoiceJournalPath+"/export"), 1, "the file of another Träger holds no document")
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events WHERE run_id = ? AND details->>'view' = 'journal'`, run.ID).
+		Scan(context.Background(), &reads))
+	assert.Zero(t, reads, "refused and foreign reads leave no trail")
+	assert.Len(t, invoiceJournal(t, f.traeger, billing, nil).Documents, len(run.Documents))
+}
+
+func TestInvoiceJournalCountsMonthlyInvoicesAndTheirCancellationsInOneRange(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Ausgangsbuch Monat")
+	run, contracts := releasedCareRun(t, f, "Mia", "Lea")
+	mia := invoiceOfContract(t, run, contracts["Mia"])
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), fmt.Sprintf("/invoices/%d/cancellation", mia.ID)),
+		map[string]any{"reason": "Falscher Vertrag"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	journal := invoiceJournal(t, f.traeger, f.office.token, nil)
+	require.Equal(t, 3, journal.TotalCount, "both invoices and the Storno")
+	require.Len(t, journal.NumberRanges, 1, "the Storno counts in the range of the invoices")
+	assert.Equal(t, "care", journal.NumberRanges[0].Service)
+	assert.Empty(t, journal.Gaps)
+	var cancellation journalDocumentBody
+	for _, document := range journal.Documents {
+		assert.Equal(t, "care", document.Run.Kind)
+		assert.EqualValues(t, run.ID, document.Run.ID)
+		require.NotNil(t, document.Run.Month)
+		assert.Equal(t, careMonth, *document.Run.Month)
+		if document.DocumentType == "cancellation" {
+			cancellation = document
+		}
+	}
+	require.NotNil(t, cancellation.Reference, "the Storno names its invoice")
+	assert.Equal(t, mia.Number, cancellation.Reference.Number)
+	assert.Equal(t, "cancels", cancellation.Reference.Kind)
+	assert.Negative(t, cancellation.GrossCents)
+	assert.NotEmpty(t, cancellation.RecipientLastName, "the Storno has the recipient of its invoice")
+	assert.Equal(t, 1, invoiceJournal(t, f.traeger, f.office.token, url.Values{"document_type": {"cancellation"}}).TotalCount)
+	assert.Equal(t, 3, invoiceJournal(t, f.traeger, f.office.token, url.Values{"run_kind": {"care"}, "run_id": {fmt.Sprint(run.ID)}}).TotalCount)
+	assert.Zero(t, invoiceJournal(t, f.traeger, f.office.token, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(run.ID)}}).TotalCount,
+		"a run is named by its kind and its ID")
+
+	var details []string
+	require.NoError(t, f.db.NewRaw(`SELECT details::text FROM parent_billing.care_run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal' ORDER BY id LIMIT 1`, run.ID).Scan(context.Background(), &details))
+	require.Len(t, details, 1, "the read stands in the trail of the monthly run")
+	assert.Contains(t, details[0], `"invoice_ids"`)
+	assert.Contains(t, details[0], `"cancellation_ids"`)
+	lines := billingListCSV(t, f.traeger, f.office.token, invoiceJournalPath+"/export")
+	require.Len(t, lines, 5)
+	assert.Contains(t, strings.Join(lines, "\n"), ";Monatsbeiträge 01/2030;")
+}
+
+func TestInvoiceJournalListsJahresbescheideAsFeeNotices(t *testing.T) {
+	t.Parallel()
+	f, _, run, _ := releasedNoticeRun(t, "Träger Ausgangsbuch Bescheid")
+	journal := invoiceJournal(t, f.traeger, f.office.token, nil)
+	require.Len(t, journal.Documents, 1)
+	notice := journal.Documents[0]
+	assert.Equal(t, "fee_notice", notice.DocumentType)
+	assert.Equal(t, "care_notice", notice.Run.Kind)
+	assert.EqualValues(t, run.ID, notice.Run.ID)
+	assert.Equal(t, 2030, notice.Run.Year)
+	assert.Equal(t, "care", notice.Service, "a Jahresbescheid counts in the range of the care")
+	assert.Equal(t, run.Notices[0].Number, notice.Number)
+	assert.NotEmpty(t, notice.RecipientLastName)
+	assert.Positive(t, notice.GrossCents)
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_notice_run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, run.ID).Scan(context.Background(), &reads))
+	assert.Equal(t, 1, reads, "the read stands in the trail of the run of the Jahresbescheide")
+	lines := billingListCSV(t, f.traeger, f.office.token, invoiceJournalPath+"/export?run_kind=care_notice&run_id="+fmt.Sprint(run.ID))
+	require.Len(t, lines, 3)
+	assert.Contains(t, lines[1], ";Gebührenbescheid;")
+	assert.Contains(t, lines[1], ";Jahresbescheide 2030;")
+}
+
+func TestInvoiceJournalQueryBudgetIsFlat(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Budget Ausgangsbuch")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	list := func() testpkg.QueryMeasurement {
+		counter := testpkg.CaptureQueriesForContext(t, f.db)
+		req := httptest.NewRequest(http.MethodGet, invoiceJournalPath, nil)
+		req.Header.Set("Authorization", "Bearer "+billing)
+		rec := httptest.NewRecorder()
+		testpkg.MeasuredHTTPRequest(counter, f.traeger, rec, req.WithContext(counter.Context(req.Context())))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return counter.Measurement(counter.Queries())
+	}
+	releasedBillingRun(t, f, billing)
+	journal := list()
+	releaseSecondPeriodFor(t, f, billing, "neu.familie@example.org")
+	assert.Len(t, list().Statements, len(journal.Statements), "the journal reads and records the same statements for any number of documents and runs")
+	querybudgets.AssertQueryBudget(t, "api.traeger.invoice_journal", journal)
+}

@@ -83,6 +83,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
     return HELP_TOPICS.traegerHolidayContribution;
   }
   if (onPage(page, "/einstellungen")) return HELP_TOPICS.traegerSettings;
+  if (onPage(page, "/abrechnung/rechnungsausgangsbuch")) {
+    return HELP_TOPICS.traegerInvoiceJournal;
+  }
   if (onPage(page, "/abrechnung/jahresbescheide")) {
     return HELP_TOPICS.traegerCareNotices;
   }

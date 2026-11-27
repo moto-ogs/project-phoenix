@@ -84,6 +84,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/abrechnung/jahresbescheide/[id]/bescheid/[contractId]` | None. | Letter opening reads an individual contract notice and records access; print/download stay on action. |
 | `/abrechnung/jahresbescheide/[id]/lastschrift` | None. | The run read is audited and controls whether debit preparation exists. |
 | `/abrechnung/jahresbescheide/[id]/versand` | None. | Run and notice-letter status are audited; recipient documents and delivery actions are not prefetched. |
+| `/abrechnung/rechnungsausgangsbuch` | None. | Every page of the journal logs a read in the trail of each run it shows; filter, paging and export stay client-owned. |
 | `/abrechnung/kinderzahl` | None. | Child-number list records every number shown. |
 | `/abrechnung/kinderzahl/import` | None. | File picker, preview and import run only from interaction. |
 | `/abrechnung/kostentraeger` | None. | Shares log each contract shown; form select/edits remain opening-specific. |
