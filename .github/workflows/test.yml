@@ -387,7 +387,10 @@ jobs:
               FULL_SUITE=true
             fi
           fi
-          if [ "$FULL_SUITE" = true ]; then
+          # Only race runs partition the package list. Go expands ./... itself.
+          if [ "$FULL_SUITE" = true ] && [ "$BACKEND_RACE" != true ]; then
+            TEST_PACKAGES=./...
+          elif [ "$FULL_SUITE" = true ]; then
             all_packages=$(go list ./...)
             TEST_PACKAGES=$(printf '%s\n' "$all_packages" | FULL_SUITE=true ../scripts/backend-test-matrix.sh |
               jq -er --argjson shard "$SHARD_INDEX" '.include[] | select(.shard == $shard) | .packages')
@@ -400,11 +403,14 @@ jobs:
             echo "No changed Go packages"
             exit 0
           fi
-          echo "Running ${#packages[@]} selected Go packages"
+          echo "Running ${#packages[@]} Go package pattern(s), starting with ${packages[0]}"
+
+          includes_package() {
+            [ "$TEST_PACKAGES" = ./... ] || grep -Fxq "$1" <<< "$TEST_PACKAGES"
+          }
 
           # Only the SEPA tests validate documents against an XSD (#4697).
-          # Full runs and race shards use the same concrete package list.
-          if grep -Fxq 'github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application' <<< "$TEST_PACKAGES"; then
+          if includes_package github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application; then
             if [ -f "$RUNNER_TEMP/xmllint.log" ]; then
               until test -s "$RUNNER_TEMP/xmllint-status"; do sleep 0.1; done
               cat "$RUNNER_TEMP/xmllint.log"
@@ -421,11 +427,9 @@ jobs:
           # owner's handlers. The race run checks nothing.
           if [ "$BACKEND_RACE" != true ]; then
             export CONTRACT_ANSWERS_FILE="$RUNNER_TEMP/contract-answers.txt"
-            for package in "${packages[@]}"; do
-              if [ "$package" = github.com/moto-ogs/project-phoenix/api ]; then
-                echo "$FULL_SUITE" > "$RUNNER_TEMP/contract-answers-full-suite"
-              fi
-            done
+            if includes_package github.com/moto-ogs/project-phoenix/api; then
+              echo "$FULL_SUITE" > "$RUNNER_TEMP/contract-answers-full-suite"
+            fi
           fi
 
           # Six package binaries keep eight vCPUs busy, four the small
@@ -455,8 +459,8 @@ jobs:
           head -n 1 /proc/stat > "$RUNNER_TEMP/cpu-before"
           docker exec "$PG_CONTAINER" cat /sys/fs/cgroup/cpu.stat > "$RUNNER_TEMP/postgres-cpu-before" || true
 
-          # Single pass produces junit.xml. No retries: flaky tests should fail
-          # loudly, not be hidden. gotestsum propagates race/test failures.
+          # Stream results so compiling the pinned reporter doesn't delay Go.
+          # The workflow's bash shell sets pipefail: either side can fail the job.
           #
           # GOGC=400 is for the compiler and the linker only: they are
           # short-lived and spent 13 % less CPU with it (549 against 480 CPU s
@@ -474,11 +478,12 @@ jobs:
           # busy seconds, in pull requests with Go changes (14.11.2026, #7045);
           # a full suite of an unchanged tree finds it in the build cache.
           # backend-build-cache.yml builds with the same flag.
-          GOGC=400 "${measure[@]}" go tool gotestsum --format pkgname-and-test-fails \
-            --junitfile junit.xml --jsonfile go-test.json \
-            -- "${race_flags[@]}" -count=1 -vet=off -parallel 8 -p "$PACKAGE_WORKERS" \
+          export GOGC=400
+          "${measure[@]}" go test -json "${race_flags[@]}" -count=1 -vet=off -parallel 8 -p "$PACKAGE_WORKERS" \
             -exec "env -u GOGC" \
-            -debug-actiongraph="$RUNNER_TEMP/actiongraph.json" "${packages[@]}"
+            -debug-actiongraph="$RUNNER_TEMP/actiongraph.json" "${packages[@]}" |
+            go tool gotestsum --raw-command --format pkgname-and-test-fails \
+              --junitfile junit.xml --jsonfile go-test.json -- cat
 
       # The job keeps its cores busy, so its wall time follows CPU work. This
       # table says whose: the compiler and the linker from Go's action

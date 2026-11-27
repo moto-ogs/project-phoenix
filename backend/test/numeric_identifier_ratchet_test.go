@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -108,32 +107,20 @@ type parsedSource struct {
 func parseBackendSources(root, module string) ([]parsedSource, error) {
 	var files []parsedSource
 	packageNames := map[string]string{}
-	err := filepath.WalkDir(root, func(full string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if full != root && (strings.HasPrefix(entry.Name(), ".") || entry.Name() == "testdata" || entry.Name() == "vendor") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(full, ".go") || strings.HasSuffix(full, "_test.go") {
-			return nil
-		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, full, nil, 0)
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(root, full)
-		rel = filepath.ToSlash(rel)
-		files = append(files, parsedSource{dir: path.Dir(rel), rel: rel, fset: fset, file: file})
-		packageNames[path.Dir(rel)] = file.Name.Name
-		return nil
-	})
+	index, err := goSourceIndex(root)
 	if err != nil {
 		return nil, err
+	}
+	for _, source := range index {
+		if strings.HasSuffix(source.rel, "_test.go") || inDirNamed(source.rel, "testdata", "vendor") {
+			continue
+		}
+		fset, file, err := parseGoSourceCached(filepath.Join(root, source.rel), source.content)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, parsedSource{dir: source.pkg, rel: source.rel, fset: fset, file: file})
+		packageNames[source.pkg] = file.Name.Name
 	}
 	for i := range files {
 		files[i].imports = map[string]string{}

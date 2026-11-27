@@ -2,9 +2,6 @@ package test
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
-	"io/fs"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -28,31 +25,21 @@ func TestNoJSONStringOptionRatchet(t *testing.T) {
 		t.Fatal(err)
 	}
 	var found []string
-	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if path != root && (strings.HasPrefix(entry.Name(), ".") || entry.Name() == "testdata" || entry.Name() == "vendor") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") {
-			return nil
-		}
-		hits, err := jsonStringOptions(path)
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(root, path)
-		for _, hit := range hits {
-			found = append(found, filepath.ToSlash(rel)+":"+hit)
-		}
-		return nil
-	})
+	files, err := goSourceIndex(root)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, source := range files {
+		if inDirNamed(source.rel, "testdata", "vendor") {
+			continue
+		}
+		hits, err := jsonStringOptions(filepath.Join(root, source.rel), source.content)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, hit := range hits {
+			found = append(found, source.rel+":"+hit)
+		}
 	}
 	if len(found) > 0 {
 		t.Fatalf("the json option ,string does not make an identifier; use ident.ID (ADR 0300):\n%s", strings.Join(found, "\n"))
@@ -61,9 +48,8 @@ func TestNoJSONStringOptionRatchet(t *testing.T) {
 
 // jsonStringOptions returns line and field of each struct field whose json
 // tag carries the option ,string.
-func jsonStringOptions(path string) ([]string, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+func jsonStringOptions(path string, content []byte) ([]string, error) {
+	fset, file, err := parseGoSourceCached(path, content)
 	if err != nil {
 		return nil, err
 	}
