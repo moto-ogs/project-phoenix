@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 
+import { useBerlinClock } from "~/components/home/home-card-rows";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { formatTime } from "~/lib/date-helpers";
+import { useCheckInOpensAt } from "~/lib/hooks/check-in-lock";
 import { useOptimisticStamp } from "~/lib/hooks/use-optimistic-stamp";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
@@ -98,10 +100,20 @@ export function useHomeStamp(enabled: boolean) {
     state.kind === "loading" ||
     absences.data === undefined;
 
+  // „Einstempeln erst kurz vor Schichtbeginn“: Hat der Server heute schon
+  // „noch nicht“ gesagt (hier oder in der Zeiterfassung), bleibt Einstempeln
+  // bis zu der genannten Uhrzeit gesperrt und nennt sie. Vorab wissen kann
+  // es das Frontend nicht: Die Einstellung braucht `config:read`.
+  const opensAt = useCheckInOpensAt(today, useBerlinClock());
+  const checkInBlockedReason =
+    opensAt === null
+      ? null
+      : `Einstempeln geht heute erst ab ${opensAt} Uhr. So hat es deine Schule eingestellt.`;
+
   const toTimeTracking = () => router.push("/time-tracking");
 
   const run = async (checkIn: boolean) => {
-    if (disabled) return;
+    if (disabled || (checkIn && checkInBlockedReason !== null)) return;
     if (checkIn && todayAbsence) {
       // Die Stempeluhr fragt vorher nach, ob trotz Abwesenheit gestempelt
       // wird; die Frage steht dort.
@@ -147,6 +159,8 @@ export function useHomeStamp(enabled: boolean) {
   return {
     state,
     disabled,
+    /** Grund, warum Einstempeln gerade nicht geht; sonst `null`. */
+    checkInBlockedReason,
     checkIn: () => void run(true),
     checkOut: () => void run(false),
   };
