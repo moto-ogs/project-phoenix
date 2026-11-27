@@ -21,12 +21,12 @@ func TestStaffShiftCreateBroadcastsTimeTrackingChangeAfterCommit(t *testing.T) {
 	service := NewStaffShiftService(
 		&shiftMockRepo{},
 		&shiftMockStaffRepo{},
-		nil,
-		nil,
-		nil, pinnedShiftToday(),
+		&stubShiftTypeService{},
+		unlockedShiftFixture,
+		nil, discardShiftMoveEvent, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	service.broadcaster = broadcaster
+	service.Broadcaster = broadcaster
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),
 	)
@@ -52,12 +52,12 @@ func TestStaffShiftCreateDoesNotBroadcastAfterFailure(t *testing.T) {
 			return errors.New("insert failed")
 		}},
 		&shiftMockStaffRepo{},
-		nil,
-		nil,
-		nil, pinnedShiftToday(),
+		&stubShiftTypeService{},
+		unlockedShiftFixture,
+		nil, discardShiftMoveEvent, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	service.broadcaster = broadcaster
+	service.Broadcaster = broadcaster
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),
 	)
@@ -79,12 +79,12 @@ func TestStaffShiftUpdateCanDeferTimeTrackingBroadcast(t *testing.T) {
 			return existing, nil
 		}},
 		&shiftMockStaffRepo{},
-		nil,
-		nil,
-		nil, pinnedShiftToday(),
+		&stubShiftTypeService{},
+		unlockedShiftFixture,
+		nil, discardShiftMoveEvent, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	service.broadcaster = broadcaster
+	service.Broadcaster = broadcaster
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),
 	)

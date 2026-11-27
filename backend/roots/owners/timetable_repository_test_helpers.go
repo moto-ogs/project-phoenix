@@ -242,7 +242,6 @@ type RoomTestRecords interface {
 	List(context.Context, map[string]any) ([]*facilitiesModule.Room, error)
 	FindByIDs(context.Context, []int64) ([]*facilitiesModule.Room, error)
 	FindByIDForUpdate(context.Context, int64) (*facilitiesModule.Room, error)
-	FindByName(context.Context, string) (*facilitiesModule.Room, error)
 	Create(context.Context, *facilitiesModule.Room) error
 	Update(context.Context, *facilitiesModule.Room) error
 	Delete(context.Context, any) error

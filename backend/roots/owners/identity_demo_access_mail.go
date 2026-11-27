@@ -2,7 +2,6 @@ package owners
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -20,11 +19,9 @@ var demoContact = email.NewEmail(identityaccess.DemoContactName, identityaccess.
 type DemoAccessWiring struct {
 	CRMEnabled  bool
 	CRMToken    string
-	Dispatcher  email.Dispatcher
 	Durable     DurableMailOutbox
 	DefaultFrom email.Email
 	FrontendURL string
-	Logger      *slog.Logger
 	// Backoff spaces the send retries; nil uses the production spacing.
 	Backoff []time.Duration
 	// MaxActiveSchools caps the demo schools that may exist at once (#3466).
@@ -38,36 +35,29 @@ type DemoAccessWiring struct {
 }
 
 // demoAccessWiringFor composes the demo access for APP_ENV=demo only.
-func demoAccessWiringFor(appEnv string, dispatcher email.Dispatcher, defaultFrom email.Email, frontendURL string, maxActiveSchools int, tokens TokenAdapter, logger *slog.Logger, durable DurableMailOutbox) *DemoAccessWiring {
+func demoAccessWiringFor(appEnv string, defaultFrom email.Email, frontendURL string, maxActiveSchools int, tokens TokenAdapter, durable DurableMailOutbox) *DemoAccessWiring {
 	if !email.IsDemoEnvironment(appEnv) {
 		return nil
 	}
 	token := strings.TrimSpace(viper.GetString("hubspot_demo_token"))
 	return &DemoAccessWiring{
 		CRMEnabled: token != "", CRMToken: token,
-		Durable: durable, Dispatcher: dispatcher, DefaultFrom: defaultFrom, FrontendURL: frontendURL, MaxActiveSchools: maxActiveSchools, Logger: logger,
+		Durable: durable, DefaultFrom: defaultFrom, FrontendURL: frontendURL, MaxActiveSchools: maxActiveSchools,
 		OperatorWithoutSecondFactor: identityaccess.DemoOperatorWithoutSecondFactor,
 		NewToken:                    tokens.NewCapabilityToken, Fingerprint: tokens.CapabilityFingerprint,
 	}
 }
 
 type demoAccessMail struct {
-	dispatcher email.Dispatcher
-	durable    DurableMailOutbox
-	from       email.Email
-	origin     string
-	backoff    []time.Duration
-	logger     *slog.Logger
+	durable DurableMailOutbox
+	from    email.Email
+	origin  string
+	backoff []time.Duration
 }
 
 func newDemoAccessMail(wiring *DemoAccessWiring) demoAccessMail {
-	logger := wiring.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
-	backoff := wiring.Backoff
 	return demoAccessMail{
-		dispatcher: wiring.Dispatcher, durable: wiring.Durable, from: wiring.DefaultFrom, backoff: backoff, logger: logger,
+		durable: wiring.Durable, from: wiring.DefaultFrom, backoff: wiring.Backoff,
 		origin: wiring.FrontendURL,
 	}
 }
@@ -75,19 +65,16 @@ func newDemoAccessMail(wiring *DemoAccessWiring) demoAccessMail {
 func (m demoAccessMail) SendDemoAccessLink(ctx context.Context, access identityaccess.DemoAccessMessage, entryURL string) error {
 	message := *identityMessage(m.from, email.NewEmail("", access.Email), identityaccess.DemoAccessLinkMail(entryURL, m.origin))
 	message.ReplyTo = demoContact
-	return m.dispatch(ctx, "demo_access", access.AccessID, message, access.ExpiresAt)
+	return m.enqueue(ctx, "demo_access", access.AccessID, message, access.ExpiresAt)
 }
 
 func (m demoAccessMail) SendDemoLead(ctx context.Context, access identityaccess.DemoAccessMessage) error {
 	message := *identityMessage(m.from, demoContact, identityaccess.DemoLeadMail(access, m.origin))
 	message.ReplyTo = email.NewEmail(access.PersonName(), access.Email)
-	return m.dispatch(ctx, "demo_lead", access.AccessID, message, time.Time{})
+	return m.enqueue(ctx, "demo_lead", access.AccessID, message, time.Time{})
 }
 
-func (m demoAccessMail) dispatch(ctx context.Context, kind string, accessID int64, message email.Message, expiry time.Time) error {
-	if m.dispatcher == nil {
-		return nil
-	}
+func (m demoAccessMail) enqueue(ctx context.Context, kind string, accessID int64, message email.Message, expiry time.Time) error {
 	return enqueueDurableMail(ctx, m.durable, DurableMail{
 		Message: message, Type: kind, ReferenceID: accessID, Backoff: m.backoff, ExpiresAt: expiry,
 	})

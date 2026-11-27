@@ -14,9 +14,6 @@ import { groupKeys } from "./groups-keys";
 
 import { shellResourceKeys } from "./shell-keys";
 
-export { announcementKeys, dashboardKeys } from "./shell-keys";
-export { parentKeys } from "./parent-keys";
-
 const operatorSummaryPrefixes = [
   "operator-school-summaries",
   "operator-organization-summaries",
@@ -343,12 +340,9 @@ export const databaseKeys = {
   counts: () => "database-stats",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
-  /** The id/name options of one API list for a select, per query. */
   /** The choice of one loaded select field of a database form, by resource. */
   formFieldOptions: (resource: string) =>
     `database-form-options-${encodeURIComponent(resource)}`,
-  entityOptions: (entityType: string, query: string) =>
-    `database-entity-options-${entityType}-${encodeURIComponent(query)}`,
 } as const;
 
 export const homeLayoutKeys = {
@@ -369,9 +363,13 @@ export const homeKeys = {
   ownGroup: (accountId: string) => `home-own-group:${accountId}`,
   /**
    * „Heute anders“ (#7659): the day's changes as the account may see them.
-   * `dayChanges("")` is the prefix the SSE flush matches.
+   * `dayChanges("")` is the prefix the SSE flush matches. `date` is always
+   * the displayed Berlin day, so a mounted card gets a fresh key at midnight.
    */
-  dayChanges: (accountId: string) => `home-day-changes:${accountId}`,
+  dayChanges: (accountId: string, date?: string) =>
+    date
+      ? `home-day-changes:${accountId}:${date}`
+      : `home-day-changes:${accountId}`,
 } as const;
 
 /**
@@ -545,6 +543,11 @@ export const holidayKeys = {
    * Markierung in Betreuungs- und Dienstplan teilen sich den Eintrag.
    */
   hostedWeeks: () => "holiday-weeks",
+  /** Die Zusatztage, die die Schule selbst angelegt hat (ADR 0329). */
+  extraDays: () => "holiday-extra-days",
+  extraDay: (id: string) => `holiday-extra-days:${encodeURIComponent(id)}`,
+  /** Liste und einzelne Tage zusammen, nach einem Speichern. */
+  extraDaysFamily: "holiday-extra-days",
   studentHealth: (studentId: string) =>
     `holiday-student-health:${encodeURIComponent(studentId)}`,
   /** Betreuung, Notfall und Abholung aus der Ferienanmeldung (#6678). */

@@ -9,6 +9,7 @@ import {
   type CatalogRoute,
   type HandOffHead,
 } from "../contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "../contract/catalog-outside-mounts";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /**
@@ -28,12 +29,6 @@ export function operatorErrorResponse(
 /** The operator portal's route handlers, on the operator session only. */
 export const operator = makePortalHandlers(operatorPortal);
 
-export const {
-  post: createOperatorPostHandler,
-  put: createOperatorPutHandler,
-  del: createOperatorDeleteHandler,
-} = operator;
-
 /**
  * The operator portal's proxy: forwards `/api/operator/…` to the backend's `/operator/…`
  * for the routes the contract registers for this portal.
@@ -43,9 +38,16 @@ export const catalogProxy = (
   method: CatalogMethod,
   publicRoutes: readonly CatalogRoute[] = [],
 ) =>
-  makeCatalogProxy(operator, "/operator", routes, method, [], {
-    routes: publicRoutes,
-  });
+  makeCatalogProxy(
+    operator,
+    "/operator",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.platform,
+    {
+      routes: publicRoutes,
+    },
+  );
 
 /**
  * The operator portal's proxy for a route file below its BFF prefix that Next would

@@ -54,12 +54,13 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	delivery deliveryRuntime.Capability, closureMail owners.HolidayClosureMail, outcomes deliveryRuntime.EmailOutcomes, keys TurnstileKeys,
 	healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, statistics studentpresence.StatisticsReports, changes careplan.OfferingChangeCapability, contractHolidays carecontract.SchoolHolidays,
 	holidayCalendar enrollmentOwner.HolidaySchoolCalendar, closureHolidays owners.HolidayClosureHolidays, calendarSchools traegercalendar.Schools, schoolPhases *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	staffing schoolCalendarHTTP.StaffingChangeQueue, contractEnrollments enrollmentOwner.ContractEnrollments, traegerModules TraegerBookedModules, timetableOwner timetable.Owner, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
+	staffing schoolCalendarHTTP.StaffingChangeQueue, notifications owners.DeliveryNotifications, contractEnrollments enrollmentOwner.ContractEnrollments, traegerModules TraegerBookedModules, timetableOwner timetable.Owner, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
 	closingDays := mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
-	dayChanges, err := traegerDayChangePorts(closingDays, timetableOwner)
+	mountTraegerOpeningChangeRoutes(root, calendarSchools, staffing, notifications, logger, func() string { return today().String() })
+	dayChanges, err := traegerDayChangePorts(organizations, closingDays, timetableOwner)
 	if err != nil {
 		return err
 	}
@@ -77,6 +78,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	}
 	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, traegerModules, accountLinks, viper.GetString("app_env"), logger, now).Router())
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, now)
+	mountSchoolExtraDayRoutes(tenant, organizations, holidayCalendar, now)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, traegerModules, today, now, logger)
 	signingLink := root
 	if limit := careContractSigningRateLimit(limiters.enabled(), demoLoopbackExempt(), limiters.newLimiter); limit != nil {

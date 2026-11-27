@@ -14,16 +14,12 @@ import { useUnreadCount } from "./use-unread-count";
  * read server-side — so the badge updates without a full reload).
  */
 export function useParentMessagesUnread(enabled: boolean) {
-  const { unreadCount, refresh } = useUnreadCount(
-    parentKeys.messagesUnreadCount(),
-    {
-      enabled,
-      fetcher: fetchMessagesUnreadCount,
-      eventNames: ["parent-messages-unread-refresh"],
-      refetchOnFocus: true,
-      // Collapse a burst of parent-message events into one count refetch.
-      eventDebounceMs: 500,
-    },
-  );
-  return { unreadCount, refresh };
+  const { unreadCount } = useUnreadCount(parentKeys.messagesUnreadCount(), {
+    enabled,
+    fetcher: fetchMessagesUnreadCount,
+    eventNames: ["parent-messages-unread-refresh"],
+    // Collapse a burst of parent-message events into one count refetch.
+    eventDebounceMs: 500,
+  });
+  return { unreadCount };
 }

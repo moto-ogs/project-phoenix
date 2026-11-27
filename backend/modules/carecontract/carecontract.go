@@ -288,12 +288,36 @@ const (
 	SkipImportedContract = "imported_contract"
 )
 
+// Columns the list of contracts is sorted by (#8138).
+const (
+	// ContractSortChild sorts by the child's last and first name.
+	ContractSortChild = "child"
+	// ContractSortSchool sorts by the name of the school.
+	ContractSortSchool = "school"
+	// ContractSortStart sorts by the first day of the current version.
+	ContractSortStart = "start"
+	// ContractSortStatus sorts by the state in the order of Statuses.
+	ContractSortStatus = "status"
+)
+
+// ContractSorts are the columns the list of contracts is sorted by.
+var ContractSorts = []string{ContractSortChild, ContractSortSchool, ContractSortStart, ContractSortStatus}
+
+// Statuses are the states of a contract in the order of its life.
+var Statuses = []string{StatusDraft, StatusSent, StatusActive, StatusTerminated, StatusWithdrawn, StatusEnded}
+
 type ContractFilter struct {
 	Status   string
 	SchoolID int64
 	Search   string
 	Offset   int
 	Limit    int
+	// Sort orders the list by a column (ContractSorts), Descending turns it
+	// round; without a column the newest contract comes first (#8138).
+	Sort       string
+	Descending bool
+	// Revision is the last page's cursor for Offset. A stale prefix restarts paging.
+	Revision string
 	// Export reads every contract of the filter for a file (#4718): at most
 	// ContractExportLimit, Offset and Limit ignored, recorded as an export.
 	Export bool
@@ -347,6 +371,7 @@ type ContractList struct {
 	Contracts []ContractSummary `json:"contracts"`
 	Counts    map[string]int    `json:"counts"`
 	HasMore   bool              `json:"has_more"`
+	Revision  string            `json:"revision"`
 }
 
 // Version is the frozen content of a contract version: the child, the

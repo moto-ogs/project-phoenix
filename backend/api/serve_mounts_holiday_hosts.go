@@ -75,3 +75,24 @@ func holidayHostWeeksPermission() common.Middleware {
 func NewHolidayHostGuestHTTP(participants *enrollmentAPI.HolidayHostResource, guests enrollmentOwner.HolidayGuests) *enrollmentAPI.HolidayHostResource {
 	return enrollmentAPI.NewHolidayHostGuestResource(participants, guests, common.RequiresPermission(permissions.UsersCreate))
 }
+
+// mountSchoolExtraDayRoutes serves the extra care days a school plans for
+// itself (#4817, ADR 0329) at /api/holiday-extra-days, behind schedules:update,
+// the right that plans the school's closing days. The days are rows of the
+// school's Träger: the route reads that Träger from Organisation & Tenancy and
+// opens its Träger transaction on its own. holidayCalendar refuses a day
+// without care.
+func mountSchoolExtraDayRoutes(tenant chi.Router, schools owners.HolidayHostSchools, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, now func() time.Time) {
+	tenant.Mount("/holiday-extra-days", NewSchoolExtraDayHTTP(schools, holidayCalendar, now).Router(ProtectedTenantRoutes))
+}
+
+// NewSchoolExtraDayHTTP binds the school's extra days to Enrollment and the
+// school's Träger to Organisation & Tenancy.
+func NewSchoolExtraDayHTTP(schools owners.HolidayHostSchools, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, now func() time.Time) *enrollmentAPI.SchoolExtraDayResource {
+	// The Träger's holiday periods also serve the days a school plans itself.
+	days, ok := enrollmentCompose.NewHolidayPeriods(now, holidayCalendar).(enrollmentOwner.SchoolExtraDays)
+	if !ok {
+		panic("school extra days: the holiday periods do not serve the school's own days")
+	}
+	return enrollmentAPI.NewSchoolExtraDayResource(days, owners.NewHolidayHostTraeger(schools), common.RequiresPermission(permissions.SchedulesUpdate))
+}

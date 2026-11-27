@@ -366,7 +366,7 @@ func (s *service) applyBatchCheckOut(
 // closeBatchVisits ends the batch's open room visits entered on or before the
 // batch day.
 func (s *service) closeBatchVisits(ctx context.Context, actionable []int64, now time.Time, day calendar.Date) ([]studentpresence.Visit, error) {
-	openVisits, err := s.currentPresenceVisits(ctx, actionable, false)
+	openVisits, err := s.currentPresenceVisits(ctx, actionable)
 	if err != nil {
 		return nil, &ActiveError{Op: "ProcessSchoolCheckinBatch", Err: err}
 	}

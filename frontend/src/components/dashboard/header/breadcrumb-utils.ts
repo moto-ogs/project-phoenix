@@ -48,6 +48,12 @@ const detailRouteTitles: Array<{
     rootPath: "/rooms",
     title: "Raum",
   },
+  // Zusatztage der Schule (#4817): Liste, neuer Tag und einzelner Tag.
+  {
+    basePath: "/ferienwochen/",
+    rootPath: "/ferienwochen",
+    title: "Zusatztage",
+  },
   // Die Mitteilungsseite (#3115); den Titel setzt die Seite selbst.
   {
     basePath: "/parent-announcements/",

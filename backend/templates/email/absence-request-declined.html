@@ -1,13 +1,11 @@
 {{define "absence-request-declined.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
-    <h1>Dein Antrag wurde abgelehnt</h1>
+    <h1>Ihr Antrag wurde abgelehnt</h1>
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
 
-    <p>dein Abwesenheitsantrag wurde leider abgelehnt:</p>
+    <p>Ihr Abwesenheitsantrag wurde leider abgelehnt:</p>
 
     <div class="highlight-box">
         <p><strong>{{.AbsenceTypeLabel}}</strong><br>
@@ -15,16 +13,13 @@
         <p>Begründung: {{.DecisionNote}}</p>
     </div>
 
-    <p>Bei Fragen wende dich bitte direkt an deine Leitung.</p>
+    <p>Bei Fragen wenden Sie sich bitte direkt an Ihre Leitung.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">Zur Zeiterfassung</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .LinkURL}}
 
 {{template "footer" .}}
 {{end}}

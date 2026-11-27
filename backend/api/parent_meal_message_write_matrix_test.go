@@ -213,6 +213,7 @@ type scenarioRun struct {
 	writeScenario
 	group     string
 	family    mealWriteFamily
+	request   writeCall
 	start     map[string]string // raw, for restoring
 	startCmp  map[string]string
 	fullCmp   map[string]string
@@ -235,13 +236,16 @@ func (r mealWriteRig) prepareScenario(t *testing.T, group string, sc writeScenar
 	if sc.prepare != nil {
 		sc.prepare(t, r, f)
 	}
-	run := &scenarioRun{writeScenario: sc, group: group, family: f}
+	// Every cell starts from the same restored rows. Read the version once,
+	// as the parent would, then replay that exact request under each fault.
+	request := r.asRead(t, sc.call(f), f.token)
+	run := &scenarioRun{writeScenario: sc, group: group, family: f, request: request}
 	run.start = r.rows(t, f.TenantID, false)
 	run.startCmp = r.rows(t, f.TenantID, true)
 	counts := r.rowCounts(t, f.TenantID)
 	before := r.broadcasts()
 	r.faults.arm(nil)
-	rec := r.call(t, context.Background(), sc.call(f), f.token)
+	rec := r.call(t, context.Background(), run.request, f.token)
 	require.Equal(t, http.StatusOK, rec.Code, "%s %s: %s", sc.route, sc.name, rec.Body.String())
 	events, _ := r.faults.snapshot()
 	// The oracle: the row changes and broadcasts fixed in the scenario, and
@@ -295,7 +299,7 @@ func (r mealWriteRig) observe(t *testing.T, run *scenarioRun, set func(*writeFau
 	t.Helper()
 	before := r.broadcasts()
 	r.faults.arm(set)
-	rec := r.call(t, context.Background(), run.call(run.family), run.family.token)
+	rec := r.call(t, context.Background(), run.request, run.family.token)
 	events, begins := r.faults.snapshot()
 	out := writeOutcome{answer: answer(t, rec), broadcasts: r.broadcasts() - before}
 	rows, err := r.rowsOf(run.family.TenantID, volatileColumns)

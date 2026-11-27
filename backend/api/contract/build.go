@@ -272,9 +272,6 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 // retryTraits checks the traits that decide what the proxy may repeat or
 // keep: NoCommit on a POST only, PrivateCache on a file of a session portal.
 func retryTraits(rc Registration, where string) error {
-	if rc.Refuses != "" && !rc.Deprecated {
-		return fmt.Errorf("%s: only a Deprecated route names Refuses; a route that stays must answer", where)
-	}
 	if rc.NoCommit != "" && rc.Method != "POST" {
 		return fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
 	}

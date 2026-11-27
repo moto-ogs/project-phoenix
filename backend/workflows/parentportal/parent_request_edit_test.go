@@ -87,7 +87,7 @@ func TestEditExcusedRequestReplacesWithdrawal(t *testing.T) {
 	require.Len(t, edited.Dates, 1)
 	assert.Equal(t, corrected, edited.Dates[0])
 	assert.Equal(t, "Doch einen Tag später", edited.Note)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, edited.Status)
+	assert.Equal(t, careplan.ExcusedRequestStatusPending, edited.Status)
 	assert.NotEqual(t, version, readstate.Of(edited.UpdatedAt), "an edit bumps the version")
 
 	rows := listLedger(t, db, events, chain.TenantID, original.ID)

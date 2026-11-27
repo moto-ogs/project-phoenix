@@ -25,6 +25,7 @@ import {
   familiesLabel,
 } from "~/components/traeger/closing-day-holiday-impact";
 import { TraegerHolidayClosureNotices } from "~/components/traeger/traeger-holiday-closure-notices";
+import { TraegerOpeningChangesSection } from "~/components/traeger/traeger-opening-changes-section";
 import {
   traegerExportScope,
   useTraegerListExportItems,
@@ -506,6 +507,14 @@ export default function TraegerClosingDaysPage() {
           />
         )}
       </SectionCard>
+
+      <TraegerOpeningChangesSection
+        year={year}
+        from={from}
+        to={to}
+        schools={schools}
+        canManage={canManage}
+      />
 
       <SectionCard
         title="Feiertage nach Bundesland"

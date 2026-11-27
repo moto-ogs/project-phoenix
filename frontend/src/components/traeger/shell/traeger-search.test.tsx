@@ -2,7 +2,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TraegerSchool } from "~/lib/traeger-api";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 const { mockPush, sessionUser, schoolsState } = vi.hoisted(() => ({
   mockPush: vi.fn(),
@@ -69,7 +68,6 @@ describe("Träger search (#7648)", () => {
   beforeEach(() => {
     // On the Träger host the paths drop their /traeger prefix.
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
     sessionUser.permissions = ["traeger_overview:read"];
     schoolsState.schools = SCHOOLS;
     schoolsState.error = null;
@@ -78,7 +76,6 @@ describe("Träger search (#7648)", () => {
   afterEach(() => {
     mockPush.mockReset();
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
   });
 
   it("opens with Ctrl+K and Cmd+K, and with the search button", async () => {

@@ -20,8 +20,10 @@ vi.mock("~/lib/backend-client.server", async (original) => ({
 }));
 
 vi.mock("~/lib/route-wrapper.server", () => ({
-  createPutHandler: (handler: Function) => handler,
-  createDeleteHandler: (handler: Function) => handler,
+  tenant: {
+    put: (handler: Function) => handler,
+    del: (handler: Function) => handler,
+  },
 }));
 
 vi.mock("next/cache", () => ({

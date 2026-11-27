@@ -97,13 +97,11 @@ const IDLE_MOVE = { type: "idle" } as const;
 interface StudentsInRoomSectionProps {
   readonly roomId: string;
   readonly roomName: string;
-  readonly onSelectionActiveChange?: (active: boolean) => void;
 }
 
 export function StudentsInRoomSection({
   roomId,
   roomName,
-  onSelectionActiveChange,
 }: StudentsInRoomSectionProps) {
   const router = useTenantRouter();
   const { data: session } = useSession();
@@ -396,10 +394,6 @@ export function StudentsInRoomSection({
     setBulkMoveState(IDLE_MOVE);
     clearMoveErrors();
   }, [roomId, clearMoveErrors]);
-
-  useEffect(() => {
-    onSelectionActiveChange?.(selectedVisibleCount > 0);
-  }, [onSelectionActiveChange, selectedVisibleCount]);
 
   useEffect(() => {
     if (
@@ -745,7 +739,6 @@ function BulkMoveToolbar({
     >
       <FormRow>
         <DatabaseSelect
-          id="room-bulk-target"
           name="room-bulk-target"
           label="Zielraum"
           value={targetValue}
@@ -916,7 +909,6 @@ function SelectableStudentRow({
       schoolClass={student.school_class}
       groupName={student.group_name ?? undefined}
       photoUrl={student.photo_url ?? null}
-      chrome="plain"
     />
   );
 

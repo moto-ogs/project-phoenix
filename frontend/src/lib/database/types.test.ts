@@ -3,48 +3,8 @@
  * Tests utility functions and type definitions
  */
 import { describe, it, expect } from "vitest";
-import {
-  defineEntityConfig,
-  configToFormSection,
-  type SectionConfig,
-} from "./types";
+import { configToFormSection, type SectionConfig } from "./types";
 import { childrenConcept } from "~/lib/concepts/children";
-
-describe("defineEntityConfig", () => {
-  it("returns the config as-is with proper typing", () => {
-    const list = () => Promise.resolve([]);
-    const config = defineEntityConfig({
-      name: {
-        singular: "Test",
-        plural: "Tests",
-      },
-      concept: childrenConcept,
-      labels: {
-        createModalTitle: "Test erstellen",
-        editModalTitle: "Test bearbeiten",
-      },
-      api: { list },
-      form: {
-        sections: [],
-      },
-      detail: {
-        sections: [],
-      },
-      list: {
-        title: "Test",
-        description: "Test description",
-        searchPlaceholder: "Search...",
-        item: {
-          title: () => "Test",
-        },
-      },
-    });
-
-    expect(config.name.singular).toBe("Test");
-    expect(config.name.plural).toBe("Tests");
-    expect(config.api.list).toBe(list);
-  });
-});
 
 describe("configToFormSection", () => {
   it("converts SectionConfig to FormSection", () => {

@@ -244,6 +244,8 @@ import type { roomsCatalogTopic as authored_roomsCatalogTopic } from "./articles
 
 import type { roomsTopic as authored_roomsTopic } from "./articles/rooms";
 
+import type { schoolExtraCareDayTopic as authored_schoolExtraCareDayTopic } from "./articles/school-extra-care-day";
+
 import type { schoolSearchTopic as authored_schoolSearchTopic } from "./articles/school-search";
 
 import type { schoolTraegerDocumentsTopic as authored_schoolTraegerDocumentsTopic } from "./articles/school-traeger-documents";
@@ -388,6 +390,8 @@ import type { traegerDocumentTemplatesTopic as authored_traegerDocumentTemplates
 
 import type { traegerExportHandoverTopic as authored_traegerExportHandoverTopic } from "./articles/traeger-export-handover";
 
+import type { traegerExtraCareDayTopic as authored_traegerExtraCareDayTopic } from "./articles/traeger-extra-care-day";
+
 import type { traegerFinanceExportsTopic as authored_traegerFinanceExportsTopic } from "./articles/traeger-finance-exports";
 
 import type { traegerHolidayAllocationTopic as authored_traegerHolidayAllocationTopic } from "./articles/traeger-holiday-allocation";
@@ -407,6 +411,8 @@ import type { traegerHolidayRegistrationTopic as authored_traegerHolidayRegistra
 import type { traegerHolidayWishTopic as authored_traegerHolidayWishTopic } from "./articles/traeger-holiday-wish";
 
 import type { traegerInvitationTopic as authored_traegerInvitationTopic } from "./articles/traeger-invitation";
+
+import type { traegerInvoiceJournalTopic as authored_traegerInvoiceJournalTopic } from "./articles/traeger-invoice-journal";
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
@@ -1068,8 +1074,15 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
+          // Gesperrte Räume in „Heute anders" (#8161), api/day_changes_room_closures.go.
+          "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
+          // #8234: eigener Termin im gesperrten Raum.
+          "Hast du heute einen Termin in dem gesperrten Raum, steht die Sperre unter `Betrifft dich`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          // Vorschau auf morgen (#7657), components/home/day-switch.tsx.
+          "Oben in der Karte wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+          "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
@@ -1398,6 +1411,10 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",
       "Schicht-Serien im Dienstplan lassen Ferien und Schließtage aus.",
       "Ein Schließtag mit `Vom Träger` hat dein Träger geplant. Er gilt wie deine eigenen Schließtage. Ändern kann ihn nur das Träger-Büro.",
+      // #8202: geänderte Öffnungszeiten des Trägers.
+      "Einen Tag mit `Vom Träger` unter `Geänderte Öffnungszeiten` hat dein Träger geplant. Er gilt wie deine eigenen Tage. Ändern kann ihn nur das Träger-Büro.",
+      // #8231: Hinweis bei Tagen vom Träger.
+      "Auch wenn dein Träger einen solchen Tag anlegt, ändert oder löscht, bekommen Team, Eltern und Träger-Büro einen Hinweis. Dafür gilt deine Einstellung `Benachrichtigung bei geänderter Öffnungszeit` genauso.",
       "Mit `Auch in den Ferien und an Schließtagen planen` planst du auch dann Schichten.",
       "An gesetzlichen Feiertagen plant eine Serie nie Schichten.",
       "Schichten, die schon geplant waren, bleiben stehen.",
@@ -2426,6 +2443,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
       // #7306: die eigenen Seiten brauchen ein Personalprofil der Schule.
       "Fehlen dir selbst `Mein Dienstplan`, `Mein Kalender` und `Zeiterfassung`? Diese Seiten zeigen deine eigenen Zeiten und Termine. Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Über den Träger fehlen diese Seiten deshalb.",
+      // #7351: Planen braucht ein Personalprofil oder den Weg über den Träger.
+      "Steht über dem Plan `Du kannst den Dienstplan nur ansehen`? Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Melde dich dafür beim moto-Team. Über den Träger planst du auch ohne Profil. `Krank melden` und das Übernehmen von Abwesenheiten fehlen dann aber.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeReview,
@@ -3862,6 +3881,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
     result:
       "Du weißt, wie viele Kinder in welcher Zeit kommen und woher sie kommen.",
     notes: [
+      "Auch ein `Zusatztag` des Trägers steht hier, zum Beispiel ein Brückentag. Er zeigt statt einer Woche den einen Tag.",
       "Die Woche steht auch im `Betreuungsplan` und im `Dienstplan`: im Kopf jedes Tages mit `Ferienbetreuung`, der Zahl der Kinder und der Betreuungszeit. Ein Klick darauf öffnet diese Seite.",
       "Über das Menü mit den drei Punkten lädst du die Liste `Als Excel herunterladen` oder `Als CSV herunterladen`.",
       "Bei Tagesbuchung nennt die Spalte `Tage` die gebuchten Tage. Das gilt auch für Excel und CSV.",
@@ -6074,6 +6094,7 @@ export const ownProfileTopic = function ownProfileTopic(): HelpTopic {
     notes: [
       "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
       "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+      "Unter `Mehr Kontrast` schaltest du dunklere Ränder an Eingabefeldern, Kästchen und Schaltern ein. Das gilt für dein Konto, auf jedem Gerät.",
     ],
     related: [
       HELP_TOPICS.staffNotifications,
@@ -6518,7 +6539,7 @@ export const parentChildOverviewTopic =
         "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
         "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
         "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, wer dein Kind abholt, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
         // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
         "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
         // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
@@ -6526,13 +6547,16 @@ export const parentChildOverviewTopic =
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
         "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
         "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",
+        // Vorschau auf morgen (#8236), components/home/day-switch.tsx.
+        "Neben `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen für dein Kind anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+        "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
       ],
       differences: [
         "Hast du mehrere Kinder, heißt der Punkt unten `Meine Kinder`.",
         "Ist dein Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
-        "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.`",
+        "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.` Für morgen steht dort `Morgen läuft alles wie geplant.`",
         "Konnte moto nicht alles laden, steht dort ein Hinweis. Schau dann später noch einmal nach.",
         "Hat dein Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
@@ -7188,7 +7212,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       {
         title: "Die eigene Anrede wählen",
         description:
-          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Karin` oder `Lieber Jonas`, ohne Anrede mit `Guten Tag` und deinem Namen.",
+          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Frau Klein` oder `Lieber Herr Klein`, ohne Anrede mit `Guten Tag` und deinem Namen.",
         steps: [
           "Tippe bei deinem eigenen Namen auf den Stift `Bearbeiten`.",
           "Wähle bei `Anrede` `Frau`, `Herr` oder `Keine Angabe`.",
@@ -7329,6 +7353,7 @@ export const parentHolidayRegistrationTopic =
       result:
         "Du bekommst eine E-Mail: Die Anmeldung ist eingegangen. Das ist noch keine Zusage. Der Träger schreibt dir, ob dein Kind einen Platz bekommt. In der E-Mail steht auch `Deine Erklärung` mit dem genauen Text. Hebe die E-Mail auf. Mit `Stand ansehen` in der E-Mail siehst du jederzeit, wie weit deine Anmeldung ist. In der Eltern-App siehst du den Stand unter `Ferienanmeldungen`.",
       notes: [
+        "Der Träger kann auch einen einzelnen `Zusatztag` anbieten, zum Beispiel einen Brückentag. Du meldest dein Kind genauso an. Statt `Wochen` steht dort `Zusatztag` mit dem Tag. Ist der Tag im Monatsbeitrag enthalten, siehst du keinen Preis und keinen `Beitrag`.",
         "Achtet der Träger auf den Ferienwunsch aus der Anmeldung für das Schuljahr, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in dieser Anmeldung steht.",
         "Ein Elternkonto brauchst du nicht. Mit Konto siehst du in der Eltern-App den Stand der Anmeldung, die Bestätigung und die Rechnung.",
         "Hast du bei `Möchtest du ein Elternkonto anlegen?` `Ja` gewählt? Dann bekommst du eine zweite E-Mail. Öffne den Link darin. Lege zweimal dein Passwort fest und wähle `Konto anlegen`. Danach wählst du `Anmelden`.",
@@ -7993,12 +8018,14 @@ export const parentPickupChangeTopic =
         "Wähle bei `Tag` den betroffenen Tag.",
         "Trage bei `Abholzeit` die neue Zeit ein, zum Beispiel 15:30.",
         "Holt jemand anderes ab? Wähle bei `Wer holt ab?` die Person.",
+        // #8162: eine Person, die keine Kontaktperson ist.
+        "Ist die Person nicht bei deinen Kontakten? Wähle `Andere Person` und schreib bei `Name der Person` den Namen auf.",
         "Trage bei `Grund für die Änderung` kurz ein, warum.",
         "Hast du eine Person gewählt, unterschreibe die Erlaubnis im Feld. Tippe auf `Unterschrift bestätigen`.",
         "Tippe auf `Anfrage senden`.",
       ],
       result:
-        "Die Änderung gilt erst, nachdem die OGS sie bestätigt hat. Danach bekommt das Team deines Kindes einen Hinweis. Der reguläre Wochenplan bleibt unverändert. Eine gewählte Person darf nur an diesem Tag abholen.",
+        "Die Änderung gilt erst, nachdem die OGS sie bestätigt hat. Danach bekommt das Team deines Kindes einen Hinweis. Der reguläre Wochenplan bleibt unverändert. Eine gewählte Person darf nur an diesem Tag abholen. An dem Tag steht sie bei `Heute anders` mit `Von dir eingetragen`.",
       differences: [
         "Steht dort `Abholung für ... ändern`? Dann kannst du auch die Abholart ändern. Wähle bei `Abholart an diesem Tag` zum Beispiel `Wird abgeholt`. Lasse `Abholzeit` leer, wenn die Uhrzeit gleich bleibt.",
         "Hat die OGS die Abholart für den Tag schon festgelegt? Dann steht sie im Fenster. Für eine Änderung schreibe der OGS.",
@@ -8006,13 +8033,14 @@ export const parentPickupChangeTopic =
       ],
       notes: [
         "Der Grund ist Pflicht und darf höchstens 255 Zeichen lang sein.",
-        "Bei `Wer holt ab?` stehen nur Personen, die du bei den Kontakten eingetragen hast. Eine neue Person trägst du vorher dort ein.",
+        "Bei `Wer holt ab?` stehen deine Kontakte und `Andere Person`. Eine andere Person zeigt bei der Abholung ihren Ausweis. Nach dem Tag löscht moto sie beim Kind. In deiner Anfrage und im Nachweis bleibt der Name stehen.",
         "Nach dem Senden findest du bei der Anfrage `Nachweis (PDF)`. Darin stehen deine Erklärung und deine Unterschrift.",
         "Soll sich die Zeit dauerhaft ändern? Dann frage eine Änderung der Betreuung an.",
       ],
       troubleshootingDetails: [
         "moto sagt, das Ändern der Abholzeit sei für diese OGS nicht aktiviert? Dann schreibe der OGS eine Nachricht.",
-        "`Wer holt ab?` fehlt? Dann hast du noch keine weitere Person bei den Kontakten eingetragen.",
+        "`Wer holt ab?` fehlt? Dann hast du bei `Abholart an diesem Tag` zum Beispiel `Geht allein` gewählt. Wer allein geht, wird nicht abgeholt.",
+        "moto sagt, die Frist für heute ist vorbei? Dann änderst du die Abholung für heute nicht mehr. Schreib der OGS eine Nachricht. Spätere Tage kannst du weiter ändern.",
         "moto sagt, die Betreuung ist für heute schon zu Ende? Dann änderst du die Abholzeit für heute nicht mehr, auch wenn dein Kind noch im Unterricht ist. Andere Tage kannst du weiter ändern.",
       ],
       related: [
@@ -8111,7 +8139,9 @@ export const parentRequestsTopic = function parentRequestsTopic(
       // #3945: Tagesanfrage mit Abholart.
       "Eine Anfrage für einen einzelnen Tag kann die Abholzeit, die Abholart oder beides ändern. Die neue Abholart gilt nur an diesem Tag.",
       // #4780: Abholperson fuer einen Tag und Abholberechtigung je Wochentag.
-      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen. Nach dem Freigeben steht beim Kind für diesen Tag `Abholung durch ... (Erlaubnis der Eltern)`.",
+      // #8162: die Freigabe setzt die Abholperson des Tages.
+      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen: eine Kontaktperson oder eine andere Person mit Namen. Nach dem Freigeben steht in der Kinderkarte `Holt heute ab: ...`. Bei einer anderen Person steht `(Ausweis prüfen)` dabei.",
+      "Hat die OGS für den Tag schon selbst eine Abholperson eingetragen? Dann lässt sich die Anfrage nicht freigeben. Ändere die Abholperson direkt beim Kind.",
       "Eine `Abholberechtigung` trägt eine Kontaktperson als abholberechtigt ein, an allen Tagen oder nur an bestimmten Tagen. Sie gilt erst nach dem Freigeben.",
       "Haben die Eltern unterschrieben, öffnest du mit `Nachweis (PDF)` die Erklärung und die Unterschrift.",
       // #5698: Elternmeldung für einen Tag mit Teilentschuldigung.
@@ -8120,7 +8150,7 @@ export const parentRequestsTopic = function parentRequestsTopic(
       "Ist der Tag heute, zeigt die Kinderkarte nach dem Freigeben unten einen orangen Hinweis.",
       // #6855: freigegebene Abholzeit für einen Tag informiert das Team
       // (Typ student_pickup_changed) und markiert die Kinderakte.
-      "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
+      "Gibst du eine neue Abholzeit oder eine Abholperson für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
       // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
       "Wer die Änderung noch nicht kennt, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Das X schließt den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
@@ -8561,7 +8591,7 @@ export const roomsCatalogTopic = function roomsCatalogTopic(
       {
         title: "Einen Raum sperren",
         description:
-          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort.",
+          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort. Wer in der Zeit einen Termin im Raum hat, bekommt den Hinweis `Raum gesperrt`. Am Tag der Sperre sieht das Team den Raum mit dem Grund auf der `Startseite` unter `Heute anders`.",
         steps: [
           "Öffne `Räume` und wähle den Raum aus der Liste.",
           "Öffne den Reiter `Stammdaten`.",
@@ -8757,6 +8787,79 @@ export const roomsTopic = function roomsTopic(
     related: [HELP_TOPICS.activeSupervision, HELP_TOPICS.changeLocation],
   };
 } satisfies typeof authored_roomsTopic;
+
+/**
+ * `/ferienwochen/zusatztage` (#4817, ADR 0329): die OGS legt einen einzelnen
+ * Betreuungstag außerhalb der Ferien für sich selbst an, etwa einen
+ * Brückentag. Anmeldungen, Plätze und Abrechnung bleiben beim Träger.
+ */
+export const schoolExtraCareDayTopic =
+  function schoolExtraCareDayTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.leadExtraCareDay,
+      title: "Zusatztag für deine OGS anlegen",
+      question: "Wie biete ich Betreuung an einem Brückentag an?",
+      summary:
+        "Ein Zusatztag ist ein einzelner Betreuungstag außerhalb der Ferien, zum Beispiel ein Brückentag oder ein beweglicher Ferientag. Du legst ihn für deine OGS an.",
+      group: "auswertung",
+      audience: "lead",
+      icon: "CalendarStar",
+      requirements: [
+        "Du darfst die Schließtage deiner OGS planen. Das darf die Leitung.",
+        "Der Tag ist an deiner OGS kein Feiertag und kein Schließtag.",
+      ],
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Zusatztag anlegen",
+          steps: [
+            "Klappe in der Seitenleiste `Eltern` auf.",
+            "Öffne `Ferienwochen`.",
+            "Wähle oben `Zusatztage`. Du findest `Zusatztage` auch bei den `Schließtagen`.",
+            "Wähle `Zusatztag anlegen`.",
+            "Trage den `Name des Zusatztags` ein, zum Beispiel Brückentag nach Himmelfahrt.",
+            "Wähle den `Tag`. Möglich ist ein Tag von Montag bis Freitag.",
+            "Trage unter `Betreuungszeit` `Beginn` und `Ende` ein.",
+            "Trage `Anmeldebeginn` und `Anmeldeschluss` ein. Der Anmeldeschluss liegt spätestens am Zusatztag.",
+            "Wähle unter `Beitrag` `Im Monatsbeitrag enthalten` oder `Mit Tagespreis`. Mit Tagespreis trägst du den `Preis pro Tag in Euro` ein.",
+            "Gibt es an dem Tag Mittagessen? Schalte `Mittagessen anbieten` ein.",
+            "Schreibe unter `Hinweise für Eltern`, was Eltern wissen müssen.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Veröffentlichen",
+          steps: [
+            "Öffne den Zusatztag in der Liste `Zusatztage`.",
+            "Wähle oben `Veröffentlichen`.",
+            "Bestätige mit `Veröffentlichen`.",
+            "Unter `Link für Eltern` steht danach der Link zur Anmeldung. Kopiere ihn mit `Link kopieren` und gib ihn an die Eltern weiter.",
+          ],
+        },
+      ],
+      result:
+        "Der Zusatztag ist für die Anmeldung freigegeben. Eltern melden ihr Kind über den Link oder in der Eltern-App an. Dein Träger bestätigt die Anmeldungen. Bestätigte Kinder stehen danach unter `Ferienwochen`.",
+      notes: [
+        "`Im Monatsbeitrag enthalten`: Eltern melden nur an, dass ihr Kind kommt. Sie sehen keinen Preis.",
+        "`Mit Tagespreis`: Eltern buchen den Tag dazu. Den Preis rechnet dein Träger ab.",
+        "Dein Träger sieht den Zusatztag in seinem Portal und kann ihn ändern. Dort werden auch die Plätze begrenzt.",
+        "Ein gespeicherter Zusatztag ist zuerst ein Entwurf. Ein veröffentlichter Zusatztag wird nicht wieder zum Entwurf.",
+      ],
+      differences: [
+        "`Im Monatsbeitrag enthalten` und `Mit Tagespreis` lassen sich nicht wählen? Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen. Er bleibt dann so.",
+        "Ein Zusatztag fehlt in der Liste? Die Liste zeigt nur Zusatztage, die deine OGS selbst angelegt hat. Einen Zusatztag deines Trägers siehst du nach dem Veröffentlichen unter `Ferienwochen`.",
+        "Du siehst oben kein `Zusatztage`? Dir fehlt das Recht, Schließtage zu planen. Frage deine Leitung.",
+      ],
+      troubleshootingDetails: [
+        "Der Zusatztag lässt sich nicht speichern, weil keine Betreuung ist? Der Tag ist ein Feiertag oder ein Schließtag. An einem Feiertag gibt es keinen Zusatztag. Einen Schließtag änderst du zuerst unter `Schließtage`.",
+        "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen.",
+      ],
+      related: [
+        HELP_TOPICS.leadHolidayWeeks,
+        HELP_TOPICS.leadHolidayGuestGroup,
+      ],
+    };
+  } satisfies typeof authored_schoolExtraCareDayTopic;
 
 // Die Suche über die ganze Schul-App (#6954, ADR 0231; Notizen #7012, ADR 0234). Was jemand findet,
 // entscheidet der Server nach den Rechten des Kontos; der Artikel nennt nur,
@@ -9232,6 +9335,8 @@ export const staffNotificationsTopic =
         "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
         // #8178: Hinweis zur geänderten Öffnungszeit.
         "Öffnet oder schließt die OGS an einem Tag zu anderen Zeiten, bekommen alle im Team einen Hinweis. Darin stehen der Tag und die Uhrzeit.",
+        // #8234: Hinweis „Raum gesperrt“.
+        "Sperrt die Leitung einen Raum, in dem du in der Zeit einen Termin hast, steht hier `Raum gesperrt`. Darin stehen der Raum, die Tage und der Grund. Der Termin bleibt im Raum, bis die Leitung ihn verlegt. Ein Klick darauf öffnet deinen Dienstplan.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für deine eigenen Nachweise gibt es `Eigene Nachweise`.",
@@ -9241,7 +9346,7 @@ export const staffNotificationsTopic =
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was du auf dem Handy gelesen hast, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Du kannst auch `Weitere laden` wählen.",
-        "Zusätzlich kann moto dir eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
+        "Zusätzlich kann moto dir eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen, gesperrten Räumen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellst du in deinem `Profil` unter `Benachrichtigungen` für jede Art ein. Schaltest du sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Du kannst sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
@@ -9261,6 +9366,7 @@ export const staffNotificationsTopic =
         "Es kommt kein Hinweis zum Stundenplan einer Klasse? Deine Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einem Schließtag? Deine Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Deine Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage deine Leitung.",
+        "Es kommt kein Hinweis zu einem gesperrten Raum? Deine Schule kann `Benachrichtigung bei gesperrtem Raum` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Deine Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Frage deine Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Deine Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Frage deine Leitung.",
@@ -10464,6 +10570,8 @@ export const teacherClassDayTopic = function teacherClassDayTopic(): HelpTopic {
       "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder unterwegs sind und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
       "Fällt einer deiner Termine heute aus oder ist er an einem anderen Ort? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet den `Kalender`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
+      // Vorschau auf morgen (#7657).
+      "Wähle oben in `Heute anders` die Schaltfläche `Morgen`. Dann siehst du schon heute, was morgen für deine Klassen und die Schule anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen, deine Aufsichten, deine Termine und die ganze Schule.",
       "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
       "Steht bei einer Klasse `4 Kinder anders als sonst`, weicht dort heute etwas vom üblichen Plan ab.",
@@ -11185,6 +11293,7 @@ export const teacherSettingsTopic = function teacherSettingsTopic(): HelpTopic {
       "`Nachrichten von Kolleginnen und Kollegen`: neue Nachrichten im Team-Chat der OGS.",
       "`Absage eines Termins`: moto meldet sich, wenn ein Termin ausfällt, bei dem du eingeplant bist. Das gilt für Absagen von heute bis in 14 Tagen. Diese Benachrichtigung ist von Anfang an eingeschaltet. Den Hinweis in der Glocke bekommst du auch, wenn du sie ausschaltest.",
       "Benachrichtigungen kommen erst an, wenn moto schule auf dem Startbildschirm liegt.",
+      "Im Bereich `Darstellung` schaltest du `Mehr Kontrast` ein. Dann bekommen Eingabefelder, Kästchen und Schalter einen dunkleren Rand. Das gilt für dein Konto, auf jedem Gerät.",
       "Im Bereich `Vertraute Geräte` stehen die Geräte, die du dir beim Anmelden gemerkt hast. Öffne das Menü am Gerät und wähle `Entfernen`. Dort fragt moto beim nächsten Anmelden wieder nach dem Code.",
     ],
     differences: [
@@ -12101,7 +12210,7 @@ export const traegerBillingTermsTopic =
             "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
             "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
             "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
+            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen. Wie jedes Schreiben spricht es sie mit „Sie“ an. Eine eigene Vorlage behält ihren Wortlaut.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
             "Wähle bei Bedarf einen `Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",
@@ -12545,7 +12654,8 @@ export const traegerCareContractsTopic =
       notes: [
         "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
         "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
-        "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
+        "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du weitere Treffer an.",
+        "Die Liste nennt in eigenen Spalten Kind, Angebot, Betreuungsort, Eltern, Beginn und Status. Der neueste Vertrag steht oben. Wähle eine Spaltenüberschrift wie `Kind` oder `Beginn`. Ein zweiter Klick dreht die Reihenfolge um. Am Handy wählst du die Reihenfolge unter `Sortieren nach`. Sortierst du am Handy nach `Betreuungsort`, steht die Schule unter dem Kind. Die Sortierung gilt für alle Verträge deiner Auswahl.",
         "Beim ersten Senden oder mit `Auf Papier übergeben` hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
         "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
         "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
@@ -13444,6 +13554,20 @@ export const traegerClosingDaysTopic =
             "Wähle `Speichern` oder beim Löschen `Ja, löschen` und dann `Endgültig löschen`. Die Eltern bekommen die E-Mail sofort.",
           ],
         },
+        // #8202: geänderte Öffnungszeiten des Trägers für mehrere Schulen.
+        {
+          title: "Geänderte Öffnungszeit planen",
+          description:
+            "Für einen Tag, an dem die OGS früher schließt oder später öffnet, zum Beispiel wegen einer Personalversammlung.",
+          steps: [
+            "Wähle in der Navigation `Schließtage`.",
+            "Gehe zum Abschnitt `Geänderte Öffnungszeiten` und wähle `Tag anlegen`.",
+            "Trage den `Anlass` ein und `Von` und `Bis`. Für einen Tag trägst du zweimal dasselbe Datum ein.",
+            "Trage ein, wann die OGS öffnet und schließt.",
+            "Wähle bei `Gilt für` die Schulen und dann `Speichern`.",
+            "Zum Ändern oder Löschen wähle beim Tag die drei Punkte.",
+          ],
+        },
         {
           title: "Eltern zu einem Schließtag der Schule informieren",
           description:
@@ -13481,13 +13605,16 @@ export const traegerClosingDaysTopic =
         "Die gewählten Schulen haben an diesem Tag geschlossen. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
       notes: [
         "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+        "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen der gewählten Schulen zur neuen Schließzeit. Die Schulen sehen den Tag mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+        // #8231: Hinweis an die gewählten Schulen.
+        "Legst du eine geänderte Öffnungszeit an, änderst oder löschst sie, bekommen Team, Eltern und Träger-Büro jeder gewählten Schule einen Hinweis. Du selbst bekommst keinen. Hat eine Schule `Benachrichtigung bei geänderter Öffnungszeit` ausgeschaltet, bekommt dort niemand einen Hinweis.",
         "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",
         "Jede Familie bekommt eine E-Mail, auch wenn mehrere Kinder oder Wochen betroffen sind. Speicherst du den Schließtag noch einmal, bekommt niemand eine zweite E-Mail.",
         "Das Bundesland einer Schule legt das moto-Team fest. Stimmt es nicht, schreibe dem moto-Team.",
         "Bisherige Buchungen einer Ferienwoche bleiben, auch wenn du später einen Schließtag in die Woche legst. Niemand verliert seinen Platz, und niemand rückt von der Warteliste nach. Neue Buchungen der Woche sind dann nicht möglich.",
       ],
       differences: [
-        "Du siehst keinen Knopf `Schließtag anlegen`? Deine Rolle darf keine Einstellungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
+        "Du siehst keinen Knopf `Schließtag anlegen` oder `Tag anlegen`? Deine Rolle darf keine Einstellungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
       ],
       troubleshootingDetails: [
         "Beim Speichern steht, die gebuchten Ferientage haben sich geändert? Inzwischen hat jemand gebucht oder storniert. Prüfe die neue Liste im Dialog und speichere noch einmal.",
@@ -13556,7 +13683,7 @@ export const traegerDailyAttendanceTopic =
     };
   } satisfies typeof authored_traegerDailyAttendanceTopic;
 
-/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672) und ihre Auffälligkeiten (#4675). */
+/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672, #8146, Vorschau auf morgen #8236) und ihre Auffälligkeiten (#4675). */
 export const traegerDashboardTopic =
   function traegerDashboardTopic(): HelpTopic {
     return {
@@ -13571,7 +13698,7 @@ export const traegerDashboardTopic =
       steps: [
         "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
         "Lies oben die Summe für alle Schulen.",
-        "Prüfe unter `Heute anders`, welche Schule heute geschlossen ist oder Termine abgesagt hat.",
+        "Prüfe unter `Heute anders`, an welcher Schule heute etwas anders läuft.",
         "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
         "Lies unter `Zahlen pro Schule` die Zahlen jeder Schule.",
@@ -13583,8 +13710,13 @@ export const traegerDashboardTopic =
       notes: [
         "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
         "Die Zahlen aktualisieren sich jede Minute von selbst.",
-        "`Heute anders` zeigt pro Schule die Schließtage von heute, von der Schule oder von dir. Dazu kommt die Zahl der abgesagten Termine im Stundenplan. Es steht dort kein Name und kein Grund.",
+        "`Heute anders` zeigt pro Schule die Schließtage von heute, von der Schule oder von dir.",
+        "Dazu kommen eine geänderte Öffnungszeit, ein ausfallendes Mittagessen, die Zahl der abgesagten Termine und die Zahl der gesperrten Räume.",
+        "Unter `Heute anders` steht kein Name und kein Grund. Nur ein Schließtag zeigt seinen Namen.",
         "Fehlt Personal, steht das unter `Auffälligkeiten` bei `Zu wenig Personal`, nicht unter `Heute anders`.",
+        // Vorschau auf morgen (#8236).
+        "Oben in `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, an welcher Schule morgen etwas anders läuft. Du siehst dort dasselbe wie für heute, nur für morgen.",
+        "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag.",
         "Du siehst nur Zahlen, keine Namen.",
         "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
         "Mit einem Klick auf eine Spaltenüberschrift sortierst du die Schulen, zum Beispiel nach `Heute krank`.",
@@ -13602,7 +13734,7 @@ export const traegerDashboardTopic =
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
         "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
         "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
-        "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann hat heute keine Schule einen Schließtag oder einen abgesagten Termin.",
+        "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann läuft heute an keiner Schule etwas anders als geplant. Für morgen steht dort „Morgen läuft an allen Schulen alles wie geplant.“",
       ],
       related: [
         HELP_TOPICS.traegerSchoolView,
@@ -13934,6 +14066,101 @@ export const traegerExportHandoverTopic =
       ],
     };
   } satisfies typeof authored_traegerExportHandoverTopic;
+
+/**
+ * `/traeger/ferien/zusatztage` (#4817): ein einzelner Betreuungstag außerhalb
+ * der Ferien, etwa ein Brückentag oder ein beweglicher Ferientag, für eine
+ * oder mehrere Schulen. Im Monatsbeitrag enthalten oder mit Tagespreis.
+ */
+export const traegerExtraCareDayTopic =
+  function traegerExtraCareDayTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerExtraCareDay,
+      title: "Zusatztag anlegen",
+      question: "Wie biete ich Betreuung an einem Brückentag an?",
+      summary:
+        "Ein Zusatztag ist ein einzelner Betreuungstag außerhalb der Ferien, zum Beispiel ein Brückentag oder ein beweglicher Ferientag. Du legst ihn für eine oder mehrere Schulen an.",
+      group: "anmeldeverwaltung",
+      audience: "traeger",
+      icon: "CalendarStar",
+      image: "/help/screens/traeger-zusatztag-anlegen.webp",
+      imageAlt:
+        "Das Formular eines Zusatztags mit Tag, Schulen, Betreuungszeit, Anmeldung und Beitrag.",
+      requirements: [
+        "Deine Rolle im Träger-Büro darf Anmeldungen verwalten. Das gilt für die Rolle Verwaltung.",
+        "Der Tag ist an den gewählten Schulen kein Feiertag und kein Schließtag.",
+      ],
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Zusatztag anlegen",
+          steps: [
+            "Wähle in der Navigation `Ferienbetreuung`.",
+            "Wähle oben den Reiter `Zusatztage`.",
+            "Wähle `Zusatztag anlegen`.",
+            "Trage den `Name des Zusatztags` ein, zum Beispiel Brückentag nach Himmelfahrt.",
+            "Wähle den `Tag`. Möglich ist ein Tag von Montag bis Freitag.",
+            "Setze unter `Schulen` einen Haken bei jeder Schule, an der es Betreuung gibt. Mit `Alle Schulen` wählst du alle auf einmal.",
+            "Trage unter `Betreuungszeit` `Beginn` und `Ende` ein. Die Zeit gilt für alle gewählten Schulen.",
+            "Trage `Anmeldebeginn` und `Anmeldeschluss` ein. Der Anmeldeschluss liegt spätestens am Zusatztag.",
+            "Wähle unter `Beitrag` `Im Monatsbeitrag enthalten` oder `Mit Tagespreis`. Mit Tagespreis trägst du den `Preis pro Tag in Euro` ein.",
+            "Gibt es an dem Tag Mittagessen? Schalte `Mittagessen anbieten` ein. Mit Tagespreis trägst du den `Preis für ein Essen in Euro` ein.",
+            "Schreibe unter `Hinweise für Eltern`, was Eltern wissen müssen. Zum Beispiel, ob ein Mittagessen nötig ist.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Veröffentlichen",
+          steps: [
+            "Öffne den Zusatztag in der Liste `Zusatztage`.",
+            "Wähle oben `Veröffentlichen`.",
+            "Bestätige mit `Veröffentlichen`.",
+            "Unter `Link für Eltern` steht danach der Link zur Anmeldung. Kopiere ihn mit `Link kopieren` und gib ihn an die Eltern weiter.",
+          ],
+        },
+        {
+          title: "Zahlen pro Schule ansehen und herunterladen",
+          steps: [
+            "Öffne den Zusatztag. Unter `Kinder pro Schule` steht für jede Schule, wie viele Kinder einen Platz haben.",
+            "Im Reiter `Plätze` begrenzt du die Plätze pro Schule und siehst die Warteliste.",
+            "Im Reiter `Anmeldungen` prüfst und bestätigst du die Anmeldungen.",
+            "Für eine Datei wählst du in der Liste `Zusatztage` oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei hat eine Zeile pro Zusatztag und Schule.",
+          ],
+        },
+      ],
+      result:
+        "Der Zusatztag ist für die Anmeldung freigegeben. Eltern melden ihr Kind über den Link oder in der Eltern-App an. Bestätigte Kinder stehen an dem Tag bei der Schule unter `Ferienwochen`.",
+      notes: [
+        "`Im Monatsbeitrag enthalten`: Eltern melden nur an, dass ihr Kind kommt. Sie sehen keinen Preis. Der Zusatztag steht in keiner Abrechnung.",
+        "`Mit Tagespreis`: Eltern buchen den Tag dazu. Der Preis geht in die Abrechnung der Ferienbetreuung. Geschwister und Befreiung gelten wie dort unter `Abrechnungsvorgaben`.",
+        "Kinder der Schule erkennt moto wie bei der Ferienanmeldung. In der Anmeldung steht dann `Kind der Schule`. Es werden dafür keine Daten freigeschaltet.",
+        "Mit `Mittagessen anbieten` wählen Eltern das Essen für jedes Kind dazu. Die Schule sieht unter `Ferienwochen`, wie viele Essen sie braucht. Ist der Tag im Monatsbeitrag enthalten, kostet das Essen nichts extra.",
+        "Ein gespeicherter Zusatztag ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
+        "Ein veröffentlichter Zusatztag wird nicht wieder zum Entwurf.",
+        "Die Fragen an die Eltern änderst du im Reiter `Formular`, wie bei einem Ferienzeitraum.",
+        "Auch eine Schule kann einen Zusatztag für sich selbst anlegen und veröffentlichen. Er steht dann in deiner Liste. Auf seiner Seite steht `Von der Schule angelegt`. Du bestätigst die Anmeldungen und rechnest einen Tagespreis ab.",
+      ],
+      differences: [
+        "`Im Monatsbeitrag enthalten` und `Mit Tagespreis` lassen sich nicht wählen? Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen. Er bleibt dann so.",
+        "`Mittagessen anbieten` lässt sich nicht ausschalten? Für den Tag ist schon Mittagessen gebucht. Das Angebot bleibt dann.",
+        "Bei einer Schule steht `Hat schon Anmeldungen und bleibt gewählt.`? Dort ist ein Kind angemeldet. Die Schule lässt sich dann nicht mehr abwählen.",
+        "Du siehst in der Navigation kein `Ferienbetreuung`? Deine Rolle darf keine Anmeldungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
+      ],
+      troubleshootingDetails: [
+        "Unter den Schulen steht `An diesem Tag gibt es dort keine Betreuung`? Der Tag ist an dieser Schule ein Feiertag oder ein Schließtag. An einem Feiertag gibt es keinen Zusatztag. Bei einem Schließtag nimmst du die Schule zuerst unter `Schließtage` aus dem Schließtag heraus.",
+        "Der Zusatztag lässt sich nicht speichern, weil keine Betreuung ist? Auch ein Schließtag, den die Schule selbst eingetragen hat, zählt. Frage bei der Schule nach.",
+        "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen. Der Zusatztag braucht mindestens eine Schule.",
+        "Eine Schule fehlt unter `Schulen`? Das moto-Team ordnet die Schulen deinem Träger zu.",
+      ],
+      related: [
+        HELP_TOPICS.traegerHolidayPeriod,
+        HELP_TOPICS.traegerHolidayRegistrationReview,
+        HELP_TOPICS.traegerHolidayPlaces,
+        HELP_TOPICS.traegerClosingDays,
+        HELP_TOPICS.traegerHolidayContribution,
+      ],
+    };
+  } satisfies typeof authored_traegerExtraCareDayTopic;
 
 export const traegerFinanceExportsTopic =
   function traegerFinanceExportsTopic(): HelpTopic {
@@ -14956,6 +15183,98 @@ export const traegerInvitationTopic =
     };
   } satisfies typeof authored_traegerInvitationTopic;
 
+export const traegerInvoiceJournalTopic =
+  function traegerInvoiceJournalTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerInvoiceJournal,
+      title: "Rechnungsausgangsbuch lesen",
+      question: "Wo sehe ich alle ausgestellten Rechnungen in einer Liste?",
+      summary:
+        "Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Stornos und Gutschriften. Eine Rechnung zeigt ihren Stand und was sie noch fordert. Fehlt in einem Nummernkreis eine Nummer, zeigt moto das als Warnung.",
+      group: "anmeldeverwaltung",
+      audience: "traeger",
+      icon: "ListSearch",
+      image: "/help/screens/traeger-rechnungsausgangsbuch.webp",
+      imageAlt:
+        "Das Rechnungsausgangsbuch: oben Suche und Filter, darunter die Warnung zu fehlenden Nummern, die Summen und die Liste der Dokumente mit Nummer, Datum, Dokumentart und Stand, Empfänger mit Kindern, Lauf, Beträgen und offener Forderung.",
+      requirements: [
+        "Deine Rolle im Träger-Büro ist Abrechnung.",
+        "Mindestens ein Lauf ist freigegeben. Ein Dokument steht erst in der Liste, wenn es seine Nummer hat.",
+      ],
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Liste öffnen und lesen",
+          steps: [
+            "Wähle `Abrechnungsläufe` und dann den Reiter `Rechnungsausgangsbuch`.",
+            "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Ohne eigene Sortierung steht das neueste Dokument oben. In einem Nummernkreis steht dann die höchste Nummer oben.",
+            "Neben der Dokumentart steht bei einer Rechnung ihr Stand, zum Beispiel `Forderung offen`, `Teilgutschrift` oder `Storniert`. Die Spalte `Offene Forderung` nennt, was die Rechnung noch fordert.",
+            "Unter dem Empfänger stehen die Vornamen der Kinder. Wähle einen unterstrichenen Empfängernamen. Du kommst zur Familie mit all ihren Dokumenten.",
+            "Neben einem Storno oder einer Gutschrift steht die Nummer der zugehörigen Rechnung. Wähle diese Nummer. moto zeigt die Rechnung und alle Dokumente, die genau diese Nummer als Bezug haben. Andere Filter werden dabei geleert.",
+            "Wähle den Namen in der Spalte `Lauf`. Du kommst zum Lauf mit seinen Schreiben.",
+            "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen. Daneben steht die Summe der offenen Forderungen.",
+            "Wähle einen Spaltenkopf, zum Beispiel `Brutto` oder `Offene Forderung`. moto sortiert alle Dokumente zu Suche und Filter, nicht nur die geladenen Zeilen. Wähle ihn noch einmal für die andere Richtung.",
+            "Auf dem Handy wählst du über der Liste `Sortieren nach`. Dort wählst du aus, wonach und in welcher Richtung moto sortiert.",
+          ],
+        },
+        {
+          title: "Dokumente finden",
+          description: "Zahl und Summen folgen immer der Suche und dem Filter.",
+          steps: [
+            "Tippe in die Suche eine Nummer, den Namen des Empfängers, den Vornamen eines Kindes oder eine Debitorennummer.",
+            "Wähle neben der Suche `Zeitraum wählen` für die Dokumente eines Monats oder Jahres.",
+            "Daneben filterst du nach Dokumentart, Stand, Nummernkreis und Lauf. Auf dem Handy wählst du dafür das Filter-Symbol.",
+            "Der Filter `Stand` → `Forderung offen` zeigt nur Rechnungen, die noch den ganzen Betrag fordern. Rechnungen mit einer Teilgutschrift haben den Stand `Teilgutschrift`. Was nach der Gutschrift übrig bleibt, steht in `Offene Forderung`.",
+            "Jeder Filter steht als Marke unter der Suche. Mit dem Kreuz an der Marke nimmst du ihn wieder weg.",
+            "Stellen mehrere Stellen für deine Schulen Rechnungen aus, filterst du auch nach `Rechnungssteller`.",
+          ],
+        },
+        {
+          title: "Lücke im Nummernkreis prüfen",
+          description:
+            "Ein Nummernkreis zählt je Rechnungssteller, Leistung und Jahr. moto vergibt jede Nummer nur einmal und ohne Lücke.",
+          steps: [
+            "Fehlt eine Nummer, steht über der Liste eine Warnung. Sie nennt den Nummernkreis und die Nummern, die fehlen.",
+            "In der Liste steht die Warnung auch am Dokument neben der Lücke, zum Beispiel `Lücke: 2 Nummern`.",
+            "Wähle `Nur diesen Nummernkreis zeigen`. Die Liste zeigt nur diesen Nummernkreis, nach Nummer sortiert. Suche und andere Filter leert moto dabei.",
+            "Wende dich an das moto-Team und nenne die Nummern. Wir klären die Ursache mit dir.",
+          ],
+        },
+        {
+          title: "Liste herunterladen",
+          steps: [
+            "Wähle oben rechts das Menü mit den drei Punkten.",
+            "Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Dokumente zu Suche und Filter, aufsteigend nach Nummer, auch wenn du die Liste anders sortiert hast. Sie nennt zusätzlich Stand, Kinder, Debitorennummer und offene Forderung. Am Ende stehen die Summen. Das Menü nennt vorher, wie viele Dokumente es sind.",
+            "Die Liste enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+          ],
+        },
+      ],
+      result:
+        "Du hast alle ausgestellten Dokumente nach Nummer vor dir und siehst, ob ein Nummernkreis vollständig ist.",
+      differences: [
+        "Die Spalte und der Filter `Rechnungssteller` fehlen: Dein Träger stellt alle Dokumente selbst aus.",
+        "Die Nummern springen an einer Stelle, ohne Warnung: Dort hat dein Büro einen Startwert für die Rechnungsnummern gesetzt. Das ist keine Lücke.",
+        "Ein Jahresbescheid steht im Nummernkreis der Monatsbeiträge: Beide zählen im selben Nummernkreis.",
+      ],
+      notes: [
+        "Die Steuer ist immer 0,00 €. Elternbeiträge stellt moto ohne Steuer aus.",
+        "Ob eine Familie gezahlt hat, steht hier nicht. Die Spalte `Offene Forderung` zieht Gutschriften ab, aber keine Zahlungen. Zahlungen prüfst du in deiner Buchhaltung.",
+        "Ein Storno, eine Gutschrift und ein Jahresbescheid haben keinen Stand. In der Spalte `Offene Forderung` steht dort ein Strich. Jahresbescheide zählen in der Summe der offenen Forderungen nicht mit.",
+      ],
+      troubleshootingDetails: [
+        "Ein Dokument fehlt in der Liste: Der Lauf ist noch nicht freigegeben. Entwürfe haben keine Nummer und stehen nur im Lauf.",
+        "Die Liste zeigt `Kein Dokument passt …`: Prüfe Suche, Zeitraum und Filter. Wähle `Filter zurücksetzen`.",
+        "Du siehst den Reiter nicht: Dir fehlt die Rolle Abrechnung. Wende dich an die Person, die bei deinem Träger die Mitglieder verwaltet.",
+      ],
+      related: [
+        HELP_TOPICS.traegerBillingRun,
+        HELP_TOPICS.traegerCareMonths,
+        HELP_TOPICS.traegerCareNotices,
+      ],
+    };
+  } satisfies typeof authored_traegerInvoiceJournalTopic;
+
 // Portal "moto schule" (#2207). Geruest nach der echten Navigation des
 // Schul-Portals (`SCHOOL_PRIMARY_NAV`): Klassenansicht, Meine Aufsichten,
 // Nachrichten, Tagesinformationen, Kalender.
@@ -15110,6 +15429,8 @@ export const traegerNotificationFeedTopic =
         "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
         // #8178: Hinweis zur geänderten Öffnungszeit.
         "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
+        // #8231: geänderte Öffnungszeit vom Träger-Büro.
+        "Plant jemand aus deinem Träger-Büro eine geänderte Öffnungszeit, siehst du sie für jede gewählte Schule. Wer sie eingetragen hat, bekommt keinen Hinweis.",
         "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",

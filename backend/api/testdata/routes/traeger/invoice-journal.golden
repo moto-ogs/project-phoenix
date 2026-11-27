@@ -1,0 +1,2 @@
+GET /traeger/invoice-journal/
+GET /traeger/invoice-journal/export

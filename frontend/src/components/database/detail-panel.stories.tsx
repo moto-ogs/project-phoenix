@@ -13,12 +13,6 @@ type Story = StoryObj<typeof DetailPanel>;
 const tabs: DetailTab[] = [
   { id: "overview", label: "Übersicht", content: <div>Übersichtsinhalt</div> },
   { id: "history", label: "Historie", content: <div>Historieninhalt</div> },
-  {
-    id: "disabled",
-    label: "Gesperrt",
-    content: <div>Nicht verfügbar</div>,
-    disabled: true,
-  },
 ];
 
 function DetailPanelDemo() {

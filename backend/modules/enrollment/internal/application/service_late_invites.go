@@ -44,10 +44,3 @@ func (m *Service) DeleteLateInvitesSettledBefore(ctx context.Context, cutoff tim
 	}
 	return m.store.DeleteLateInvitesSettledBefore(ctx, cutoff)
 }
-
-func (m *Service) DeleteLateInvitesByUsedRequestID(ctx context.Context, requestID int64) (int64, error) {
-	if err := m.transactions.RequireTransaction(ctx); err != nil {
-		return 0, err
-	}
-	return m.store.DeleteLateInvitesByUsedRequestID(ctx, requestID)
-}

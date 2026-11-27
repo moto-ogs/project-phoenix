@@ -1,5 +1,6 @@
 import { Alert } from "~/components/ui/alert";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Input } from "~/components/ui/input";
@@ -13,7 +14,7 @@ import { createLogger } from "~/lib/logger";
 import {
   FormField,
   DeliveryStatusBadge,
-  SelectWithChevron,
+  POSITION_OPTIONS,
 } from "./provisioning-shared";
 
 const logger = createLogger({ component: "InviteAdminModal" });
@@ -243,19 +244,14 @@ export function InviteAdminModal({
               htmlFor="invite-admin-position"
               error={formErrors.fieldError("position")}
             >
-              <SelectWithChevron
+              <CustomSelect
                 id="invite-admin-position"
                 name="position"
+                ariaLabelledBy="invite-admin-position-label"
                 value={position}
-                onChange={(e) => setPosition(e.target.value)}
-              >
-                <option value="">Position auswählen...</option>
-                <option value="Pädagogische Fachkraft">
-                  Pädagogische Fachkraft
-                </option>
-                <option value="OGS-Büro">OGS-Büro</option>
-                <option value="Extern">Extern</option>
-              </SelectWithChevron>
+                options={POSITION_OPTIONS}
+                onChange={setPosition}
+              />
             </FormField>
           )}
         </form>

@@ -19,6 +19,7 @@ import {
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { holidayListBack } from "~/components/traeger/holiday-period-format";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchHolidayWeekPlaces } from "~/lib/traeger-holiday-registrations-api";
@@ -80,10 +81,19 @@ export default function TraegerHolidayPlacesPage() {
     <TenantPage
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
-      backHref={traegerPath("/traeger/ferien")}
-      backLabel="Zurück zu den Ferien"
+      backHref={traegerPath(holidayListBack(period?.kind).path)}
+      backLabel={holidayListBack(period?.kind).label}
       info={
-        period?.allocationMode === "criteria" ? (
+        period?.kind === "extra_day" ? (
+          <p>
+            Hier legst du für jede Schule fest, wie viele Kinder am Zusatztag
+            kommen können. Plätze gehen in der Reihenfolge, in der die
+            Anmeldungen eingehen. Ist eine Schule voll, kommt das Kind auf die
+            Warteliste. Wird ein Platz frei, rückt das nächste Kind automatisch
+            nach. Seine Eltern bekommen eine E-Mail. Kinder auf der Warteliste
+            stehen nicht auf der Liste der OGS.
+          </p>
+        ) : period?.allocationMode === "criteria" ? (
           <p>
             Hier legst du fest, wie viele Kinder in einer Woche mitmachen
             können. Die Plätze vergibt dein Büro im Reiter „Vergabe“. moto
@@ -135,6 +145,7 @@ export default function TraegerHolidayPlacesPage() {
         "plaetze",
         period?.registrationCount,
         period?.allocationMode,
+        period?.kind,
       )}
       overflowMenu={exportItems}
       error={loadError}
@@ -142,9 +153,14 @@ export default function TraegerHolidayPlacesPage() {
       empty={
         weeks?.length === 0
           ? {
-              title: "Noch keine Wochen",
+              title:
+                period?.kind === "extra_day"
+                  ? "Noch keine Schule"
+                  : "Noch keine Wochen",
               description:
-                "Lege zuerst im Reiter „Planung“ die Wochen der Ferien an.",
+                period?.kind === "extra_day"
+                  ? "Wähle zuerst im Reiter „Planung“ die Schulen des Zusatztags."
+                  : "Lege zuerst im Reiter „Planung“ die Wochen der Ferien an.",
             }
           : undefined
       }

@@ -82,8 +82,6 @@ interface UseActivityFormReturn {
   ) => void;
   /** Validate form and return the first problem or null */
   validateForm: () => ActivityFormProblem | null;
-  /** Load categories from API */
-  loadCategories: () => Promise<void>;
 }
 
 /**
@@ -99,7 +97,7 @@ interface UseActivityFormReturn {
  * ```tsx
  * const {
  *   form, setForm, categories, loading, loadError,
- *   handleInputChange, validateForm, loadCategories
+ *   handleInputChange, validateForm
  * } = useActivityForm(initialValues, isOpen);
  * ```
  */
@@ -108,8 +106,7 @@ export function useActivityForm(
   isOpen: boolean,
 ): UseActivityFormReturn {
   const [form, setForm] = useState<ActivityFormState>(initialForm);
-  // Loads only when the modal opens or `loadCategories` asks, and then
-  // always fresh: a category created elsewhere shows up at the next open.
+  // Each opening reads afresh so it includes categories created elsewhere.
   const { data, error, isValidating, mutate } = useSWRAuth(
     tenantDailyKeys.activityCategories(),
     getCategories,
@@ -120,9 +117,6 @@ export function useActivityForm(
   );
   const categories = data ?? NO_CATEGORIES;
   const loading = isValidating && data === undefined;
-  const loadCategories = useCallback(async () => {
-    await mutate();
-  }, [mutate]);
   const { error: loadError } = useSwrResourceLoadError(
     [{ data, error }],
     "die Liste der Kategorien",
@@ -163,6 +157,5 @@ export function useActivityForm(
     loadError,
     handleInputChange,
     validateForm,
-    loadCategories,
   };
 }

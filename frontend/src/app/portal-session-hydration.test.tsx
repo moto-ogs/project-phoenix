@@ -88,6 +88,9 @@ vi.mock("~/components/auth/sentry-session-context", () => ({
 vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => null,
 }));
+vi.mock("~/components/settings/contrast-account-sync", () => ({
+  ContrastAccountSync: () => null,
+}));
 vi.mock("~/lib/module-portal-context", () => ({
   ModulePortalProvider: passthrough,
 }));

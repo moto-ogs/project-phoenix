@@ -104,7 +104,7 @@ func (c *ClassListImportConfig) CreateChunk(ctx context.Context, rows []importMo
 }
 
 // appendCreatedEntries records the creation of the entries in the audit trail
-// like a single create does, in one statement where the command can.
+// like a single create does, in one statement.
 func (c *ClassListImportConfig) appendCreatedEntries(ctx context.Context, entries []ports.ClassListEntry, changedBy int64) error {
 	if c.deps.Audit == nil {
 		return nil
@@ -116,15 +116,7 @@ func (c *ClassListImportConfig) appendCreatedEntries(ctx context.Context, entrie
 			EntryID: entry.ID, Action: auditModels.ClassListEntryActionCreated, OldValue: "", NewValue: display, ChangedBy: changedBy,
 		}
 	}
-	if batch, ok := c.deps.Audit.(ports.AuditBatchCommand); ok {
-		return batch.AppendAll(ctx, events)
-	}
-	for _, event := range events {
-		if err := c.deps.Audit.Append(ctx, event); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.deps.Audit.AppendAll(ctx, events)
 }
 
 // studentNameView reads the persons carrying the rows' names and their

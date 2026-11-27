@@ -168,17 +168,19 @@ export async function createStudentStatusDays(
   return mapStatusDays(rows);
 }
 
-export async function bulkCreateStudentStatusDays(
+export async function createClassTripStatusDays(
   studentIds: string[],
-  status: StudentStatusKind,
   from: string,
   to: string,
   reason?: string,
 ): Promise<StatusDaysBulkCreatedResponse> {
-  const student_ids = [...studentIds];
-  const body: BulkCreateStudentStatusDaysRequest = reason
-    ? { student_ids, status, from, to, reason }
-    : { student_ids, status, from, to };
+  const body: BulkCreateStudentStatusDaysRequest = {
+    student_ids: studentIds,
+    status: "class_trip",
+    from,
+    to,
+    ...(reason ? { reason } : {}),
+  };
   return writeStatusDays(
     bffJson("tenant", "POST /api/students/status-days/bulk", {
       body,

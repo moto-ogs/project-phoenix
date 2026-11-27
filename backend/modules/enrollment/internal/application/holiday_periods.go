@@ -118,7 +118,7 @@ func (h *HolidayPeriods) CreateHolidayPeriod(ctx context.Context, organizationID
 	if organizationID <= 0 {
 		return enrollment.HolidayPeriod{}, errHolidayPeriodRequired
 	}
-	input = normalizeHolidayPeriod(input)
+	input = withHolidayKind(normalizeHolidayPeriod(input), enrollment.HolidayPeriod{})
 	if err := validateHolidayPeriod(input, enrollment.HolidayPeriod{}); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
@@ -139,17 +139,44 @@ func (h *HolidayPeriods) CreateHolidayPeriod(ctx context.Context, organizationID
 // under the lock of its row, over the version the Büro read (ADR 0311), and
 // returns it as stored. A published period stays published.
 func (h *HolidayPeriods) UpdateHolidayPeriod(ctx context.Context, organizationID, periodID int64, input enrollment.HolidayPeriodInput) (enrollment.HolidayPeriod, error) {
+	return h.updateHolidayPeriod(ctx, organizationID, periodID, input, nil)
+}
+
+// holidayPeriodWriter shapes what a narrower writer than the Träger-Büro
+// sends over the locked period, or refuses the writer (ADR 0329).
+type holidayPeriodWriter func(input enrollment.HolidayPeriodInput, locked enrollment.HolidayPeriod) (enrollment.HolidayPeriodInput, error)
+
+// storedPeriod reads the period as stored, without its days without care;
+// lock holds its row.
+func (h *HolidayPeriods) storedPeriod(ctx context.Context, organizationID, periodID int64, lock bool) (enrollment.HolidayPeriod, error) {
 	if err := holidayPeriodKey(organizationID, periodID); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
-	current, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, periodID, true))
+	return foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, periodID, lock))
+}
+
+// lockedForWrite locks the period and lets writer, when set, shape input
+// over the locked row or refuse.
+func (h *HolidayPeriods) lockedForWrite(ctx context.Context, organizationID, periodID int64, input enrollment.HolidayPeriodInput, writer holidayPeriodWriter) (enrollment.HolidayPeriod, enrollment.HolidayPeriodInput, error) {
+	current, err := h.storedPeriod(ctx, organizationID, periodID, true)
+	if err == nil && writer != nil {
+		input, err = writer(input, current)
+	}
+	return current, input, err
+}
+
+// updateHolidayPeriod is UpdateHolidayPeriod; writer, when set, sees the
+// period after its row is locked, so nothing changes between its check and
+// the write.
+func (h *HolidayPeriods) updateHolidayPeriod(ctx context.Context, organizationID, periodID int64, input enrollment.HolidayPeriodInput, writer holidayPeriodWriter) (enrollment.HolidayPeriod, error) {
+	current, input, err := h.lockedForWrite(ctx, organizationID, periodID, input, writer)
 	if err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
 	if err := readstate.Check(input.ExpectedVersion, current.Version); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
-	input = keepArchivedHolidayTimeModels(normalizeHolidayPeriod(input), current)
+	input = keepArchivedHolidayTimeModels(withHolidayKind(normalizeHolidayPeriod(input), current), current)
 	input = keepHolidayBookingUnits(input, current)
 	if err := validateHolidayPeriod(input, current); err != nil {
 		return enrollment.HolidayPeriod{}, err
@@ -237,12 +264,24 @@ func holidayWeekPair(a, b int64) [2]int64 {
 // PublishHolidayPeriod offers a complete period for registration. Publishing
 // a published period changes nothing.
 func (h *HolidayPeriods) PublishHolidayPeriod(ctx context.Context, organizationID, periodID int64) (enrollment.HolidayPeriod, error) {
+	return h.publishHolidayPeriod(ctx, organizationID, periodID, nil)
+}
+
+// publishHolidayPeriod is PublishHolidayPeriod; admit, when set, sees the
+// period after its row is locked and refuses a narrower writer (ADR 0329).
+func (h *HolidayPeriods) publishHolidayPeriod(ctx context.Context, organizationID, periodID int64, admit func(locked enrollment.HolidayPeriod) error) (enrollment.HolidayPeriod, error) {
 	if err := holidayPeriodKey(organizationID, periodID); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
 	current, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, periodID, true))
-	if err != nil || current.Status == enrollment.HolidayPeriodPublished {
-		return current, err
+	if err == nil && admit != nil {
+		err = admit(current)
+	}
+	if err != nil {
+		return enrollment.HolidayPeriod{}, err
+	}
+	if current.Status == enrollment.HolidayPeriodPublished {
+		return h.markedPeriod(ctx, organizationID, periodID)
 	}
 	if !holidayPeriodComplete(current) {
 		return enrollment.HolidayPeriod{}, enrollment.ErrHolidayPeriodIncomplete
@@ -385,8 +424,12 @@ func validateHolidayPeriod(input enrollment.HolidayPeriodInput, current enrollme
 	}
 	if len(input.Weeks) > holidayMaxWeeks {
 		errs["weeks"] = fmt.Errorf("a period has at most %d weeks", holidayMaxWeeks)
-	} else if weekErrs := validateHolidayWeeks(input.Weeks, current); len(weekErrs) > 0 {
-		errs["weeks"] = weekErrs
+	} else {
+		weekErrs := validateHolidayWeeks(input.Weeks, current)
+		validateHolidayKind(input, current, errs, weekErrs)
+		if len(weekErrs) > 0 {
+			errs["weeks"] = weekErrs
+		}
 	}
 	if len(errs) == 0 {
 		return nil

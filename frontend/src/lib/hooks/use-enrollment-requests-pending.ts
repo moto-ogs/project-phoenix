@@ -37,7 +37,6 @@ export function useEnrollmentRequestsPending(): UseUnreadCountResult {
       fetcher: fetchPendingEnrollmentChangeRequestCount,
       eventNames: [CHANGE_REQUESTS_REFRESH_EVENT],
       eventDebounceMs: 500,
-      refetchOnFocus: true,
     },
   );
 }

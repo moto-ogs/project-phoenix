@@ -20,10 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Parallel is safe here, unlike for the feed tests above: every assertion
-// names an id this test created, so an announcement another test publishes
-// into the shared clone cannot change the answer. The feed tests count what a
-// guardian sees in total, which is why they run serially.
 func TestGuardianAnnouncementTenant_OnlyForTheAudience(t *testing.T) {
 	t.Parallel()
 	testpkg.OwnTenant(t)
@@ -56,7 +52,6 @@ func TestGuardianAnnouncementTenant_OnlyForTheAudience(t *testing.T) {
 	assert.Zero(t, tenantID)
 }
 
-// Parallel is safe, see above.
 func TestGuardianAnnouncementTenant_DraftAndDisabledFeatureHideTheFile(t *testing.T) {
 	t.Parallel()
 	testpkg.OwnTenant(t)
@@ -95,7 +90,6 @@ func TestGuardianAnnouncementTenant_DraftAndDisabledFeatureHideTheFile(t *testin
 	assert.Zero(t, tenantID, "an announcement not yet live has no reachable attachments")
 }
 
-// Parallel is safe, see above.
 func TestGuardianAnnouncementTenant_FeatureOffHidesTheFile(t *testing.T) {
 	t.Parallel()
 	testpkg.OwnTenant(t)

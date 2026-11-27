@@ -198,7 +198,7 @@ function SearchBarContent({
               : describedBy
           }
           onChange={(e) => handleChange(e.target.value)}
-          className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
+          className={`border-field-edge focus:border-field-focus w-full rounded-2xl border bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
         />
 
         {shownValue && (
@@ -246,23 +246,4 @@ export function SharedSearchBar(props: Readonly<SearchBarProps>) {
   }
 
   return <SearchBarContent {...props} draftState={sharedDraftState} />;
-}
-
-/**
- * Ein einzelnes Suchfeld mit eigenem Entwurf, für eine Suche außerhalb der
- * Such- und Filterzeile von `TenantPage` (z. B. im Bedienband der
- * Planungsflächen). Die Zeile selbst rendert zwei Kopien desselben Felds und
- * teilt ihren Entwurf über `SearchBarDraftProvider`.
- */
-export function SearchBar(props: Readonly<SearchBarProps>) {
-  return (
-    <SearchBarDraftProvider
-      value={props.value}
-      onChange={props.onChange}
-      debounceMs={props.debounceMs}
-      resetKey={props.resetKey}
-    >
-      <SharedSearchBar {...props} />
-    </SearchBarDraftProvider>
-  );
 }

@@ -82,7 +82,7 @@ func TestGuardianInvitationExpiryAndMail(t *testing.T) {
 	assert.Equal(t, "https://eltern.example/login", existing.InvitationURL)
 	mail, err := identityaccess.GuardianInvitationMail(existing)
 	require.NoError(t, err)
-	assert.Equal(t, "Dein Zugang zum Eltern-Portal – OGS", mail.Subject)
+	assert.Equal(t, "Ihr Zugang zum Eltern-Portal – OGS", mail.Subject)
 	assert.Equal(t, 48, content(t, mail)["ExpiryHours"], "a mail without a lifetime states the fallback")
 	_, err = identityaccess.GuardianInvitationMail(identityaccess.GuardianMail{Recipient: "kim@example.test"})
 	require.Error(t, err, "an invitation needs its link")

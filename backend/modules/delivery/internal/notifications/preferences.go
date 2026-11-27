@@ -28,7 +28,7 @@ type PreferenceState struct {
 	Group       string `json:"group"`
 	Enabled     bool   `json:"enabled"`
 	// Available reports whether the school allows this type right now. A type
-	// can be switched on personally while unavailable — see SetForAccount.
+	// can be switched on personally while unavailable.
 	Available bool `json:"available"`
 }
 
@@ -49,11 +49,9 @@ type PreferenceService interface {
 	// stored decisions merged in. Types the account never touched read as off.
 	GetForAccount(ctx context.Context, accountID int64, portal string) (*PreferenceOverview, error)
 
-	// SetForAccount records one decision.
-	SetForAccount(ctx context.Context, accountID int64, notificationType string, enabled bool) error
-	// SetForPortalAccount is SetForAccount for a named portal: the type must be
-	// offered there (OfferedInPortal). The school portal (#2208) writes the
-	// same row as the staff portal.
+	// SetForPortalAccount records a decision for a type offered in the named
+	// portal. The school portal (#2208) writes the same row as the staff portal.
+	// A school gate affects delivery, not whether a choice can be stored.
 	SetForPortalAccount(ctx context.Context, accountID int64, portal, notificationType string, enabled bool) error
 
 	// EmailSubscribed and SetEmailSubscribed read and record the account's own
@@ -64,8 +62,6 @@ type PreferenceService interface {
 	EmailSubscribed(ctx context.Context, accountID int64, permissions []string, notificationType string) (bool, error)
 	SetEmailSubscribed(ctx context.Context, accountID int64, permissions []string, notificationType string, enabled bool) error
 
-	// DisableAllForAccount switches every stored staff-portal decision off.
-	DisableAllForAccount(ctx context.Context, accountID int64) error
 	// DisableAllForPortalAccount switches off every type the portal offers.
 	DisableAllForPortalAccount(ctx context.Context, accountID int64, portal string) error
 
@@ -242,15 +238,6 @@ func (s *preferenceService) GetForAccount(ctx context.Context, accountID int64, 
 	return overview, nil
 }
 
-// SetForAccount records one decision.
-//
-// A type the school currently blocks can still be switched on. The alternative
-// would lose a person's choice whenever an admin toggles the school setting off
-// and on again; the gate is applied at delivery time instead.
-func (s *preferenceService) SetForAccount(ctx context.Context, accountID int64, notificationType string, enabled bool) error {
-	return s.SetForPortalAccount(ctx, accountID, PortalStaff, notificationType, enabled)
-}
-
 func (s *preferenceService) SetForPortalAccount(ctx context.Context, accountID int64, portal, notificationType string, enabled bool) error {
 	if accountID <= 0 {
 		return errors.New("account id is required")
@@ -311,10 +298,6 @@ func (s *preferenceService) checkOwnEmailDecision(accountID int64, permissions [
 		return fmt.Errorf("%w: %s", ErrEmailPermissionRequired, notificationType)
 	}
 	return nil
-}
-
-func (s *preferenceService) DisableAllForAccount(ctx context.Context, accountID int64) error {
-	return s.DisableAllForPortalAccount(ctx, accountID, PortalStaff)
 }
 
 func (s *preferenceService) DisableAllForPortalAccount(ctx context.Context, accountID int64, portal string) error {

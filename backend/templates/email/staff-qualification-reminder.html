@@ -1,39 +1,36 @@
 {{define "staff-qualification-reminder.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{if .LogoURL}}
     {{template "moto-brand" .}}
     {{else}}
-    <p class="school-name">{{.SchoolName}}</p>
+    {{template "sender-brand" .}}
     {{end}}
     <h1>{{if .Lapsed}}Nachweis ist abgelaufen{{else if .ExpiryDay}}Nachweis läuft heute ab{{else}}Nachweis läuft bald ab{{end}}</h1>
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}}{{if .LastName}} {{.LastName}}{{end}},</p>
 
     {{if .Own}}
-    <p>{{if .Lapsed}}Dein Nachweis „{{.QualificationName}}“ galt bis {{.ExpiresOn}}.{{else if .ExpiryDay}}Dein Nachweis „{{.QualificationName}}“ gilt nur noch heute.{{else}}Dein Nachweis „{{.QualificationName}}“ gilt bis {{.ExpiresOn}}.{{end}}</p>
-    <p>Bitte kümmere dich um einen neuen Nachweis und gib ihn bei der Leitung ab.</p>
+    <div class="highlight-box">
+        <p>{{if .Lapsed}}Ihr Nachweis „{{.QualificationName}}“ galt bis {{.ExpiresOn}}.{{else if .ExpiryDay}}Ihr Nachweis „{{.QualificationName}}“ gilt nur noch heute.{{else}}Ihr Nachweis „{{.QualificationName}}“ gilt bis {{.ExpiresOn}}.{{end}}</p>
+    </div>
+    <p>Bitte kümmern Sie sich um einen neuen Nachweis und geben Sie ihn bei der Leitung ab.</p>
     {{else}}
     <p>{{if .Lapsed}}Ein Nachweis von {{.StaffName}} ist abgelaufen.{{else if .ExpiryDay}}Heute läuft ein Nachweis von {{.StaffName}} ab.{{else}}Bald läuft ein Nachweis von {{.StaffName}} ab.{{end}}</p>
     <div class="highlight-box">
         <p>{{.QualificationName}}: gültig bis {{.ExpiresOn}}</p>
     </div>
-    <p>Trage den neuen Nachweis im Profil der Person ein, sobald er vorliegt.</p>
+    <p>Tragen Sie den neuen Nachweis im Profil der Person ein, sobald er vorliegt.</p>
     {{end}}
 
     {{if .LinkURL}}
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">{{if .Own}}Profil öffnen{{else}}Person öffnen{{end}}</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
+    {{template "link-box" .LinkURL}}
     {{end}}
 
     <p>{{.SchoolName}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

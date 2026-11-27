@@ -97,6 +97,10 @@ func TestPickupTermsReadTheOneDayCollector(t *testing.T) {
 
 	_, ok = PickupTerms(json.RawMessage(`{"date":"2026-11-10","pickup_person":{"guardian_profile_id":0,"name":""}}`))
 	assert.False(t, ok, "an empty collector is not a request")
+	for _, mode := range []string{"alone", "bus"} {
+		_, ok = PickupTerms(json.RawMessage(`{"date":"2026-11-10","departure_mode":"` + mode + `","pickup_person":{"name":"Erika Muster"}}`))
+		assert.False(t, ok, "a collector cannot go %s", mode)
+	}
 }
 
 func TestPickupPersonAllowed(t *testing.T) {

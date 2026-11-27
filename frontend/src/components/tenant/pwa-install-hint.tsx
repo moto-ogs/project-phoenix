@@ -2,51 +2,21 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Download, EllipsisVertical, Share, X } from "lucide-react";
+import { EllipsisVertical, X } from "lucide-react";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { trackEvent, trackOnboardingSurface } from "~/lib/analytics";
-import type { OnboardingSurface } from "~/lib/analytics-policy";
 import { GROUP_ROOM_SHADES } from "~/lib/location-helper";
-import { createLogger } from "~/lib/logger";
 import {
-  canPromptInstall,
   createChromeIntentUrl,
   dismissInstallHint,
-  isAndroidDevice,
-  isIosDevice,
   isInstallHintEligible,
   isInstallationCompleted,
   isSamsungInternet,
   subscribeInstallPrompt,
-  triggerInstallPrompt,
 } from "~/lib/pwa-install-prompt";
-
-export {
-  isAndroidDevice,
-  isIosDevice,
-  isSamsungInternet,
-} from "~/lib/pwa-install-prompt";
-
-const logger = createLogger({ component: "PwaInstallHint" });
-
-export type InstallPlatform = "ios" | "android" | "samsung";
-
-/** True only in Safari, where the iOS home-screen action is available. */
-export function isIosSafari(nav: Navigator): boolean {
-  if (!isIosDevice(nav)) return false;
-  return (
-    /version\/[\d.]+.*safari\//i.test(nav.userAgent) &&
-    !/(crios|fxios|edgios|opios)/i.test(nav.userAgent)
-  );
-}
-
-/** Der Samsung-Hinweis ist eine eigene Fläche des Einstiegs (#7552). */
-function onboardingSurfaceOf(platform: InstallPlatform): OnboardingSurface {
-  return platform === "samsung" ? "samsung_hint" : "install_hint";
-}
 
 /** True when running inside an installed PWA (standalone display mode). */
-export function isStandaloneDisplay(win: Window): boolean {
+function isStandaloneDisplay(win: Window): boolean {
   if (win.matchMedia("(display-mode: standalone)").matches) return true;
   const nav = win.navigator as Navigator & { standalone?: boolean };
   return nav.standalone === true;
@@ -80,11 +50,8 @@ export function SamsungChromeInstructions({
 }
 
 /**
- * Floating, dismissible install promotion for iOS Safari and Android users
- * browsing the tenant app in a normal browser tab: add moto to the home
- * screen from THIS subdomain so the installed app keeps its standalone scope
- * (issue #2010 — both platforms show browser chrome after a cross-origin
- * redirect, so installing on the root host breaks fullscreen).
+ * Samsung Internet can install an outdated app, so point users to the
+ * current page in Chrome. Other browsers use the guided notification setup.
  *
  * Mounted in the protected layout on purpose. The audience is staff on phones
  * and tablets, and most of them never reach the admin-only dashboard, so a
@@ -102,22 +69,13 @@ export function SamsungChromeInstructions({
  * - Horizontally centered at every width instead of jumping from an
  *   edge-to-edge mobile banner to a right-anchored card at `sm`.
  *
- * Never rendered on desktop, inside an already-installed PWA, before the
- * second visit, or after the user dismissed it.
+ * Never rendered in an installed app, before the second visit, or after
+ * dismissal.
  */
-export function PwaInstallHint({
-  samsungOnly = false,
-}: Readonly<{ samsungOnly?: boolean }>) {
+export function PwaInstallHint() {
   const t = useTranslations("pwaInstallHint");
-  const [platform, setPlatform] = useState<InstallPlatform | null>(null);
+  const [visible, setVisible] = useState(false);
 
-  // Chrome may fire beforeinstallprompt before or after this mounts, so read
-  // it from the module-level store rather than a local listener.
-  const oneTapInstallReady = useSyncExternalStore(
-    subscribeInstallPrompt,
-    canPromptInstall,
-    () => false,
-  );
   const installationCompleted = useSyncExternalStore(
     subscribeInstallPrompt,
     isInstallationCompleted,
@@ -125,81 +83,32 @@ export function PwaInstallHint({
   );
 
   useEffect(() => {
-    let detected: InstallPlatform | null = null;
-    if (isIosSafari(window.navigator)) detected = "ios";
-    else if (isSamsungInternet(window.navigator)) detected = "samsung";
-    else if (isAndroidDevice(window.navigator)) detected = "android";
-    if (!detected) return;
-    if (samsungOnly && detected !== "samsung") return;
+    if (!isSamsungInternet(window.navigator)) return;
     if (isStandaloneDisplay(window)) return;
     if (!isInstallHintEligible(window)) return;
-    setPlatform(detected);
-  }, [samsungOnly]);
+    setVisible(true);
+  }, []);
 
   useEffect(() => {
     if (!installationCompleted) return;
-    // Anonymous install-funnel signal (#2189): the appinstalled event fired.
+    // Report installations even in browsers that never show the Samsung hint.
     trackEvent("pwa_installed");
-    setPlatform(null);
+    setVisible(false);
   }, [installationCompleted]);
 
-  // Install-funnel signal (#2189): the install-hint card became visible —
-  // any platform, so the shown count covers the manual iOS card too.
   useEffect(() => {
-    if (!platform) return;
+    if (!visible) return;
     trackEvent("pwa_install_prompt_shown");
-    // Einstieg (#7552): Installations- und Samsung-Hinweis sind getrennte
-    // Flächen, obwohl es dieselbe Karte ist.
-    trackOnboardingSurface("shown", onboardingSurfaceOf(platform));
-  }, [platform]);
+    trackOnboardingSurface("shown", "samsung_hint");
+  }, [visible]);
 
-  if (!platform || installationCompleted) return null;
+  if (!visible || installationCompleted) return null;
 
-  const surface = onboardingSurfaceOf(platform);
-
-  const dismiss = () => {
-    setPlatform(null);
+  const close = () => {
+    trackOnboardingSurface("dismissed", "samsung_hint");
+    setVisible(false);
     dismissInstallHint(window);
   };
-
-  // Schließen über das X: die Person lehnt den Hinweis ab. Eine angenommene
-  // Installation schließt die Karte ebenfalls, zählt aber nicht als Schließen.
-  const close = () => {
-    trackOnboardingSurface("dismissed", surface);
-    dismiss();
-  };
-
-  const install = () => {
-    // Angenommen heißt: die Person tippt auf das Angebot der Karte. Was sie
-    // im Browser-Dialog wählt, melden weiter die pwa_install_prompt_*.
-    trackOnboardingSurface("accepted", surface);
-    void triggerInstallPrompt()
-      .then((outcome) => {
-        logger.info("pwa_install_prompt_answered", { outcome });
-        if (outcome === "accepted") trackEvent("pwa_install_prompt_accepted");
-        if (outcome === "dismissed") trackEvent("pwa_install_prompt_dismissed");
-        // A declined prompt leaves the card in place so the user can retry.
-        if (outcome === "accepted") dismiss();
-      })
-      .catch((err: unknown) => {
-        // Bewusst ohne Meldung: der Browser hat seinen Dialog nicht
-        // gezeigt, die Karte bleibt stehen und kann erneut getippt werden.
-        // Es gibt keinen Server-Fehler, den die Person verstehen könnte.
-        logger.error("pwa_install_prompt_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  };
-
-  // Android with a captured event gets a real one-tap install. Without one
-  // (event missed, or the browser exposes no install action) it falls back to
-  // the same manual instructions iOS needs, which is all Safari ever allows.
-  const showOneTapInstall = platform === "android" && oneTapInstallReady;
-  const PlatformIcon = showOneTapInstall
-    ? Download
-    : platform === "ios"
-      ? Share
-      : EllipsisVertical;
 
   return (
     // Deliberately NOT `moto-content-surface`: that utility is unlayered and
@@ -220,7 +129,7 @@ export function PwaInstallHint({
         {/* White bubble, because the previous #83CD2D/10 tint is invisible on
             the green card background. */}
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white">
-          <PlatformIcon
+          <EllipsisVertical
             className="h-4 w-4"
             style={{ color: GROUP_ROOM_SHADES.text }}
             aria-hidden="true"
@@ -233,39 +142,12 @@ export function PwaInstallHint({
           >
             {t("title")}
           </h2>
-          {platform === "samsung" ? (
-            <SamsungChromeInstructions
-              pageUrl={new URL(window.location.href)}
-              onOpenInChrome={() => trackOnboardingSurface("accepted", surface)}
-            />
-          ) : showOneTapInstall ? (
-            <p className="mt-1">{t("oneTapDescription")}</p>
-          ) : platform === "ios" ? (
-            <p className="mt-1">
-              {t("iosBefore")} <span className="font-medium">{t("share")}</span>{" "}
-              {t("iosBetween")}{" "}
-              <span className="font-medium">{t("homeScreen")}</span>.
-            </p>
-          ) : (
-            <p className="mt-1">
-              {t("androidBefore")}{" "}
-              <span className="font-medium">{t("install")}</span>{" "}
-              {t("androidOr")}{" "}
-              <span className="font-medium">{t("addToHome")}</span>.
-            </p>
-          )}
-          {showOneTapInstall && (
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className="mt-3"
-              onClick={install}
-              tooltip={t("installTooltip")}
-            >
-              {t("install")}
-            </Button>
-          )}
+          <SamsungChromeInstructions
+            pageUrl={new URL(window.location.href)}
+            onOpenInChrome={() =>
+              trackOnboardingSurface("accepted", "samsung_hint")
+            }
+          />
         </div>
         <Button
           type="button"

@@ -40,6 +40,8 @@ export function dailyBackupRig(t, { dotEnv = '' } = {}) {
   server:
     image: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
     network_mode: none
+    # Forward the image's stop signal to sleep instead of waiting for Docker's 10s kill timeout.
+    init: true
     entrypoint: [sleep, infinity]
     # As in the deployed Compose files; the backup inspects the container.
     environment:

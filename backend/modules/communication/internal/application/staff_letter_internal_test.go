@@ -160,11 +160,12 @@ func letterDraft(mode, audience string) *StaffParentAnnouncement {
 }
 
 func newLetterService(repo *letterRepo, outbox *letterOutbox, deliveries *letterDeliveries) StaffService {
+	notifier := &fakeNotifier{}
 	return NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   &fakeNotifier{},
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     outbox,
 		Deliveries: deliveries,
 		ParentsURL: "https://eltern.example.test",
@@ -607,10 +608,10 @@ func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   notifier,
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     &letterOutbox{},
 		Deliveries: &letterDeliveries{},
 		ParentsURL: "https://eltern.example.test",

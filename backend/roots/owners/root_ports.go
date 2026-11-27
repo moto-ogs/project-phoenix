@@ -9,7 +9,6 @@ import (
 	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	careplanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	carePlanBindingPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
@@ -34,12 +33,6 @@ import (
 type PickupExcusalTimetable interface {
 	careplanCompose.PartialAbsencePreview
 	careplanCompose.PickupExtensions
-}
-
-// ExcusedRequestReads reads one excused-absence request for the parents
-// portal.
-type ExcusedRequestReads interface {
-	FindByID(ctx context.Context, id any) (*absencerecords.ExcusedAbsenceRequest, error)
 }
 
 // PickupStudentLocks takes the People Directory student lock a weekly pickup

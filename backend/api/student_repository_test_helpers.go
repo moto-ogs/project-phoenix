@@ -18,14 +18,12 @@ import (
 )
 
 // StudentTestRepositories are the student suites' Care Plan rows: the owner
-// capability, which the Care Plan workflows composed by the test root share,
-// and the request adapters over it. The Enrollment graph the suites read
+// capability, which the Care Plan workflows composed by the test root share. The Enrollment graph the suites read
 // through comes beside it (NewStudentTestRepositories), the People
 // Directory, Audit and Communication rows from NewStudentPeopleRows,
 // NewStudentAuditRows and NewStudentMessageRows.
 type StudentTestRepositories struct {
-	CarePlan              careplan.Capability
-	ExcusedAbsenceRequest *owners.ExcusedAbsenceRequestRepository
+	CarePlan careplan.Capability
 }
 
 // NewStudentTestRepositoriesWithMembers composes the student suites' Care
@@ -45,8 +43,7 @@ func NewStudentTestRepositoriesWithMembers(db transactionruntime.Database, membe
 		return StudentTestRepositories{}, EnrollmentTestRepositories{}, err
 	}
 	return StudentTestRepositories{
-		CarePlan:              care,
-		ExcusedAbsenceRequest: owners.NewExcusedAbsenceRequestRepository(care),
+		CarePlan: care,
 	}, enrollment, nil
 }
 

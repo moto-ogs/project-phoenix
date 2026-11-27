@@ -449,12 +449,10 @@ func (s *TemplateSplitService) splitInTransaction(
 // guarantee that no planned non-spontaneous old-template instance survives
 // on/after the effective date, however far materialization once reached.
 // Started/completed/cancelled and spontaneous rows survive (same protection
-// rule as ReplanWeek). preserveDeviations=false: split is the destructive
-// series operation. A surviving deviated old-template row would dedupe apart
-// from the new template's materialized successor and show as a duplicate
-// block (#1840).
+// rule as ReplanWeek). Planned rows with deviations are removed too: a
+// surviving old-template row would duplicate its materialized successor (#1840).
 func (s *TemplateSplitService) deleteSplitSourceInstances(ctx context.Context, oldID int64, effectiveDate calendar.Date) (int64, error) {
-	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, calendar.Date(effectiveDate), nil, &oldID, false)
+	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, effectiveDate, nil, &oldID)
 	if err != nil {
 		return 0, &ports.ScheduleError{Op: "split template: delete planned instances", Err: err}
 	}

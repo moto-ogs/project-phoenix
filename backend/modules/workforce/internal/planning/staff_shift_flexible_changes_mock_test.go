@@ -561,7 +561,8 @@ func TestShiftService_ApplyCancellation_CancelsAndCreatesReplacements(t *testing
 func TestShiftService_ApplyCancellation_AppliesOriginEdits(t *testing.T) {
 	t.Parallel()
 
-	svc, repo, _ := shiftServiceFixture()
+	newType := int64(42)
+	svc, repo, _ := shiftServiceWithTypes(map[int64]*workforce.ShiftTypeRecord{newType: {IsActive: true}})
 
 	origin := validShift(7) // stored 08:00–16:00
 	origin.ID = 5
@@ -575,7 +576,6 @@ func TestShiftService_ApplyCancellation_AppliesOriginEdits(t *testing.T) {
 		return nil
 	}
 
-	newType := int64(42)
 	_, err := svc.ApplyCancellation(context.Background(), CancelShiftInput{
 		ShiftID:          5,
 		Cancelled:        true,
@@ -978,12 +978,11 @@ func TestShiftService_ApplyCancellation_ReloadsOriginAfterLock(t *testing.T) {
 // A cover this cancellation drops (its staff absent from the new replacement set)
 // must still be locked, so a concurrent edit/delete of it — which locks only that
 // cover's staff — serializes against the delete-and-rebuild instead of racing it
-// (#1841). The advisory lock is a no-op without a DB, so the lock set is observed
-// directly via the test seam.
+// (#1841).
 func TestShiftService_ApplyCancellation_LocksDroppedCoverStaff(t *testing.T) {
 	t.Parallel()
 
-	svc, repo, _ := shiftServiceFixture()
+	repo := &shiftMockRepo{}
 
 	origin := validShift(7) // origin owned by staff 7
 	origin.ID = 5
@@ -1004,10 +1003,11 @@ func TestShiftService_ApplyCancellation_LocksDroppedCoverStaff(t *testing.T) {
 	}
 	repo.createFunc = func(_ context.Context, _ *workforce.ShiftRecord) error { return nil }
 
-	var lockSets [][]int64
-	svc.(*staffShiftService).lockObserver = func(ids []int64) {
-		lockSets = append(lockSets, append([]int64(nil), ids...))
-	}
+	var locked []int64
+	svc := NewStaffShiftService(repo, &shiftMockStaffRepo{}, &stubShiftTypeService{}, func(_ context.Context, id int64) error {
+		locked = append(locked, id)
+		return nil
+	}, nil, discardShiftMoveEvent, pinnedShiftToday())
 
 	_, err := svc.ApplyCancellation(context.Background(), CancelShiftInput{
 		ShiftID:      5,
@@ -1018,11 +1018,11 @@ func TestShiftService_ApplyCancellation_LocksDroppedCoverStaff(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, lockSets)
+	require.GreaterOrEqual(t, len(locked), 3)
 	// The top-level cancellation lock set is the first acquisition; it must cover the
 	// origin's staff (7), the requested replacement's staff (8), AND the dropped
 	// cover's staff (3), taken in a single stable sorted order.
-	assert.Equal(t, []int64{3, 7, 8}, lockSets[0],
+	assert.Equal(t, []int64{3, 7, 8}, locked[:3],
 		"the dropped cover's staff (3) must be folded into the cancellation lock set")
 }
 

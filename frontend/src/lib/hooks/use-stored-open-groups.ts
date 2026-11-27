@@ -176,5 +176,5 @@ export function useStoredOpenGroups<K extends string>({
     [openGroups],
   );
 
-  return { openGroups, isGroupOpen, toggleGroup };
+  return { isGroupOpen, toggleGroup };
 }

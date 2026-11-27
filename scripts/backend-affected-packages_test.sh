@@ -170,7 +170,7 @@ select_lint_packages() {
   working_directory=${3:-$fixture}
   (
     cd "$working_directory"
-    BASE_REF=base EVENT_NAME="$event_name" FULL_BACKEND="$full_backend" \
+    BASE_REVISION=refs/remotes/origin/base EVENT_NAME="$event_name" FULL_BACKEND="$full_backend" \
       "$repo_root/scripts/backend-lint-packages.sh"
   )
 }
@@ -225,8 +225,17 @@ assert_workflow_filter() {
 # As in paths-filter: * stays inside one path segment, ** crosses them,
 # and **/ also matches no directory at all.
 glob_matches() {
-  regex=$(printf '%s' "$1" | sed -e 's/[.%]/\\&/g' -e 's|\*\*/|(.@/)?|g' \
-    -e 's|\*\*|.@|g' -e 's|\*|[^/]*|g' -e 's|@|*|g')
+  local glob=$1 regex='' char
+  while [ -n "$glob" ]; do
+    case "$glob" in
+      '**/'*) regex+='(.*/)?'; glob=${glob:3} ;;
+      '**'*) regex+='.*'; glob=${glob:2} ;;
+      '*'*) regex+='[^/]*'; glob=${glob:1} ;;
+      *) char=${glob:0:1}; glob=${glob:1}
+         case "$char" in '.'|'+'|'?'|'^'|'$'|'|'|'('|')'|'['|']'|'{'|'}'|'\') regex+='\' ;; esac
+         regex+=$char ;;
+    esac
+  done
   [[ "$2" =~ ^${regex}$ ]]
 }
 
@@ -239,10 +248,15 @@ workflow_filter_patterns() {
 }
 
 workflow_filter_matches() {
+  local pattern included=false
   while IFS= read -r pattern; do
-    [ -n "$pattern" ] && glob_matches "$pattern" "$2" && return 0
+    if [[ "$pattern" == '!'* ]]; then
+      if glob_matches "${pattern#!}" "$2"; then return 1; fi
+    elif glob_matches "$pattern" "$2"; then
+      included=true
+    fi
   done < <(workflow_filter_patterns "$1")
-  return 1
+  [ "$included" = true ]
 }
 
 assert_workflow_output_contains() {
@@ -340,6 +354,14 @@ rm "$fixture/backend/auth/authorize/permissions/catalog.json"
 printf '{}\n' >"$fixture/backend/architecture/composition.json"
 assert_output $'example.test/project/cmd\nexample.test/project/test'
 rm "$fixture/backend/architecture/composition.json"
+
+mkdir -p "$fixture/backend/api/contract" "$fixture/frontend/src/lib/contract"
+for path in backend/api/contract/contract.json frontend/src/lib/contract/probe.generated.ts; do
+  touch "$fixture/$path"
+  assert_output $'example.test/project/cmd\nexample.test/project/test'
+  assert_output_changed 'example.test/project/cmd'
+  rm "$fixture/$path"
+done
 
 # Fixtures shared across packages select the tests that name them.
 printf '[]\n' >"$fixture/backend/testdata/shared-cases.json"
@@ -458,8 +480,7 @@ for path in 'scripts/test-changed.sh' 'scripts/test-changed_test.sh' 'scripts/te
 done
 assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.backend-local-test-scripts == 'true'"
 assert_workflow_output_contains toolchain-changed "steps.filter.outputs.backend-local-test-scripts == 'true'"
-# The script self-tests left the backend test job: the ratchets suite must
-# start wherever that job ran them, on every full backend suite.
+# The shell self-tests remain in selection even when the full backend job covers the Go ratchets.
 for output in run-ci-scripts toolchain-changed; do
   assert_workflow_output_contains "$output" "steps.backend-size.outputs.full == 'true'"
   assert_workflow_output_contains "$output" "steps.filter.outputs.backend-test-infra == 'true'"
@@ -467,83 +488,109 @@ for output in run-ci-scripts toolchain-changed; do
   assert_workflow_output_contains "$output" "steps.scope.outputs.release == 'true'"
 done
 grep -qF 'scripts/backend-test-matrix_test.sh' <(sed -n '/- name: Verify backend test scripts/,/^  [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml") ||
-  { echo 'the ratchets suite must run the test matrix self-test' >&2; exit 1; }
+  { echo 'the selection suite must run the test matrix self-test' >&2; exit 1; }
 for path in 'scripts/backend-source-ratchets.mjs' 'backend/test/*_test.go'; do
   assert_workflow_filter script-tests "$path" present
   # Do not buy the release-restore or extra toolchain-ratchet jobs for these.
   assert_workflow_filter tooling "$path" absent
-  assert_workflow_filter restore-suite "$path" absent
+  assert_workflow_filter daily-restore "$path" absent
+  assert_workflow_filter release-restore "$path" absent
   assert_workflow_filter hooks "$path" absent
 done
-# The restore suite takes about five minutes (#6962). Pull requests start it
-# only through the restore-suite filter; pushes and release pull requests
-# always start it.
-assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-suite == 'true'"
-for fragment in "steps.filter.outputs.restore-suite == 'true'" "github.event_name == 'push'" \
-  "steps.scope.outputs.release == 'true'"; do
-  assert_workflow_output_contains restore-changed "$fragment"
-done
-restore_rows=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '"restore"' || true)
-if [ -z "$restore_rows" ] ||
-   grep -vqF "needs.detect-changes.outputs.restore-changed == 'true' &&" <<<"$restore_rows"; then
-  echo 'only restore-changed may add the restore suite to the matrix' >&2
-  exit 1
-fi
-# The split suites start together: the release restore left the restore job
-# and the script self-tests left the ratchets job only to shorten both (#6962).
-suite_rows=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '["unit"' || true)
-while IFS= read -r row; do
-  for pair in '"restore" "release-restore"' '"ratchets" "selection"'; do
-    read -r first second <<<"$pair"
-    has_first=0; has_second=0
-    grep -qF "$first" <<<"$row" && has_first=1
-    grep -qF "$second" <<<"$row" && has_second=1
-    [ "$has_first" = "$has_second" ] ||
-      { echo "suites $first and $second must start together: $row" >&2; exit 1; }
+# A change must run exactly the drills that read it. Protected runs always do both.
+for filter in daily-restore release-restore; do
+  workflow_filter_matches "$filter" .github/workflows/main.yml ||
+    { echo "workflow changes must run the $filter drill" >&2; exit 1; }
+  for admission in run-ci-scripts run-script-fixtures; do
+    assert_workflow_output_contains "$admission" "steps.filter.outputs.$filter == 'true'"
   done
-done <<<"$suite_rows"
-[ "$(grep -c . <<<"$suite_rows")" = 4 ] || { echo 'expected four suite rows in the ci-scripts matrix' >&2; exit 1; }
-if workflow_filter_matches restore-suite scripts/posthog-dashboards.mjs; then
-  echo 'a PostHog dashboard change must not start the restore suite' >&2
-  exit 1
-fi
-for path in .github/workflows/main.yml scripts/daily-backup.sh scripts/release-backup.sh; do
-  workflow_filter_matches restore-suite "$path" ||
-    { echo "a change to $path must start the restore suite" >&2; exit 1; }
+  for fragment in "steps.filter.outputs.$filter == 'true'" "github.event_name == 'push'" "steps.scope.outputs.release == 'true'"; do
+    assert_workflow_output_contains "$filter-changed" "$fragment"
+  done
+  for path in scripts/posthog-dashboards.mjs scripts/daily-backup-alerts.integration.test.mjs monitoring/grafana/provisioning/alerting/daily-backup.yml docs/operations/daily-backup.md; do
+    if workflow_filter_matches "$filter" "$path"; then
+      echo "$path must not start the $filter database restore drill" >&2; exit 1
+    fi
+  done
 done
+if workflow_filter_matches daily-restore scripts/restore-db.sh ||
+   workflow_filter_matches release-restore scripts/daily_backup.py; then
+  echo 'a change to one restore must not start the other drill' >&2; exit 1
+fi
+assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-alerts == 'true'"
+for fragment in "steps.filter.outputs.restore-alerts == 'true'" "github.event_name == 'push'" "steps.scope.outputs.release == 'true'"; do
+  assert_workflow_output_contains run-restore-alerts "$fragment"
+done
+# Evaluate the actual matrix for all path selections, with and without a full
+# backend suite. Full backend tests cover ratchets, not the selection self-tests.
+node --input-type=module - "$repo_root/.github/workflows/main.yml" <<'NODE'
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+const workflow = readFileSync(process.argv[2], 'utf8');
+const suite = workflow.match(/^        suite: >-\n\s+\$\{\{ ([\s\S]*?) \}\}/m)[1];
+const exclude = workflow.match(/^        exclude: \$\{\{ (.+) \}\}/m)[1];
+function evaluate(expression, outputs) {
+  return runInNewContext(expression.replace(/needs\.detect-changes\.outputs\.([\w-]+)/g, 'outputs["$1"]'), {
+    outputs, fromJSON: JSON.parse,
+    format: (pattern, ...args) => pattern.replace(/\{(\d+)\}/g, (_, index) => args[index]),
+  });
+}
+for (const daily of [false, true]) for (const release of [false, true]) {
+  for (const toolchain of [false, true]) for (const full of [false, true]) {
+    const outputs = { 'daily-restore-changed': String(daily), 'release-restore-changed': String(release),
+      'toolchain-changed': String(toolchain), 'full-backend-suite': String(full) };
+    const omitted = evaluate(exclude, outputs).map(row => row.suite);
+    const actual = evaluate(suite, outputs).filter(name => !omitted.includes(name));
+    const expected = ['unit'];
+    if (daily) expected.push('restore');
+    if (release) expected.push('release-restore');
+    if (toolchain && !full) expected.push('ratchets');
+    if (toolchain) expected.push('selection');
+    assert.deepEqual(actual, expected, JSON.stringify(outputs));
+  }
+}
+NODE
 # Inventory: every file the restore steps name, and every file those files
 # reach by relative path, import or script directory, is in the filter.
-restore_queue=$(awk '
-  $0 == "  ci-scripts:" { job = 1; next }
-  !job { next }
-  /^      - / { if (keep) printf "%s", block; block = ""; keep = 0 }
-  /^  [a-z-]+:$/ { if (keep) printf "%s", block; exit }
-  { block = block $0 "\n" }
-  /if: matrix\.suite == .(release-)?restore.$/ { keep = 1 }
-' "$repo_root/.github/workflows/main.yml" | { grep -oE '(scripts|docs|monitoring)/[A-Za-z0-9_.@/-]+' || true; } | sort -u)
-[ -n "$restore_queue" ] || { echo 'restore suite steps missing from main.yml' >&2; exit 1; }
-restore_seen=' '
-while [ -n "$restore_queue" ]; do
-  path=${restore_queue%%$'\n'*}
-  [ "$path" = "$restore_queue" ] && restore_queue='' || restore_queue=${restore_queue#*$'\n'}
-  case "$restore_seen" in *" $path "*) continue ;; esac
-  restore_seen="$restore_seen$path "
-  [ -f "$repo_root/$path" ] || { echo "restore suite input does not exist: $path" >&2; exit 1; }
-  workflow_filter_matches restore-suite "$path" ||
-    { echo "restore suite input missing from the restore-suite filter: $path" >&2; exit 1; }
-  while IFS= read -r reference; do
-    [ -n "$reference" ] || continue
-    reference=$(printf '%s/%s\n' "${path%/*}" "$reference" |
-      sed -E -e 's#/\./#/#g' -e ':a' -e 's#[^/]+/\.\./##' -e 'ta')
-    restore_queue=$(printf '%s\n%s' "$restore_queue" "$reference")
-    restore_queue=${restore_queue#$'\n'}
-  done < <(
-    { grep -oE "(new URL\(|join\(scripts, |with_name\()'[^']+'|from '\.\.?/[^']+'" "$repo_root/$path" |
-        grep -oE "'[^']+'" | tr -d "'"
-      grep -oE '(\$script_dir|dirname -- "\$0"\))/[A-Za-z0-9_.-]+' "$repo_root/$path" | sed 's|.*/||'
-    } || true
-  )
-done
+assert_restore_inputs() {
+  local restore_queue restore_seen path reference
+  restore_queue=$(awk -v step_pattern="$2" '
+    $0 == "  ci-scripts:" { job = 1; next }
+    !job { next }
+    /^      - / { if (keep) printf "%s", block; block = ""; keep = 0 }
+    /^  [a-z-]+:$/ { if (keep) printf "%s", block; exit }
+    { block = block $0 "\n" }
+    $0 ~ step_pattern { keep = 1 }
+  ' "$repo_root/.github/workflows/main.yml" | { grep -oE '(scripts|docs|monitoring)/[A-Za-z0-9_.@/-]+' || true; } | sort -u)
+  [ -n "$restore_queue" ] || { echo "steps for the $1 filter missing from main.yml" >&2; exit 1; }
+  restore_seen=' '
+  while [ -n "$restore_queue" ]; do
+    path=${restore_queue%%$'\n'*}
+    [ "$path" = "$restore_queue" ] && restore_queue='' || restore_queue=${restore_queue#*$'\n'}
+    case "$restore_seen" in *" $path "*) continue ;; esac
+    restore_seen="$restore_seen$path "
+    [ -f "$repo_root/$path" ] || { echo "restore suite input does not exist: $path" >&2; exit 1; }
+    workflow_filter_matches "$1" "$path" ||
+      { echo "input missing from the $1 filter: $path" >&2; exit 1; }
+    while IFS= read -r reference; do
+      [ -n "$reference" ] || continue
+      reference=$(printf '%s/%s\n' "${path%/*}" "$reference" |
+        sed -E -e 's#/\./#/#g' -e ':a' -e 's#[^/]+/\.\./##' -e 'ta')
+      restore_queue=$(printf '%s\n%s' "$restore_queue" "$reference")
+      restore_queue=${restore_queue#$'\n'}
+    done < <(
+      { grep -oE "(new URL\(|join\(scripts, |with_name\()'[^']+'|from '\.\.?/[^']+'|read\('\.\.?/[^']+'" "$repo_root/$path" |
+          grep -oE "'[^']+'" | tr -d "'"
+        grep -oE '(\$script_dir|dirname -- "\$0"\))/[A-Za-z0-9_.-]+' "$repo_root/$path" | sed 's|.*/||'
+      } || true
+    )
+  done
+}
+assert_restore_inputs daily-restore 'if: matrix[.]suite == .restore.$'
+assert_restore_inputs release-restore 'if: matrix[.]suite == .release-restore.$'
+assert_restore_inputs restore-alerts 'needs[.]detect-changes[.]outputs[.]run-restore-alerts'
+
 for filter in backend-tests backend-lint backend-architecture; do
   assert_workflow_filter "$filter" 'scripts/backend-architecture.sh' present
   assert_workflow_filter "$filter" 'scripts/backend-architecture/**' present
@@ -643,8 +690,7 @@ for manifest in go.mod go.sum; do
   grep -qx 'full=true' "$fixture/scope-size"
   rm "$fixture/scope-size"
 done
-# The runner is sized before the import graph is known: only test files in at
-# most 15 directories prove a selection of at most 16 packages (with ./test).
+# Only package-local test inputs have a bounded selection without an import graph.
 assert_small_runner() {
   expected=$1
   files=$2
@@ -654,11 +700,19 @@ assert_small_runner() {
   rm "$fixture/scope-size"
 }
 assert_small_runner false '[]'
+assert_small_runner true '["backend/api/contract/contract.json","frontend/src/lib/contract/rows.generated.ts"]'
 assert_small_runner true '["backend/api/a_test.go","backend/api/b_test.go"]'
 assert_small_runner true "$(jq -cn '[range(0; 15) | "backend/package\(.)/source_test.go"]')"
 assert_small_runner false "$(jq -cn '[range(0; 16) | "backend/package\(.)/source_test.go"]')"
 assert_small_runner false '["backend/api/a_test.go","backend/api/a.go"]'
-assert_small_runner false '["backend/api/a_test.go","backend/api/testdata/a.json"]'
+assert_small_runner true '["backend/templates/email/holiday-registration-accepted.html","backend/templates/email/holiday_registration_accepted_test.go"]'
+assert_small_runner true "$(jq -cn '[range(0; 15) | "backend/package\(.)/a_test.go", "backend/package\(.)/testdata/sub/input.go"]')"
+assert_small_runner false "$(jq -cn '[range(0; 16) | "backend/package\(.)/testdata/sub/input.json"]')"
+assert_small_runner false '["backend/testdata/shared-cases.json"]'
+assert_small_runner false '["backend/testdata/shared_test.go"]'
+assert_small_runner false '["backend/test/query-budgets/report_test.go"]'
+assert_small_runner false '["backend/architecture/command-effects/fixture_test.go"]'
+assert_small_runner false '["backend/templates/email/new-input.bin"]'
 assert_small_runner false '["backend/go.sum"]'
 grep -qF "backend-small-runner: \${{ needs.detect-changes.outputs.small-backend-suite == 'true' && needs.detect-changes.outputs.full-backend-suite != 'true' }}" "$repo_root/.github/workflows/main.yml" ||
   { echo 'a full backend suite must not run on the small runner' >&2; exit 1; }

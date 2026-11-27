@@ -243,9 +243,7 @@ function GroupsPageContent() {
   const handleCreateGroup = useCallback(
     async (data: Partial<Group>) => {
       // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath.
-      const payload = groupsConfig.form.transformBeforeSubmit
-        ? groupsConfig.form.transformBeforeSubmit(data)
-        : data;
+      const payload = groupsConfig.form.transformBeforeSubmit(data);
       const created = await service.create(payload);
       toastSuccess(`Die Gruppe „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
@@ -258,9 +256,7 @@ function GroupsPageContent() {
     async (data: Partial<Group>) => {
       if (!selectedGroup) return;
       // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
-      const payload = groupsConfig.form.transformBeforeSubmit
-        ? groupsConfig.form.transformBeforeSubmit(data)
-        : data;
+      const payload = groupsConfig.form.transformBeforeSubmit(data);
       let saved: Group | null;
       try {
         saved = await service.update(selectedGroup.id, payload);
@@ -295,11 +291,7 @@ function GroupsPageContent() {
     setDeletePending(true);
     deleteErrors.clear();
     try {
-      const deleted = await service.remove(selectedGroup.id);
-      if (!deleted) {
-        setDeletePending(false);
-        return;
-      }
+      await service.remove(selectedGroup.id);
     } catch (err) {
       logger.warn("group_delete_failed", {
         group_id: selectedGroup.id,
@@ -369,7 +361,7 @@ function GroupsPageContent() {
           <DatabaseFormModal<Group>
             isOpen={showCreateModal && !accessRefused}
             onClose={() => setShowCreateModal(false)}
-            mode="create"
+
             config={groupsConfig}
             onSubmit={handleCreateGroup}
             errorPath={createErrors}

@@ -21,8 +21,8 @@ func TestAmendmentLetterDoesNotReuseTheApplicationsConclusion(t *testing.T) {
 		}
 		return strings.Join(blocks, "\n")
 	}
-	assert.Contains(t, text(), "Ihr müsst ihn nicht unterschreiben.")
+	assert.Contains(t, text(), "Sie müssen ihn nicht unterschreiben.")
 	record.Version.Number, record.Version.Status, record.Version.Source = 2, carecontract.VersionRequested, carecontract.SourceBookingChange
-	assert.NotContains(t, text(), "Ihr müsst ihn nicht unterschreiben.")
-	assert.Contains(t, text(), "Bitte unterschreibt diese neue Fassung.")
+	assert.NotContains(t, text(), "Sie müssen ihn nicht unterschreiben.")
+	assert.Contains(t, text(), "Bitte unterschreiben Sie diese neue Fassung.")
 }

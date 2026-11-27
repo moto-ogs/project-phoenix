@@ -25,30 +25,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "binding_digest": "898708533b442531816204abf4738cdf",
       "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
@@ -1362,7 +1338,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayAcceptanceAccounts.HolidayParentSetupURL",
-      "binding_digest": "cb9e92e4188fc4f8d49f854e17d4922d",
+      "binding_digest": "87f92b42409029178d29e49dbec9fa79",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayAcceptanceAccounts.HolidayParentSetupURL",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",
@@ -1721,6 +1697,22 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "46cee501662b6b6f6bf60d434b9fe0a0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "f40b4497afd691812b45706a6da2731c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayKnownChildren.KnownHolidayChildren",
       "binding_digest": "ca6a5c753137d7a8d89d0d2bd775110a",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayKnownChildren.KnownHolidayChildren",
@@ -1762,7 +1754,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayParentAccountLinks.HolidayParentAccountLink",
-      "binding_digest": "9e7c99a7127e636709092e5547874b22",
+      "binding_digest": "39941dd667ea63aa4f0699aac35c8bbc",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParentAccountLinks.HolidayParentAccountLink",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",

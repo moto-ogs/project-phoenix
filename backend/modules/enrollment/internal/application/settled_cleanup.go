@@ -26,7 +26,7 @@ type settledCutoffs struct {
 // recorded per request.
 func (s *RejectedCleanup) CleanupSettledEnrollments(ctx context.Context) (enrollmentNative.SettledEnrollmentCleanupResult, error) {
 	d := s.deps
-	if d.Requests == nil || d.Children == nil || d.LateInvites == nil || d.Delivery == nil || d.Settings == nil || d.Runtime.InTransaction == nil {
+	if !s.configured() {
 		return enrollmentNative.SettledEnrollmentCleanupResult{}, errors.New("settled enrollment cleanup is not configured")
 	}
 	cutoffs, err := s.settledCutoffs(ctx)

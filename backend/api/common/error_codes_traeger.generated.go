@@ -26,6 +26,8 @@ const CodeTraegerLogoTooLarge = "traeger.logo_too_large"
 const CodeTraegerMasterDataInvalid = "traeger.master_data_invalid"
 const CodeTraegerMemberNotFound = "traeger.member_not_found"
 const CodeTraegerNoMembership = "traeger.no_membership"
+const CodeTraegerOpeningChangeInvalid = "traeger.opening_change_invalid"
+const CodeTraegerOpeningChangeNotFound = "traeger.opening_change_not_found"
 const CodeTraegerReportTemplateInvalid = "traeger.report_template_invalid"
 const CodeTraegerReportTemplateNameTaken = "traeger.report_template_name_taken"
 const CodeTraegerReportTemplateNotFound = "traeger.report_template_not_found"
@@ -64,6 +66,8 @@ var errorCodeClassesTraeger = []errorCodeClass{
 	{CodeTraegerMasterDataInvalid, "input"},
 	{CodeTraegerMemberNotFound, "input"},
 	{CodeTraegerNoMembership, "permission"},
+	{CodeTraegerOpeningChangeInvalid, "input"},
+	{CodeTraegerOpeningChangeNotFound, "input"},
 	{CodeTraegerReportTemplateInvalid, "input"},
 	{CodeTraegerReportTemplateNameTaken, "input"},
 	{CodeTraegerReportTemplateNotFound, "input"},

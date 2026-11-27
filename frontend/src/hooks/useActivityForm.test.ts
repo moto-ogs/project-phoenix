@@ -500,87 +500,22 @@ describe("useActivityForm", () => {
     });
   });
 
-  describe("loadCategories callback", () => {
-    it("should manually load categories when called", async () => {
-      vi.mocked(getCategories).mockResolvedValue(mockCategories);
+  it("should not reload categories multiple times on rapid isOpen changes", async () => {
+    vi.mocked(getCategories).mockResolvedValue(mockCategories);
 
-      const { result } = renderHook(() => useActivityForm(initialForm, false));
+    const { rerender } = renderHook(
+      ({ isOpen }) => useActivityForm(initialForm, isOpen),
+      { initialProps: { isOpen: false } },
+    );
 
-      expect(result.current.categories).toEqual([]);
+    // Open and close rapidly
+    rerender({ isOpen: true });
+    rerender({ isOpen: false });
+    rerender({ isOpen: true });
 
-      await act(async () => {
-        await result.current.loadCategories();
-      });
-
-      expect(result.current.categories).toEqual(mockCategories);
-      expect(getCategories).toHaveBeenCalledTimes(1);
-    });
-
-    it("should set loading state during manual load", async () => {
-      let resolveCategories: (value: ActivityCategory[]) => void = () =>
-        undefined;
-      const categoriesPromise = new Promise<ActivityCategory[]>(
-        (resolve) => (resolveCategories = resolve),
-      );
-      vi.mocked(getCategories).mockReturnValue(categoriesPromise);
-
-      const { result } = renderHook(() => useActivityForm(initialForm, false));
-
-      expect(result.current.loading).toBe(false);
-
-      act(() => {
-        void result.current.loadCategories();
-      });
-
-      expect(result.current.loading).toBe(true);
-
-      await act(async () => {
-        resolveCategories(mockCategories);
-        await categoriesPromise;
-      });
-
-      expect(result.current.loading).toBe(false);
-      expect(result.current.categories).toEqual(mockCategories);
-    });
-
-    it("should handle errors during manual load", async () => {
-      const error = new ApiError("API error", 500, { code: "general.server" });
-      vi.mocked(getCategories).mockRejectedValue(error);
-
-      const { result } = renderHook(() => useActivityForm(initialForm, false));
-
-      await act(async () => {
-        await result.current.loadCategories();
-      });
-
-      await waitFor(() => {
-        expect(result.current.loadError?.message).toBe(
-          catalogText("general.server", "die Liste der Kategorien"),
-        );
-      });
-      expect(result.current.loading).toBe(false);
-      expect(console.error).toHaveBeenCalledWith("failed to load categories", {
-        error: "API error",
-      });
-    });
-
-    it("should not reload categories multiple times on rapid isOpen changes", async () => {
-      vi.mocked(getCategories).mockResolvedValue(mockCategories);
-
-      const { rerender } = renderHook(
-        ({ isOpen }) => useActivityForm(initialForm, isOpen),
-        { initialProps: { isOpen: false } },
-      );
-
-      // Open and close rapidly
-      rerender({ isOpen: true });
-      rerender({ isOpen: false });
-      rerender({ isOpen: true });
-
-      await waitFor(() => {
-        // Should be called twice (once for each true transition)
-        expect(getCategories).toHaveBeenCalledTimes(2);
-      });
+    await waitFor(() => {
+      // Should be called twice (once for each true transition)
+      expect(getCategories).toHaveBeenCalledTimes(2);
     });
   });
 

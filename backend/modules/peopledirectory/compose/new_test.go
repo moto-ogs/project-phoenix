@@ -17,7 +17,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func buildModule(t *testing.T, db *bun.DB, observations ...func(Observation)) peopledirectory.Owner {
+func buildModule(t *testing.T, db *bun.DB, observations ...func(Observation)) *Directory {
 	t.Helper()
 	observe := func(Observation) {}
 	if len(observations) > 0 {
@@ -25,7 +25,7 @@ func buildModule(t *testing.T, db *bun.DB, observations ...func(Observation)) pe
 	}
 	module, err := New(Dependencies{StudentDirectory: testpkg.StudentDirectory{}, DB: db, Observe: observe, GuardianLinkOwners: testGuardianLinkOwners{Db: db}, GuardianLinkRows: testpkg.GuardianLinks{}, LiveStaff: liveStaffDouble{}}, testPortalMemberships(db))
 	require.NoError(t, err)
-	return module.Owner
+	return module
 }
 
 // liveStaffDouble stands in for School Membership's live staff answer.
@@ -300,7 +300,7 @@ func TestModuleNameLookupsMatchCanonicalUnicodeForms(t *testing.T) {
 			require.NoError(t, err)
 			assert.ElementsMatch(t, []int64{current.ID, legacy.ID}, students)
 
-			byBirthday, err := module.ListEnrolledStudentIDsByNameAndBirthday(ctx, testpkg.Tenant(t), first, last, "2016-03-14")
+			byBirthday, err := module.students.ListEnrolledIDsByNameAndBirthday(ctx, testpkg.Tenant(t), first, last, "2016-03-14")
 			require.NoError(t, err)
 			assert.ElementsMatch(t, []int64{current.ID, legacy.ID}, byBirthday)
 		}

@@ -3,7 +3,6 @@ package messaging
 import (
 	"context"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -31,7 +30,7 @@ type CareRequestReads interface {
 
 // ExcusedRequestReads reads one absence request.
 type ExcusedRequestReads interface {
-	FindByID(ctx context.Context, id any) (*absencerecords.ExcusedAbsenceRequest, error)
+	FindIdentity(ctx context.Context, id int64) (submittedBy, studentID int64, err error)
 }
 
 // OfferingChangeRequestReads reads one offering change request.

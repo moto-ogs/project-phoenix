@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "This creditor identifier is already entered for {school_name} with another bank account. A creditor identifier belongs to exactly one account: enter the same account or check the creditor identifier.",
   "member_not_found": "This person no longer belongs to the Träger office. Please reload the page.",
   "no_membership": "Your account has no access to the Träger portal. Please contact the moto team.",
+  "opening_change_invalid": "The changed opening hours are incomplete. Please check the dates, times, name and schools.",
+  "opening_change_not_found": "These changed opening hours no longer exist. Please reload the page.",
   "report_template_invalid": "Please check the details of the template.",
   "report_template_name_taken": "A template with this name already exists. Please choose another name.",
   "report_template_not_found": "This template no longer exists. Please reload the page.",

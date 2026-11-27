@@ -20,8 +20,6 @@ const { session, sse, invalidatedFamilies, invalidateMatching, useSSESpy } =
       state: {
         status: "connected",
         isConnected: true,
-        error: null,
-        reconnectAttempts: 0,
       } as SSEHookState,
       handlers: [] as ((event: SSEEvent) => void)[],
     },
@@ -64,11 +62,8 @@ vi.mock("~/lib/swr/mutate", () => ({
 }));
 
 import { mutate } from "~/lib/swr/mutate";
-import {
-  LIVE_FALLBACK_INTERVAL_MS,
-  LIVE_RECONCILE_INTERVAL_MS,
-  useLiveRefreshInterval,
-} from "~/lib/swr";
+import { LIVE_RECONCILE_INTERVAL_MS, useLiveRefreshInterval } from "~/lib/swr";
+import { LIVE_FALLBACK_INTERVAL_MS } from "~/lib/swr/live-sync";
 import { resumeSWRSession, suspendSWRSession } from "~/lib/swr/scope";
 import { ownSupervisionKeys } from "~/lib/swr/shell-keys";
 import { subscribeStudentCompanionsChanged } from "~/lib/student-companion-api";
@@ -118,8 +113,6 @@ function setStatus(status: SSEHookState["status"]) {
   sse.state = {
     status,
     isConnected: status === "connected",
-    error: null,
-    reconnectAttempts: status === "reconnecting" ? 1 : 0,
   };
 }
 

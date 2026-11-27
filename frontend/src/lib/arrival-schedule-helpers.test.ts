@@ -4,7 +4,7 @@ import type { ArrivalSchedule } from "./student-arrival-api";
 import {
   arrivalScheduleSourceLabel,
   getDayData,
-  getWeekDays,
+  getWeekDaysForStart,
 } from "./arrival-schedule-helpers";
 
 describe("arrival schedule getDayData", () => {
@@ -96,17 +96,17 @@ describe("arrival schedule getDayData", () => {
   });
 });
 
-describe("arrival schedule getWeekDays", () => {
+describe("arrival schedule getWeekDaysForStart", () => {
   it("includes Saturday and Sunday in today's weekend week when the weekend follows Friday", () => {
     // Sunday in Berlin, but already Monday in a browser east of Berlin.
     setTestClock("2026-09-13T21:30:00Z");
     vi.stubEnv("TZ", "Asia/Almaty");
     try {
-      const days = getWeekDays(0, true);
+      const days = getWeekDaysForStart("2026-09-07", true);
 
       expect(days).toHaveLength(7);
       expect(days.map((day) => day.getDay())).toEqual([1, 2, 3, 4, 5, 6, 0]);
-      expect(getWeekDays(1, true)).toHaveLength(5);
+      expect(getWeekDaysForStart("2026-09-14", true)).toHaveLength(5);
     } finally {
       vi.unstubAllEnvs();
     }
@@ -115,7 +115,7 @@ describe("arrival schedule getWeekDays", () => {
   it("keeps Mo–Fr on a weekday although the weekend follows Friday", () => {
     // The test is about a weekday: Wednesday 2026-09-09.
     setTestClock("2026-09-09T12:00:00+02:00");
-    const days = getWeekDays(0, true);
+    const days = getWeekDaysForStart("2026-09-07", true);
 
     expect(days.map((day) => day.getDay())).toEqual([1, 2, 3, 4, 5]);
   });

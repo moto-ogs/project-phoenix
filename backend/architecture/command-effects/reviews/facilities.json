@@ -577,6 +577,87 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/staffdirectoryview.Directory.AccountIDsByStaffIDs (staff-directory-view) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed to name the login accounts of the staff planned in the closed room. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.AccountIDsByStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Platform protocol participation (durable): facilities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234). The notification feed entries and the push outbox entries join the unit that saves the room closure; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target: facilities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234) to drop explicit push declines. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target: facilities reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234) to remove accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): the root names the account of the request from the session claims already in the context, to leave the person who closed the room out of the audience. No database access, persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs (people-directory) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed to map the planned staff to their accounts in one read. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed; it only constructs the staff directory read. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/timetable.RoomBlockStaffQuery.RoomBlockStaffIDs (timetable-activities) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed: one SELECT of the staff planned on planned blocks of the room within the closure, in the caller's tenant transaction that writes the closure. No row mutation or locking read.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomBlockStaffQuery.RoomBlockStaffIDs",
+      "target_owner": "timetable-activities"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.CloseRoom",
       "classification": "platform",
@@ -1348,26 +1429,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID; modules/studentpresence/internal/application/presence/visit_reads.go:73. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CreateActiveGroup",
       "classification": "leaf",
@@ -1586,26 +1647,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID; modules/studentpresence/internal/application/presence/visit_reads.go:11. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.FindVisitsByStudentID; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ForceStartActivitySessionWithSupervisors",
       "classification": "leaf",
@@ -1805,26 +1846,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.GetStudentCurrentVisit; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisit",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom; modules/studentpresence/internal/application/presence/visit_reads.go:32. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
       "target_owner": "student-presence"
     },
     {

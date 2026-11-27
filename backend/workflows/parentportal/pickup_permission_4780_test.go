@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -54,6 +55,19 @@ type pickupPermissionFixture struct {
 
 func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 	t.Helper()
+	return buildPickupPermissionServiceWith(t, parentSettingsStub{boolValues: map[string]bool{
+		parentService.KeyParentPickupChangeEnabled:       true,
+		parentService.KeyParentGuardianManagementEnabled: true,
+		parentService.KeyParentCareModeRequestEnabled:    true,
+	}, stringValues: map[string]string{
+		parentService.KeyGuardianParentInviteMode: parentService.ParentInviteModeDisabled,
+	}})
+}
+
+// buildPickupPermissionServiceWith builds the fixture over the given school
+// settings (#8162: the same-day cutoff).
+func buildPickupPermissionServiceWith(t *testing.T, settings parentSettingsStub) pickupPermissionFixture {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	timetableOwner := owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
@@ -70,7 +84,7 @@ func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 		owners.NewParentGuardianPolicy(), permissions,
 	)
 	requests := owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		repos.CarePlan(), persons, schedules.Arrivals, schedules.Pickups, presence,
+		owners.CarePlanRequestRecords(repos.CarePlan()), persons, schedules.Arrivals, schedules.Pickups, presence,
 		newPickupExcusal(t, db, repos.CarePlan(),
 			newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)),
 			timetableOwner, false,
@@ -108,16 +122,10 @@ func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 		Attendance:          parentAttendance(t, db),
 		CareRequests:        requests,
-		Settings: parentSettingsStub{boolValues: map[string]bool{
-			parentService.KeyParentPickupChangeEnabled:       true,
-			parentService.KeyParentGuardianManagementEnabled: true,
-			parentService.KeyParentCareModeRequestEnabled:    true,
-		}, stringValues: map[string]string{
-			parentService.KeyGuardianParentInviteMode: parentService.ParentInviteModeDisabled,
-		}},
-		Logger:         slog.Default(),
-		DataRequests:   owners.NewParentDataRequestCommands(repos.CarePlan()),
-		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
+		Settings:            settings,
+		Logger:              slog.Default(),
+		DataRequests:        owners.NewParentDataRequestCommands(repos.CarePlan()),
+		CarePlanPolicy:      owners.NewParentCarePlanPolicy(),
 	})
 	return pickupPermissionFixture{svc: svc, db: db, requests: requests, care: repos.CarePlan()}
 }
@@ -181,6 +189,40 @@ func signedDayAlone(t *testing.T, f pickupPermissionFixture, chain testpkg.Paren
 	return signedPickupSignature(t, f, chain, parentService.PickupSignatureStatementInput{
 		Kind: parentService.PickupSignatureStatementDay, Date: pickupPermissionDay, DepartureMode: "alone",
 	})
+}
+
+// setWeeklyDepartureMode makes the effective weekly plan explicit for a
+// scenario. A person may only be named when the child is collected that day.
+func setWeeklyDepartureMode(t *testing.T, f pickupPermissionFixture, chain testpkg.ParentChain, day calendar.Date, mode string) {
+	t.Helper()
+	weekday, err := calendar.PlanWeekday(t.Context(), day)
+	require.NoError(t, err)
+	keys := [...]string{"", "mon", "tue", "wed", "thu", "fri"}
+	require.GreaterOrEqual(t, weekday, 1)
+	require.LessOrEqual(t, weekday, 5)
+	key := keys[weekday]
+	allowed, err := json.Marshal(map[string][]string{key: {mode}})
+	require.NoError(t, err)
+	days, err := json.Marshal(map[string]string{key: mode})
+	require.NoError(t, err)
+	busDays, err := json.Marshal(map[string]bool{key: mode == careplan.DepartureModeBus})
+	require.NoError(t, err)
+	pickupDays, err := json.Marshal(map[string]bool{key: mode == careplan.DepartureModePickup})
+	require.NoError(t, err)
+	ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
+	_, err = f.db.NewUpdate().TableExpr("users.student_care_profiles").
+		Set("allowed_departure_modes = ?::jsonb", string(allowed)).
+		Set("departure_days = ?::jsonb", string(days)).
+		Set("bus_days = ?::jsonb", string(busDays)).
+		Set("pickup_days = ?::jsonb", string(pickupDays)).
+		Where("membership_id = (SELECT id FROM users.student_school_memberships WHERE student_profile_id = ? AND deleted_at IS NULL)", chain.StudentID).
+		Exec(ctx)
+	require.NoError(t, err)
+}
+
+func setWeeklyPickup(t *testing.T, f pickupPermissionFixture, chain testpkg.ParentChain, day calendar.Date) {
+	t.Helper()
+	setWeeklyDepartureMode(t, f, chain, day, careplan.DepartureModePickup)
 }
 
 func staffDecisionContext(t *testing.T, db *bun.DB, tenantID int64) (context.Context, int64) {
@@ -339,6 +381,7 @@ func TestPickupChangeEditPreservesAnOmittedSignedCollector(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "oma-4780-edit-compatibility")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
@@ -664,6 +707,7 @@ func TestDayPickupPerson_SignedConfirmedAndOnlyThatDay(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "oma-4780-day")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
@@ -691,13 +735,15 @@ func TestDayPickupPerson_SignedConfirmedAndOnlyThatDay(t *testing.T) {
 	approveCareRequest(t, f, chain.TenantID, created.ID)
 
 	tenantCtx := tenant.WithTenantID(ctx, chain.TenantID)
-	onDay, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay)})
+	onDay := dayPickupPersonOf(t, f, tenantCtx, chain.StudentID, pickupPermissionDay)
+	require.NotNil(t, onDay, "the confirmed collector is the pickup person of that day (#8162)")
+	assert.Equal(t, terms.PickupPersonName, onDay.Name)
+	require.NotNil(t, onDay.GuardianProfileID)
+	assert.Equal(t, contactID, *onDay.GuardianProfileID)
+	assert.Nil(t, dayPickupPersonOf(t, f, tenantCtx, chain.StudentID, pickupPermissionDay.AddDays(1)), "the collector is not set on the next day")
+	notes, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay)})
 	require.NoError(t, err)
-	require.Len(t, onDay, 1, "the confirmed collector is noted for that day")
-	assert.Contains(t, onDay[0].Content, terms.PickupPersonName)
-	nextDay, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay.AddDays(1))})
-	require.NoError(t, err)
-	assert.Empty(t, nextDay, "the collector is not noted on the next day")
+	assert.Empty(t, notes, "the collector is no longer a free-text note")
 
 	canPickup, _ := pickupWeekdays(t, f.db, chain.StudentID, contactID)
 	assert.False(t, canPickup, "a one-day collector does not become a standing pickup permission")
@@ -737,6 +783,7 @@ func TestDayPickupApprovalRefusesAContactNowManagedByTheSchool(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "schule-4780-tag")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
@@ -768,9 +815,9 @@ func TestWalkingHomeAloneNeedsASignature(t *testing.T) {
 	})
 	require.ErrorIs(t, err, parentService.ErrPickupSignatureRequired)
 
-	_, err = f.svc.CreateCareScheduleRequest(ctx, chain.AccountID, chain.StudentID, map[string]any{"weekdays": []any{
+	_, err = f.svc.CreateSignedCareScheduleRequest(ctx, chain.AccountID, chain.StudentID, map[string]any{"weekdays": []any{
 		map[string]any{"weekday": 2, "mode": "alone"},
-	}})
+	}}, nil)
 	require.ErrorIs(t, err, parentService.ErrPickupSignatureRequired, "a weekday alone needs a signature too")
 
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{

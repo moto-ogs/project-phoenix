@@ -72,8 +72,9 @@ func TestWeeklyPlanSaveRefusesAStaleRead(t *testing.T) {
 		return count
 	}
 	weekdayNotes := func(studentID int64) map[int]string {
-		notes, err := tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), studentID)
+		data, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetStudentPickupData, studentID)
 		require.NoError(t, err)
+		notes := data.Notes
 		byWeekday := map[int]string{}
 		for _, note := range notes {
 			if note.Weekday != 0 {
@@ -201,16 +202,18 @@ func TestWeeklyPlanApplyRefusesAStaleRead(t *testing.T) {
 	require.Equal(t, http.StatusConflict, code, "Body: %s", body)
 	assert.Contains(t, body, readstate.ChangedCode)
 	assert.Zero(t, pickupRows(), "a refused apply writes no pickup row")
-	notes, err := tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
+	data, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetStudentPickupData, student.ID)
 	require.NoError(t, err)
+	notes := data.Notes
 	require.Len(t, notes, 1)
 	assert.Equal(t, "Montags bei Oma", notes[0].Content, "a refused apply keeps the colleague's note")
 
 	code, body = apply(weeklyPlanVersion(t, tc, student.ID))
 	require.Equal(t, http.StatusOK, code, "Body: %s", body)
 	assert.Positive(t, pickupRows(), "the apply writes the pickup row")
-	notes, err = tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
+	data, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetStudentPickupData, student.ID)
 	require.NoError(t, err)
+	notes = data.Notes
 	require.Len(t, notes, 1)
 	assert.Equal(t, "Montags zu Hause", notes[0].Content, "the apply writes the weekday notes with the plan")
 	var saved struct {
@@ -393,8 +396,9 @@ func TestPickupNoteUpdateKeepsItsWeekday(t *testing.T) {
 	code, body = exec("PUT", weekday, map[string]any{"weekday": 3, "content": "Dienstags bei Oma", "expected_version": weekdayVersion})
 	require.Equal(t, http.StatusBadRequest, code, "a weekday note does not move to another weekday. Body: %s", body)
 
-	notes, err := tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
+	data, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetStudentPickupData, student.ID)
 	require.NoError(t, err)
+	notes := data.Notes
 	byWeekday := map[int]string{}
 	for _, note := range notes {
 		byWeekday[note.Weekday] = note.Content

@@ -705,7 +705,9 @@ export interface OpeningRead<T> {
    * failure and leaves the opening as it was: SWR's own revalidation would
    * resolve with the old data instead.
    */
-  readonly reload: () => Promise<T>;
+  readonly reload: (options?: {
+    readonly fetcher?: () => Promise<T>;
+  }) => Promise<T>;
   /**
    * SWR-shaped writer for callers that hand on a save's answer:
    * `mutate(answer, { revalidate: false })` writes the cache and holds the
@@ -826,6 +828,11 @@ export function useOpeningRead<T>(
     flight: number;
     data: T;
   }>();
+  const [failed, setFailed] = useState<{
+    serial: number;
+    flight: number;
+    error: unknown;
+  }>();
   // A new serial per opening: A → B → A must not find A's first answer.
   const [track, setTrack] = useState({ opening, serial: 0 });
   let serial = track.serial;
@@ -838,11 +845,22 @@ export function useOpeningRead<T>(
   // that reconnect effects without changing the key or the render state.
   const committed = useRef<{ serial: number } | null>(null);
   useLayoutEffect(() => {
+    const discardAuditedAnswer = () => {
+      if (!options.showCached) {
+        setHeld(undefined);
+        setFailed(undefined);
+      }
+    };
+    // Drop any state update deferred while Activity was hidden before paint.
+    discardAuditedAnswer();
     committed.current = { serial };
     return () => {
       committed.current = null;
+      // Activity preserves state when it hides a view. An audited read must
+      // not reuse that opening's answer when its effects reconnect.
+      discardAuditedAnswer();
     };
-  }, [serial]);
+  }, [serial, options.showCached]);
   // SWR starts automatic reads on a key change even with mount
   // revalidation off. Until this opening started its own read, none runs;
   // reset before SWR's own layout effects of the new key can read.
@@ -875,11 +893,6 @@ export function useOpeningRead<T>(
 
   const [attempt, setAttempt] = useState({ serial, count: 0 });
   const count = attempt.serial === serial ? attempt.count : 0;
-  const [failed, setFailed] = useState<{
-    serial: number;
-    flight: number;
-    error: unknown;
-  }>();
 
   const flights = useRef(0);
   // The newest read of this hook while it runs; an older one it overtook
@@ -908,38 +921,41 @@ export function useOpeningRead<T>(
     };
   });
 
-  const readOnce = useCallback(async (): Promise<
-    OpeningFlight<T> & { readonly isCurrent: () => boolean }
-  > => {
-    const current = latest.current;
-    const started = committed.current;
-    const flight = ++flights.current;
-    const { fullKey: readKey } = current;
-    if (readKey === null || started === null) {
-      return {
-        ok: false,
-        flight,
-        error: new DiscardedAnswer(),
-        isCurrent: () => false,
-      };
-    }
-    const dataGeneration = dataGenerationOf(readKey);
-    const isCurrent = () =>
-      committed.current === started &&
-      flights.current === flight &&
-      dataGenerationOf(readKey) === dataGeneration;
-    setPending(flight);
-    try {
-      const result = await readThrough(
-        { ...current, fullKey: readKey },
-        flight,
-        isCurrent,
-      );
-      return { ...result, isCurrent };
-    } finally {
-      setPending((newest) => (newest === flight ? null : newest));
-    }
-  }, []);
+  const readOnce = useCallback(
+    async (
+      fetcher?: () => Promise<T>,
+    ): Promise<OpeningFlight<T> & { readonly isCurrent: () => boolean }> => {
+      const current = latest.current;
+      const started = committed.current;
+      const flight = ++flights.current;
+      const { fullKey: readKey } = current;
+      if (readKey === null || started === null) {
+        return {
+          ok: false,
+          flight,
+          error: new DiscardedAnswer(),
+          isCurrent: () => false,
+        };
+      }
+      const dataGeneration = dataGenerationOf(readKey);
+      const isCurrent = () =>
+        committed.current === started &&
+        flights.current === flight &&
+        dataGenerationOf(readKey) === dataGeneration;
+      setPending(flight);
+      try {
+        const result = await readThrough(
+          { ...current, fullKey: readKey, fetcher: fetcher ?? current.fetcher },
+          flight,
+          isCurrent,
+        );
+        return { ...result, isCurrent };
+      } finally {
+        setPending((newest) => (newest === flight ? null : newest));
+      }
+    },
+    [],
+  );
 
   const paused = options.isPaused?.() === true;
   const open = opening !== null;
@@ -977,16 +993,19 @@ export function useOpeningRead<T>(
   const retry = useCallback(() => {
     setAttempt({ serial: latest.current.serial, count: count + 1 });
   }, [count]);
-  const reload = useCallback(async () => {
-    const forSerial = latest.current.serial;
-    const result = await readOnce();
-    if (!result.isCurrent()) throw new DiscardedAnswer();
-    if (!result.ok) throw result.error;
-    if (result.data === undefined) throw new DiscardedAnswer();
-    const data = result.data;
-    setHeld({ serial: forSerial, flight: result.flight, data });
-    return data;
-  }, [readOnce]);
+  const reload = useCallback<OpeningRead<T>["reload"]>(
+    async (options) => {
+      const forSerial = latest.current.serial;
+      const result = await readOnce(options?.fetcher);
+      if (!result.isCurrent()) throw new DiscardedAnswer();
+      if (!result.ok) throw result.error;
+      if (result.data === undefined) throw new DiscardedAnswer();
+      const data = result.data;
+      setHeld({ serial: forSerial, flight: result.flight, data });
+      return data;
+    },
+    [readOnce],
+  );
   const mutate = useCallback(
     ((...args: unknown[]) => {
       const current = latest.current;
@@ -1359,6 +1378,8 @@ export function useSWRRequestGuard() {
     [prefix, origin],
   );
 }
+
+export { isDiscardedAnswer };
 
 /** Resolve a factory key for cache reads/seeds without duplicating session scoping. */
 export function useSWRCacheKey() {

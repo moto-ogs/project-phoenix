@@ -3963,14 +3963,6 @@ export function useEventForm({
     }));
   };
 
-  const mutateStudents = studentRead.mutate;
-  const retryStudentLoad = useCallback(
-    () => mutateStudents(),
-    [mutateStudents],
-  );
-  const mutateStaff = staffRead.mutate;
-  const retryStaffLoad = useCallback(() => mutateStaff(), [mutateStaff]);
-
   // Datum and Tagesnotiz only apply to the single-instance scope — series-wide
   // scopes write the template, which carries the Wochennotiz instead of the
   // per-occurrence Tagesnotiz.
@@ -4085,8 +4077,6 @@ export function useEventForm({
     loadingStaff,
     staffLoadFailed,
     staffLoadError: staffLoad.error,
-    retryStudentLoad,
-    retryStaffLoad,
     pending: save,
     submitting,
     handleSubmit,
@@ -4134,7 +4124,6 @@ export function useEventForm({
     targetClassOptions,
     offeringSources,
     offeringSourcesError,
-    selectedOfferingSources,
     sourcePhaseLockId,
     sourceGradeOptions,
     sourceGradeCounts,

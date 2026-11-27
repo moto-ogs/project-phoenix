@@ -93,6 +93,7 @@ type matrixUpload struct {
 	deadlocks        int
 	statements       []string
 	primary, cleaned bool // the faults fired
+	rolledBack       bool // the outer transaction rolled back after the primary fault
 }
 
 func (u matrixUpload) persisted() map[string][]string { return u.outcome.Rows }
@@ -187,7 +188,7 @@ func (f *matrixFault) breaksConnection() bool {
 }
 
 // runMatrixUploadOf imports the file fixture builds on its own tenant of the
-// package clone over a pool that records every statement and injects fault.
+// package clone. Clean uploads record the SQL; faulted uploads inject at those positions.
 func runMatrixUploadOf(t *testing.T, db *bun.DB, pools matrixPools, options api.ImportTestOptions, fault *matrixFault, fixture func(*testing.T, *bun.DB) []importModels.StudentImportRow) matrixUpload {
 	t.Helper()
 	testpkg.OwnTenant(t)
@@ -208,9 +209,9 @@ func runMatrixUploadOf(t *testing.T, db *bun.DB, pools matrixPools, options api.
 			defer mu.Unlock()
 			index := count
 			count++
-			statements = append(statements, query)
 			switch {
 			case fault == nil:
+				statements = append(statements, query)
 			case index == fault.at:
 				upload.primary = true
 				return fault.err
@@ -224,12 +225,16 @@ func runMatrixUploadOf(t *testing.T, db *bun.DB, pools matrixPools, options api.
 			return nil
 		},
 		rollback: func() error {
-			if !armed.Load() || fault == nil || fault.cleanup != outerRollback {
+			if !armed.Load() || fault == nil {
 				return nil
 			}
 			mu.Lock()
 			defer mu.Unlock()
 			if !upload.primary || upload.cleaned {
+				return nil
+			}
+			upload.rolledBack = true
+			if fault.cleanup != outerRollback {
 				return nil
 			}
 			upload.cleaned = true
@@ -240,7 +245,12 @@ func runMatrixUploadOf(t *testing.T, db *bun.DB, pools matrixPools, options api.
 	require.NoError(t, err)
 	actor := newImporter(t, db)
 	rows := fixture(t, db)
-	upload.before = studentOutcomeOf(t, db, nil)
+	// A matrix fixture always seeds the same owner rows after IDs and timestamps
+	// are normalized. Capture them on the clean recordings; each faulted upload
+	// still reads its own tenant to check what actually survived the fault.
+	if fault == nil {
+		upload.before = studentOutcomeOf(t, db, nil)
+	}
 	armed.Store(true)
 	done := awaitStudents(t, uploadStudents(t, module, pool, actor, rows, "matrix.csv"))
 	armed.Store(false)
@@ -665,12 +675,12 @@ func requireSameEnd(t *testing.T, want, got matrixUpload) {
 
 // requireLost is F of table A: 500, no retry, no replay, nothing of the
 // chunk persisted.
-func requireLost(t *testing.T, got matrixUpload) {
+func requireLost(t *testing.T, clean, got matrixUpload) {
 	t.Helper()
 	require.Equal(t, "500", got.status)
 	require.Zero(t, got.retries, "no retry")
 	require.Zero(t, got.replays, "no replay")
-	require.Equal(t, got.before.Rows, got.persisted(), "nothing of the chunk persisted")
+	require.Equal(t, clean.before.Rows, got.persisted(), "nothing of the chunk persisted")
 }
 
 var matrixFailures = []error{
@@ -730,6 +740,7 @@ func runStudentFaultMatrix(t *testing.T, fixture func(*testing.T, *bun.DB) []imp
 		clean = rowRecording
 	})
 	require.Equal(t, "200", clean.status)
+	require.Equal(t, clean.before.Rows, batchRecording.before.Rows, "independent fixture tenants start with the same owner rows")
 	requireSameEnd(t, clean, batchRecording)
 	// The O rows' guardians went into the bundled statements; the M rows and
 	// the card row wrote theirs in place (#5552 step 5c): five new profiles
@@ -834,7 +845,7 @@ func runStudentFaultMatrix(t *testing.T, fixture func(*testing.T, *bun.DB) []imp
 						require.Zero(t, batch.replays)
 						return
 					case classResolverControl:
-						requireLost(t, batch)
+						requireLost(t, clean, batch)
 						return
 					case classBoundControl:
 						// As the row path's first write: 40P01 and 40001 retry the
@@ -846,7 +857,7 @@ func runStudentFaultMatrix(t *testing.T, fixture func(*testing.T, *bun.DB) []imp
 							require.Equal(t, 1, batch.retries)
 							return
 						}
-						requireLost(t, batch)
+						requireLost(t, clean, batch)
 						return
 					}
 					t.Run("row path", func(t *testing.T) {
@@ -880,12 +891,19 @@ func runStudentFaultMatrix(t *testing.T, fixture func(*testing.T, *bun.DB) []imp
 				continue
 			}
 			for _, err := range minimumCleanupFailures {
+				value, _ := mainOnly.Load(fmt.Sprint(statement.index, err))
+				main, _ := value.(matrixUpload) // absent when -run selects only cleanup cases
 				for _, point := range cleanupPoints[statement.class] {
+					// A successful recovery that never rolled back has no outer
+					// ROLLBACK to fault. The main-error case already tested it.
+					if point == outerRollback && !main.rolledBack && main.status == "200" && main.retries == 0 {
+						continue
+					}
 					for _, err2 := range minimumCleanupErrors {
 						cases++
 						t.Run(fmt.Sprintf("%s × %v, cleanup %d × %v", statement.label(), err, point, err2), func(t *testing.T) {
 							t.Parallel()
-							runCleanupCase(t, db, pools, clean, &mainOnly, statement, err, point, err2, fixture)
+							runCleanupCase(t, db, pools, clean, main, statement, err, point, err2, fixture)
 						})
 					}
 				}
@@ -908,7 +926,7 @@ var minimumCleanupFailures = []error{
 }
 
 // runCleanupCase is one cell of part 2 (tables A and B of the PR).
-func runCleanupCase(t *testing.T, db *bun.DB, pools matrixPools, clean matrixUpload, mainOnly *sync.Map, statement matrixStatement, err error, point int, err2 error, fixture func(*testing.T, *bun.DB) []importModels.StudentImportRow) {
+func runCleanupCase(t *testing.T, db *bun.DB, pools matrixPools, clean, main matrixUpload, statement matrixStatement, err error, point int, err2 error, fixture func(*testing.T, *bun.DB) []importModels.StudentImportRow) {
 	t.Helper()
 	logStatementOnFailure(t, statement)
 	got := runMatrixUploadOf(t, db, pools, api.ImportTestOptions{}, &matrixFault{at: statement.index, err: err, cleanup: point, err2: err2}, fixture)
@@ -919,15 +937,11 @@ func runCleanupCase(t *testing.T, db *bun.DB, pools matrixPools, clean matrixUpl
 	if point == outerRollback {
 		// The transaction's ROLLBACK is diagnostics: the upload ends as with
 		// the main error alone (#6316).
-		value, ok := mainOnly.Load(fmt.Sprint(statement.index, err))
-		require.True(t, ok)
-		want := value.(matrixUpload)
-		if want.status != "200" || want.retries > 0 {
-			require.True(t, got.cleaned, "the ROLLBACK fault fired")
-		}
-		requireSameEnd(t, want, got)
-		require.Equal(t, want.retries, got.retries)
-		require.Equal(t, want.replays, got.replays)
+		require.NotEmpty(t, main.status, "outer ROLLBACK needs the main-error comparison")
+		require.True(t, got.cleaned, "the ROLLBACK fault fired")
+		requireSameEnd(t, main, got)
+		require.Equal(t, main.retries, got.retries)
+		require.Equal(t, main.replays, got.replays)
 		return
 	}
 	require.True(t, got.cleaned, "the cleanup fault fired")
@@ -940,7 +954,7 @@ func runCleanupCase(t *testing.T, db *bun.DB, pools matrixPools, clean matrixUpl
 		require.Zero(t, got.retries)
 		return
 	}
-	requireLost(t, got) // E19
+	requireLost(t, clean, got) // E19
 }
 
 func countKind(statements []string, prefix string) int {

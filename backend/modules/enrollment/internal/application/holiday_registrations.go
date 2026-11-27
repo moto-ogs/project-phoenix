@@ -193,7 +193,8 @@ func (h *HolidayRegistrations) HolidayRegistrationOffer(ctx context.Context, lin
 	}
 	return enrollment.HolidayRegistrationOffer{
 		HolidayWishMode: wishMode, AllocationMode: period.AllocationMode, Criteria: questions,
-		Name: period.Name, RegistrationOpensOn: period.RegistrationOpensOn, RegistrationClosesOn: period.RegistrationClosesOn,
+		Name: period.Name, Kind: period.Kind, IncludedInFee: period.IncludedInFee,
+		RegistrationOpensOn: period.RegistrationOpensOn, RegistrationClosesOn: period.RegistrationClosesOn,
 		Binding: period.Binding, Notes: period.Notes, Weeks: offeredHolidayWeeks(period.Weeks),
 		Open: !today.Before(period.RegistrationOpensOn) && !today.After(period.RegistrationClosesOn), Form: form,
 		ConsentTexts: texts, MaxDaysPerChild: period.MaxDaysPerChild, FullDays: fullDays,

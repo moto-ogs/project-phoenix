@@ -30,10 +30,10 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
-export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_pickup_person", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_cancelled", "meal_plan_changed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_pickup_person", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_cancelled", "meal_plan_changed", "room_closed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["calendar", "calendar_periods", "day_plan", "group_handovers", "meal_plan", "own_absences", "own_shift_plan", "school_calendar", "school_class", "school_supervisions", "shift_plan", "staff_absences", "staff_list", "staff_member", "staff_notices", "student", "substitution_plan"] as const;
+export const LINK_TARGET_VALUES = ["calendar", "calendar_periods", "day_plan", "group_handovers", "meal_plan", "own_absences", "own_shift_plan", "room", "school_calendar", "school_class", "school_supervisions", "shift_plan", "staff_absences", "staff_list", "staff_member", "staff_notices", "student", "substitution_plan"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
 export const LIST_FORMAT_VALUES = ["csv", "docx", "pdf", "xlsx"] as const;
@@ -48,7 +48,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["activities", "appointments", "children", "classes", "closing_days", "meal_plan", "notices", "staff", "supervisions"] as const;
+export const SOURCE_VALUES = ["activities", "appointments", "children", "classes", "closing_days", "meal_plan", "notices", "room_closures", "staff", "supervisions"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -782,6 +782,7 @@ export interface Link {
   staff_id?: string;
   student_id?: string;
   instance_id?: string;
+  room_id?: string;
 }
 
 export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
@@ -789,6 +790,7 @@ export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
   staff_id: optional(int64String),
   student_id: optional(int64String),
   instance_id: optional(int64String),
+  room_id: optional(int64String),
 });
 
 /** Go: daychangesview.DayNotice */
@@ -961,6 +963,15 @@ export const DayMealCancellationSchema: z.ZodType<DayMealCancellation, unknown> 
   reason: str,
 });
 
+/** Go: daychangesview.DayRoomClosure */
+export interface DayRoomClosure {
+  reason: string;
+}
+
+export const DayRoomClosureSchema: z.ZodType<DayRoomClosure, unknown> = object<DayRoomClosure>({
+  reason: str,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -985,6 +996,7 @@ export interface Entry {
   class: DayClass | null;
   appointment: DayAppointment | null;
   meal_cancellation: DayMealCancellation | null;
+  room_closure: DayRoomClosure | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -1010,6 +1022,7 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   class: nullable(DayClassSchema),
   appointment: nullable(DayAppointmentSchema),
   meal_cancellation: nullable(DayMealCancellationSchema),
+  room_closure: nullable(DayRoomClosureSchema),
 });
 
 /** Go: daychangesview.Overview */
@@ -1699,6 +1712,156 @@ export const RangeSchema: z.ZodType<Range, unknown> = object<Range>({
 export interface NotifyRequest {
   token?: string;
   revision?: number;
+}
+
+/** Go: enrollment.HolidayTimeModel */
+export interface HolidayTimeModel {
+  id: string;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+  price_cents: number;
+  archived: boolean;
+  protected: boolean;
+}
+
+export const HolidayTimeModelSchema: z.ZodType<HolidayTimeModel, unknown> = object<HolidayTimeModel>({
+  id: int64String,
+  name: str,
+  starts_at: str,
+  ends_at: str,
+  price_cents: safeInt,
+  archived: bool,
+  protected: bool,
+});
+
+/** Go: enrollment.HolidayNoCareDay */
+export interface HolidayNoCareDay {
+  date: string | null;
+  kind: string;
+  name: string;
+}
+
+export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
+  date: nullable(calendarDate),
+  kind: str,
+  name: str,
+});
+
+/** Go: enrollment.HolidayWeek */
+export interface HolidayWeek {
+  id: string;
+  starts_on: string | null;
+  ends_on: string | null;
+  host_school_id: string;
+  time_models: HolidayTimeModel[] | null;
+  no_care_days: HolidayNoCareDay[] | null;
+  capacity: number | null;
+  booking_unit: string;
+  lunch_price_cents: number | null;
+  lunch_booked: boolean;
+  placed: number;
+}
+
+export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = object<HolidayWeek>({
+  id: int64String,
+  starts_on: nullable(calendarDate),
+  ends_on: nullable(calendarDate),
+  host_school_id: int64String,
+  time_models: nullable(arr(HolidayTimeModelSchema)),
+  no_care_days: nullable(arr(HolidayNoCareDaySchema)),
+  capacity: nullable(safeInt),
+  booking_unit: str,
+  lunch_price_cents: nullable(safeInt),
+  lunch_booked: bool,
+  placed: safeInt,
+});
+
+/** Go: enrollment.HolidayPeriod */
+export interface HolidayPeriod {
+  id: string;
+  name: string;
+  kind: string;
+  included_in_fee: boolean;
+  created_by_school_id: string | null;
+  registration_opens_on: string | null;
+  registration_closes_on: string | null;
+  binding: boolean;
+  notes: string;
+  acceptance_mail_text: string;
+  status: string;
+  published_at: string | null;
+  max_days_per_child: number | null;
+  holiday_wish_rule: boolean;
+  allocation_mode: string;
+  allocation_mode_locked: boolean;
+  updated_at: string;
+  public_token: string;
+  registration_count: number;
+  weeks: HolidayWeek[] | null;
+  version: string;
+}
+
+export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<HolidayPeriod>({
+  id: int64String,
+  name: str,
+  kind: str,
+  included_in_fee: bool,
+  created_by_school_id: nullable(int64String),
+  registration_opens_on: nullable(calendarDate),
+  registration_closes_on: nullable(calendarDate),
+  binding: bool,
+  notes: str,
+  acceptance_mail_text: str,
+  status: str,
+  published_at: nullable(instant),
+  max_days_per_child: nullable(safeInt),
+  holiday_wish_rule: bool,
+  allocation_mode: str,
+  allocation_mode_locked: bool,
+  updated_at: instant,
+  public_token: str,
+  registration_count: safeInt,
+  weeks: nullable(arr(HolidayWeekSchema)),
+  version: str,
+});
+
+/** Go: enrollmenthttp.HolidayTimeModelRequest */
+export interface HolidayTimeModelRequest {
+  id?: string;
+  name?: string;
+  starts_at?: string;
+  ends_at?: string;
+  price_cents?: number;
+  archived?: boolean;
+}
+
+/** Go: enrollmenthttp.HolidayWeekRequest */
+export interface HolidayWeekRequest {
+  id?: string;
+  starts_on?: string | null;
+  ends_on?: string | null;
+  host_school_id?: string;
+  time_models?: HolidayTimeModelRequest[] | null;
+  booking_unit?: string;
+  lunch_price_cents?: number | null;
+}
+
+/** Go: enrollmenthttp.HolidayPeriodRequest */
+export interface HolidayPeriodRequest {
+  name?: string;
+  kind?: string;
+  included_in_fee?: boolean;
+  registration_opens_on?: string | null;
+  registration_closes_on?: string | null;
+  binding?: boolean;
+  notes?: string;
+  acceptance_mail_text?: string;
+  holiday_wish_rule?: boolean;
+  max_days_per_child?: number | null;
+  allocation_mode?: string;
+  weeks?: HolidayWeekRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: enrollment.HolidayGuestContact */
@@ -4885,6 +5048,7 @@ export interface HolidayRegistrationDetail {
   custody_confirmed_at: string | null;
   declaration_name: string;
   benefits_proofs: HolidayRegistrationProof[] | null;
+  included_in_fee: boolean;
   history: HolidayRegistrationEvent[] | null;
   criteria: HolidayRegistrationCriterion[] | null;
   mails?: RequestMailOutcome[];
@@ -4924,24 +5088,12 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   custody_confirmed_at: nullable(instant),
   declaration_name: str,
   benefits_proofs: nullable(arr(HolidayRegistrationProofSchema)),
+  included_in_fee: bool,
   history: nullable(arr(HolidayRegistrationEventSchema)),
   criteria: nullable(arr(HolidayRegistrationCriterionSchema)),
   mails: optional(arr(RequestMailOutcomeSchema)),
   promotions: optional(arr(HolidayPromotionSchema)),
   version: str,
-});
-
-/** Go: enrollment.HolidayNoCareDay */
-export interface HolidayNoCareDay {
-  date: string | null;
-  kind: string;
-  name: string;
-}
-
-export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
-  date: nullable(calendarDate),
-  kind: str,
-  name: str,
 });
 
 /** Go: enrollmenthttp.holidayGuardianRequest */

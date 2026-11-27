@@ -49,10 +49,6 @@ var (
 	// ErrCareExceptionConflict means a staff-authored exception already exists
 	// for the date, so the parent change is refused rather than overwriting it.
 	ErrCareExceptionConflict = errors.New("parent: the school already set a special time for this day")
-	// ErrCareExceptionRaced means two submits for the same child+date collided
-	// on the unique index (e.g. a double-click); the change was not saved and
-	// the caller should reload and retry.
-	ErrCareExceptionRaced = errors.New("parent: this day was just changed, please reload and try again")
 	// ErrExcusedRequestNotFound is the legacy-named error for an absence request
 	// the caller did not submit for this child.
 	ErrExcusedRequestNotFound = errors.New("parent: excused absence request not found")

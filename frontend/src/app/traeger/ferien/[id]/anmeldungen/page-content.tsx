@@ -74,6 +74,7 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
+import { holidayListBack } from "~/components/traeger/holiday-period-format";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
@@ -242,6 +243,8 @@ function columns(
   wishRule: boolean,
   known: ReadonlyMap<string, string>,
   mails: ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>,
+  /** The period is one extra care day, not weeks (#4817). */
+  extraDay: boolean,
 ): DataTableColumn<HolidayRegistrationSummary>[] {
   return [
     {
@@ -289,7 +292,7 @@ function columns(
     },
     {
       key: "children",
-      header: "Kinder und Wochen",
+      header: extraDay ? "Kinder und Schule" : "Kinder und Wochen",
       render: (registration) => (
         <ul className="space-y-2">
           {registration.children.map((child) => {
@@ -496,12 +499,16 @@ export default function TraegerHolidayRegistrationsPage() {
   // Whether the Träger asks for the debtor number (#5621); the column shows
   // only then. Silent on purpose: the list stays complete without the
   // column; the detail of each registration still names its number.
+  // An extra day the monthly fee covers is never billed: it needs no debtor
+  // number, so the column and the question stay away (#4817).
   const debtorNumberColumn =
-    useTraegerResource(
+    (useTraegerResource(
       traegerKeys.holidayConfirmationSettings(),
       fetchHolidayConfirmationSettings,
       "die Einstellungen der Bestätigung",
-    ).data?.debtorNumberRequired ?? false;
+    ).data?.debtorNumberRequired ??
+      false) &&
+    !period?.includedInFee;
 
   const filter = useMemo<HolidayRegistrationFilter>(
     () => ({
@@ -721,11 +728,16 @@ export default function TraegerHolidayRegistrationsPage() {
     ...(schools ?? []).map((entry) => ({ value: entry.id, label: entry.name })),
     { value: "guest", label: "Feriengäste" },
   ];
+  // An extra care day (#4817) is one day at each school: the filter of the
+  // weeks then chooses the school that gives the care.
+  const extraDay = period?.kind === "extra_day";
   const weekOptions = [
-    { value: "", label: "Alle Wochen" },
+    { value: "", label: extraDay ? "Alle Schulen" : "Alle Wochen" },
     ...(period?.weeks ?? []).map((week) => ({
       value: week.id ?? "",
-      label: `${formatHolidayWeek(week.startsOn, week.endsOn)}, ${names.get(week.hostSchoolId) ?? "Schule nicht mehr vorhanden"}`,
+      label: extraDay
+        ? (names.get(week.hostSchoolId) ?? "Schule nicht mehr vorhanden")
+        : `${formatHolidayWeek(week.startsOn, week.endsOn)}, ${names.get(week.hostSchoolId) ?? "Schule nicht mehr vorhanden"}`,
     })),
   ];
   const timeModelOptions = [
@@ -771,7 +783,7 @@ export default function TraegerHolidayRegistrationsPage() {
     },
     {
       id: "week",
-      label: "Woche",
+      label: extraDay ? "Betreuung an" : "Woche",
       type: "dropdown",
       value: weekId,
       onChange: (value) => setWeekId(value as string),
@@ -863,8 +875,8 @@ export default function TraegerHolidayRegistrationsPage() {
       info={REGISTRATIONS_INFO}
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
-      backHref={traegerPath("/traeger/ferien")}
-      backLabel="Zurück zu den Ferien"
+      backHref={traegerPath(holidayListBack(period?.kind).path)}
+      backLabel={holidayListBack(period?.kind).label}
       stats={list ? <StatusLine list={list} /> : null}
       statsLoading={!list && !loadError}
       search={{
@@ -890,6 +902,7 @@ export default function TraegerHolidayRegistrationsPage() {
         "anmeldungen",
         period?.registrationCount,
         period?.allocationMode,
+        period?.kind,
       )}
       // Export and the way to billing stand in the page menu; the list has
       // no visible head action (#7411).
@@ -957,6 +970,7 @@ export default function TraegerHolidayRegistrationsPage() {
           wishRule,
           known,
           mails,
+          extraDay,
         )}
         rows={[...registrationsShown]}
         getRowKey={(registration) => registration.id}

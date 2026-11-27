@@ -59,7 +59,7 @@ func (s *Service) pushGroupMessage(ctx context.Context, thread *deliveryPorts.Pa
 				GuardianAccountIDs: []int64{accountID},
 				StudentIDs:         children[accountID],
 			},
-		}.Public())
+		})
 		switch {
 		case s.deliveryPolicy.IsNotificationsDisabled(err), s.deliveryPolicy.IsOutsideActiveWindow(err):
 			continue

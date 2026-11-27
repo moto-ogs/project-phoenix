@@ -145,22 +145,32 @@ func TestModuleActivityInstancesAreTenantIsolated(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestModuleActivityInstanceReplanPreservesDeviations(t *testing.T) {
+func TestSeriesShorteningPreservesDeviationsBeforePlannedDeletion(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	module, ctx := buildModule(t, db), testpkg.Ctx(t)
-	fixture := newOwnedActivityInstanceFixture(t, db, "deviation")
-	plain := createOwnedActivityInstance(t, module, ctx, fixture, "2027-09-13", "08:00:00", "Plain")
-	absent := createOwnedActivityInstance(t, module, ctx, fixture, "2027-09-13", "10:00:00", "Absent")
-	ack := ownedActivityInstanceInput(fixture, "2027-09-13", "12:00:00", "Acknowledged")
+	category := createCategory(t, ctx, module, "Series deviation")
+	room := testpkg.CreateTestRoom(t, db, fmt.Sprintf("Series deviation %d", time.Now().UnixNano()))
+	template, err := module.CreateGroup(ctx, timetable.GroupInput{
+		Name: "Series deviation", CategoryID: category.ID, IsTemplate: true,
+	})
+	require.NoError(t, err)
+	fixture := ownedActivityInstanceFixture{roomID: room.ID, groupID: template.ID}
+	date := "2099-09-14"
+	plain := createOwnedActivityInstance(t, module, ctx, fixture, date, "08:00:00", "Plain")
+	absent := createOwnedActivityInstance(t, module, ctx, fixture, date, "10:00:00", "Absent")
+	ack := ownedActivityInstanceInput(fixture, date, "12:00:00", "Acknowledged")
 	ack.UnderstaffedAck = true
 	acknowledged, err := module.CreateActivityInstance(ctx, ack)
 	require.NoError(t, err)
 	staff := testpkg.CreateTestStaff(t, db, "Owner deviation", fmt.Sprintf("%d", time.Now().UnixNano()))
 	testpkg.CreateTestInstanceStaff(t, db, absent.ID, staff.ID, testpkg.InstanceStaffOpts{IsAbsent: true})
 
-	to := "2027-09-13"
-	rows, err := module.DeletePlannedActivityInstances(ctx, to, &to, nil, true)
+	lastDay := "2099-09-13"
+	rows, err := module.UpdateTemplate(ctx, template.ID, timetable.TemplateUpdate{
+		Name: template.Name, CategoryID: category.ID, RoomID: room.ID,
+		SeriesLastDay: &lastDay, SeriesLastDayProvided: true,
+	})
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, rows)
 	_, err = module.FindActivityInstance(ctx, plain.ID)
@@ -170,9 +180,13 @@ func TestModuleActivityInstanceReplanPreservesDeviations(t *testing.T) {
 	_, err = module.FindActivityInstance(ctx, acknowledged.ID)
 	require.NoError(t, err)
 
-	rows, err = module.DeletePlannedActivityInstances(ctx, to, &to, &fixture.groupID, false)
+	rows, err = module.DeletePlannedActivityInstances(ctx, date, &date, &fixture.groupID)
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, rows)
+	_, err = module.FindActivityInstance(ctx, absent.ID)
+	require.ErrorIs(t, err, timetable.ErrActivityInstanceNotFound)
+	_, err = module.FindActivityInstance(ctx, acknowledged.ID)
+	require.ErrorIs(t, err, timetable.ErrActivityInstanceNotFound)
 }
 
 func TestModuleActivityInstanceWeekendCleanup(t *testing.T) {

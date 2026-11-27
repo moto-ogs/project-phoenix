@@ -11,6 +11,8 @@ import { createLogger } from "~/lib/logger";
 
 // Logger instance for SSE connection
 const logger = createLogger({ component: "SSE" });
+const RECONNECT_INTERVAL_MS = 1000;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 /**
  * React hook for Server-Sent Events (SSE) with auto-reconnection
@@ -23,20 +25,13 @@ const logger = createLogger({ component: "SSE" });
  *
  * @param endpoint - The SSE endpoint URL (e.g., '/api/sse/events')
  * @param options - Hook configuration options
- * @returns Connection state (isConnected, error, reconnectAttempts)
+ * @returns The current connection state.
  */
 export function useSSE(
   endpoint: string,
   options: SSEHookOptions = {},
 ): SSEHookState {
-  const {
-    onMessage,
-    onError,
-    reconnectInterval = 1000, // Start with 1 second
-    maxReconnectAttempts = 5,
-    enabled = true,
-    reconnectKey,
-  } = options;
+  const { onMessage, enabled = true, reconnectKey } = options;
 
   const { data: session } = useSession();
   // The stream is bound to the tab's account (#5385). A provider answer for
@@ -54,7 +49,6 @@ export function useSSE(
   ]);
 
   const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   const eventSourceRef = useRef<FetchEventSource | null>(null);
@@ -76,16 +70,6 @@ export function useSSE(
     [onMessage],
   );
 
-  // Stable onError callback
-  const stableOnError = useCallback(
-    (err: Event) => {
-      if (mountedRef.current) {
-        onError?.(err);
-      }
-    },
-    [onError],
-  );
-
   // connect() stores every EventSource in eventSourceRef; the cleanup below
   // closes that ref and clears the reconnect timer. The scanner cannot follow
   // the nested connection factory to its cleanup.
@@ -101,7 +85,6 @@ export function useSSE(
     if (!enabled) {
       reconnectAttemptsRef.current = 0;
       setIsConnected(false);
-      setError(null);
       setReconnectAttempts(0);
       return;
     }
@@ -113,7 +96,6 @@ export function useSSE(
     // stream opens, instead of retaining the prior connection's state.
     if (reconnectKeyChanged) {
       setIsConnected(false);
-      setError(null);
       reconnectAttemptsRef.current = 0;
       setReconnectAttempts(0);
     }
@@ -136,11 +118,6 @@ export function useSSE(
           event_type: eventType,
           error: err instanceof Error ? err.message : String(err),
         });
-        setError(
-          eventType === "message"
-            ? "Ungültige Server-Event-Daten empfangen"
-            : `Ungültige Server-Event-Daten (${eventType})`,
-        );
       }
     };
 
@@ -170,7 +147,6 @@ export function useSSE(
             return;
           }
           setIsConnected(true);
-          setError(null);
           reconnectAttemptsRef.current = 0; // Reset ref
           setReconnectAttempts(0); // Reset state
         };
@@ -211,16 +187,6 @@ export function useSSE(
           });
 
           setIsConnected(false);
-          // classify likely causes
-          if (typeof navigator !== "undefined" && !navigator.onLine) {
-            setError("Netzwerkverbindung unterbrochen");
-          } else if (eventSource?.readyState === 2) {
-            setError("SSE-Verbindung vom Server geschlossen");
-          } else {
-            setError("SSE-Verbindungsfehler");
-          }
-          stableOnError(err);
-
           sessionRefused = eventSource.sessionRefused;
 
           // Close the failed connection
@@ -235,12 +201,12 @@ export function useSSE(
           // Read from ref to get live count (not stale closure value)
           const currentAttempts = reconnectAttemptsRef.current;
 
-          if (currentAttempts < maxReconnectAttempts) {
+          if (currentAttempts < MAX_RECONNECT_ATTEMPTS) {
             // Exponential backoff with proportional jitter (up to +100% of the
             // base delay): a backend restart drops every client of the
             // deployment at the same instant, and without jitter they all
             // reconnected — and revalidated — in synchronized waves (#2057).
-            const base = reconnectInterval * Math.pow(2, currentAttempts);
+            const base = RECONNECT_INTERVAL_MS * Math.pow(2, currentAttempts);
             // Math.random is fine here: reconnect jitter, no security context.
             const delay = base + Math.random() * base;
 
@@ -254,10 +220,9 @@ export function useSSE(
 
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, delay);
           } else {
-            setError("Max reconnection attempts reached");
             logger.warn("sse max reconnection attempts reached", {
               endpoint,
-              max_attempts: maxReconnectAttempts,
+              max_attempts: MAX_RECONNECT_ATTEMPTS,
             });
           }
         };
@@ -267,7 +232,6 @@ export function useSSE(
           endpoint,
           error: err instanceof Error ? err.message : String(err),
         });
-        setError("Failed to establish SSE connection");
       } finally {
         connecting = false;
       }
@@ -349,9 +313,6 @@ export function useSSE(
   }, [
     endpoint,
     stableOnMessage,
-    stableOnError,
-    reconnectInterval,
-    maxReconnectAttempts,
     enabled,
     reconnectKey,
     sessionAccount,
@@ -369,15 +330,13 @@ export function useSSE(
   // Compute connection status based on state
   const status = useMemo<ConnectionStatus>(() => {
     if (isConnected) return "connected";
-    if (reconnectAttempts >= maxReconnectAttempts) return "failed";
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return "failed";
     if (reconnectAttempts > 0) return "reconnecting";
     return "idle";
-  }, [isConnected, reconnectAttempts, maxReconnectAttempts]);
+  }, [isConnected, reconnectAttempts]);
 
   return {
     isConnected,
-    error,
-    reconnectAttempts,
     status,
   };
 }

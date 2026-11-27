@@ -26,7 +26,6 @@ export function ParentChildConversationContent({
       <OgsConversation
         studentId={studentId}
         showBack
-        showChild
         audience={audience}
         onAudienceChange={(next) =>
           router.replace(parentPath(childConversationPath(studentId, next)))

@@ -65,6 +65,31 @@ func (s *Service) ListTraegerSchoolIDs(ctx context.Context, organizationID int64
 	return ids, err
 }
 
+// ListTraegerSchools returns the undeleted schools of an active, undeleted
+// Träger with their names, in one statement (#8146). Any other Träger
+// reaches no school.
+func (s *Service) ListTraegerSchools(ctx context.Context, organizationID int64) ([]organizationtenancy.TraegerSchool, error) {
+	schools := []organizationtenancy.TraegerSchool{}
+	err := s.runRead(ctx, "list_traeger_schools", func(txCtx context.Context, stats *domain.OperationStats) error {
+		set, queryStats, err := s.store.ListLiveTraegerSchools(txCtx, organizationID)
+		stats.Add(queryStats)
+		switch {
+		case err != nil:
+			return err
+		case !set.Found:
+			return organizationtenancy.ErrOrganizationNotFound
+		case !set.Live:
+			return organizationtenancy.ErrOrganizationInactive
+		}
+		schools = make([]organizationtenancy.TraegerSchool, 0, len(set.Schools))
+		for _, school := range set.Schools {
+			schools = append(schools, organizationtenancy.TraegerSchool(school))
+		}
+		return nil
+	})
+	return schools, err
+}
+
 // ListTraegerMemberships returns every membership of the Träger.
 func (s *Service) ListTraegerMemberships(ctx context.Context, organizationID int64) ([]organizationtenancy.TraegerMembership, error) {
 	memberships := []organizationtenancy.TraegerMembership{}
@@ -208,3 +233,5 @@ func (s *Service) HasRetainedTraegerMembership(ctx context.Context, accountID in
 	})
 	return retained, err
 }
+
+var _ organizationtenancy.TraegerSchools = (*Service)(nil)

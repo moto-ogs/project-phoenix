@@ -183,15 +183,20 @@ describe("CreateAccountModal", () => {
   it("loads roles on mount and renders role options", async () => {
     renderModal();
 
+    const role = screen.getByRole("combobox", { name: /System-Rolle/ });
+    expect(role).toBeDisabled();
     await waitFor(() => {
       expect(mockListSystemRoles).toHaveBeenCalled();
     });
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/System-Rolle/)).not.toBeDisabled();
+      expect(role).not.toBeDisabled();
     });
-    fireEvent.click(screen.getByLabelText(/System-Rolle/));
+    fireEvent.click(role);
 
+    expect(
+      screen.getByRole("listbox", { name: /System-Rolle/ }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "admin" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "user" })).toBeInTheDocument();
   });

@@ -215,24 +215,32 @@ func TestLegalRemedyNeedsRenderedTextNotOnlyPlaceholdersOrAHeading(t *testing.T)
 	}
 }
 
-// The standard template for one person (ADR 0294, #7463) is the standard
-// text in the du-form: the same placeholders and closing, no ihr-form, and
-// no salutation, because the letter greets the person by name. A kind no
-// letter to one person uses keeps its standard template.
-func TestTheStandardTemplateForOnePersonSaysDu(t *testing.T) {
+// The standard templates say "Sie" (ADR 0328). The one for one person,
+// another payer (#7463), is the confirmation letter without the booking and
+// the child as the payer's own: the same placeholders and closing, and no
+// salutation, because the letter greets the person by name. Every other
+// kind writes its standard template to one person too.
+func TestTheStandardTemplatesSaySie(t *testing.T) {
 	t.Parallel()
-	ihrForm := regexp.MustCompile(`(?i)\b(ihr|euch|euer|eure[mnrs]?|habt|müsst|gebt|überweist|beachtet)\b`)
+	informal := regexp.MustCompile(`\b(ihr|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|habt|müsst|gebt|überweist|beachtet|` +
+		`[Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|hast|musst|gib|überweise|beachte|erreichst)\b`)
 	placeholder := regexp.MustCompile(`\{\{\w+\}\}`)
-	for _, kind := range []templates.Kind{templates.KindConfirmation, templates.KindInvoice, templates.KindFeeNotice} {
+	for _, kind := range templates.Kinds() {
 		one, standard := templates.DefaultForOne(kind), templates.Default(kind)
+		for _, template := range []templates.Template{standard, one} {
+			for _, text := range []string{template.Subject, template.Salutation, template.Body, template.Closing} {
+				assert.Empty(t, informal.FindAllString(text, -1), "%s: %q", kind, text)
+			}
+		}
+		if kind != templates.KindConfirmation {
+			assert.Equal(t, standard, one, kind)
+			continue
+		}
 		require.NoError(t, templates.Check(kind, one), kind)
 		assert.Empty(t, one.Salutation, kind)
 		assert.Equal(t, standard.Closing, one.Closing, kind)
-		for _, text := range []string{one.Subject, one.Body} {
-			assert.Empty(t, ihrForm.FindAllString(text, -1), "%s: %q", kind, text)
-		}
+		assert.NotContains(t, one.Body, "Ihr Kind", kind)
 		assert.ElementsMatch(t, placeholder.FindAllString(standard.Subject+standard.Body, -1),
 			placeholder.FindAllString(one.Subject+one.Body, -1), kind)
 	}
-	assert.Equal(t, templates.Default(templates.KindContract), templates.DefaultForOne(templates.KindContract))
 }

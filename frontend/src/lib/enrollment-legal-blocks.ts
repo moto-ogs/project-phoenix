@@ -122,7 +122,7 @@ export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
     key: "email_contact",
     kind: "notice",
     title: "E-Mail-Kontakt",
-    // sie-anrede-erlaubt (ADR 0294): Standardhinweis, geht wörtlich in Nachweise und gespeicherte Formularvorlagen ein.
+    // sie-anrede-erlaubt (ADR 0328): Standardhinweis, geht wörtlich in Nachweise und gespeicherte Formularvorlagen ein.
     label:
       "Die Schule nutzt Ihre E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
     text: "",

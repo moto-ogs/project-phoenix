@@ -217,7 +217,7 @@ func TestDecide_PickupChangeFreezesDiff(t *testing.T) {
 	// A fixed future Monday lets the exception's weekday fallback (the live
 	// Monday plan) supply the old side without depending on the wall clock.
 	date := calendar.NewDate(2026, 8, 31)
-	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.chain.AccountID), f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(0, 1, 1, 16, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.chain.AccountID), f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(0, 1, 1, 16, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,

@@ -60,12 +60,6 @@ func (failingPickupBaseline) Project(
 	return nil, errors.New("weekly pickup projection unavailable")
 }
 
-func (failingPickupBaseline) OfferingPickupForDate(
-	context.Context, int64, calendar.Date,
-) (*careplan.PickupSchedule, error) {
-	return nil, errors.New("weekly pickup projection unavailable")
-}
-
 func (failingPickupBaseline) HasBookedOfferingPickupForWeekday(
 	context.Context, int64, int,
 ) (bool, error) {
@@ -473,7 +467,7 @@ func TestAutoExcusal_WeeklyBaselineDeletedReleasesCoupling(t *testing.T) {
 
 	// Without a weekly baseline there is no Vorverlegung — deleting the plan
 	// must release the derived absences.
-	require.NoError(t, h.svc.DeleteAllStudentPickupSchedules(h.ctx, h.student.ID))
+	require.NoError(t, h.svc.UpsertBulkStudentPickupSchedules(h.ctx, h.student.ID, nil))
 
 	fresh := h.exception(t)
 	require.NotNil(t, fresh)

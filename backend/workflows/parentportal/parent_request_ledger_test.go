@@ -56,7 +56,7 @@ func buildLedgerServices(t *testing.T) (*parentService.Portal, careplan.ExcusedA
 			excusedRequiresApproval: true,
 		},
 		ExcusedRequests:     owners.NewParentExcusedAbsenceRequests(excused),
-		ExcusedRequestRepo:  repos.ExcusedAbsenceRequest,
+		ExcusedRequestRepo:  owners.NewParentExcusedRequestReads(repos.CarePlan()),
 		ParentRequestEvents: owners.NewParentRequestEvents(events),
 		Logger:              slog.Default(),
 		Now:                 careFixtureNow,

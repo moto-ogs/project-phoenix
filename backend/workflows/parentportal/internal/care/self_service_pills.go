@@ -2,7 +2,6 @@ package care
 
 import (
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -23,20 +22,4 @@ func SickNoteEventBody(status string, dates []calendar.Date) string {
 		label = "Entschuldigte Abwesenheit"
 	}
 	return label + ": " + strings.Join(parts, ", ")
-}
-
-// CareExceptionEventBody renders the chat pill for a guardian care-time
-// submission. The headline stays neutral ("Betreuungszeit") because either leg
-// (arrival, pickup, or both) may have changed — labelling it as an "Abholung"
-// change would record a pickup change that did not happen on an arrival-only
-// submit. The appended value lines name the concrete leg(s) that were set.
-func CareExceptionEventBody(date calendar.Date, pickupTime, arrivalTime *time.Time) string {
-	parts := []string{"Betreuungszeit " + date.Format("02.01.") + " geändert"}
-	if arrivalTime != nil {
-		parts = append(parts, "Ankunft "+arrivalTime.Format("15:04"))
-	}
-	if pickupTime != nil {
-		parts = append(parts, "Abholung "+pickupTime.Format("15:04"))
-	}
-	return strings.Join(parts, ": ")
 }

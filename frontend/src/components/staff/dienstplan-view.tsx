@@ -52,6 +52,8 @@ import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { usePlanningHolidayWeeks } from "~/lib/hooks/use-holiday-care";
 import { holidayCareDays } from "~/lib/holiday-care";
 import { useDienstplanData } from "~/lib/hooks/use-dienstplan-data";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
+import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { useUrlParams } from "~/lib/hooks/use-url-params";
 import { createLogger } from "~/lib/logger";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
@@ -116,6 +118,16 @@ function DienstplanContent() {
   // über das Wildcard-Recht). Am Rollennamen `admin` festgemacht, kam eine
   // Leitungsrolle, die die Schule selbst anlegt, nie in den Dienstplan (#3469).
   const canEdit = hasPermission(session, "time_tracking:manage");
+  // Jede Planänderung braucht einen Urheber: das eigene Personalprofil der
+  // Schule oder, über den Träger, den Vermerk des Träger-Büros (ADR 0084,
+  // Nachtrag 2). Ohne beides lehnt der Server ab; der Plan bleibt dann eine
+  // Anzeige und sagt vorher, warum (#7351). Krankmeldung und Übernahme von
+  // Abwesenheiten bleiben dem Personal der Schule vorbehalten. Solange der
+  // Nutzerkontext lädt oder fehlschlägt, gilt das Profil als vorhanden.
+  const hasOwnStaff = useHasOwnStaff(sessionStatus === "authenticated");
+  const viaTraeger = useShellAuthSafe()?.isViaTraeger === true;
+  const canPlanShifts = canEdit && (hasOwnStaff || viaTraeger);
+  const canWriteAbsences = canEdit && hasOwnStaff;
   // Die Halbjahres-Sicht zeigt Soll-/Plan-Abgleiche aus /overview. Dieser
   // Endpunkt verlangt zusätzlich `schedules:read`; Tab und Deep-Link sind
   // darum weiterhin auf beide Berechtigungen gegated, auch wenn die
@@ -150,6 +162,18 @@ function DienstplanContent() {
   const [sickModal, setSickModal] = useState<StaffScheduleStaff | null>(null);
   // Anlegen eines Kalenderzeitraums; bearbeitet wird auf /calendar-periods.
   const [periodModalOpen, setPeriodModalOpen] = useState(false);
+
+  // Ein Kontext ohne Profil kann erst eintreffen, während ein zuvor erlaubter
+  // Dialog offen ist. Dann bleibt keine Schreibaktion auf einer Anzeige übrig.
+  useEffect(() => {
+    if (!canPlanShifts) {
+      setModal(null);
+      setPeriodModalOpen(false);
+    }
+  }, [canPlanShifts]);
+  useEffect(() => {
+    if (!canWriteAbsences) setSickModal(null);
+  }, [canWriteAbsences]);
 
   // Montag der Woche, die `d` enthält.
   const weekAnchor = useMemo(() => startOfWeek(parseISODate(dayISO)), [dayISO]);
@@ -194,7 +218,6 @@ function DienstplanContent() {
   const weekTo = weekDays[4] ?? "";
 
   const {
-    canManageAbsences,
     sortedStaff,
     shiftsByStaff,
     assignmentsByStaff,
@@ -339,9 +362,12 @@ function DienstplanContent() {
   // person → /time-tracking, others → the staff detail page). Reuses the
   // time-tracking page's SWR key so the request is deduped; null when the
   // account is not linked to a staff person.
-  const { data: ownStaff } = useSWRAuth(meKeys.key(), meKeys.fetcher, {
-    revalidateOnFocus: false,
-  });
+  // Known to have no own staff profile: the request could only be refused.
+  const { data: ownStaff } = useSWRAuth(
+    hasOwnStaff ? meKeys.key() : null,
+    meKeys.fetcher,
+    { revalidateOnFocus: false },
+  );
   const currentStaffId = ownStaff?.id ?? null;
 
   // Person der Ansicht "person": aus `staff`, sonst die eigene Person, sonst
@@ -447,6 +473,27 @@ function DienstplanContent() {
       ? noStaffEmpty
       : null;
 
+  // Öffnet den Schicht-Dialog; ohne Planungsrecht gibt es keinen, und die
+  // Raster bleiben eine Anzeige (#7351).
+  const openShiftEditor = canPlanShifts
+    ? (
+        member: StaffScheduleStaff,
+        date: string,
+        shift: StaffShift | null,
+        initialTimes?: { startTime: string; endTime: string },
+      ) =>
+        setModal({
+          mode: shift ? "edit" : "create",
+          staff: member,
+          date,
+          shift,
+          replacements: shift
+            ? allShifts.filter((s) => s.originShiftId === shift.id)
+            : [],
+          initialTimes,
+        })
+    : undefined;
+
   // Der Inhalt wird nur gerendert, wenn das Gerüst ihn durchlässt — bei
   // Laden, Fehler oder Leerzustand ersetzt `TenantPage` ihn vollständig.
   let content: ReactNode;
@@ -481,26 +528,17 @@ function DienstplanContent() {
           typesById={typesById}
           shiftTypes={shiftTypes ?? []}
           summary={summaryByStaff.get(personMember.id)}
-          onCreate={(date, startTime, endTime) =>
-            setModal({
-              mode: "create",
-              staff: personMember,
-              date,
-              shift: null,
-              replacements: [],
-              initialTimes: { startTime, endTime },
-            })
+          onCreate={
+            openShiftEditor &&
+            ((date, startTime, endTime) =>
+              openShiftEditor(personMember, date, null, {
+                startTime,
+                endTime,
+              }))
           }
-          onEdit={(date, shift) =>
-            setModal({
-              mode: "edit",
-              staff: personMember,
-              date,
-              shift,
-              replacements: allShifts.filter(
-                (s) => s.originShiftId === shift.id,
-              ),
-            })
+          onEdit={
+            openShiftEditor &&
+            ((date, shift) => openShiftEditor(personMember, date, shift))
           }
         />
       </div>
@@ -537,20 +575,11 @@ function DienstplanContent() {
           reducedPath={reducedPath}
           currentStaffId={currentStaffId}
           reloadShifts={reloadShifts}
-          onCellClick={(member, date, shift) =>
-            setModal({
-              mode: shift ? "edit" : "create",
-              staff: member,
-              date,
-              shift,
-              replacements: shift
-                ? allShifts.filter((s) => s.originShiftId === shift.id)
-                : [],
-            })
-          }
+          onCellClick={openShiftEditor}
           onSickReport={
-            canManageAbsences ? (member) => setSickModal(member) : undefined
+            canWriteAbsences ? (member) => setSickModal(member) : undefined
           }
+          canWriteAbsences={canWriteAbsences}
           onOpenPersonWeek={
             canViewHalbjahr
               ? (member) =>
@@ -715,6 +744,7 @@ function DienstplanContent() {
             periods={periods ?? []}
             weekDays={weekDayDates}
             isLoading={showSkeleton || periodsLoading}
+            canManage={canPlanShifts}
             onCreate={() => setPeriodModalOpen(true)}
             onSelect={(period) =>
               updateUrlParams({
@@ -731,19 +761,26 @@ function DienstplanContent() {
     >
       <LoadErrorAlert error={periodsLoad.error} className="mb-3" />
       <LoadErrorAlert error={holidayWeeks.loadError} className="mb-3" />
+      {canEdit && !canPlanShifts && (
+        // Ein dauerhafter Zustand, kein Ereignis: Hinweis im Inhalt, ohne X.
+        <Alert
+          type="info"
+          className="mb-3"
+          message="Du kannst den Dienstplan nur ansehen. Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Melde dich dafür beim moto-Team."
+        />
+      )}
       {/* Abwesenheiten von vor #6847, deren Tage noch im Plan stehen
           (#7021). Über dem Raster, weil sie jede Ansicht betreffen. */}
       <AbsencePlanGaps
-        enabled={sessionStatus === "authenticated" && canEdit}
+        enabled={sessionStatus === "authenticated" && canWriteAbsences}
         staffById={staffById}
         onPlansChanged={refreshAfterPlanMutation}
         onShowWeek={(day) => updateUrlParams({ d: day, view: null })}
       />
       {content}
 
-      {modal && (
+      {modal && canPlanShifts && (
         <ShiftEditModal
-          isOpen
           mode={modal.mode}
           staffId={modal.staff.id}
           staffName={`${modal.staff.firstName} ${modal.staff.lastName}`}
@@ -759,7 +796,7 @@ function DienstplanContent() {
           reloadShift={reloadModalShift}
         />
       )}
-      {periodModalOpen && (
+      {periodModalOpen && canPlanShifts && (
         <CalendarPeriodModal
           linkClosingDays
           isOpen
@@ -777,7 +814,6 @@ function DienstplanContent() {
           dann in jeden Test dieser Seite, wenn ihn niemand öffnet. */}
       {canExportPlan && exportOpen && (
         <PlanExportModal
-          isOpen
           plan="dienstplan"
           weekDay={dayISO}
           isWeekOnScreen={view !== "halbjahr"}
@@ -785,7 +821,7 @@ function DienstplanContent() {
           onClose={() => setExportOpen(false)}
         />
       )}
-      {sickModal && (
+      {sickModal && canWriteAbsences && (
         <SickReportModal
           isOpen
           staff={sickModal}

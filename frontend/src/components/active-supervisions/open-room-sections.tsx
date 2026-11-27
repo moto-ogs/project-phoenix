@@ -477,7 +477,7 @@ function OpenRoomBlockBody({
       <LoadErrorAlert error={actions.reloadError} />
       {header}
       {isLoading ? (
-        <ActiveSupervisionLoadingView withHeader={false} />
+        <ActiveSupervisionLoadingView />
       ) : (
         <SectionStudents
           students={students}

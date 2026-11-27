@@ -29,18 +29,6 @@ const (
 // model per issue #586 (Rule 12: models hold data, not decisions).
 const defaultDeviceOnlineWindow = 5 * time.Minute
 
-// RoomConflictStrategy defines how to handle room conflicts when determining room ID
-type RoomConflictStrategy int
-
-const (
-	// RoomConflictFail returns error if room has conflicts
-	RoomConflictFail RoomConflictStrategy = iota
-	// RoomConflictIgnore skips conflict checking entirely
-	RoomConflictIgnore
-	// RoomConflictWarn logs warning but continues
-	RoomConflictWarn
-)
-
 // SettingsResolver resolves tenant-scoped settings. Implemented by config.SettingsService.
 // Optional dependency — when nil, auto-clear behavior falls back to the registry default.
 type SettingsResolver interface {

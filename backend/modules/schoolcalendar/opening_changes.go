@@ -49,6 +49,9 @@ type OpeningChange struct {
 	ClosesAt  string
 	Reason    string
 	UpdatedAt time.Time
+	// Traeger marks a change the school's Träger planned for it (#8202). The
+	// school reads it and cannot change it; its ID is one of the Träger's.
+	Traeger bool
 }
 
 // Version is the token a change sends back as expected version (ADR 0311).
@@ -69,10 +72,12 @@ type OpeningChangeInput struct {
 // OpeningChanges maintains the opening changes of the school of the ambient
 // tenant transaction; every operation runs in that transaction.
 type OpeningChanges interface {
-	// ListOpeningChanges lists the changes touching [from, to], by start.
+	// ListOpeningChanges lists the changes touching [from, to], by start:
+	// the school's own and those of its current Träger (#8202).
 	ListOpeningChanges(ctx context.Context, from, to calendar.Date) ([]OpeningChange, error)
 	// ClosingTimeOn answers the closing time "HH:MM" a change sets for day,
-	// the earliest when several overlap; ok is false on a day without one.
+	// the earliest when several overlap, the Träger's included (#8202); ok
+	// is false on a day without one.
 	// It replaces operations.session_end_time on that day (#8157).
 	ClosingTimeOn(ctx context.Context, day calendar.Date) (closesAt string, ok bool, err error)
 	CreateOpeningChange(ctx context.Context, input OpeningChangeInput) (OpeningChange, error)

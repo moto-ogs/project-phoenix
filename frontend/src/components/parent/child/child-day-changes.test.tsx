@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
@@ -14,6 +21,8 @@ import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({ getChildDayChanges: vi.fn() }));
+const trackEvent = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/analytics", () => ({ trackEvent }));
 vi.mock("~/lib/parent-url", () => ({ parentPath: (path: string) => path }));
 
 const mockedRead = vi.mocked(getChildDayChanges);
@@ -38,6 +47,8 @@ function entry(
     entered_by_you: false,
     child_status: null,
     pickup_time: null,
+    pickup_person_name: null,
+    pickup_person_one_time: false,
     activity_title: null,
     room_name: null,
     previous_room_name: null,
@@ -56,8 +67,9 @@ function entry(
 function day(
   entries: parentMeContract.ChildDayChangeEntry[],
   sources = loaded,
+  date = testClockDay(),
 ): parentMeContract.ChildDayChangesResponse {
-  return { date: testClockDay(), sources, entries };
+  return { date, sources, entries };
 }
 
 function renderCard(changes: parentMeContract.ChildDayChangesResponse) {
@@ -205,6 +217,29 @@ describe("ChildDayChangesList in der Tageskarte", () => {
     ).not.toBeInTheDocument();
   });
 
+  // #8162: wer das Kind heute abholt, eine andere Person mit Ausweis.
+  it("nennt die Abholperson des Tages", () => {
+    renderCard(
+      day([
+        entry({
+          kind: "child_pickup_person",
+          pickup_person_name: "Tante Frieda",
+          pickup_person_one_time: true,
+          entered_by_you: true,
+        }),
+        entry({ kind: "child_pickup_person", pickup_person_name: "Oma Berta" }),
+        entry({ kind: "child_pickup_person", pickup_person_name: null }),
+      ]),
+    );
+    const items = within(screen.getByTestId("child-day-changes"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual([
+      "Tante Frieda holt Felix heute ab und zeigt dabei den Ausweis.Von dir eingetragen",
+      "Oma Berta holt Felix heute ab.",
+    ]);
+  });
+
   it("sagt ohne Änderungen, dass alles wie geplant läuft", () => {
     renderCard(day([]));
     const section = screen.getByTestId("child-day-changes");
@@ -264,4 +299,110 @@ describe("ChildDayChanges", () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(mockedRead).toHaveBeenCalledTimes(2));
   });
+
+  it("liest mit „Morgen“ den nächsten Tag und sagt „morgen“ (#8236)", async () => {
+    const tomorrow = testClockDay(1);
+    mockedRead.mockImplementation((_studentId: string, date?: string) =>
+      Promise.resolve(
+        date === tomorrow
+          ? day(
+              [
+                entry({ kind: "child_absent", child_status: "sick" }),
+                entry({ kind: "meal_cancelled" }),
+              ],
+              loaded,
+              tomorrow,
+            )
+          : day([entry({ kind: "child_goes_alone" })]),
+      ),
+    );
+    trackEvent.mockReset();
+    renderLoader();
+
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Heute" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      await screen.findByText("Felix ist morgen krank gemeldet."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Morgen gibt es kein Mittagessen für Felix. Es wird nicht berechnet.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockedRead).toHaveBeenLastCalledWith("42", tomorrow);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_tomorrow_shown");
+    expect(screen.queryByText(/heute/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Heute" }));
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("sagt ohne Änderungen, dass morgen alles wie geplant läuft", async () => {
+    const tomorrow = testClockDay(1);
+    mockedRead.mockImplementation((_studentId: string, date?: string) =>
+      Promise.resolve(day([], loaded, date ?? testClockDay())),
+    );
+    renderLoader();
+    fireEvent.click(await screen.findByRole("button", { name: "Morgen" }));
+    expect(
+      await screen.findByText("Morgen läuft alles wie geplant."),
+    ).toBeInTheDocument();
+    expect(mockedRead).toHaveBeenLastCalledWith("42", tomorrow);
+  });
+
+  it("zeigt unter „Morgen“ nie die Antwort eines anderen Tags", async () => {
+    mockedRead.mockResolvedValue(day([entry({ kind: "child_goes_alone" })]));
+    renderLoader();
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      await screen.findByTestId("child-day-changes-loading"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Felix geht/)).toBeNull();
+    expect(screen.queryByText(/wie geplant/)).toBeNull();
+  });
+
+  it("lässt den Umschalter stehen, wenn morgen nicht lädt", async () => {
+    const tomorrow = testClockDay(1);
+    mockedRead.mockImplementation((_studentId: string, date?: string) =>
+      date === tomorrow
+        ? Promise.reject(new Error("down"))
+        : Promise.resolve(day([entry({ kind: "child_goes_alone" })])),
+    );
+    renderLoader();
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Heute" }));
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+  });
 });
+
+function renderLoader() {
+  return render(
+    <NextIntlClientProvider locale="de" messages={deMessages}>
+      <ParentResourceTestProvider>
+        <ChildDayChanges studentId="42" firstName="Felix" />
+      </ParentResourceTestProvider>
+    </NextIntlClientProvider>,
+  );
+}

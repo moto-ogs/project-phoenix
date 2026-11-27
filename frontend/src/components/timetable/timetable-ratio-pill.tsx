@@ -29,8 +29,6 @@ interface TimetableRatioPillProps {
    * "dot": bare colored dot for month/year grid cells (no room for text).
    */
   readonly variant?: "pill" | "compact" | "dot";
-  /** Accessible name — required content for "dot" (no visible text). */
-  readonly title?: string;
 }
 
 export function TimetableRatioPill({
@@ -39,10 +37,9 @@ export function TimetableRatioPill({
   value,
   tone,
   variant = "pill",
-  title,
 }: Readonly<TimetableRatioPillProps>) {
   const color = timetableToneColors[tone];
-  const accessibleName = title ?? `${label}: ${value}`;
+  const accessibleName = `${label}: ${value}`;
 
   if (variant === "dot") {
     return <StatusDot color={color} label={accessibleName} />;

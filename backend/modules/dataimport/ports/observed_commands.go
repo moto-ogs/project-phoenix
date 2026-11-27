@@ -289,19 +289,10 @@ func (o observedClassListEntryBatches) CreateClassListEntries(ctx context.Contex
 	return o.ClassListEntryBatches.CreateClassListEntries(ctx, inputs)
 }
 
-// AppendAll appends in one call where the command can, one by one otherwise.
+// AppendAll observes the single batch command.
 func (o observedAuditCommand) AppendAll(ctx context.Context, events []any) (err error) {
-	batch, ok := o.AuditCommand.(AuditBatchCommand)
-	if !ok {
-		for _, event := range events {
-			if err := o.Append(ctx, event); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 	defer observeCommand(ctx, "audit-platform", "append_all", stopwatch(), &err)
-	return batch.AppendAll(ctx, events)
+	return o.AuditCommand.AppendAll(ctx, events)
 }
 
 type observedPersonBatches struct{ PersonBatches }

@@ -65,11 +65,6 @@ interface ExportDialogProps<F extends ExportFileFormat> {
    * options themselves say why; Drucken and Herunterladen wait.
    */
   readonly blocked?: boolean;
-  /**
-   * Locks every way to close the dialog without a running operation; the
-   * one name for this lock in every kit dialog (#6575). A running export locks it too.
-   */
-  readonly isDismissDisabled?: boolean;
   /** Options of this export (template, period, columns). */
   readonly children?: ReactNode;
 }
@@ -92,7 +87,6 @@ export function ExportDialog<F extends ExportFileFormat>({
   formats,
   run,
   blocked = false,
-  isDismissDisabled = false,
   children,
 }: ExportDialogProps<F>) {
   const initialFormat = formats[0];
@@ -115,7 +109,7 @@ export function ExportDialog<F extends ExportFileFormat>({
         if (!open) onClose();
       }}
       // Solange ein Export läuft, bleibt der Dialog stehen.
-      isDismissDisabled={isDismissDisabled || busy !== null}
+      isDismissDisabled={busy !== null}
     >
       <SlideOverContent size="md">
         <SlideOverHeader

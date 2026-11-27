@@ -170,7 +170,8 @@ func (b *BillingRuns) ListBillingRuns(ctx context.Context, organizationID int64)
 }
 
 // ListBillablePeriods lists the published periods with weeks, the latest
-// first.
+// first. An extra day included in the monthly contribution has nothing to
+// bill and is left out (#4817).
 func (b *BillingRuns) ListBillablePeriods(ctx context.Context, reviewer parentbilling.HolidayReviewer) ([]parentbilling.HolidayBillingPeriod, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
@@ -181,7 +182,7 @@ func (b *BillingRuns) ListBillablePeriods(ctx context.Context, reviewer parentbi
 	}
 	billable := make([]parentbilling.HolidayBillingPeriod, 0, len(periods))
 	for _, period := range periods {
-		if period.Published && !period.StartsOn.IsZero() {
+		if period.Published && !period.IncludedInFee && !period.StartsOn.IsZero() {
 			billable = append(billable, period)
 		}
 	}
@@ -202,7 +203,10 @@ func (b *BillingRuns) StartHolidayBillingRun(ctx context.Context, reviewer paren
 	if err != nil {
 		return parentbilling.BillingRun{}, err
 	}
-	if period.StartsOn.IsZero() || period.EndsOn.IsZero() {
+	// An extra day is billed under the fee mode parents registered for,
+	// which is fixed once it is published (#4817): a draft takes no run,
+	// and an included day has nothing to bill.
+	if period.IncludedInFee || (period.ExtraDay && !period.Published) || period.StartsOn.IsZero() || period.EndsOn.IsZero() {
 		return parentbilling.BillingRun{}, parentbilling.ErrBillingRunEmpty
 	}
 	run, err := b.store.InsertBillingRun(ctx, reviewer.OrganizationID, parentbilling.BillingRun{

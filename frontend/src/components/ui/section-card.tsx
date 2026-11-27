@@ -323,8 +323,7 @@ export function SectionCard({
   /**
    * Ohne eigene Kartenfläche, wenn der Inhalt selbst schon aus Karten besteht
    * (eine Reihe `StatCard`, eine Liste `TileCard`). Sonst steht eine weiße
-   * Karte auf einer weißen Karte und beide Ränder werden schwach. Dieselbe
-   * Entscheidung trifft das Eltern-Portal mit `ParentSection bare`.
+   * Karte auf einer weißen Karte und beide Ränder werden schwach.
    */
   bare?: boolean;
   /** Testanker; erspart eine zusätzliche Hülle nur für den Selektor. */

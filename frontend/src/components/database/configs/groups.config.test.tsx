@@ -20,15 +20,6 @@ vi.mock(
   () => import("~/test/mocks/plain-session-fetch"),
 );
 
-// Mock mapGroupResponse
-vi.mock("@/lib/group-helpers", async () => {
-  const actual = await vi.importActual("@/lib/group-helpers");
-  return {
-    ...actual,
-    mapGroupResponse: vi.fn((data: unknown) => data),
-  };
-});
-
 describe("groupsConfig", () => {
   it("exports a valid entity config", () => {
     expect(groupsConfig).toBeDefined();
@@ -73,30 +64,6 @@ describe("groupsConfig", () => {
     expect(transformed?.room_id).toBeUndefined();
   });
 
-  it("has detail header configuration", () => {
-    const mockGroup: Group = {
-      id: "1",
-      name: "Group Blue",
-      room_name: "Room 101",
-      student_count: 15,
-    };
-
-    expect(groupsConfig.detail.header?.title(mockGroup)).toBe("Group Blue");
-    expect(groupsConfig.detail.header?.subtitle?.(mockGroup)).toBe("Room 101");
-  });
-
-  it("shows no room message when not assigned", () => {
-    const mockGroup: Group = {
-      id: "1",
-      name: "Group Blue",
-      student_count: 0,
-    };
-
-    expect(groupsConfig.detail.header?.subtitle?.(mockGroup)).toBe(
-      "Kein Raum zugewiesen",
-    );
-  });
-
   it("maps request data correctly", () => {
     const data: Partial<Group> = {
       name: "Test Group",
@@ -129,40 +96,6 @@ describe("groupsConfig", () => {
       teacher_ids: ["1"],
       expected_version: "v3",
     });
-  });
-
-  it("has list configuration", () => {
-    expect(groupsConfig.list.title).toBe("Gruppe auswählen");
-    expect(groupsConfig.list.searchStrategy).toBe("frontend");
-  });
-
-  it("displays group in list with supervisors", () => {
-    const mockGroup: Group = {
-      id: "1",
-      name: "Group Blue",
-      student_count: 15,
-      supervisors: [{ id: "1", name: "Max Mustermann" }],
-    };
-
-    const subtitle = groupsConfig.list.item.subtitle?.(mockGroup);
-    expect(subtitle).toBe("1 Gruppenleitung");
-  });
-
-  it("displays no supervisor message in list", () => {
-    const mockGroup: Group = {
-      id: "1",
-      name: "Group Blue",
-      student_count: 0,
-      supervisors: [],
-    };
-
-    const subtitle = groupsConfig.list.item.subtitle?.(mockGroup);
-    expect(subtitle).toBe("Keine Gruppenleitung");
-  });
-
-  it("has custom labels", () => {
-    expect(groupsConfig.labels?.createButton).toBe("Neue Gruppe erstellen");
-    expect(groupsConfig.labels?.deleteConfirmation).toContain("löschen");
   });
 
   it("loads caregiver teacher options and skips staff without teacher ids", async () => {
@@ -258,16 +191,5 @@ describe("groupsConfig", () => {
     const caught = await loadOptions?.().catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(ApiError);
     expect(caught).toMatchObject({ code: "general.unavailable" });
-  });
-
-  it("maps the contract's group row", async () => {
-    const { mapGroupResponse } = await import("@/lib/group-helpers");
-    const row = { id: "12", name: "Gruppe" };
-
-    mockFetch.mockResolvedValueOnce(Response.json({ data: row }));
-
-    await groupsConfig.api.get!("12");
-
-    expect(vi.mocked(mapGroupResponse)).toHaveBeenCalledWith(row);
   });
 });

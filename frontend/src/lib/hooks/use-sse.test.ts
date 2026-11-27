@@ -47,6 +47,12 @@ function sentAccount(index = 0) {
   );
 }
 
+async function advance(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
+
 beforeEach(() => {
   streams = [];
   onMessage.mockReset();
@@ -119,25 +125,29 @@ it.each([
 ])(
   "reports the stream's own %s refusal without a probe or retries",
   async (code) => {
+    vi.useFakeTimers();
     const refusal = vi.fn();
     const unsubscribe = onSessionTenantMismatch(refusal);
     fetchMock.mockResolvedValue(Response.json({ code }, { status: 409 }));
     const { result, rerender } = renderHook(() =>
-      useSSE("/api/sse/events", { onMessage, reconnectInterval: 1 }),
+      useSSE("/api/sse/events", { onMessage }),
     );
-    await waitFor(() => expect(refusal).toHaveBeenCalledWith(code));
+    await advance(0);
+    expect(refusal).toHaveBeenCalledWith(code);
     expect(result.current.isConnected).toBe(false);
     act(() => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
+    await advance(3000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // A confirmed new provider account replaces the refused connection.
     bindSessionAccount("B");
     mockUseSession.mockReturnValue(session("B"));
     fetchMock.mockImplementation(async () => streamResponse());
     rerender();
-    await waitFor(() => expect(result.current.isConnected).toBe(true));
+    await advance(0);
+    expect(result.current.isConnected).toBe(true);
     expect(sentAccount(1)).toBe("B");
     unsubscribe();
   },
@@ -146,15 +156,20 @@ it.each([
 it.each([401, 503, "offline"])(
   "retries ordinary %s errors, still bound to A",
   async (failure) => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const refusal = vi.fn();
     const unsubscribe = onSessionTenantMismatch(refusal);
     if (typeof failure === "number")
       fetchMock.mockResolvedValueOnce(new Response(null, { status: failure }));
     else fetchMock.mockRejectedValueOnce(new TypeError("offline"));
     const { result } = renderHook(() =>
-      useSSE("/api/sse/events", { onMessage, reconnectInterval: 1 }),
+      useSSE("/api/sse/events", { onMessage }),
     );
-    await waitFor(() => expect(result.current.isConnected).toBe(true));
+    await advance(0);
+    expect(result.current.status).toBe("reconnecting");
+    await advance(1000);
+    expect(result.current.isConnected).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect([sentAccount(), sentAccount(1)]).toEqual(["A", "A"]);
     expect(refusal).not.toHaveBeenCalled();
@@ -163,18 +178,25 @@ it.each([401, 503, "offline"])(
 );
 
 it("binds another reconnect and aborts the old stream on an account change", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0);
   const { result, rerender } = renderHook(() =>
-    useSSE("/api/sse/events", { onMessage, reconnectInterval: 1 }),
+    useSSE("/api/sse/events", { onMessage }),
   );
-  await waitFor(() => expect(result.current.isConnected).toBe(true));
+  await advance(0);
+  expect(result.current.isConnected).toBe(true);
   act(() => streams[0]!.close());
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  await advance(0);
+  expect(result.current.status).toBe("reconnecting");
+  await advance(1000);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(sentAccount(1)).toBe("A");
   const oldSignal = fetchMock.mock.calls[1]![1]!.signal!;
   bindSessionAccount("B");
   mockUseSession.mockReturnValue(session("B"));
   rerender();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+  await advance(0);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
   expect(oldSignal.aborted).toBe(true);
   expect(sentAccount(2)).toBe("B");
 });
@@ -210,7 +232,9 @@ it("resumes a refused stream when a lookup confirms the same account again", asy
   const { result, rerender } = renderHook(() =>
     useSSE("/api/sse/events", { onMessage }),
   );
-  await waitFor(() => expect(result.current.error).toBeTruthy());
+  await waitFor(() =>
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true),
+  );
   mockUseSession.mockReturnValue(session("A"));
   rerender();
   await waitFor(() => expect(result.current.isConnected).toBe(true));
@@ -274,18 +298,24 @@ it("keeps an open stream when the provider confirms the same account (#5017)", a
 });
 
 it("retries a stream out of retries when the provider answers again", async () => {
-  fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  fetchMock.mockImplementation(async () => new Response(null, { status: 503 }));
   const { result, rerender } = renderHook(() =>
-    useSSE("/api/sse/events", { onMessage, maxReconnectAttempts: 0 }),
+    useSSE("/api/sse/events", { onMessage }),
   );
-  await waitFor(() => expect(result.current.error).toBeTruthy());
+  await advance(0);
+  await advance(31_000);
   expect(result.current.status).toBe("failed");
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledTimes(6);
+
   mockUseSession.mockReturnValue(session("A"));
+  fetchMock.mockImplementation(async () => streamResponse());
   rerender();
-  await waitFor(() => expect(result.current.isConnected).toBe(true));
-  expect(fetchMock).toHaveBeenCalledTimes(2);
-  expect(sentAccount(1)).toBe("A");
+  await advance(0);
+  expect(result.current.isConnected).toBe(true);
+  expect(fetchMock).toHaveBeenCalledTimes(7);
+  expect(sentAccount(6)).toBe("A");
 });
 
 it.each([
@@ -367,17 +397,11 @@ it("keeps the stream for reordered permissions and roles and profile changes", a
 });
 
 describe("heartbeat watchdog (#5017)", () => {
-  async function advance(ms: number) {
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(ms);
-    });
-  }
-
   it("counts a silent stream as dropped and reconnects", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const { result } = renderHook(() =>
-      useSSE("/api/sse/events", { onMessage, reconnectInterval: 1 }),
+      useSSE("/api/sse/events", { onMessage }),
     );
     await advance(0);
     expect(result.current.isConnected).toBe(true);
@@ -391,7 +415,7 @@ describe("heartbeat watchdog (#5017)", () => {
     expect(result.current.isConnected).toBe(false);
     expect(result.current.status).toBe("reconnecting");
 
-    await advance(5);
+    await advance(1000);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(sentAccount(1)).toBe("A");
     expect(result.current.isConnected).toBe(true);
@@ -400,7 +424,7 @@ describe("heartbeat watchdog (#5017)", () => {
   it("keeps a stream alive while heartbeats arrive", async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>
-      useSSE("/api/sse/events", { onMessage, reconnectInterval: 1 }),
+      useSSE("/api/sse/events", { onMessage }),
     );
     await advance(0);
     expect(result.current.isConnected).toBe(true);

@@ -2,11 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   countCheckedInStudents,
   formatGroupLabelWithAttendance,
-  isStudentCheckedIn,
   isStudentInGroupRoom,
   matchesSearchFilter,
   matchesAttendanceFilter,
-  matchesForeignRoomFilter,
 } from "./ogs-group-helpers";
 import type { OGSGroup } from "./ogs-group-helpers";
 import type { Student } from "~/lib/student-helpers";
@@ -111,14 +109,12 @@ describe("attendance count helpers", () => {
 
   it("does not count home, unknown, or empty locations as checked in", () => {
     expect(
-      isStudentCheckedIn(makeStudent({ current_location: "Zuhause" })),
-    ).toBe(false);
-    expect(
-      isStudentCheckedIn(makeStudent({ current_location: "Unbekannt" })),
-    ).toBe(false);
-    expect(
-      isStudentCheckedIn(makeStudent({ current_location: undefined })),
-    ).toBe(false);
+      countCheckedInStudents([
+        makeStudent({ current_location: "Zuhause" }),
+        makeStudent({ current_location: "Unbekannt" }),
+        makeStudent({ current_location: undefined }),
+      ]),
+    ).toBe(0);
   });
 
   it("formats group labels with checked-in and total counts", () => {
@@ -204,6 +200,7 @@ describe("matchesAttendanceFilter", () => {
     "1": { in_group_room: true, current_room_id: "5" },
     "2": { in_group_room: false, current_room_id: "10" },
     "3": { in_group_room: false },
+    "4": { current_room_id: "10" },
   };
 
   it("returns true when filter is 'all'", () => {
@@ -222,15 +219,11 @@ describe("matchesAttendanceFilter", () => {
     ).toBe(false);
   });
 
-  it("filters by foreign_room", () => {
-    const foreignRoomStudent = makeStudent({ id: "2" });
-    const inGroupRoomStudent = makeStudent({ id: "1" });
-    expect(
-      matchesAttendanceFilter(foreignRoomStudent, "foreign_room", roomStatus),
-    ).toBe(true);
-    expect(
-      matchesAttendanceFilter(inGroupRoomStudent, "foreign_room", roomStatus),
-    ).toBe(false);
+  it("only matches students with a confirmed foreign room", () => {
+    const matches = ["1", "2", "3", "4", "5"].filter((id) =>
+      matchesAttendanceFilter(makeStudent({ id }), "foreign_room", roomStatus),
+    );
+    expect(matches).toEqual(["2"]);
   });
 
   it("filters by transit location", () => {
@@ -274,31 +267,5 @@ describe("matchesAttendanceFilter", () => {
   it("returns false for in_room when student has no room status", () => {
     const student = makeStudent({ id: "999" }); // Not in roomStatus map
     expect(matchesAttendanceFilter(student, "in_room", roomStatus)).toBe(false);
-  });
-});
-
-describe("matchesForeignRoomFilter", () => {
-  it("returns true when student is in a foreign room", () => {
-    expect(
-      matchesForeignRoomFilter({ in_group_room: false, current_room_id: "10" }),
-    ).toBe(true);
-  });
-
-  it("returns false when student is in group room", () => {
-    expect(
-      matchesForeignRoomFilter({ in_group_room: true, current_room_id: "5" }),
-    ).toBe(false);
-  });
-
-  it("returns false when student has no room status", () => {
-    expect(matchesForeignRoomFilter(undefined)).toBe(false);
-  });
-
-  it("returns false when student has no current_room_id", () => {
-    expect(matchesForeignRoomFilter({ in_group_room: false })).toBe(false);
-  });
-
-  it("returns false when in_group_room is undefined but has room_id", () => {
-    expect(matchesForeignRoomFilter({ current_room_id: "10" })).toBe(false);
   });
 });

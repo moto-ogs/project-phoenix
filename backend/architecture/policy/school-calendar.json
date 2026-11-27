@@ -173,6 +173,10 @@
     {
       "name": "schedule.traeger_closing_days",
       "write_owner": "school-calendar"
+    },
+    {
+      "name": "schedule.traeger_opening_changes",
+      "write_owner": "school-calendar"
     }
   ],
   "rules": [

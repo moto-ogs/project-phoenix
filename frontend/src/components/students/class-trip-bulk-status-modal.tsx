@@ -25,7 +25,7 @@ import {
   type ClassTripReportInput,
 } from "~/lib/school-class-day-api";
 import {
-  bulkCreateStudentStatusDays,
+  createClassTripStatusDays,
   type StudentStatusKind,
   StudentStatusDayConflictError,
 } from "~/lib/student-status-days-api";
@@ -184,9 +184,8 @@ export function ClassTripBulkStatusModal({
         return;
       }
       try {
-        await bulkCreateStudentStatusDays(
+        await createClassTripStatusDays(
           students.map((student) => student.id),
-          "class_trip",
           from,
           to,
           reason.trim() || undefined,

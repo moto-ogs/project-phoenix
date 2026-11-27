@@ -761,80 +761,6 @@ func TestRevokeAllFromAdminTxWithTenantDeletesOtherSchoolTokens(t *testing.T) {
 	require.Zero(t, count)
 }
 
-func TestCleanupExpiredTokensDoesNotWipeReactivatedSessions(t *testing.T) {
-	t.Parallel()
-	testpkg.SetupIsolatedTestDB(t)
-	db := testpkg.SetupTestDB(t)
-	service := setupAuthService(t, db)
-	tenantID, _ := testpkg.CreateTestTenant(t, db)
-	ctx := testpkg.TenantContext(tenantID)
-	email, username := uniqueTestCredentials("reactivate-wipe")
-	account, err := service.Register(ctx, email, username, testPassword, nil, 0)
-	require.NoError(t, err)
-	testpkg.EnsureAccountTenant(t, db, account.ID, tenantID)
-
-	require.NoError(t, testpkg.WithTenantTx(t, ctx, db, tenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return service.DeactivateAccount(txCtx, int(account.ID))
-	}))
-	require.NoError(t, service.ActivateAccount(ctx, int(account.ID)))
-	_, _, err = service.Login(ctx, email, testPassword)
-	require.NoError(t, err)
-
-	_, err = service.CleanupExpiredTokens(ctx)
-	require.NoError(t, err)
-
-	count, err := db.NewSelect().
-		TableExpr("auth.tokens").
-		Where("account_id = ?", account.ID).
-		Where("rotated_at IS NULL").
-		Where("expiry > ?", time.Now()).
-		Count(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, 1, int(count))
-}
-
-func TestActivateAccountCompletesPendingAccountWideWipeWithoutMutatingHistory(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	service := setupAuthService(t, db)
-	tenantID, _ := testpkg.CreateTestTenant(t, db)
-	ctx := testpkg.TenantContext(tenantID)
-	email, username := uniqueTestCredentials("activate-clear-pending")
-	account, err := service.Register(ctx, email, username, testPassword, nil, 0)
-	require.NoError(t, err)
-	testpkg.EnsureAccountTenant(t, db, account.ID, tenantID)
-
-	insertPendingAccountWideWipe(t, db, account.ID, tenantID, "account_deactivated", time.Now())
-	var pendingID int64
-	require.NoError(t, db.NewSelect().
-		TableExpr("audit.auth_events").
-		Column("id").
-		Where("account_id = ?", account.ID).
-		Where("event_type = ?", authEventTokenRevoked).
-		Where(`metadata @> ?`, `{"pending_account_wide_wipe":true}`).
-		Scan(context.Background(), &pendingID))
-	require.NoError(t, service.ActivateAccount(ctx, int(account.ID)))
-
-	history, err := db.NewSelect().
-		TableExpr("audit.auth_events").
-		Where("account_id = ?", account.ID).
-		Where("event_type = ?", authEventTokenRevoked).
-		Where(`metadata @> ?`, `{"pending_account_wide_wipe":true}`).
-		Count(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, 1, int(history), "completion must not update or delete the pending event")
-
-	completed, err := db.NewSelect().
-		TableExpr("audit.auth_events").
-		Where("account_id = ?", account.ID).
-		Where("event_type = ?", authEventAccountWideWipeCompleted).
-		Where(`metadata->>'pending_event_id' = ?`, fmt.Sprint(pendingID)).
-		Count(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, 1, int(completed))
-}
-
 func TestCleanupExpiredTokensLeavesSessionsCreatedAfterPendingWipe(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupIsolatedTestDB(t)
@@ -968,14 +894,17 @@ func TestCleanupExpiredTokensKeepsParentPushForUnknownSession(t *testing.T) {
 // production uses: the cutoff is on the session clock (time.Now in these
 // tests) in the metadata, created_at is the database's time aged by as much
 // as the cutoff lies in the past.
-func insertPendingAccountWideWipe(t *testing.T, db *bun.DB, accountID, tenantID int64, reason string, cutoff time.Time) {
+func insertPendingAccountWideWipe(t *testing.T, db *bun.DB, accountID, tenantID int64, reason string, cutoff time.Time) int64 {
 	t.Helper()
 	age := max(time.Since(cutoff), 0)
-	_, err := db.NewRaw(`
+	var id int64
+	err := db.NewRaw(`
 		INSERT INTO audit.auth_events (tenant_id, account_id, event_type, success, ip_address, metadata, created_at)
 		VALUES (?, ?, 'token_revoked', true, '0.0.0.0',
 			jsonb_build_object('reason', ?::text, 'pending_account_wide_wipe', true, 'session_cutoff', ?::text),
 			now() - make_interval(secs => ?))
-	`, tenantID, accountID, reason, cutoff.UTC().Format(time.RFC3339Nano), age.Seconds()).Exec(context.Background())
+		RETURNING id
+	`, tenantID, accountID, reason, cutoff.UTC().Format(time.RFC3339Nano), age.Seconds()).Scan(context.Background(), &id)
 	require.NoError(t, err)
+	return id
 }

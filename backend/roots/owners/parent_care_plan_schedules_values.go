@@ -67,17 +67,6 @@ func parentCarePlanFromOwnerEffectivePickupTime(value careplan.EffectivePickupTi
 	}
 }
 
-func parentCarePlanToOwnerGuardianPickupChange(value parentportal.GuardianPickupChangeSnapshot) careplan.GuardianPickupChange {
-	return careplan.GuardianPickupChange{
-		TenantID:          value.TenantID,
-		StudentID:         value.StudentID,
-		GuardianAccountID: value.GuardianAccountID,
-		Date:              careplan.Date(value.Date),
-		PickupTime:        value.PickupTime,
-		Reason:            value.Reason,
-	}
-}
-
 func parentCarePlanFromOwnerNoteData(value careplan.NoteData) parentportal.NoteDataSnapshot {
 	return parentportal.NoteDataSnapshot{
 		ID:      value.ID,

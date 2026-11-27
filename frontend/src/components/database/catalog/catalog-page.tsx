@@ -733,7 +733,6 @@ export function CatalogPage<T extends CatalogItem>({
                 onSubmit={handleUpdate}
                 onCancel={edit.discard}
                 submitLabel="Speichern"
-                stickyActions
                 preserveDraftOnSectionsChange={
                   config.preserveDraftOnSectionsChange
                 }
@@ -839,15 +838,11 @@ export function CatalogPage<T extends CatalogItem>({
             <DatabaseFormModal<Record<string, unknown>>
               isOpen
               onClose={() => setCreateOpen(false)}
-              mode="create"
               config={{
+                createTitle: `${config.singular} anlegen`,
                 form: {
                   sections: config.sections(null),
                   defaultValues: config.createDefaults,
-                },
-                labels: {
-                  createModalTitle: `${config.singular} anlegen`,
-                  editModalTitle: `${config.singular} bearbeiten`,
                 },
               }}
               onSubmit={handleCreate}

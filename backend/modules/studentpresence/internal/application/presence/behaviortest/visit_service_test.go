@@ -311,15 +311,15 @@ func TestPresence_ListVisits(t *testing.T) {
 }
 
 // =============================================================================
-// FindVisitsByStudentID Tests
+// ListVisits for one student
 // =============================================================================
 
-func TestActiveService_FindVisitsByStudentID(t *testing.T) {
+func TestPresence_ListOpenVisitsForStudent(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupActiveService(t, db)
+	presence := testSchoolPresence(t, db)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns visits for student", func(t *testing.T) {
@@ -331,7 +331,7 @@ func TestActiveService_FindVisitsByStudentID(t *testing.T) {
 		testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, time.Now(), nil)
 
 		// ACT
-		result, err := service.FindVisitsByStudentID(ctx, student.ID)
+		result, err := presence.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{student.ID}, OpenOnly: true})
 
 		// ASSERT
 		require.NoError(t, err)
@@ -347,7 +347,7 @@ func TestActiveService_FindVisitsByStudentID(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "No", "Visits", "1a")
 
 		// ACT
-		result, err := service.FindVisitsByStudentID(ctx, student.ID)
+		result, err := presence.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{student.ID}, OpenOnly: true})
 
 		// ASSERT
 		require.NoError(t, err)

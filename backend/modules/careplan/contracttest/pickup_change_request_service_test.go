@@ -56,7 +56,7 @@ func TestPickupChangeRequestAppliesOnlyAfterStaffApproval(t *testing.T) {
 		require.NoError(t, f.schedules.Pickups.DeleteStudentPickupSchedule(ctx, f.chain.StudentID))
 	})
 
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
 	require.NoError(t, err)
 	assert.Equal(t, carerequests.KindPickupChange, req.RequestKind)
 	var payload map[string]any
@@ -99,7 +99,7 @@ func TestPickupChangeApprovalExcusesBlocksAfterEarlierPickup(t *testing.T) {
 	f, date, slotID := newPickupApprovalAutoExcusalScenario(t)
 	ctx := f.staffCtx(f.staffAccount)
 
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
@@ -134,7 +134,7 @@ func TestPendingPickupChangeNamesBlocksRemovedByApproval(t *testing.T) {
 
 	f, date, _ := newPickupApprovalAutoExcusalScenario(t)
 	ctx := f.staffCtx(f.staffAccount)
-	_, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	_, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 
 	items, _, err := nativeCareReviews(t, f).ListPending(ctx, careplan.RequestQueueFilter{})
@@ -216,7 +216,7 @@ func TestPickupChangeApprovalReleasesAutoExcusalAfterLaterPickup(t *testing.T) {
 	earlierPickup := time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC)
 	f.seedGuardianPickupAutoExcusal(t, date, earlierPickup)
 
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 16, 30, 0, 0, time.UTC), "Späterer Termin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 16, 30, 0, 0, time.UTC), "Späterer Termin")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
@@ -250,7 +250,7 @@ func TestPickupChangeApprovalRollsBackWhenAutoExcusalFails(t *testing.T) {
 
 	f, date, slotID := newPickupApprovalAutoExcusalScenario(t)
 	ctx := f.staffCtx(f.staffAccount)
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 
 	releaseSlot := holdInstanceStudentLock(t, f, slotID)
@@ -361,7 +361,7 @@ func newPickupApprovalAutoExcusalScenario(t *testing.T) (*careFixture, calendar.
 // seedPickupChangeRequest books a pending parent pickup change for a future day.
 func seedPickupChangeRequest(t *testing.T, f *careFixture, date calendar.Date) *carerequests.Request {
 	t.Helper()
-	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.staffAccount), f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.staffAccount), f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 	return req
 }
@@ -444,7 +444,7 @@ func TestPickupChangeApprovalRejectsCompletedSameDayPickup(t *testing.T) {
 	f := newPickupChangeFixture(t)
 	ctx := f.staffCtx(f.staffAccount)
 	date := calendar.NewDate(2026, 8, 24)
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 16, 30, 0, 0, time.UTC), "Späterer Termin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 16, 30, 0, 0, time.UTC), "Späterer Termin")
 	require.NoError(t, err)
 	device := testpkg.CreateTestDeviceForTenant(t, f.db, f.chain.TenantID, "pickup-review-checkout")
 	checkedOutAt := calendar.Now()
@@ -510,11 +510,11 @@ func TestPickupChangeRequestsForDifferentDaysCoexist(t *testing.T) {
 
 	first := seedPickupChangeRequest(t, f, tuesday)
 
-	second, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, wednesday, time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC), "Früherer Termin")
+	second, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, wednesday, time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC), "Früherer Termin")
 	require.NoError(t, err, "ein Antrag für einen anderen Tag darf nicht blockiert werden")
 	assert.NotEqual(t, first.ID, second.ID)
 
-	_, err = testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, tuesday, time.Date(2000, 1, 1, 16, 0, 0, 0, time.UTC), "Doppelt")
+	_, err = testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, tuesday, time.Date(2000, 1, 1, 16, 0, 0, 0, time.UTC), "Doppelt")
 	require.ErrorIs(t, err, carerequests.ErrAlreadyPending)
 
 	_, err = testpkg.TenantQuery3(t, ctx, f.db, f.svc.CreateRequest, f.chain.StudentID, f.chain.AccountID, careWeekdays(map[string]any{"weekday": 1, "pickup": "15:00"}))
@@ -540,7 +540,7 @@ func TestPickupChangeApprovalRejectsExpiredRequest(t *testing.T) {
 
 	f := newPickupChangeFixture(t)
 	ctx := f.staffCtx(f.staffAccount)
-	// CreatePickupChangeRequest refuses past dates, so an expired request can
+	// CreatePickupChange refuses past dates, so an expired request can
 	// only exist by aging in the queue — seed it directly at the repo.
 	req := &careplan.CareScheduleChangeRequest{
 		StudentID:   f.chain.StudentID,
@@ -607,7 +607,7 @@ func approvedPickupChange(t *testing.T, f *careFixture) (*carerequests.Request, 
 	t.Helper()
 	ctx := f.staffCtx(f.staffAccount)
 	date := nextSchoolDay(calendar.NewDate(2026, 8, 24).AddDays(2))
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
@@ -670,7 +670,7 @@ func TestPickupChangeCorrectRefusesAnUndecidedRequest(t *testing.T) {
 
 	f := newPickupChangeFixture(t)
 	ctx := f.staffCtx(f.staffAccount)
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, nextSchoolDay(calendar.NewDate(2026, 8, 24).AddDays(2)), time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, nextSchoolDay(calendar.NewDate(2026, 8, 24).AddDays(2)), time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 
 	err = f.svc.(pickupCorrecter).Correct(ctx, req.ID, false, testpkg.CareRequestVersion(t, req.ID), "Korrektur", f.staffAccount)

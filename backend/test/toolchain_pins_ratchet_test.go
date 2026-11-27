@@ -18,7 +18,7 @@ var (
 	nodeImagePattern   = regexp.MustCompile(`(?m)^FROM node:([^[:space:]]+)`)
 	nodeCIPattern      = regexp.MustCompile(`(?m)^\s+node-version:\s*"?([^"[:space:]]+)"?`)
 	airInstallPattern  = regexp.MustCompile(`go install github\.com/air-verse/air@v([0-9]+\.[0-9]+\.[0-9]+)`)
-	linterCIPattern    = regexp.MustCompile(`(?m)^\s+version: v([0-9]+\.[0-9]+\.[0-9]+)\s*(?:#.*)?$`)
+	linterCIPattern    = regexp.MustCompile(`(?m)^\s+GOLANGCI_LINT_VERSION: v([0-9]+\.[0-9]+\.[0-9]+)\s*(?:#.*)?$`)
 	// A release reaches nixpkgs days before nixhub indexes it, and devbox
 	// search only offers indexed versions. Until then Go and golangci-lint may
 	// be pinned to the nixpkgs commit that carries the release. The commit
@@ -80,7 +80,9 @@ func TestToolchainPinsRatchet(t *testing.T) {
 	} else {
 		linterVersion := requireDevboxPackageVersion(t, packages, "golangci-lint")
 		lockedPackages = append(lockedPackages, "golangci-lint")
-		assertCILinterVersion(t, filepath.Join(repoRoot, ".github/workflows/lint.yml"), linterVersion)
+		for _, workflow := range []string{"lint.yml", "backend-build-cache.yml"} {
+			assertCILinterVersion(t, filepath.Join(repoRoot, ".github/workflows", workflow), linterVersion)
+		}
 	}
 	pnpmVersion := requireDevboxPackageVersion(t, packages, "pnpm_10")
 	for _, manifestPath := range []string{"package.json", "frontend/package.json"} {
@@ -413,7 +415,11 @@ func assertDockerAirVersion(t *testing.T, path, want string) {
 
 func assertCILinterVersion(t *testing.T, path, want string) {
 	t.Helper()
-	match := linterCIPattern.FindStringSubmatch(string(readToolchainFile(t, path)))
+	content := string(readToolchainFile(t, path))
+	if !activeLinePattern("version: ${{ env.GOLANGCI_LINT_VERSION }}").MatchString(content) {
+		t.Errorf("%s does not install the pinned linter version", path)
+	}
+	match := linterCIPattern.FindStringSubmatch(content)
 	if match == nil {
 		t.Fatalf("%s has no pinned golangci-lint action version", path)
 	}

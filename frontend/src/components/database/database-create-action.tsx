@@ -18,7 +18,6 @@ interface DatabaseCreateActionProps {
   label: string;
   ariaLabel: string;
   disabled?: boolean;
-  showMobileFab?: boolean;
   onClick?: () => void;
   /**
    * Several ways to create (#4573: Personal einladen, Externe Person anlegen).
@@ -57,7 +56,6 @@ export function DatabaseCreateAction({
   label,
   ariaLabel,
   disabled = false,
-  showMobileFab = true,
   onClick,
   menuItems,
   tooltip = DEFAULT_TOOLTIP,
@@ -73,7 +71,7 @@ export function DatabaseCreateAction({
   }, []);
 
   useFloatingFabOffset({
-    active: showMobileFab,
+    active: true,
     mediaQuery: MOBILE_CREATE_FAB_MEDIA_QUERY,
   });
 
@@ -94,8 +92,7 @@ export function DatabaseCreateAction({
             }
           />
         </span>
-        {showMobileFab &&
-          mounted &&
+        {mounted &&
           createPortal(
             <span
               className={`fixed right-4 bottom-24 z-40 md:hidden ${FIXED_LAYER_SHIFT}`}
@@ -133,8 +130,7 @@ export function DatabaseCreateAction({
       >
         + {label}
       </Button>
-      {showMobileFab &&
-        mounted &&
+      {mounted &&
         createPortal(
           <Button
             type="button"

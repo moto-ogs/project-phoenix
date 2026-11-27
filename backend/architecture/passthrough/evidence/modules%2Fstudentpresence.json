@@ -723,23 +723,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *service) CountActiveVisitsByActiveGroupID(ctx context.Context, activeGroupID int64) (int, error) {\n\tcount, err := s.SchoolPresence.CountOpenVisitsInGroup(ctx, activeGroupID)\n\tif err != nil {\n\t\treturn 0, \u0026ActiveError{Op: \"CountActiveVisitsByActiveGroupID\", Err: ErrDatabaseOperation}\n\t}\n\treturn count, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/studentpresence/internal/application/presence/service.CountActiveVisitsByActiveGroupID",
-      "owner": "modules/studentpresence"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *service) FindDeviceActiveGroupInRoom(ctx context.Context, roomID int64, deviceID int64) (*ports.ActiveGroup, error) {\n\tgroup, err := s.GroupRepo.FindActiveByRoomIDAndDeviceID(ctx, roomID, deviceID)\n\tif err != nil {\n\t\treturn nil, \u0026ActiveError{Op: \"FindDeviceActiveGroupInRoom\", Err: fmt.Errorf(\"find by room and device: %w\", err)}\n\t}\n\treturn group, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/application/presence/service.FindDeviceActiveGroupInRoom",
-      "owner": "modules/studentpresence"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *service) FindVisitsByStudentID(ctx context.Context, studentID int64) ([]studentpresence.Visit, error) {\n\tvisits, err := s.SchoolPresence.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{studentID}, OpenOnly: true})\n\tif err != nil {\n\t\treturn nil, \u0026ActiveError{Op: \"FindVisitsByStudentID\", Err: ErrDatabaseOperation}\n\t}\n\treturn visits, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/studentpresence/internal/application/presence/service.FindVisitsByStudentID",
       "owner": "modules/studentpresence"
     },
     {

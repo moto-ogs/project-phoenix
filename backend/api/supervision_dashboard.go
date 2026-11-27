@@ -29,7 +29,6 @@ import (
 	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
-	supervisiondashboardCompose "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	calendarpkg "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -230,14 +229,13 @@ func newSupervisionSessions(active studentpresence.Presence, groups SupervisionO
 	if active == nil || caller == nil {
 		return nil
 	}
-	return supervisionSessions{active: active, groups: groups, userContext: caller, collate: supervisiondashboardCompose.CompareRoomNames}
+	return supervisionSessions{active: active, groups: groups, userContext: caller}
 }
 
 type supervisionSessions struct {
 	active      studentpresence.Presence
 	groups      SupervisionOpenRoomSessions
 	userContext supervisionSessionCaller
-	collate     func(a, b string) int
 }
 
 // Running lists every running session with the template activity relation
@@ -334,7 +332,7 @@ func (s supervisionSessions) records(ctx context.Context, groups []*studentprese
 		}
 		result = append(result, item)
 	}
-	supervisiondashboard.SortSessionsByRoom(result, s.collate)
+	supervisiondashboard.SortSessionsByRoom(result)
 	return result, nil
 }
 

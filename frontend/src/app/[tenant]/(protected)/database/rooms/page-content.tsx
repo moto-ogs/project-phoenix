@@ -266,9 +266,7 @@ function RoomsPageContent() {
     async (data: Partial<Room>) => {
       // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath,
       // eine vergebene Farbe (rooms.color_already_in_use) mit eigenem Text.
-      const payload = roomsConfig.form.transformBeforeSubmit
-        ? roomsConfig.form.transformBeforeSubmit(data)
-        : data;
+      const payload = roomsConfig.form.transformBeforeSubmit(data);
       const created = await service.create(payload);
       toastSuccess(`Der Raum „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
@@ -312,7 +310,7 @@ function RoomsPageContent() {
         <DatabaseFormModal<Room>
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          mode="create"
+
           config={roomsConfig}
           onSubmit={handleCreateRoom}
           errorPath={createErrors}

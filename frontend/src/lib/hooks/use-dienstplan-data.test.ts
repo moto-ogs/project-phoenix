@@ -215,7 +215,6 @@ describe("useDienstplanData", () => {
     expect(mocks.getAllStaff).not.toHaveBeenCalled();
     expect(mocks.getShifts).not.toHaveBeenCalled();
 
-    expect(result.current.canManageAbsences).toBe(true);
     // Full permission set → not the reduced path.
     expect(result.current.reducedPath).toBe(false);
     // Sorted by last name, German collation: Abel before Lovelace.
@@ -270,7 +269,6 @@ describe("useDienstplanData", () => {
     expect(mocks.getShifts).toHaveBeenCalledWith(weekFrom, weekTo);
     expect(mocks.getOverview).not.toHaveBeenCalled();
 
-    expect(result.current.canManageAbsences).toBe(true);
     // Missing schedules:read/users:read → the reduced path.
     expect(result.current.reducedPath).toBe(true);
     expect(result.current.sortedStaff).toEqual([

@@ -20,7 +20,7 @@ import {
 import { ApiError } from "~/lib/api-error";
 import { ClassTripBulkStatusModal } from "./class-trip-bulk-status-modal";
 import {
-  bulkCreateStudentStatusDays,
+  createClassTripStatusDays,
   StudentStatusDayConflictError,
 } from "~/lib/student-status-days-api";
 import type { Student } from "~/lib/student-helpers";
@@ -79,7 +79,7 @@ vi.mock("~/lib/student-status-days-api", async (importOriginal) => {
     await importOriginal<typeof import("~/lib/student-status-days-api")>();
   return {
     ...actual,
-    bulkCreateStudentStatusDays: vi.fn(),
+    createClassTripStatusDays: vi.fn(),
   };
 });
 
@@ -117,7 +117,7 @@ describe("ClassTripBulkStatusModal", () => {
 
       vi.useFakeTimers();
       setSchoolDateClock(zone, instant, "2026-05-27");
-      vi.mocked(bulkCreateStudentStatusDays).mockResolvedValue({
+      vi.mocked(createClassTripStatusDays).mockResolvedValue({
         student_count: 1,
         date_count: 1,
       });
@@ -141,9 +141,8 @@ describe("ClassTripBulkStatusModal", () => {
       );
 
       await waitFor(() => {
-        expect(bulkCreateStudentStatusDays).toHaveBeenCalledWith(
+        expect(createClassTripStatusDays).toHaveBeenCalledWith(
           ["42"],
-          "class_trip",
           "2026-05-27",
           "2026-05-27",
           undefined,
@@ -153,7 +152,7 @@ describe("ClassTripBulkStatusModal", () => {
   );
 
   it("lists each conflicting student, date, and status from a bulk 409", async () => {
-    vi.mocked(bulkCreateStudentStatusDays).mockRejectedValueOnce(
+    vi.mocked(createClassTripStatusDays).mockRejectedValueOnce(
       new StudentStatusDayConflictError([
         {
           id: "7",
@@ -207,7 +206,7 @@ describe("ClassTripBulkStatusModal", () => {
       updated_at: "2026-05-01T08:00:00Z",
     }));
     // Backend may return a capped sample with a higher total count.
-    vi.mocked(bulkCreateStudentStatusDays).mockRejectedValueOnce(
+    vi.mocked(createClassTripStatusDays).mockRejectedValueOnce(
       new StudentStatusDayConflictError(manyConflicts, 48),
     );
 
@@ -243,7 +242,7 @@ describe("ClassTripBulkStatusModal", () => {
   });
 
   it("names the class trip in a failed save without the server sentence", async () => {
-    vi.mocked(bulkCreateStudentStatusDays).mockRejectedValueOnce(
+    vi.mocked(createClassTripStatusDays).mockRejectedValueOnce(
       new ApiError("db down", 500, { code: "general.server" }),
     );
 
@@ -342,7 +341,7 @@ describe("ClassTripBulkStatusModal in moto schule (#4799)", () => {
     });
     expect(onSuccess).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
-    expect(bulkCreateStudentStatusDays).not.toHaveBeenCalled();
+    expect(createClassTripStatusDays).not.toHaveBeenCalled();
   });
 
   it("offers a return time for one day and sends it", async () => {

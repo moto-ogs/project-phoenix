@@ -40,7 +40,7 @@ export const ERROR_CATALOG = {
       "calendar.federal_state_missing":
         "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
       "calendar.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
       "calendar.opening_change_invalid":
@@ -1717,7 +1717,7 @@ export const ERROR_CATALOG = {
       "timetable.move_same_instance":
         "Bitte wähle einen anderen Termin als Ziel.",
       "timetable.no_staff_profile":
-        "Für diese Aktion brauchst du ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Für diese Aktion brauchst du ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "timetable.offering_gap_period_inactive":
         "Dieser Planungszeitraum ist nicht mehr aktiv. Bitte lade die Seite neu.",
       "timetable.offering_source_inactive":
@@ -1939,6 +1939,10 @@ export const ERROR_CATALOG = {
         "Diese Person gehört nicht mehr zum Träger-Büro. Bitte lade die Seite neu.",
       "traeger.no_membership":
         "Dein Konto hat keinen Zugang zum Träger-Portal. Bitte wende dich an das moto-Team.",
+      "traeger.opening_change_invalid":
+        "Die geänderte Öffnungszeit ist nicht vollständig. Bitte prüfe Datum, Uhrzeiten, Name und Schulen.",
+      "traeger.opening_change_not_found":
+        "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.report_template_invalid": "Bitte prüfe die Angaben der Vorlage.",
       "traeger.report_template_name_taken":
         "Eine Vorlage mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
@@ -2014,7 +2018,7 @@ export const ERROR_CATALOG = {
         "Gerade läuft keine Arbeitszeit. Bitte lade die Seite neu.",
       "workforce.no_session_for_today": "Kein Eintrag für heute vorhanden.",
       "workforce.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "workforce.opening_balance_already_exists":
         "Für diese Person gibt es schon einen Eröffnungssaldo. Bitte lösche zuerst den alten.",
       "workforce.payroll_config_incomplete":
@@ -3013,6 +3017,10 @@ export const ERROR_CATALOG = {
         "This person no longer belongs to the Träger office. Please reload the page.",
       "traeger.no_membership":
         "Your account has no access to the Träger portal. Please contact the moto team.",
+      "traeger.opening_change_invalid":
+        "The changed opening hours are incomplete. Please check the dates, times, name and schools.",
+      "traeger.opening_change_not_found":
+        "These changed opening hours no longer exist. Please reload the page.",
       "traeger.report_template_invalid":
         "Please check the details of the template.",
       "traeger.report_template_name_taken":

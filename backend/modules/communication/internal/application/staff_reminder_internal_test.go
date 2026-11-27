@@ -90,7 +90,7 @@ func newReminderHarness(repo *reminderRepo) *reminderHarness {
 		Repo:        repo,
 		Settings:    h.settings,
 		Notifier:    h.notifier,
-		Series:      communication.NotificationSeries{NotifyDurably: h.notifier.NotifyEachDurably},
+		Series:      communication.NotificationSeries{Notify: h.notifier.notifyBatch, NotifyDurably: h.notifier.NotifyEachDurably},
 		Outbox:      h.outbox,
 		ParentsURL:  "https://parents.example.test",
 		Logger:      slog.Default(),
@@ -644,7 +644,7 @@ func TestSendDueReminders_PersonalLetterRepeatsEachFamilysOwnLetter(t *testing.T
 	}}
 	h.svc = NewService(ServiceConfig{
 		Now: staffTestClock, Repo: repo, Settings: h.settings, Notifier: h.notifier,
-		Series: communication.NotificationSeries{NotifyDurably: h.notifier.NotifyEachDurably},
+		Series: communication.NotificationSeries{Notify: h.notifier.notifyBatch, NotifyDurably: h.notifier.NotifyEachDurably},
 		Outbox: h.outbox, ParentsURL: "https://parents.example.test", Logger: slog.Default(), Attachments: &stubPurger{},
 		Letters: ParentLetters{Copies: copies},
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())

@@ -30,7 +30,6 @@ type GuardianAbsenceReports interface {
 	ReportGuardianAbsence(ctx context.Context, report GuardianAbsenceReport) ([]StudentStatusDay, error)
 }
 type GuardianPickupExceptions interface {
-	ApplyGuardianPickupException(ctx context.Context, change GuardianPickupChange) error
 	WithdrawGuardianPickupException(ctx context.Context, change PickupException) error
 }
 type ExcusedAbsenceRequests interface {

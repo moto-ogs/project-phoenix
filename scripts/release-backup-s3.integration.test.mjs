@@ -48,6 +48,7 @@ services:
   server:
     image: ${image}
     network_mode: none
+    init: true
     entrypoint: [sleep, infinity]
     environment:
       UPLOADS_BACKEND: \${UPLOADS_BACKEND-}
@@ -59,6 +60,7 @@ services:
   frontend:
     image: ${image}
     network_mode: none
+    init: true
     entrypoint: [sleep, infinity]
 volumes:
   database:

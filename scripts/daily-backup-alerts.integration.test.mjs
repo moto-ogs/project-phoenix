@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { setTimeout } from 'node:timers/promises';
 import test from 'node:test';
+import { startLoki } from './logql-alerts-fixture.mjs';
 
 test('daily backup LogQL detects silence and failures without trusting legacy backup logs', { timeout: 90000 }, async t => {
   const rules = readFileSync(new URL('../monitoring/grafana/provisioning/alerting/daily-backup.yml', import.meta.url), 'utf8');
@@ -19,26 +18,8 @@ test('daily backup LogQL detects silence and failures without trusting legacy ba
   };
   const [prodMissing, prodFailed, stagingMissing, stagingFailed] =
     [rule('prod', 'missing'), rule('prod', 'failed'), rule('staging', 'missing'), rule('staging', 'failed')];
-  const name = `moto-backup-alert-test-${process.pid}-${Date.now()}`;
-  const docker = (...args) => spawnSync('docker', args, { encoding: 'utf8', timeout: 60000 });
-  t.after(() => docker('rm', '-f', name));
-  const started = docker('run', '-d', '--name', name, '--network', 'none',
-    'grafana/loki:3.4.3', '-config.file=/etc/loki/local-config.yaml',
-    '-ingester.min-ready-duration=0s', '-querier.query-ingesters-within=0',
-    '-querier.split-queries-by-interval=0', '-querier.cache-results=false',
-    // Keep the 27 h fixture queryable with the production 26 h alert window.
-    // Like nightly-cleanup-alerts, override only the isolated test's chunk age.
-    '-ingester.max-chunk-age=60h');
-  assert.equal(started.status, 0, started.stderr);
-  const request = (path, payload) => docker('exec', name, '/busybox/wget', '-qO-',
-    ...(payload ? ['--header=Content-Type: application/json', `--post-data=${JSON.stringify(payload)}`] : []),
-    `http://127.0.0.1:3100${path}`);
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
-    if (request('/ready').status === 0) { ready = true; break; }
-    await setTimeout(500);
-  }
-  assert.ok(ready, 'isolated Loki did not become ready');
+  // The alert window includes logs older than Loki's default 2 h chunk age.
+  const request = await startLoki(t, '-ingester.max-chunk-age=60h');
   const now = Date.now();
   const stamp = ms => String(BigInt(ms) * 1000000n);
   const push = (service, ms, line, env = 'prod') => {

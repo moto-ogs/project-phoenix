@@ -14,9 +14,7 @@ import {
  * empty list without a request.
  */
 export function usePickupExtensions(enabled: boolean) {
-  const { data, error, isLoading, mutate } = useSWRAuth<
-    PickupExtensionReminder[]
-  >(
+  const { data, error, mutate } = useSWRAuth<PickupExtensionReminder[]>(
     enabled ? tenantDailyKeys.pickupExtensionReminders() : null,
     async () => (await fetchPickupExtensions()).map(mapPickupExtensionReminder),
     { revalidateOnFocus: true },
@@ -24,7 +22,6 @@ export function usePickupExtensions(enabled: boolean) {
   return {
     tasks: data ?? [],
     error,
-    isLoading: enabled && isLoading,
     refresh: () => mutate(),
   };
 }

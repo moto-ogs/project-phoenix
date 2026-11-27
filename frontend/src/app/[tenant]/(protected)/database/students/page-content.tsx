@@ -34,7 +34,6 @@ import {
 } from "@/components/students/students-list";
 import { CareExitModal } from "~/components/students/care-exit-modal";
 import { getDbOperationMessage } from "@/lib/use-notification";
-import { studentsConfig } from "@/components/database/configs/students.config";
 import type { Student } from "~/lib/student-helpers";
 import { createStudent, fetchStudents } from "~/lib/student-api";
 import type { StudentGuardianPayload } from "@/lib/guardian-helpers";
@@ -363,7 +362,7 @@ function StudentsPageContent() {
       } & CreateStudentSchedules,
     ) => {
       const newStudent = await createStudent(studentData);
-      const displayName = studentsConfig.list.item.title(newStudent);
+      const displayName = `${newStudent.first_name} ${newStudent.second_name}`;
       if (newStudent.privacy_consent_saved === false) {
         // The child exists, but the consent input is lost (#5970): the notice
         // stays until closed and leads to the child's page to enter it again.
@@ -378,13 +377,7 @@ function StudentsPageContent() {
           },
         );
       } else {
-        toastSuccess(
-          getDbOperationMessage(
-            "create",
-            studentsConfig.name.singular,
-            displayName,
-          ),
-        );
+        toastSuccess(getDbOperationMessage("create", "Kinder", displayName));
       }
       // Das Panel schließt sich selbst, nur im Vorgang, der angelegt hat.
       await Promise.all([

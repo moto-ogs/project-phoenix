@@ -226,17 +226,8 @@ func TestArrivalExceptionsDoNotCreateUnbookedCareDays(t *testing.T) {
 	arrivalTime := time.Date(2000, time.January, 1, 11, 45, 0, 0, time.UTC)
 	// The booking-authoritative baseline only returns Tuesday. Monday must stay
 	// unplanned even when the stored exception has an arrival time.
-	require.NoError(t, svc.CreateStudentArrivalException(ctx, &careplan.ArrivalException{
-		StudentID:       student.ID,
-		ExceptionDate:   careplan.Date(monday),
-		ExpectedArrival: &arrivalTime,
-		CreatedBy:       staff.ID,
-	}))
-
-	single, err := svc.GetEffectiveArrivalTimeForDate(ctx, student.ID, monday)
+	_, err := svc.CreateOrReclaimException(ctx, student.ID, monday, &arrivalTime, nil, staff.ID, nil)
 	require.NoError(t, err)
-	assert.Nil(t, single.ArrivalTime)
-	assert.False(t, single.IsException)
 
 	bulk, err := svc.GetBulkEffectiveArrivalTimesForDate(ctx, []int64{student.ID}, monday)
 	require.NoError(t, err)
@@ -273,10 +264,10 @@ func TestArrivalScheduleForWeekdayProjectsBookedDayWithoutStoredRow(t *testing.T
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), tuesdayOnlyArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Ohne", "Zeile", "8i")
 
-	row, err := svc.GetStudentArrivalScheduleForWeekday(ctx, student.ID, timetable.WeekdayTuesday)
+	rows, err := svc.GetWeeklySchedulesByStudentIDsAndWeekday(ctx, []int64{student.ID}, timetable.WeekdayTuesday)
 	require.NoError(t, err)
-	require.NotNil(t, row)
-	assert.Equal(t, timetable.WeekdayTuesday, row.Weekday)
+	require.Len(t, rows, 1)
+	assert.Equal(t, timetable.WeekdayTuesday, rows[0].Weekday)
 }
 
 func TestArrivalDataForDateRangeKeepsOneRowPerWeekday(t *testing.T) {

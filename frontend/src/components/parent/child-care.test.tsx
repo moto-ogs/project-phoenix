@@ -461,6 +461,55 @@ describe("PickupTimeModal — failed preload guard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["alone", "Geht allein"],
+    ["bus", "Bus"],
+  ] as const)(
+    "does not offer a pickup person when the OGS set %s",
+    (departureMode, label) => {
+      renderModal({
+        departureModeEnabled: true,
+        careExceptions: [
+          {
+            date: todayISO(),
+            departure_mode: departureMode,
+            source: "staff",
+            pickup_source: "",
+            updated_at: "2026-09-08T09:00:00Z",
+          },
+        ],
+      });
+
+      expect(
+        screen.getByText(
+          `Die OGS hat die Abholart für diesen Tag schon festgelegt: ${label}.`,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: "Wer holt ab?" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps the pickup-person choice when the OGS set pickup", () => {
+    renderModal({
+      departureModeEnabled: true,
+      careExceptions: [
+        {
+          date: todayISO(),
+          departure_mode: "pickup",
+          source: "staff",
+          pickup_source: "",
+          updated_at: "2026-09-08T09:00:00Z",
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: "Wer holt ab?" }),
+    ).toBeInTheDocument();
+  });
+
   it("names a pending Abholart in the request status", () => {
     render(
       <PickupTimeModal
@@ -1297,7 +1346,7 @@ describe("PickupTimeModal — Änderung zurücknehmen", () => {
     const onRemove = vi
       .fn()
       .mockRejectedValue(
-        new ApiError("x", 409, { code: "students.care_exception_raced" }),
+        new ApiError("x", 409, { code: "care.care_exception_conflict" }),
       );
     const { onClose, dialog } = openResetDialog({ onRemove });
 
@@ -1309,7 +1358,7 @@ describe("PickupTimeModal — Änderung zurücknehmen", () => {
     );
 
     expect(
-      await within(dialog).findByText(/Dieser Tag wurde gerade geändert/),
+      await within(dialog).findByText(/abweichende Abholzeit festgelegt/),
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(
@@ -3119,6 +3168,112 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
         }),
       ),
     );
+    contacts.mockRestore();
+  });
+
+  // #8162: eine Person, die keine Kontaktperson ist, mit Namen.
+  it("sends another person by name with the signature", async () => {
+    const contacts = vi
+      .spyOn(parentApi, "listChildGuardians")
+      .mockResolvedValue([]);
+    const { onSubmit, dateInput, reasonInput } = renderModal({
+      studentId: "1",
+    });
+
+    fireEvent.change(dateInput, { target: { value: "2026-09-15" } });
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: "Wer holt ab?" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Andere Person" }));
+    if (reasonInput) {
+      fireEvent.change(reasonInput, { target: { value: "Tante holt ab" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
+    expect(
+      (await screen.findAllByText("Bitte schreib den Namen der Person auf."))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Name der Person/), {
+      target: { value: "  Tante   Frieda " },
+    });
+    expect(
+      await screen.findByText(
+        "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
+      target: { value: "Sabine Muster" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unterschrift bestätigen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-09-15",
+          pickupPersonName: "Tante Frieda",
+          signatureStatement:
+            "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+        }),
+      ),
+    );
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty(
+      "pickupPersonGuardianProfileId",
+    );
+    contacts.mockRestore();
+  });
+
+  it("keeps the signature statement when changing another person back to a contact", async () => {
+    const contacts = vi
+      .spyOn(parentApi, "listChildGuardians")
+      .mockResolvedValue([
+        {
+          guardian_profile_id: "12",
+          student_guardian_id: "120",
+          first_name: "Rita",
+          last_name: "Klein",
+          relationship_type: "relative",
+          is_primary: false,
+          can_pickup: false,
+          can_manage_pickup: true,
+          is_emergency_contact: false,
+          phones: [],
+          is_self: false,
+        } as unknown as parentMeContract.childGuardianResponse,
+      ]);
+    const { dateInput } = renderModal({ studentId: "1" });
+
+    fireEvent.change(dateInput, { target: { value: "2026-09-15" } });
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: "Wer holt ab?" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Rita Klein" }));
+    await screen.findByText(
+      "Ich erlaube, dass Rita Klein das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Wer holt ab?" }));
+    fireEvent.click(screen.getByRole("option", { name: "Andere Person" }));
+    fireEvent.change(screen.getByLabelText(/Name der Person/), {
+      target: { value: "Tante Frieda" },
+    });
+    await screen.findByText(
+      "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Wer holt ab?" }));
+    fireEvent.click(screen.getByRole("option", { name: "Rita Klein" }));
+
+    expect(
+      screen.getByText(
+        "Ich erlaube, dass Rita Klein das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+      ),
+    ).toBeInTheDocument();
     contacts.mockRestore();
   });
 

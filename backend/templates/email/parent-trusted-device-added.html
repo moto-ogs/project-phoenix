@@ -1,7 +1,5 @@
 {{define "parent-trusted-device-added.html"}}
-{{template "header" .}}
-
-<div class="email-body" lang="{{.Lang}}">
+{{template "header" (or .Lang "")}}
     {{template "moto-brand" .}}
     <h1>{{.Title}}</h1>
     <p>{{.Greeting}}</p>
@@ -16,7 +14,6 @@
     <p class="security-note"><strong>{{.NotYouTitle}}</strong></p>
     <p>{{.NotYou}}</p>
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">{{.Recovery}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

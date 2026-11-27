@@ -63,7 +63,7 @@ describe("BookingLeftoverTodos (#5102)", () => {
 
   it("counts the open children only and links to the Regeltermine", () => {
     state.leftovers = [leftover("1"), leftover("2"), leftover("3", true)];
-    render(<BookingLeftoverTodos enabled />);
+    render(<BookingLeftoverTodos />);
 
     expect(state.keys).toContain("booking-leftovers-4-count");
     expect(
@@ -82,7 +82,7 @@ describe("BookingLeftoverTodos (#5102)", () => {
       leftover("1"),
       { ...leftover("1"), templateId: "10", templateName: "Lernzeit" },
     ];
-    render(<BookingLeftoverTodos enabled />);
+    render(<BookingLeftoverTodos />);
 
     expect(
       screen.getByText(
@@ -91,13 +91,9 @@ describe("BookingLeftoverTodos (#5102)", () => {
     ).toBeInTheDocument();
   });
 
-  it("stays away when everything is decided or without planning rights", () => {
+  it("stays away when everything is decided", () => {
     state.leftovers = [leftover("1", true)];
-    const { container, rerender } = render(<BookingLeftoverTodos enabled />);
-    expect(container).toBeEmptyDOMElement();
-
-    state.leftovers = [leftover("1")];
-    rerender(<BookingLeftoverTodos enabled={false} />);
+    const { container } = render(<BookingLeftoverTodos />);
     expect(container).toBeEmptyDOMElement();
   });
 });

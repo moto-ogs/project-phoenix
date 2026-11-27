@@ -70,7 +70,7 @@ func (s *InstanceLifecycleService) replanWeekLocked(ctx context.Context, tenantI
 	// Legacy weekend occurrences are deleted too: the materialization no
 	// longer recreates them.
 	fromDate, toDate := calendar.Date(from), calendar.Date(to)
-	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, fromDate, &toDate, activityGroupID, false)
+	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, fromDate, &toDate, activityGroupID)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "replan week: delete planned", Err: err}
 	}

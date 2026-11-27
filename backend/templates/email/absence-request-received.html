@@ -1,7 +1,5 @@
 {{define "absence-request-received.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     {{if .PreviousQuestion}}
     <h1>Abwesenheitsantrag erneut eingereicht</h1>
@@ -9,7 +7,7 @@
     <h1>Neuer Abwesenheitsantrag</h1>
     {{end}}
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
 
     {{if .PreviousQuestion}}
     <p><strong>{{.RequesterName}}</strong> hat einen Antrag nach einer Rückfrage erneut eingereicht:</p>
@@ -28,16 +26,13 @@
         {{end}}
     </div>
 
-    <p>Du kannst den Antrag direkt in den eingehenden Anfragen auf der Mitarbeiter-Seite bearbeiten.</p>
+    <p>Sie können den Antrag direkt in den eingehenden Anfragen auf der Mitarbeiter-Seite bearbeiten.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">Antrag ansehen</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .LinkURL}}
 
 {{template "footer" .}}
 {{end}}

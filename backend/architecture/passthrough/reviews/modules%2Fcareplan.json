@@ -422,11 +422,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/careplan/internal/application/Service.DeleteArrivalNotesByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/careplan/internal/application/Service.DeleteArrivalSchedule",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -468,11 +463,6 @@
     {
       "decision": "0090",
       "id": "modules/careplan/internal/application/Service.DeletePickupNote",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/careplan/internal/application/Service.DeletePickupNotesByStudent",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -852,11 +842,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/careplan/internal/application/arrivalScheduleService.DeleteAllStudentArrivalSchedules",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/careplan/internal/application/arrivalScheduleService.GetStudentsWithStoredArrivalSchedules",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -884,11 +869,6 @@
       "decision": "0090",
       "id": "modules/careplan/internal/application/pickupApprovalExceptions.Create",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0286",
-      "id": "modules/careplan/internal/application/pickupApprovalExceptions.CreateNote",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; returns the stored note so the approval can version it (ADR 0286); semantic form review pending."
     },
     {
       "decision": "0090",

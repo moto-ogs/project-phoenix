@@ -45,7 +45,22 @@ import (
 // factor writes the codes to.
 type traegerPortalHandler struct {
 	http.Handler
-	mail *testpkg.CapturingMailer
+	mail          *testpkg.CapturingMailer
+	officeSession func(t *testing.T, accountID, organizationID int64) string
+}
+
+func newTraegerPortalHandler(handler http.Handler, mail *testpkg.CapturingMailer, identity TraegerPortalIdentity) *traegerPortalHandler {
+	officeSession := func(t *testing.T, accountID, organizationID int64) string {
+		t.Helper()
+		// Business-route tests start after the mail challenge. The owner still
+		// enrolls the factor, reads the membership and mints the audited session.
+		proof := identityaccess.VerifiedMFAChallenge{AccountID: accountID, Scope: identityaccess.MFAChallengeScopeOrg}
+		require.NoError(t, identity.EnrollMFA(t.Context(), proof))
+		answer, err := identity.IssueTraegerTokensForVerifiedMFA(t.Context(), proof, organizationID, "192.0.2.1", "")
+		require.NoError(t, err)
+		return answer.AccessToken
+	}
+	return &traegerPortalHandler{Handler: handler, mail: mail, officeSession: officeSession}
 }
 
 // newTraegerPortal mounts /traeger as the serving root does, behind the
@@ -71,7 +86,7 @@ func newTraegerPortalAt(t *testing.T, today func() calendar.Date, now func() tim
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
 	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, now)
-	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
+	return db, newTraegerPortalHandler(testpkg.SessionVerifier(routes), mail, auth.Auth), auth.Auth, unit
 }
 
 func newTraegerPortalWithStaffing(t *testing.T, staffing timetableHTTP.StaffingAnnouncer) (*bun.DB, *traegerPortalHandler) {
@@ -82,7 +97,7 @@ func newTraegerPortalWithStaffing(t *testing.T, staffing timetableHTTP.StaffingA
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
 	routes := traegerPortalRoutesOnWithStaffing(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, calendar.TodayDate, time.Now, newTraegerClosingDayStaffingQueue(staffing, slog.Default()))
-	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}
+	return db, newTraegerPortalHandler(testpkg.SessionVerifier(routes), mail, auth.Auth)
 }
 
 // traegerPortalOn composes Identity & Access over db with a capturing
@@ -92,7 +107,7 @@ func traegerPortalOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, options .
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, append([]AuthTestOption{WithAuthTestMailer(mail)}, options...)...)
 	require.NoError(t, err)
-	return &traegerPortalHandler{Handler: traegerPortalRouter(t, db, auth.Auth, unit), mail: mail}, auth.Auth
+	return newTraegerPortalHandler(traegerPortalRouter(t, db, auth.Auth, unit), mail, auth.Auth), auth.Auth
 }
 
 // traegerPortalWithDays is traegerPortalOn whose host schools give no care
@@ -109,7 +124,7 @@ func traegerPortalWithDaysOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, d
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	return &traegerPortalHandler{Handler: testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today, now)), mail: mail}
+	return newTraegerPortalHandler(testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today, now)), mail, auth.Auth)
 }
 
 // traegerPortalRouter builds the /traeger router over identity, with the
@@ -168,14 +183,16 @@ func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity Traege
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	closingDays := mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
+	calendarSchools := owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings)
+	closingDays := mountTraegerClosingDayRoutes(router, calendarSchools, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
-	dayChanges, err := traegerDayChangePorts(closingDays, traegerTestTimetable(t, database, membership, now))
+	mountTraegerOpeningChangeRoutes(router, calendarSchools, staffing, owners.DeliveryNotifications{}, nil, func() string { return today().String() })
+	dayChanges, err := traegerDayChangePorts(organizations, closingDays, traegerTestTimetable(t, database, membership, now))
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, schoolSettings.Settings, testHealthCipher(), days,
 		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, NewTraegerBookedModules(organizations, schoolSettings.Settings), today, now,
-		owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), dayChanges)
+		calendarSchools, dayChanges)
 	require.NoError(t, err)
 	router.Mount("/traeger", portal.RouterWithAuthRateLimiter(nil, ProtectedTraegerRoutes))
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})

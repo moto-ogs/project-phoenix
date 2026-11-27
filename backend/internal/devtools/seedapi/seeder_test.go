@@ -948,7 +948,7 @@ func TestFixedSeeder_Seed_FullWorkflow(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, len(DemoRooms), result.RoomCount)
-	assert.Equal(t, len(DemoStaff), result.PersonCount)
+	assert.Len(t, fs.personIDs, len(DemoStaff))
 	assert.Equal(t, len(DemoStaff), result.StaffCount)
 	assert.Equal(t, len(DemoStaff), result.AccountCount)
 	assert.Equal(t, 10, result.GroupCount)

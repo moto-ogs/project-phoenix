@@ -17,8 +17,7 @@ export const localCommands = {
   // Keyed by the job's display name without workflow prefix and matrix suffix.
   'Backend quality': 'scripts/run-go-toolchain.sh bash scripts/check-quality.sh backend  # deadcode alone: scripts/run-go-toolchain.sh bash scripts/check-deadcode.sh',
   'Backend lint': 'scripts/run-go-toolchain.sh scripts/check-backend-quality.sh lint origin/development',
-  'Frontend quality': 'bash scripts/check-quality.sh frontend',
-  'Frontend React Doctor': 'cd frontend && bash ../scripts/check-quality.sh react-doctor origin/development',
+  'Frontend quality': 'bash scripts/check-quality.sh frontend && bash scripts/check-quality.sh react-doctor origin/development',
   // Same cold two-tree comparison as CI (docs/agents/frontend-performance.md); commit first.
   'Frontend build': 'cd frontend && node scripts/perf/bundle-measurement.mjs --prepare-ci "$(git merge-base HEAD origin/development)" && node scripts/perf/bundle-measurement.mjs --build-base && pnpm run perf:bundle-ratchet',
   // The build environment is in lint.yml; SKIP_ENV_VALIDATION covers what a local .env lacks.

@@ -338,6 +338,13 @@ func TestNewExcusedRequestsRequiresCoreDependencies(t *testing.T) {
 	require.Error(t, err)
 }
 
+func requiredNoteRequest(dates []careplan.Date, note, status string) careplan.ExcusedRequestCreateInput {
+	return careplan.ExcusedRequestCreateInput{
+		StudentID: fakeStudentID, GuardianAccountID: fakeGuardian, Dates: dates,
+		Note: note, AbsenceStatus: status, NoteRequired: true,
+	}
+}
+
 func TestSubmitValidatesBeforeAnyWrite(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, &fakeCarePlan{createRequest: func(context.Context, careplan.ExcusedAbsenceRequest) (careplan.ExcusedAbsenceRequest, error) {
@@ -346,13 +353,13 @@ func TestSubmitValidatesBeforeAnyWrite(t *testing.T) {
 	}}, &fakeStudents{})
 	ctx := context.Background()
 
-	_, err := h.workflow.CreateRequest(ctx, fakeStudentID, fakeGuardian, nil, "note")
+	_, err := h.workflow.Submit(ctx, requiredNoteRequest(nil, "note", careplan.StudentStatusDayExcused))
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNoDates)
-	_, err = h.workflow.CreateRequest(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, "   ")
+	_, err = h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeTomorrow}, "   ", careplan.StudentStatusDayExcused))
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestEmptyNote)
-	_, err = h.workflow.CreateRequest(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, strings.Repeat("x", 2001))
+	_, err = h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeTomorrow}, strings.Repeat("x", 2001), careplan.StudentStatusDayExcused))
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNoteTooLong)
-	_, err = h.workflow.CreateRequestForStatus(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, "note", careplan.StudentStatusDayClassTrip)
+	_, err = h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeTomorrow}, "note", careplan.StudentStatusDayClassTrip))
 	assert.ErrorIs(t, err, careplan.ErrAbsenceRequestInvalidStatus)
 
 	// A school that asks nobody for a reason accepts a blank note.
@@ -397,15 +404,15 @@ func TestSubmitIsIdempotentForIdenticalAndRefusesOverlap(t *testing.T) {
 	}, &fakeStudents{})
 	ctx := context.Background()
 
-	same, err := h.workflow.CreateRequest(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeNextWeek, fakeTomorrow}, "nochmal")
+	same, err := h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeNextWeek, fakeTomorrow}, "nochmal", careplan.StudentStatusDayExcused))
 	require.NoError(t, err)
 	assert.Equal(t, existing.ID, same.ID, "an identical resubmit is an idempotent retry")
 	assert.Empty(t, h.ledger.entries, "a retry records nothing")
 
-	_, err = h.workflow.CreateRequest(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow, fakePast}, "teilweise")
+	_, err = h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeTomorrow, fakePast}, "teilweise", careplan.StudentStatusDayExcused))
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestOverlap)
 
-	_, err = h.workflow.CreateRequestForStatus(ctx, fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow, fakeNextWeek}, "krank", careplan.StudentStatusDaySick)
+	_, err = h.workflow.Submit(ctx, requiredNoteRequest([]careplan.Date{fakeTomorrow, fakeNextWeek}, "krank", careplan.StudentStatusDaySick))
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestOverlap, "the same days cannot carry a pending sick and a pending excused request")
 }
 
@@ -424,9 +431,9 @@ func TestSubmitAcceptedWhenManualPartialAbsenceOwnsADay(t *testing.T) {
 		},
 	}, &fakeStudents{})
 
-	_, err := h.workflow.CreateRequest(context.Background(), fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, "auto excusal coexists")
+	_, err := h.workflow.Submit(context.Background(), requiredNoteRequest([]careplan.Date{fakeTomorrow}, "auto excusal coexists", careplan.StudentStatusDayExcused))
 	require.NoError(t, err, "an auto-derived excusal does not block a full-day request")
-	_, err = h.workflow.CreateRequest(context.Background(), fakeStudentID, fakeGuardian, []careplan.Date{fakeNextWeek}, "manual excusal goes to the school")
+	_, err = h.workflow.Submit(context.Background(), requiredNoteRequest([]careplan.Date{fakeNextWeek}, "manual excusal goes to the school", careplan.StudentStatusDayExcused))
 	require.NoError(t, err, "a manual partial absence is decided by the school, not refused")
 }
 
@@ -434,7 +441,7 @@ func TestSubmitRecordsLedgerAndWakesBothAudiencesAfterCommit(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, &fakeCarePlan{}, &fakeStudents{})
 
-	created, err := h.workflow.CreateRequest(context.Background(), fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, "Arzttermin")
+	created, err := h.workflow.Submit(context.Background(), requiredNoteRequest([]careplan.Date{fakeTomorrow}, "Arzttermin", careplan.StudentStatusDayExcused))
 	require.NoError(t, err)
 	require.Len(t, h.ledger.entries, 1)
 	assert.Equal(t, careplan.ParentRequestEventSubmitted, h.ledger.entries[0].EventType)
@@ -459,7 +466,7 @@ func TestSubmitWrapsStoreFailure(t *testing.T) {
 	h := newHarness(t, &fakeCarePlan{createRequest: func(context.Context, careplan.ExcusedAbsenceRequest) (careplan.ExcusedAbsenceRequest, error) {
 		return careplan.ExcusedAbsenceRequest{}, errBoom
 	}}, &fakeStudents{})
-	_, err := h.workflow.CreateRequest(context.Background(), fakeStudentID, fakeGuardian, []careplan.Date{fakeTomorrow}, "note")
+	_, err := h.workflow.Submit(context.Background(), requiredNoteRequest([]careplan.Date{fakeTomorrow}, "note", careplan.StudentStatusDayExcused))
 	require.ErrorIs(t, err, errBoom)
 	assert.Zero(t, h.hooks.pending(), "a failed write schedules no after-commit effect")
 }

@@ -3,7 +3,7 @@ import {
   formatDecimalHours,
   parseDecimalHours,
   isStaleAfterModelSave,
-} from "./arbeitszeitmodell-tab";
+} from "./arbeitszeit-hours";
 
 describe("arbeitszeitmodell-tab.decimal-hours", () => {
   describe("parseDecimalHours", () => {

@@ -44,7 +44,7 @@ func TestDeliveryCheckpointReportsOnlyItsWorkerQueries(t *testing.T) {
 	identity, err := api.NewIdentityAccessForTests(database)
 	require.NoError(t, err)
 	env := owners.RootEnvironment{Logger: slog.Default(), Config: owners.ServiceConfig{AppEnv: "test"}, Now: time.Now, Today: calendar.TodayDate}
-	mailer, _, from, vapid, err := owners.BuildMailTransport(env)
+	mailer, from, vapid, err := owners.BuildMailTransport(env)
 	require.NoError(t, err)
 	mailIdentity := owners.TenantMailIdentity(schools, settings.Settings, env)
 	// This is the real root's MailPushProvider/registry/module gate over the

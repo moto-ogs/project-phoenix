@@ -4,11 +4,21 @@
  */
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  SearchBar,
-  SearchBarDraftProvider,
-  SharedSearchBar,
-} from "./SearchBar";
+import { SearchBarDraftProvider, SharedSearchBar } from "./SearchBar";
+import type { SearchBarProps } from "./types";
+
+function SearchBar(props: Readonly<SearchBarProps>) {
+  return (
+    <SearchBarDraftProvider
+      value={props.value}
+      onChange={props.onChange}
+      debounceMs={props.debounceMs}
+      resetKey={props.resetKey}
+    >
+      <SharedSearchBar {...props} />
+    </SearchBarDraftProvider>
+  );
+}
 
 describe("SearchBar", () => {
   const mockOnChange = vi.fn();
@@ -208,6 +218,29 @@ describe("SearchBar", () => {
 
       // The pending keystroke must not resurrect the cleared term.
       expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it("keeps a newer draft when the owner echoes an earlier sent term", () => {
+      const { rerender } = render(
+        <SearchBar value="M" onChange={mockOnChange} debounceMs={300} />,
+      );
+      const input = screen.getByPlaceholderText("Name suchen...");
+      fireEvent.change(input, { target: { value: "Ma" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Ma");
+
+      fireEvent.change(input, { target: { value: "Max" } });
+      rerender(
+        <SearchBar value="Ma" onChange={mockOnChange} debounceMs={300} />,
+      );
+
+      expect(input).toHaveValue("Max");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Max");
     });
 
     it("uses the current callback when it changes during a pending debounce", () => {

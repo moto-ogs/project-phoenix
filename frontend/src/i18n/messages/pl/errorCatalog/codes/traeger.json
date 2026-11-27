@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "Ten identyfikator wierzyciela jest już wpisany dla {school_name} z innym kontem. Wpisz to samo konto lub sprawdź identyfikator.",
   "member_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "no_membership": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "opening_change_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "opening_change_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "report_template_invalid": "Sprawdź dane szablonu.",
   "report_template_name_taken": "Szablon o tej nazwie już istnieje. Wybierz inną nazwę.",
   "report_template_not_found": "Ten szablon już nie istnieje. Odśwież stronę.",

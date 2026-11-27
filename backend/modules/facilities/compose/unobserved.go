@@ -13,12 +13,12 @@ import (
 // module with New so runtime evidence is kept and deletions are validated.
 func NewUnobserved(db *bun.DB) (facilities.Capability, error) {
 	return New(Dependencies{
-		DB:           db,
-		DeletionLock: func(context.Context) error { return nil },
+		DB: db, DeletionLock: func(context.Context) error { return nil }, Observe: func(Observation) {},
 		// The legacy repository accepted deletes without service-level
 		// guards; graphs without the API root keep that path usable.
-		Usage:      applicationBindings.UnusedRooms{},
-		References: applicationBindings.NoRoomReferences,
-		Observe:    func(Observation) {},
+		Usage: applicationBindings.UnusedRooms{}, References: applicationBindings.NoRoomReferences,
 	})
 }
+
+// NewNoticedClosures tells the staff planned in the room of a new closure (#8234).
+var NewNoticedClosures = applicationBindings.NewNoticedClosures

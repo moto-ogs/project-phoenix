@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { setTimeout } from 'node:timers/promises';
 import test from 'node:test';
+import { startLoki } from './logql-alerts-fixture.mjs';
 
 // Runs the LogQL of the contract decode alert (#7809) against an isolated Loki
 // with lines in the shape the frontend's server logger writes them.
@@ -11,23 +10,7 @@ test('contract decode LogQL alerts per route on the first rejected answer', { ti
   const expressions = [...rules.matchAll(/expr: '([^']+)'/g)].map(match => match[1]);
   assert.equal(expressions.length, 1);
   const threshold = Number(rules.match(/params: \[(\d+)\]/)[1]);
-  const name = `moto-contract-decode-alert-test-${process.pid}-${Date.now()}`;
-  const docker = (...args) => spawnSync('docker', args, { encoding: 'utf8', timeout: 60000 });
-  t.after(() => docker('rm', '-f', name));
-  const started = docker('run', '-d', '--name', name, '--network', 'none',
-    'grafana/loki:3.4.3', '-config.file=/etc/loki/local-config.yaml',
-    '-ingester.min-ready-duration=0s', '-querier.query-ingesters-within=0',
-    '-querier.split-queries-by-interval=0', '-querier.cache-results=false');
-  assert.equal(started.status, 0, started.stderr);
-  const request = (path, payload) => docker('exec', name, '/busybox/wget', '-qO-',
-    ...(payload ? ['--header=Content-Type: application/json', `--post-data=${JSON.stringify(payload)}`] : []),
-    `http://127.0.0.1:3100${path}`);
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
-    if (request('/ready').status === 0) { ready = true; break; }
-    await setTimeout(500);
-  }
-  assert.ok(ready, 'isolated Loki did not become ready');
+  const request = await startLoki(t);
   const now = Date.now();
   const minute = 60000;
   const stamp = ms => String(BigInt(ms) * 1000000n);

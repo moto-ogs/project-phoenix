@@ -225,14 +225,14 @@ func TestGetForAccountFailures(t *testing.T) {
 	})
 }
 
-func TestSetForAccount(t *testing.T) {
+func TestSetForPortalAccount(t *testing.T) {
 	t.Parallel()
 
 	t.Run("records the decision", func(t *testing.T) {
 		repo := &fakePreferenceRepo{}
 		svc := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
 
-		require.NoError(t, svc.SetForAccount(context.Background(), prefAccountA, notifications.TypePickupUpcoming, true))
+		require.NoError(t, svc.SetForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff, notifications.TypePickupUpcoming, true))
 
 		require.Len(t, repo.upserted, 1)
 		assert.Equal(t, prefAccountA, repo.upserted[0].AccountID)
@@ -244,7 +244,7 @@ func TestSetForAccount(t *testing.T) {
 		repo := &fakePreferenceRepo{}
 		svc := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
 
-		err := svc.SetForAccount(context.Background(), prefAccountA, "not_a_type", true)
+		err := svc.SetForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff, "not_a_type", true)
 		require.ErrorIs(t, err, notifications.ErrUnknownNotificationType)
 		assert.Empty(t, repo.upserted)
 	})
@@ -253,40 +253,40 @@ func TestSetForAccount(t *testing.T) {
 		repo := &fakePreferenceRepo{}
 		svc := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
 
-		err := svc.SetForAccount(context.Background(), prefAccountA, notifications.TypeParentAnnouncement, true)
+		err := svc.SetForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff, notifications.TypeParentAnnouncement, true)
 		require.ErrorIs(t, err, notifications.ErrUnknownNotificationType)
 		assert.Empty(t, repo.upserted)
 	})
 
 	t.Run("account id is required", func(t *testing.T) {
 		svc := notifications.NewPreferenceService(&fakePreferenceRepo{}, allSettingsOn(), nil, nil, securityruntime.HasPermission)
-		require.Error(t, svc.SetForAccount(context.Background(), 0, notifications.TypePickupUpcoming, true))
+		require.Error(t, svc.SetForPortalAccount(context.Background(), 0, notifications.PortalStaff, notifications.TypePickupUpcoming, true))
 	})
 
 	t.Run("a failing write surfaces", func(t *testing.T) {
 		repo := &fakePreferenceRepo{upsertErr: errors.New("boom")}
 		svc := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
-		require.Error(t, svc.SetForAccount(context.Background(), prefAccountA, notifications.TypePickupUpcoming, true))
+		require.Error(t, svc.SetForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff, notifications.TypePickupUpcoming, true))
 	})
 }
 
-func TestDisableAllForAccount(t *testing.T) {
+func TestDisableAllForPortalAccount(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakePreferenceRepo{}
 	svc := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
 
-	require.NoError(t, svc.DisableAllForAccount(context.Background(), prefAccountA))
+	require.NoError(t, svc.DisableAllForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff))
 	assert.Equal(t, []int64{prefAccountA}, repo.disabled)
 	require.Len(t, repo.disabledTypes, 1)
 	assert.Contains(t, repo.disabledTypes[0], notifications.TypePickupUpcoming)
 	assert.NotContains(t, repo.disabledTypes[0], notifications.TypeParentAnnouncement,
 		"the staff action must not disable parent-portal consent")
 
-	require.Error(t, svc.DisableAllForAccount(context.Background(), 0))
+	require.Error(t, svc.DisableAllForPortalAccount(context.Background(), 0, notifications.PortalStaff))
 
 	failing := notifications.NewPreferenceService(&fakePreferenceRepo{disableErr: errors.New("boom")}, allSettingsOn(), nil, nil, securityruntime.HasPermission)
-	require.Error(t, failing.DisableAllForAccount(context.Background(), prefAccountA))
+	require.Error(t, failing.DisableAllForPortalAccount(context.Background(), prefAccountA, notifications.PortalStaff))
 }
 
 // FilterOptedIn is the single enforcement point for "nothing without consent",

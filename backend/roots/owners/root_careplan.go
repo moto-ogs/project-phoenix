@@ -39,7 +39,6 @@ type CarePlanRows struct {
 	ArrivalDependencies    carePlanCompose.ArrivalScheduleDependencies
 	LifecycleOwners        carePlanCompose.CareLifecycleOwners
 	Companions             careplan.StudentCompanions
-	ExcusedRequestRows     ExcusedRequestReads
 	// Now is the root clock the schedules and the lifecycle decide on; nil
 	// is the real one (ADR 0239).
 	Now func() time.Time
@@ -90,7 +89,6 @@ func BuildCarePlanRows(
 		ArrivalDependencies:    arrivalDependencies,
 		LifecycleOwners:        lifecycleOwners,
 		Companions:             companions,
-		ExcusedRequestRows:     NewExcusedAbsenceRequestRepository(carePlan),
 		Now:                    now,
 	}, nil
 }

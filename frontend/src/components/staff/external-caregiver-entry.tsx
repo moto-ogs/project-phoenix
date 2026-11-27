@@ -312,12 +312,10 @@ export function ExternalAccessChoice<T extends ExternalAccess>({
 export function ExternalCaregiverFields({
   form,
   onKeyDown,
-  autoFocus = false,
   withGender = false,
 }: {
   readonly form: ExternalCaregiverForm;
   readonly onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  readonly autoFocus?: boolean;
   /**
    * „Geschlecht (freiwillig)“ for the Stammdaten, as when inviting staff. The
    * dialog of the Personalverwaltung shows it; the quick entry in the
@@ -343,7 +341,7 @@ export function ExternalCaregiverFields({
           error={form.fieldError(EXTERNAL_FIELDS.firstName)}
           autoComplete="off"
           maxLength={100}
-          autoFocus={autoFocus}
+          autoFocus
         />
         <Input
           id={`${uid}-last-name`}
@@ -421,7 +419,6 @@ export function ExternalCaregiverFields({
 interface ExternalCaregiverEntryProps {
   /** Called with the new entry, with or without invitation. */
   readonly onAdded: (staff: Staff) => void;
-  readonly disabled?: boolean;
   /** Offer „Nur ansehen“ (`canGrantExternalViewAccess`). */
   readonly canGrantView?: boolean;
 }
@@ -434,7 +431,6 @@ interface ExternalCaregiverEntryProps {
  */
 export function ExternalCaregiverEntry({
   onAdded,
-  disabled = false,
   canGrantView = false,
 }: ExternalCaregiverEntryProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -478,7 +474,6 @@ export function ExternalCaregiverEntry({
         variant="ghost"
         size="compact"
         onClick={() => setIsOpen(true)}
-        disabled={disabled}
         tooltip="Öffnet Felder, um eine Person von außerhalb einzutragen."
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
@@ -492,11 +487,7 @@ export function ExternalCaregiverEntry({
       <InsetPanel framed className="space-y-3">
         <p className="text-sm text-gray-600">{EXTERNAL_CAREGIVER_HINT}</p>
         <FormErrorAlert message={form.error} />
-        <ExternalCaregiverFields
-          form={form}
-          onKeyDown={handleKeyDown}
-          autoFocus
-        />
+        <ExternalCaregiverFields form={form} onKeyDown={handleKeyDown} />
         <div className="flex justify-end gap-2">
           {/* Not "Abbrechen": the dialog below already has one for itself. */}
           <Button

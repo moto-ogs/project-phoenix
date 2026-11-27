@@ -39,6 +39,20 @@ export function traegerClosingDaysTopic(): HelpTopic {
           "Wähle `Speichern` oder beim Löschen `Ja, löschen` und dann `Endgültig löschen`. Die Eltern bekommen die E-Mail sofort.",
         ],
       },
+      // #8202: geänderte Öffnungszeiten des Trägers für mehrere Schulen.
+      {
+        title: "Geänderte Öffnungszeit planen",
+        description:
+          "Für einen Tag, an dem die OGS früher schließt oder später öffnet, zum Beispiel wegen einer Personalversammlung.",
+        steps: [
+          "Wähle in der Navigation `Schließtage`.",
+          "Gehe zum Abschnitt `Geänderte Öffnungszeiten` und wähle `Tag anlegen`.",
+          "Trage den `Anlass` ein und `Von` und `Bis`. Für einen Tag trägst du zweimal dasselbe Datum ein.",
+          "Trage ein, wann die OGS öffnet und schließt.",
+          "Wähle bei `Gilt für` die Schulen und dann `Speichern`.",
+          "Zum Ändern oder Löschen wähle beim Tag die drei Punkte.",
+        ],
+      },
       {
         title: "Eltern zu einem Schließtag der Schule informieren",
         description:
@@ -76,13 +90,16 @@ export function traegerClosingDaysTopic(): HelpTopic {
       "Die gewählten Schulen haben an diesem Tag geschlossen. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
     notes: [
       "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+      "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen der gewählten Schulen zur neuen Schließzeit. Die Schulen sehen den Tag mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+      // #8231: Hinweis an die gewählten Schulen.
+      "Legst du eine geänderte Öffnungszeit an, änderst oder löschst sie, bekommen Team, Eltern und Träger-Büro jeder gewählten Schule einen Hinweis. Du selbst bekommst keinen. Hat eine Schule `Benachrichtigung bei geänderter Öffnungszeit` ausgeschaltet, bekommt dort niemand einen Hinweis.",
       "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",
       "Jede Familie bekommt eine E-Mail, auch wenn mehrere Kinder oder Wochen betroffen sind. Speicherst du den Schließtag noch einmal, bekommt niemand eine zweite E-Mail.",
       "Das Bundesland einer Schule legt das moto-Team fest. Stimmt es nicht, schreibe dem moto-Team.",
       "Bisherige Buchungen einer Ferienwoche bleiben, auch wenn du später einen Schließtag in die Woche legst. Niemand verliert seinen Platz, und niemand rückt von der Warteliste nach. Neue Buchungen der Woche sind dann nicht möglich.",
     ],
     differences: [
-      "Du siehst keinen Knopf `Schließtag anlegen`? Deine Rolle darf keine Einstellungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
+      "Du siehst keinen Knopf `Schließtag anlegen` oder `Tag anlegen`? Deine Rolle darf keine Einstellungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
     ],
     troubleshootingDetails: [
       "Beim Speichern steht, die gebuchten Ferientage haben sich geändert? Inzwischen hat jemand gebucht oder storniert. Prüfe die neue Liste im Dialog und speichere noch einmal.",

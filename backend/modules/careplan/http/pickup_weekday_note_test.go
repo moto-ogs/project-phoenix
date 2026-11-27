@@ -89,8 +89,9 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 		rr = authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 
-		notes, err := tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
+		data, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetStudentPickupData, student.ID)
 		require.NoError(t, err)
+		notes := data.Notes
 		assert.Len(t, notes, 3)
 		byWeekday := make(map[int]string, len(notes))
 		var dated string

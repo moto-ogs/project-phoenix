@@ -1,7 +1,5 @@
 {{define "parent-mfa-reset.html"}}
-{{template "header" .}}
-
-<div class="email-body" lang="{{.Lang}}">
+{{template "header" (or .Lang "")}}
     {{template "moto-brand" .}}
     <h1>{{.Title}}</h1>
     <p>{{.Greeting}}</p>
@@ -10,7 +8,6 @@
 
     <p class="security-note"><strong>{{.NotYouTitle}}</strong></p>
     <p>{{.NotYou}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

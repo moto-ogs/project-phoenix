@@ -114,7 +114,6 @@ vi.mock("next/navigation", () => ({
 const mockSearchParams = { value: "" };
 
 vi.mock("~/lib/settings-api", () => ({
-  SETTINGS_SCHEMA_SWR_KEY: "settings-schema",
   fetchSettingsSchema: () => mockFetchSchema(),
   saveSettingValue: (key: string, value: unknown) =>
     mockSetSettingValue(key, value),

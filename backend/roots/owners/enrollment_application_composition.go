@@ -281,7 +281,7 @@ type holidayParentAccountLinks struct {
 }
 
 // NewHolidayParentAccountLinks binds the setup link of the offer mail: the
-// page /ferienkonto/{token} and the sign-in /login of the parents portal.
+// page /ferienkonto/{token} of the parents portal.
 func NewHolidayParentAccountLinks(setups identityaccess.HolidayParentSetups, parentsURL string) enrollmentOwner.HolidayParentAccountLinks {
 	return holidayParentAccountLinks{setups: setups, parentsURL: strings.TrimRight(parentsURL, "/")}
 }
@@ -296,7 +296,6 @@ func (l holidayParentAccountLinks) HolidayParentAccountLink(email string, organi
 	}
 	return enrollmentOwner.HolidayParentAccountLink{
 		SetupURL: l.parentsURL + "/ferienkonto/" + url.PathEscape(token),
-		LoginURL: l.parentsURL + "/login",
 	}, nil
 }
 

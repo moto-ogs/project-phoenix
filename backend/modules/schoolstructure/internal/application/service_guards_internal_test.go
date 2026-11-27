@@ -59,7 +59,7 @@ func (s *recordingStore) AnonymizeStudentTransitionHistory(context.Context, int6
 	return 0, domain.OperationStats{}, nil
 }
 
-func (s *recordingStore) FindTransition(_ context.Context, _, id int64, _ string) (schoolstructure.Transition, bool, domain.OperationStats, error) {
+func (s *recordingStore) FindTransition(_ context.Context, _, id int64) (schoolstructure.Transition, bool, domain.OperationStats, error) {
 	s.calls++
 	return schoolstructure.Transition{ID: id, Status: schoolstructure.TransitionStatusDraft}, true, domain.OperationStats{}, nil
 }
@@ -224,8 +224,6 @@ func TestTransitionServiceRejectsInvalidInputBeforeReachingTheStore(t *testing.T
 	_, err = service.UpdateTransition(ctx, schoolstructure.TransitionUpdate{})
 	require.ErrorIs(t, err, schoolstructure.ErrInvalidTransition)
 	require.ErrorIs(t, service.DeleteTransition(ctx, 0), schoolstructure.ErrInvalidTransition)
-	_, err = service.LockTransitionForMutation(ctx, 0)
-	require.ErrorIs(t, err, schoolstructure.ErrInvalidTransition)
 	require.ErrorIs(t, service.MarkTransitionApplied(ctx, 1, 0, now, nil), schoolstructure.ErrInvalidTransition)
 	require.ErrorIs(t, service.MarkTransitionReverted(ctx, 1, 7, time.Time{}), schoolstructure.ErrInvalidTransition)
 	assert.Zero(t, store.calls, "invalid input must never reach persistence")

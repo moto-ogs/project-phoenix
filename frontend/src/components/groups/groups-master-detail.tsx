@@ -233,7 +233,6 @@ function GroupStammdatenTab({
           onResetForm();
         }}
         submitLabel="Speichern"
-        stickyActions
         errorPath={saveErrors}
         errorObject="die Gruppe"
       />

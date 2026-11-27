@@ -9,6 +9,8 @@ export function formatDateRange(
   from: string | null,
   to: string | null,
 ): string {
+  // One day, such as an extra care day (#4817), is named once.
+  if (from && from === to) return formatDay(from);
   return `${formatDay(from)} bis ${formatDay(to)}`;
 }
 
@@ -35,6 +37,22 @@ export function formatWeeks(period: HolidayPeriod): string {
       .sort()
       .at(-1) ?? "";
   return `${count}${where}: ${formatDateRange(firstDay, lastDay)}`;
+}
+
+/**
+ * Where „Zurück“ leads from a period and what the link says: an extra day
+ * belongs to the list of extra days (#4817).
+ */
+export function holidayListBack(kind: HolidayPeriod["kind"] | undefined): {
+  readonly path: string;
+  readonly label: string;
+} {
+  return kind === "extra_day"
+    ? {
+        path: "/traeger/ferien/zusatztage",
+        label: "Zurück zu den Zusatztagen",
+      }
+    : { path: "/traeger/ferien", label: "Zurück zu den Ferien" };
 }
 
 export function holidayStatusLabel(period: HolidayPeriod): string {

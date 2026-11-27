@@ -333,6 +333,9 @@ func (rs *Resource) endSeries(w http.ResponseWriter, r *http.Request) {
 		rs.invalid(w, r, errors.New("invalid from date format, expected YYYY-MM-DD"))
 		return
 	}
+	if _, ok := rs.actor(w, r); !ok {
+		return
+	}
 	result, err := rs.planning.EndSeries(r.Context(), id, from)
 	if err != nil {
 		rs.renderError(w, r, err)

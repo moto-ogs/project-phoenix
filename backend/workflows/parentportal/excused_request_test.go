@@ -202,7 +202,7 @@ func TestSubmitExcused_ApprovalOn_CreatesPendingRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res.PendingRequest, "an excused report must become a pending request when approval is on")
 	assert.Empty(t, res.StatusDays, "no status day is written while the request is pending")
-	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, res.PendingRequest.Status)
+	assert.Equal(t, careplan.ExcusedRequestStatusPending, res.PendingRequest.Status)
 	assert.Equal(t, absencerecords.StudentStatusDayExcused, res.PendingRequest.AbsenceStatus)
 	assert.Equal(t, "Familienfeier", res.PendingRequest.Note)
 
@@ -217,7 +217,7 @@ func TestSubmitExcused_ApprovalOn_CreatesPendingRequest(t *testing.T) {
 	reqs, err := svc.ListExcusedRequests(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	require.Len(t, reqs, 1)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, reqs[0].Status)
+	assert.Equal(t, careplan.ExcusedRequestStatusPending, reqs[0].Status)
 }
 
 // TestSubmitExcused_ApprovalOff_WritesDirectly verifies the gate-off path is
@@ -278,7 +278,7 @@ func TestExcusedRequest_ApproveWritesStatusDays(t *testing.T) {
 		if derr != nil {
 			return derr
 		}
-		require.Equal(t, absencerecords.ExcusedRequestStatusApproved, item.Request.Status)
+		require.Equal(t, careplan.ExcusedRequestStatusApproved, item.Request.Status)
 		return nil
 	})
 	require.NoError(t, err)
@@ -368,7 +368,7 @@ func TestListExcusedRequests_ShowsRecentlyRejectedLongPending(t *testing.T) {
 	reqs, err := svc.ListExcusedRequests(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	require.Len(t, reqs, 1, "a long-pending request rejected today must stay visible so the parent learns the outcome")
-	assert.Equal(t, absencerecords.ExcusedRequestStatusRejected, reqs[0].Status)
+	assert.Equal(t, careplan.ExcusedRequestStatusRejected, reqs[0].Status)
 	assert.Equal(t, requestID, reqs[0].ID)
 }
 
@@ -412,6 +412,6 @@ func TestListExcusedRequests_ShowsApprovedForOutOfWindowDates(t *testing.T) {
 	reqs, err := svc.ListExcusedRequests(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	require.Len(t, reqs, 1, "an approved out-of-window request must stay visible so the parent sees the confirmation")
-	assert.Equal(t, absencerecords.ExcusedRequestStatusApproved, reqs[0].Status)
+	assert.Equal(t, careplan.ExcusedRequestStatusApproved, reqs[0].Status)
 	assert.Equal(t, requestID, reqs[0].ID)
 }

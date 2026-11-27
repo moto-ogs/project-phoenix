@@ -17,8 +17,11 @@ export const traegerContractKeys = {
     readonly status?: string;
     readonly schoolId: string;
     readonly search: string;
+    /** The column the database orders by (#8138); none: newest first. */
+    readonly sort?: string;
+    readonly order?: string;
   }) =>
-    `traeger-care-contract-list-status=${encodeURIComponent(filter.status ?? "")}&school=${encodeURIComponent(filter.schoolId)}&search=${encodeURIComponent(filter.search)}`,
+    `traeger-care-contract-list-status=${encodeURIComponent(filter.status ?? "")}&school=${encodeURIComponent(filter.schoolId)}&search=${encodeURIComponent(filter.search)}&sort=${encodeURIComponent(filter.sort ?? "")}&order=${encodeURIComponent(filter.sort ? (filter.order ?? "") : "")}`,
   // Angenommene Kinder ohne Vertrag, mit dem Grund, warum keiner entsteht.
   candidates: () => "traeger-care-contract-candidates",
   // „Wann gilt der Vertrag?“ je Schule.

@@ -31,7 +31,7 @@ func checkFormerLateBoundMounts(t *testing.T, graph *goldenRuntime) {
 	}
 
 	t.Run("meal plan settings", func(t *testing.T) {
-		code, body := request(http.MethodGet, "/api/meal-plan/?week_start=2030-01-07", "")
+		code, body := request(http.MethodGet, "/api/meal-plan/days?week_start=2030-01-07", "")
 		assert.Contains(t, []int{http.StatusOK, http.StatusForbidden}, code, body)
 		if code == http.StatusForbidden {
 			assert.Contains(t, body, "meals_plan_disabled", "a refusal comes from the tenant setting")

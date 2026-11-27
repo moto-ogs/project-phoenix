@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   DEPLOYMENTS,
   FEATURES,
+  NO_FEATURE_PAGES,
   ONBOARDING_SURFACE_LABELS,
   PARENT_FIRST_STEP_LABELS,
   ON_WORKDAY,
@@ -15,14 +16,11 @@ import {
   check,
   dashboards,
   featureExpression,
-  featureOfPage,
   isQueryTimeout,
   missingPath,
   posthogClient,
   publicHolidays,
   readBrowserEvents,
-  readOnboardingChecklistSteps,
-  readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
   sync,
@@ -30,6 +28,13 @@ import {
 
 const definitions = dashboards({ projectId: '1' });
 const insights = definitions.flatMap((dashboard) => dashboard.insights);
+
+const analyticsPolicy = readFileSync(new URL('../frontend/src/lib/analytics-policy.ts', import.meta.url), 'utf8');
+function readPolicyList(name) {
+  const body = new RegExp(`const ${name} = \\[([\\s\\S]*?)\\] as const;`).exec(analyticsPolicy)?.[1];
+  assert.ok(body, `analytics-policy.ts has no ${name}`);
+  return [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, value]) => value);
+}
 
 test('defines one dashboard per product surface plus the two across schools and the entry', () => {
   assert.deepEqual(definitions.map((dashboard) => dashboard.name), [
@@ -144,18 +149,19 @@ test('reads the browser events from analytics-policy.ts', () => {
 
 test('every route template belongs to exactly one feature area or is an entry page', () => {
   for (const [surface, template] of readRouteTemplates()) {
-    const feature = featureOfPage(surface, template);
-    assert.notEqual(feature, 'Sonstiges', `${surface} ${template}: add it to FEATURES or NO_FEATURE_PAGES`);
     const owners = FEATURES.filter((f) => (f.pages?.[surface] ?? []).some((pattern) => pattern.endsWith('/**')
       ? template === pattern.slice(0, -3) || template.startsWith(pattern.slice(0, -2))
       : template === pattern));
+    assert.ok(owners.length || NO_FEATURE_PAGES[surface]?.includes(template),
+      `${surface} ${template}: add it to FEATURES or NO_FEATURE_PAGES`);
     assert.ok(owners.length <= 1, `${surface} ${template} is in ${owners.map((f) => f.name).join(' and ')}`);
   }
-  assert.equal(featureOfPage('ogs', '/students/:id/room-history'), 'Kinder und Kindakte');
-  assert.equal(featureOfPage('school', '/klasse/kind'), 'Kinder und Kindakte');
-  assert.equal(featureOfPage('ogs', '/students-archive'), 'Sonstiges', 'a prefix covers its sub pages only');
-  assert.equal(featureOfPage('parents', '/login'), null);
-  assert.equal(featureOfPage('parents', '/documents'), 'Weitere Werkzeuge');
+  const query = featureExpression();
+  assert.match(query, /properties\.surface = 'ogs' and \(properties\.\$pathname in \('\/students'\) or startsWith\(properties\.\$pathname, '\/students\/'\)\).*?properties\.surface = 'school' and \(properties\.\$pathname in \('\/klasse', '\/klasse\/kind'\)\).*?, 'Kinder und Kindakte'/,
+    'student prefixes only match subpages and school routes are exact');
+  assert.match(query, /^multiIf\(.*?properties\.surface = 'parents' and \(properties\.\$pathname in \('\/login',.*?\)\).*?, '',/,
+    'entry pages are excluded before feature matching');
+  assert.match(query, /properties\.surface = 'parents' and \(properties\.\$pathname in \('\/documents',.*?\).*?, 'Weitere Werkzeuge'/);
 });
 
 test('feature areas have unique names, each event belongs to one area, and the kiosk counts', () => {
@@ -198,7 +204,7 @@ test('the entry dashboard shows the notification setup per portal, marked as con
   for (const [surface, label] of [['ogs', 'OGS-App'], ['school', 'Schul-App'], ['parents', 'Eltern-App']]) {
     assert.ok(query.includes(`'${surface}', '${label}'`), surface);
   }
-  assert.ok(readOnboardingSurfaces().includes('notification_setup'), 'the browser filter allows the surface');
+  assert.ok(readPolicyList('ONBOARDING_SURFACES').includes('notification_setup'), 'the browser filter allows the surface');
 });
 
 test('the entry dashboard counts self-opening surfaces from consenting browsers only, never as feature use', () => {
@@ -218,8 +224,7 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
   assert.match(perSession.query.source.query, /uniq\(toString\(properties\.onboarding_surface\)\)/);
 
   // Every allowed surface of the browser filter has a German name on the tile.
-  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), readOnboardingSurfaces().sort());
-  assert.throws(() => readOnboardingSurfaces('const OTHER = 1;'), /ONBOARDING_SURFACES/);
+  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), readPolicyList('ONBOARDING_SURFACES').sort());
   const query = perSurface.query.source.query;
   assert.match(query, /transform\(toString\(properties\.onboarding_surface\), \['/, 'transform takes arrays, not tuples');
   for (const [value, label] of Object.entries(ONBOARDING_SURFACE_LABELS)) {
@@ -308,8 +313,7 @@ test('the entry dashboard shows the parents\' first steps from consenting browse
   assert.match(query, /properties\.surface = 'parents'/);
 
   // Every allowed step of the browser filter has a German name on the tile.
-  assert.deepEqual(Object.keys(PARENT_FIRST_STEP_LABELS).sort(), readOnboardingChecklistSteps().sort());
-  assert.throws(() => readOnboardingChecklistSteps('const OTHER = 1;'), /ONBOARDING_CHECKLIST_STEPS/);
+  assert.deepEqual(Object.keys(PARENT_FIRST_STEP_LABELS).sort(), readPolicyList('ONBOARDING_CHECKLIST_STEPS').sort());
   for (const [value, label] of Object.entries(PARENT_FIRST_STEP_LABELS)) {
     assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
   }

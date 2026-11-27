@@ -37,6 +37,7 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/ready", moduleRouteBasis},
 	{"/analytics-consent", moduleRouteBasis},
 	{"/analytics-policy", moduleRouteBasis},
+	{"/display-preferences", moduleRouteBasis},
 	{"/internal", moduleRouteBasis},
 	{"/auth", moduleRouteBasis},
 	{"/operator", moduleRouteBasis},
@@ -118,6 +119,7 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/traeger/billing-run-due-dates", settings.ModuleElternbeitraege},
 	{"/traeger/billing-document-kinds", settings.ModuleElternbeitraege},
 	{"/traeger/billing-families", settings.ModuleElternbeitraege},
+	{"/traeger/invoice-journal", settings.ModuleElternbeitraege},
 	{"/traeger/billing-terms", settings.ModuleElternbeitraege},
 	{"/traeger/number-ranges", settings.ModuleElternbeitraege},
 	{"/traeger/family-billing", settings.ModuleElternbeitraege},
@@ -162,6 +164,8 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/guardians", moduleRouteBasis},
 	// The hosting school's holiday guests (#4666) and participant lists
 	// (#4665); see docs/reference/modulschalter.md.
+	// The extra care days a school plans for itself (#4817, ADR 0329).
+	{"/api/holiday-extra-days", moduleRouteBasis},
 	{"/api/holiday-guests", moduleRouteBasis},
 	{"/api/holiday-weeks", moduleRouteBasis},
 	{"/api/import", moduleRouteBasis},

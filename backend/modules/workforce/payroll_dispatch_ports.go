@@ -99,6 +99,7 @@ type PayrollMailContent struct {
 	LogoURL    string
 	SchoolName string
 	FirstName  string
+	LastName   string
 	MonthLabel string
 	Correction bool
 	LinkURL    string

@@ -2,24 +2,20 @@ import { defineConfig, devices } from "@playwright/test";
 
 import { frontendPort } from "./e2e/frontend-port";
 import { assertPortServesThisCheckout } from "./e2e/own-server";
+import { printedGuides } from "./scripts/printed-guides";
 import { SECURE_CHROME_SETUP, secureChromeUse } from "./scripts/secure-chrome";
 
-// Dedicated config for build-time PDF generation of the printed NFC onepager
-// (pnpm run generate:guides). Kept separate from playwright.config.ts so the
-// generator never runs as part of the normal e2e suite (and vice versa).
-//
-// Renders against a *production* server (`next build && next start`), not
-// `next dev`: the PDFs ship inside the prod image, so they must be generated
-// from the same output users actually see , and a prod server renders
-// deterministically and fast (no first-request compile / HMR), which removes
-// the main flakiness source.
-//
-// Env note: the /help pages are public and host-agnostic, but proxy.ts throws
-// when the operator/parents/tenant hostnames are unset. Locally those come from
-// .env.local; in CI the generate:guides step sets them plus SKIP_ENV_VALIDATION.
-// No values are baked in here.
-// reuseExistingServer must not pick up another checkout's frontend.
 assertPortServesThisCheckout(frontendPort);
+
+const pages = printedGuides
+  .map(({ route }) => `app${route}/page.tsx`)
+  .join(",");
+const guideBuild = `pnpm run build --debug-build-paths=${pages}`;
+// Compile and prerender just the printed page. The image build typechecks the
+// entire app; local generation must leave a complete .next for the developer.
+const buildCommand = process.env.CI
+  ? `${guideBuild} --experimental-build-mode=compile && ${guideBuild} --experimental-build-mode=generate`
+  : "pnpm run build";
 
 export default defineConfig({
   globalSetup: SECURE_CHROME_SETUP,
@@ -42,16 +38,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm run build && pnpm run start",
-    url: `http://localhost:${frontendPort}/help/nfc/erste-schritte`,
+    command: `${buildCommand} && pnpm run start`,
+    url: `http://localhost:${frontendPort}${printedGuides[0].route}`,
     // Locally reuse a server you already have running; in CI always build fresh.
     reuseExistingServer: !process.env.CI,
-    // build + start is far slower to become ready than `next dev`. On the
-    // deploy runner it took 30–266 s across 15 green runs and once passed
-    // 300 s (Build 7c68f66), so 600 s leaves room inside the job's 20 min.
+    // Local generation can still need a cold build of the whole application.
     timeout: 600_000,
-    // Show the build output in the CI log, so a slow or failing build is
-    // visible instead of a bare webServer timeout.
     stdout: "pipe",
   },
 });

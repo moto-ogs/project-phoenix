@@ -32,21 +32,12 @@ This command can generate:
 
 Use the appropriate flags to generate the desired documentation.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if routes {
-			if err := genRoutesDoc(); err != nil {
+		if routes || !openapi {
+			if err := genRoutesDocAt("routes.md"); err != nil {
 				return err
 			}
 		}
-		if openapi {
-			if err := genOpenAPIDoc(); err != nil {
-				return err
-			}
-		}
-		if !routes && !openapi {
-			// Default: generate both if no flags specified
-			if err := genRoutesDoc(); err != nil {
-				return err
-			}
+		if openapi || !routes {
 			return genOpenAPIDoc()
 		}
 		return nil
@@ -61,12 +52,8 @@ func init() {
 	gendocCmd.Flags().BoolVarP(&openapi, "openapi", "o", false, "create or update OpenAPI specification")
 }
 
-func genRoutesDoc() error {
-	return genRoutesDocAt("routes.md")
-}
-
 func genRoutesDocAt(path string) error {
-	routes, err := documentationRoutes()
+	routes, err := api.RouteCatalog()
 	if err != nil {
 		return fmt.Errorf("load route catalog: %w", err)
 	}
@@ -83,7 +70,7 @@ func genRoutesDocAt(path string) error {
 func genOpenAPIDoc() error {
 	fmt.Print("Generating OpenAPI specification: ")
 
-	routes, err := documentationRoutes()
+	routes, err := api.RouteCatalog()
 	if err != nil {
 		return fmt.Errorf("load route catalog: %w", err)
 	}
@@ -100,7 +87,7 @@ func genOpenAPIDoc() error {
 	openAPIPath := filepath.Join(docsDir, "openapi.yaml")
 
 	// Create base specification
-	spec := createBaseOpenAPISpecFromMarkdown(catalogMarkdown(routes))
+	spec := catalogOpenAPISpec(routes)
 
 	// Convert to YAML
 	data, err := yaml.Marshal(spec)
@@ -127,10 +114,6 @@ func genOpenAPIDoc() error {
 	return nil
 }
 
-func documentationRoutes() ([]api.Route, error) {
-	return api.RouteCatalog()
-}
-
 func catalogMarkdown(routes []api.Route) string {
 	var document strings.Builder
 	document.WriteString("# MOTO REST API routes\n\n")
@@ -140,13 +123,18 @@ func catalogMarkdown(routes []api.Route) string {
 	return document.String()
 }
 
-func createBaseOpenAPISpecFromMarkdown(md string) map[string]interface{} {
+func catalogOpenAPISpec(routes []api.Route) map[string]interface{} {
 	spec := createOpenAPIBaseStructure()
 	paths := spec["paths"].(map[string]interface{})
-
-	parseRoutesFromMarkdown(md, paths)
-	mergeSettingsSchemas(spec)
-
+	for _, route := range routes {
+		if paths[route.Pattern] == nil {
+			paths[route.Pattern] = map[string]interface{}{}
+		}
+		switch route.Method {
+		case "GET", "POST", "PUT", "DELETE", "PATCH":
+			addMethod(paths, route.Pattern, route.Method)
+		}
+	}
 	return spec
 }
 
@@ -182,79 +170,9 @@ func createOpenAPIBaseStructure() map[string]interface{} {
 					"description": "API key for device authentication. Provide the API key as a Bearer token.",
 				},
 			},
-			"schemas": map[string]interface{}{},
+			"schemas": getSettingsSchemas(),
 		},
 		"paths": map[string]interface{}{},
-	}
-}
-
-// parseRoutesFromMarkdown parses routes from markdown documentation
-func parseRoutesFromMarkdown(md string, paths map[string]interface{}) {
-	lines := strings.Split(md, "\n")
-	var currentRoute string
-
-	for _, line := range lines {
-		if route := extractRoutePattern(line); route != "" {
-			currentRoute = route
-			if paths[currentRoute] == nil {
-				paths[currentRoute] = map[string]interface{}{}
-			}
-		} else {
-			tryAddHTTPMethod(line, paths, currentRoute)
-		}
-	}
-}
-
-// extractRoutePattern extracts route pattern from a markdown line
-func extractRoutePattern(line string) string {
-	if !strings.Contains(line, "`") || !strings.Contains(line, "<summary>") {
-		return ""
-	}
-
-	routeStartIdx := strings.Index(line, "`") + 1
-	routeEndIdx := strings.LastIndex(line, "`")
-
-	if routeStartIdx <= 0 || routeEndIdx <= routeStartIdx {
-		return ""
-	}
-
-	route := line[routeStartIdx:routeEndIdx]
-	if route == "" || route == "*" {
-		return ""
-	}
-
-	return route
-}
-
-// tryAddHTTPMethod tries to add HTTP method if the line contains a method marker
-func tryAddHTTPMethod(line string, paths map[string]interface{}, currentRoute string) {
-	if currentRoute == "" {
-		return
-	}
-
-	methods := map[string]string{
-		"_GET_":    "GET",
-		"_POST_":   "POST",
-		"_PUT_":    "PUT",
-		"_DELETE_": "DELETE",
-		"_PATCH_":  "PATCH",
-	}
-
-	for marker, method := range methods {
-		if strings.Contains(line, marker) {
-			addMethod(paths, currentRoute, method)
-			return
-		}
-	}
-}
-
-// mergeSettingsSchemas merges settings schemas into the OpenAPI spec
-func mergeSettingsSchemas(spec map[string]interface{}) {
-	schemas := spec["components"].(map[string]interface{})["schemas"].(map[string]interface{})
-	settingSchemas := getSettingsSchemas()
-
-	for name, schema := range settingSchemas {
-		schemas[name] = schema
 	}
 }
 

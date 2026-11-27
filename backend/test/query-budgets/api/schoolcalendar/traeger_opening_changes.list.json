@@ -1,0 +1,7 @@
+{
+  "scenario": "traeger.opening_changes.list",
+  "max": 4,
+  "exact": true,
+  "description": "School Calendar Träger opening-change route (#8202): populated N3/N8 including the HTTP Träger transaction, excluding outer server/session liveness.",
+  "route": "GET /traeger/opening-changes/"
+}

@@ -39,12 +39,9 @@ type HolidayParentAccountProofs interface {
 	HolidayParentAccountProof(organizationID, periodID, accountID int64) (string, error)
 }
 
-// HolidayParentAccountLink is the way into a parent account the offer mail
-// names: SetupURL sets up the account at the Träger, LoginURL is the sign-in
-// of the parents portal for an address that already has one.
+// HolidayParentAccountLink sets up the parent account at the Träger.
 type HolidayParentAccountLink struct {
 	SetupURL string
-	LoginURL string
 }
 
 // HolidayParentAccountLinks issues the setup link of a parent account at a

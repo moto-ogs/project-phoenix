@@ -61,8 +61,6 @@ vi.mock("~/lib/hooks/use-sse", () => ({
   useSSE: vi.fn(() => ({
     status: "connected",
     isConnected: true,
-    error: null,
-    reconnectAttempts: 0,
   })),
 }));
 
@@ -150,8 +148,6 @@ describe("useGlobalSSE", () => {
 
       expect(result.current.status).toBe("connected");
       expect(result.current.isConnected).toBe(true);
-      expect(result.current.error).toBeNull();
-      expect(result.current.reconnectAttempts).toBe(0);
     });
 
     it("calls useSSE with correct endpoint", () => {
@@ -369,8 +365,6 @@ describe("useGlobalSSE", () => {
       let connectionState: SSEHookState = {
         status: "connected",
         isConnected: true,
-        error: null,
-        reconnectAttempts: 0,
       };
       vi.mocked(useSSE).mockImplementation(() => connectionState);
 
@@ -380,16 +374,12 @@ describe("useGlobalSSE", () => {
       connectionState = {
         status: "reconnecting",
         isConnected: false,
-        error: "SSE-Verbindungsfehler",
-        reconnectAttempts: 1,
       };
       rerender();
 
       connectionState = {
         status: "connected",
         isConnected: true,
-        error: null,
-        reconnectAttempts: 0,
       };
       rerender();
 
@@ -411,8 +401,6 @@ describe("useGlobalSSE", () => {
       let connectionState: SSEHookState = {
         status: "connected",
         isConnected: true,
-        error: null,
-        reconnectAttempts: 0,
       };
       vi.mocked(useSSE).mockImplementation(() => connectionState);
 
@@ -428,16 +416,12 @@ describe("useGlobalSSE", () => {
       connectionState = {
         status: "reconnecting",
         isConnected: false,
-        error: null,
-        reconnectAttempts: 0,
       };
       rerender();
 
       connectionState = {
         status: "connected",
         isConnected: true,
-        error: null,
-        reconnectAttempts: 0,
       };
       rerender();
 

@@ -1,18 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type * as meContract from "./contract/me.generated";
-import type { Profile, ProfileUpdateRequest } from "./profile-helpers";
+import type { Profile } from "./profile-helpers";
 
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
-
-vi.mock("./profile-helpers", () => ({
-  mapProfileResponse: vi.fn(),
-  mapProfileUpdateRequest: vi.fn(),
-}));
 
 // Import after mocks are set up
 import { ApiError } from "./api-error";
 import * as sessionCache from "./session-cache";
-import { mapProfileResponse, mapProfileUpdateRequest } from "./profile-helpers";
 import { fetchProfile, updateProfile, uploadAvatar } from "./profile-api";
 
 // Type-safe mocks
@@ -25,8 +19,6 @@ function refuseSession(
 ) {
   vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
 }
-const mockedMapProfileResponse = vi.mocked(mapProfileResponse);
-const mockedMapProfileUpdateRequest = vi.mocked(mapProfileUpdateRequest);
 
 // Sample data
 const sampleProfileWire: meContract.ProfileResponse = {
@@ -46,25 +38,17 @@ const sampleProfileWire: meContract.ProfileResponse = {
 };
 
 const sampleProfile: Profile = {
-  id: "123",
   firstName: "Max",
   lastName: "Mustermann",
   email: "max@example.com",
-  username: "maxmuster",
   avatar: "/api/me/profile/avatar/avatar.jpg",
-  bio: "Test bio",
-  rfidCard: "CARD001",
-  createdAt: "2024-01-01T00:00:00Z",
-  updatedAt: "2024-01-15T12:00:00Z",
   version: "v1",
-  lastLogin: "2024-01-20T10:00:00Z",
-  settings: { theme: "dark" },
 };
 
-const sampleUpdateRequest: ProfileUpdateRequest = {
+const sampleUpdateRequest = {
   firstName: "Max",
   lastName: "Mustermann",
-  bio: "Updated bio",
+  expectedVersion: "v1",
 };
 
 describe("profile-api", () => {
@@ -75,16 +59,6 @@ describe("profile-api", () => {
     consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
-
-    // Default session mock
-
-    // Default mapper mocks
-    mockedMapProfileResponse.mockReturnValue(sampleProfile);
-    mockedMapProfileUpdateRequest.mockReturnValue({
-      first_name: "Max",
-      last_name: "Mustermann",
-      bio: "Updated bio",
-    });
   });
 
   afterEach(() => {
@@ -109,7 +83,6 @@ describe("profile-api", () => {
       expect(mockFetch).toHaveBeenCalledWith("/api/me/profile", {
         method: "GET",
       });
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 
@@ -175,9 +148,6 @@ describe("profile-api", () => {
 
       const result = await updateProfile(sampleUpdateRequest);
 
-      expect(mockedMapProfileUpdateRequest).toHaveBeenCalledWith(
-        sampleUpdateRequest,
-      );
       expect(mockFetch).toHaveBeenCalledWith("/api/me/profile", {
         method: "PUT",
         headers: {
@@ -186,10 +156,9 @@ describe("profile-api", () => {
         body: JSON.stringify({
           first_name: "Max",
           last_name: "Mustermann",
-          bio: "Updated bio",
+          expected_version: "v1",
         }),
       });
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 
@@ -248,7 +217,7 @@ describe("profile-api", () => {
       });
       global.fetch = mockFetch;
 
-      const result = await uploadAvatar(mockFile);
+      await uploadAvatar(mockFile);
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/me/profile/avatar",
@@ -265,9 +234,6 @@ describe("profile-api", () => {
       const body = callArgs?.[1]?.body as FormData;
       expect(body).toBeInstanceOf(FormData);
       expect(body.get("avatar")).toBe(mockFile);
-
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
-      expect(result).toEqual(sampleProfile);
     });
 
     it("throws error when no token is available", async () => {

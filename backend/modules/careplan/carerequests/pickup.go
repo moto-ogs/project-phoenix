@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +35,9 @@ type PickupApproval struct {
 	Payload             json.RawMessage
 	ExpectedImpactToken *string
 	RequireImpactToken  bool
+	// GuardianAccountID submitted the request; the day's pickup person it
+	// names keeps it (#8162).
+	GuardianAccountID int64
 }
 
 // PickupApplied names the rows an approval wrote, so a later correction can
@@ -49,6 +53,22 @@ type PickupApplied struct {
 	// (#4780); PickupNoteVersion fingerprints it like the exceptions.
 	PickupNoteID      int64
 	PickupNoteVersion string
+	// PickupPersonID is the day's pickup person an approval writes since
+	// #8162, in place of the dated note; PickupPersonVersion fingerprints it.
+	PickupPersonID      int64
+	PickupPersonVersion string
+	// PreviousPickupPerson is restored when a later guardian approval is
+	// corrected. It is nil when the approval created the day's first person.
+	PreviousPickupPerson *PickupPersonState
+}
+
+// PickupPersonState is the prior guardian-approved person a later approval
+// replaces, retained only so correcting that decision can restore it.
+type PickupPersonState struct {
+	Name                string
+	GuardianProfileID   *int64
+	CreatedBy           *int64
+	RequestedByGuardian *int64
 }
 
 // PickupApprovals applies the pickup leg of an already authorized request
@@ -119,12 +139,13 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 		}
 		change.DepartureMode = mode
 	}
-	if personRaw, present := payload["pickup_person"]; present && personRaw != nil {
-		person, ok := storedPickupPerson(personRaw)
-		if !ok {
-			return PickupChange{}, false
-		}
-		change.PickupPerson = &person
+	person, ok := pickupPersonFromPayload(payload)
+	if !ok {
+		return PickupChange{}, false
+	}
+	change.PickupPerson = person
+	if change.PickupPerson != nil && !PickupPersonAllowed(change.DepartureMode) {
+		return PickupChange{}, false
 	}
 	if change.PickupTime == nil && change.DepartureMode == "" && change.PickupPerson == nil {
 		return PickupChange{}, false
@@ -132,14 +153,37 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 	return change, true
 }
 
+func pickupPersonFromPayload(payload map[string]any) (*PickupPerson, bool) {
+	personRaw, present := payload["pickup_person"]
+	if !present || personRaw == nil {
+		return nil, true
+	}
+	person, ok := storedPickupPerson(personRaw)
+	if !ok {
+		return nil, false
+	}
+	return &person, true
+}
+
 func storedPickupPerson(raw any) (PickupPerson, bool) {
-	fields, _ := raw.(map[string]any)
-	id, _ := fields["guardian_profile_id"].(float64)
-	name, _ := fields["name"].(string)
-	if id <= 0 || strings.TrimSpace(name) == "" {
+	fields, ok := raw.(map[string]any)
+	if !ok {
 		return PickupPerson{}, false
 	}
-	return PickupPerson{GuardianProfileID: int64(id), Name: name}, true
+	var id int64
+	if rawID, present := fields["guardian_profile_id"]; present {
+		value, ok := rawID.(float64)
+		if !ok || value <= 0 || math.Trunc(value) != value || value > math.MaxInt64 {
+			return PickupPerson{}, false
+		}
+		id = int64(value)
+	}
+	name, _ := fields["name"].(string)
+	person := PickupPerson{GuardianProfileID: id, Name: name}
+	if !person.valid("") {
+		return PickupPerson{}, false
+	}
+	return person, true
 }
 
 // PickupPersonAllowed reports whether a one-day collector fits the requested

@@ -57,8 +57,9 @@ func TestDayDepartureRequestStoresTheModeAndTheDayBefore(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.Ctx(t)
 
-	created, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID,
-		dayDepartureRequestToday.AddDays(3), time.Time{}, "pickup", "Die Oma holt ab", nil)
+	created, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: dayDepartureRequestToday.AddDays(3), DepartureMode: "pickup", Reason: "Die Oma holt ab",
+	})
 	require.NoError(t, err)
 
 	var payload map[string]any
@@ -84,8 +85,9 @@ func TestDayDepartureRequestStoresTheLegacyDepartureModeBefore(t *testing.T) {
 		Exec(ctx)
 	require.NoError(t, err)
 
-	created, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID,
-		dayDepartureRequestToday.AddDays(7), time.Time{}, "pickup", "Die Oma holt ab", nil)
+	created, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: dayDepartureRequestToday.AddDays(7), DepartureMode: "pickup", Reason: "Die Oma holt ab",
+	})
 	require.NoError(t, err)
 
 	var payload map[string]any
@@ -102,12 +104,16 @@ func TestDayDepartureRequestNeedsTheSchoolsAbholartSetting(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	date := dayDepartureRequestToday.AddDays(3)
 
-	_, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, time.Time{}, "bus", "Ausflug", nil)
+	_, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, DepartureMode: "bus", Reason: "Ausflug",
+	})
 	require.ErrorIs(t, err, parentService.ErrCareRequestFieldDisabled)
 
 	// The Gehzeit alone stays open: the school only closed the Abholart.
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 0, 0, 0, time.UTC))
-	_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
+	_, err = svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupTime: pickup, Reason: "Arzttermin",
+	})
 	require.NoError(t, err)
 }
 
@@ -117,8 +123,9 @@ func TestDayDepartureRequestRefusesInBegleitung(t *testing.T) {
 	svc, db, _ := buildDayDepartureRequestService(t, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	_, err := svc.SubmitPickupChangeRequest(testpkg.Ctx(t), chain.AccountID, chain.StudentID,
-		dayDepartureRequestToday.AddDays(3), time.Time{}, "accompanied", "Mit dem Nachbarskind", nil)
+	_, err := svc.SubmitPickupChange(testpkg.Ctx(t), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: dayDepartureRequestToday.AddDays(3), DepartureMode: "accompanied", Reason: "Mit dem Nachbarskind",
+	})
 	require.ErrorIs(t, err, parentService.ErrInvalidCareRequestPayload)
 }
 
@@ -129,8 +136,9 @@ func TestDayDepartureRequestRefusesNonCareWeekend(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	date := dayDepartureRequestToday.AddDays(5)
 
-	_, err := svc.SubmitPickupChangeRequest(testpkg.Ctx(t), chain.AccountID, chain.StudentID,
-		date, time.Time{}, "bus", "Ausflug", nil)
+	_, err := svc.SubmitPickupChange(testpkg.Ctx(t), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, DepartureMode: "bus", Reason: "Ausflug",
+	})
 	require.ErrorIs(t, err, parentService.ErrCareExceptionNotCareDay)
 }
 
@@ -151,10 +159,14 @@ func TestDayDepartureRequestRespectsTheOGSDayValue(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, time.Time{}, "pickup", "Oma holt ab", nil)
+	_, err = svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, DepartureMode: "pickup", Reason: "Oma holt ab",
+	})
 	require.ErrorIs(t, err, parentService.ErrCareExceptionConflict)
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 13, 0, 0, 0, time.UTC))
-	_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
+	_, err = svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupTime: pickup, Reason: "Arzttermin",
+	})
 	require.NoError(t, err)
 }

@@ -15,10 +15,8 @@ import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { enrollmentChangeRequestStatusMeta } from "~/components/enrollment/enrollment-change-request-status";
-import {
-  RequestReviewCard,
-  ReviewDiffPanel,
-} from "~/components/students/request-review-card";
+import { RequestReviewCard } from "~/components/students/request-review-card";
+import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { ButtonLink } from "~/components/ui/button";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
@@ -37,11 +35,9 @@ const MAX_DIFF_ROWS = 6;
 export function EnrollmentRequestItem({
   row,
   view,
-  grouped = false,
 }: Readonly<{
   row: enrollmentContract.ChangeRequestReviewEntry;
   view: "open" | "history";
-  grouped?: boolean;
 }>) {
   const tenantPath = useTenantAwarePath();
   const meta = enrollmentChangeRequestStatusMeta(row.status);
@@ -68,7 +64,7 @@ export function EnrollmentRequestItem({
     <RequestReviewCard
       type="enrollment"
       childName={childNames}
-      grouped={grouped}
+      grouped={view === "open"}
       summary={row.origin === "admin" ? "Korrektur der OGS" : undefined}
       submittedAt={row.created_at}
       submittedByName={row.origin === "admin" ? undefined : row.guardian_name}

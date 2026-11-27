@@ -49,9 +49,15 @@ jobs:
       run-backend: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-tests == 'true' || steps.filter.outputs.backend-test-infra == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' }}
       run-frontend: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.frontend-fs-inputs == 'true' || steps.filter.outputs.frontend-test-infra == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' }}
       run-backend-lint: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-lint == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
+      check-migration-history: ${{ steps.filter.outputs.migrations != 'false' || github.event.pull_request.changed_files >= 3000 }}
       run-backend-architecture: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-architecture == 'true' || steps.filter.outputs.workflow-main == 'true' }}
       full-backend-lint: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-lint-full == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
-      run-frontend-lint: ${{ steps.filter.outputs.frontend == 'true' || steps.filter.outputs.frontend-catalog-inputs == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
+      run-frontend-lint: ${{ steps.filter.outputs.frontend == 'true' || steps.filter.outputs.frontend-quality-only == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
+      build-frontend: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' }}
+      # CI/global changes and backstops go straight to the full browser matrix.
+      # A catalog or lint-script change alone still runs frontend validators.
+      storybook-mode: ${{ (github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.storybook-global == 'true') && 'full' || steps.filter.outputs.frontend == 'true' && 'select' || 'skip' }}
+      storybook-build-input: ${{ steps.filter.outputs.storybook-build }}
       # The seed smoke drives runtime API contracts. Test-only edits,
       # frontend-only pushes and CI changes outside its own workflow definition
       # cannot affect it and must not buy another runner.
@@ -69,6 +75,7 @@ jobs:
       full-backend-suite: ${{ steps.backend-size.outputs.full == 'true' || steps.filter.outputs.backend-test-infra == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
       small-backend-suite: ${{ steps.backend-size.outputs.small == 'true' }}
       full-frontend-suite: ${{ steps.frontend-mode.outputs.mode == 'full' || steps.filter.outputs.frontend-test-infra == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
+      full-frontend-dom: ${{ steps.frontend-mode.outputs.mode == 'full-dom' }}
       # Pull requests test what changed against the base branch. Protected-branch
       # pushes and release pull requests run the full suites.
       changed-scope: ${{ github.event_name != 'push' && steps.scope.outputs.release != 'true' }}
@@ -79,12 +86,15 @@ jobs:
       base-ref: ${{ github.base_ref }}
       # The script suites, the env sync and the error-code registry check only
       # files their own filter lists. Docs-only pull requests skip all three.
-      run-ci-scripts: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.restore-suite == 'true' || steps.filter.outputs.quality-scripts == 'true' || steps.filter.outputs.hooks == 'true' || steps.filter.outputs.toolchain == 'true' || steps.filter.outputs.script-tests == 'true' || steps.filter.outputs.backend-local-test-scripts == 'true' || steps.backend-size.outputs.full == 'true' || steps.filter.outputs.backend-test-infra == 'true' }}
+      run-script-fixtures: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.hooks == 'true' || steps.filter.outputs.quality-scripts == 'true' || steps.filter.outputs.toolchain == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.daily-restore == 'true' || steps.filter.outputs.release-restore == 'true' }}
+      run-ci-scripts: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.daily-restore == 'true' || steps.filter.outputs.release-restore == 'true' || steps.filter.outputs.restore-alerts == 'true' || steps.filter.outputs.quality-scripts == 'true' || steps.filter.outputs.hooks == 'true' || steps.filter.outputs.toolchain == 'true' || steps.filter.outputs.script-tests == 'true' || steps.filter.outputs.backend-local-test-scripts == 'true' || steps.backend-size.outputs.full == 'true' || steps.filter.outputs.backend-test-infra == 'true' }}
       run-env-check: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.env == 'true' }}
       run-error-codes: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.error-codes == 'true' }}
       # The restore suite takes about five minutes (#6962). Pull requests run
       # it for its own inputs; pushes and release pull requests always do.
-      restore-changed: ${{ steps.filter.outputs.restore-suite == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
+      run-restore-alerts: ${{ steps.filter.outputs.restore-alerts == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
+      daily-restore-changed: ${{ steps.filter.outputs.daily-restore == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
+      release-restore-changed: ${{ steps.filter.outputs.release-restore == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
       # The ratchets suite also runs the self-tests of the backend test
       # scripts: for a change to the local wrappers, and whenever the backend
       # suite is full. They ran inside "Backend tests" on full runs and took
@@ -122,6 +132,9 @@ jobs:
           predicate-quantifier: "some-with-excludes"
           list-files: json
           filters: |
+            migrations:
+              - 'backend/database/migrations/**'
+              - 'scripts/check-migration-versions*'
             backend-tests:
               - 'backend/**/*.go'
               - 'backend/go.mod'
@@ -146,8 +159,7 @@ jobs:
               - 'backend/modules/organizationtenancy/return_register.json'
               - 'backend/modules/organizationtenancy/inbound/datareturn/openapi.json'
               - 'backend/modules/organizationtenancy/data_lifecycle_catalog.json'
-              # Generated from the Go route registrations (ADR 0270); the
-              # backend quality job checks that they are current.
+              # cmd.TestTheCommittedContractIsCurrent reads both outputs.
               - 'backend/api/contract/contract.json'
               - 'frontend/src/lib/contract/*.generated.ts'
               - 'backend/modules/documentrendering/internal/application/listrenderer/assets/**'
@@ -155,6 +167,7 @@ jobs:
               - 'scripts/backend-architecture.sh'
               - 'scripts/backend-architecture/**'
             backend-lint:
+              - 'scripts/check-backend-quality.sh'
               - 'backend/**/*.go'
               - 'backend/go.mod'
               - 'backend/go.sum'
@@ -186,6 +199,7 @@ jobs:
               # The architecture check reads Go and policy, never backend/ notes.
               - '!backend/**/*.md'
             backend-lint-full:
+              - 'scripts/check-backend-quality.sh'
               - 'backend/go.mod'
               - 'backend/go.sum'
               - 'backend/.golangci.yml'
@@ -212,15 +226,29 @@ jobs:
             frontend:
               - 'frontend/**'
               - '!frontend/**/*.md'
-            # Catalogs read by frontend validators and the identifier lint rule.
-            frontend-catalog-inputs:
+              - '!frontend/.agents/**'
+              - '!frontend/.claude/**'
+            storybook-global:
+              - 'frontend/.storybook/**'
+              - 'frontend/{package.json,pnpm-lock.yaml,vitest.storybook.config.ts,postcss.config.mjs,tsconfig.json}'
+              - 'frontend/src/{fonts,styles}/**'
+              - 'frontend/public/**'
+              - 'frontend/scripts/storybook-test-changed.mjs'
+            storybook-build:
+              - 'frontend/scripts/build-storybook.mjs'
+              - 'frontend/src/components/**/*.stories.{ts,tsx}'
+            # Inputs to frontend validators, not to the application build.
+            frontend-quality-only:
+              - 'scripts/check-frontend-quality.sh'
               - 'backend/api/contract/contract.json'
               - 'error-registry/**'
               - 'scripts/error-registry.mjs'
               - 'backend/modules/delivery/internal/adapters/localization/locales.json'
             frontend-fs-inputs:
-              # External/Markdown inputs need one guard job, not both projects.
+              # Agent guidance and other filesystem inputs need guards, not a product build.
               - 'frontend/**/*.md'
+              - 'frontend/.agents/**'
+              - 'frontend/.claude/**'
               - 'backend/**'
               - '!backend/**/*.md'
               - 'scripts/dev-native.sh'
@@ -278,8 +306,6 @@ jobs:
             # Shared with pre-push; CI calls them from the lint jobs.
             quality-scripts:
               - 'scripts/check-quality.sh'
-              - 'scripts/check-backend-quality.sh'
-              - 'scripts/check-frontend-quality.sh'
               - 'scripts/quality-timing.sh'
             # Local developer tooling: Git hooks and the native dev loop. CI
             # never runs them; the script suites and the toolchain ratchet are
@@ -288,6 +314,7 @@ jobs:
               - 'lefthook.yml'
               - 'scripts/pre-push*'
               - 'scripts/check-secrets*'
+              - 'scripts/test-helpers/**'
               - '.gitleaks*'
               - 'scripts/run-go-toolchain.sh'
               - 'scripts/dev-native*'
@@ -295,8 +322,9 @@ jobs:
               - '.wtconfig'
             # Release, deploy and demo tooling and the workflow files the
             # script suites read. None of it feeds the test or lint suites.
-            # The unit suite also starts for restore-suite below.
+            # The unit suite also starts for either restore filter below.
             tooling:
+              - 'scripts/check-*-quality.sh'
               - 'scripts/check-release-architecture*'
               - 'scripts/demo-environment.test.mjs'
               - 'scripts/report-sentry-deploy*'
@@ -310,24 +338,36 @@ jobs:
               - 'environments/**'
               - '.env.example'
               - 'package.json'
-            # Every file the restore suite's steps run or read: the tests, the
-            # scripts they call (and those scripts' callees), Compose files,
-            # alert rules and systemd units; images are pinned in these files.
+            # Files the DB restore drills run or read, including their Compose
+            # files and systemd units. Alert-rule fixtures are independent.
             # main.yml defines the steps and the apt tools. Families are listed
             # by glob so a new sibling fails open. Nothing else is read: Node
             # loads only node: built-ins, Python only its standard library
             # (#6962). backend-affected-packages_test.sh checks the inventory.
-            restore-suite:
+            release-restore:
               - '.github/workflows/main.yml'
               - 'scripts/release-backup*'
               - 'scripts/rollback-remote.sh'
               - 'scripts/restore-db.sh'
+              - 'scripts/daily-backup-s3-server.mjs'
+            daily-restore:
+              - '.github/workflows/main.yml'
+              # The shared S3 fixture reads the pinned rclone image from this script.
+              - 'scripts/release-backup.sh'
               - 'scripts/daily-backup*'
               - 'scripts/daily_backup.py'
               - 'scripts/restore-daily-backup.sh'
               - 'docs/operations/daily-restore.compose.yml'
               - 'scripts/*erasure-ledger*'
+              - '!scripts/*-alerts*'
+              - 'scripts/systemd/moto-*backup*'
+              - 'scripts/systemd/moto-release-retention*'
+            restore-alerts:
+              - '.github/workflows/main.yml'
               - 'scripts/*-alerts*'
+              - 'scripts/systemd/moto-backup-failure@.service'
+              - 'scripts/systemd/moto-daily-backup@.service'
+              - 'docs/operations/daily-backup.md'
               - 'monitoring/grafana/provisioning/alerting/daily-backup.yml'
               - 'monitoring/grafana/provisioning/alerting/nightly-cleanup.yml'
               - 'monitoring/grafana/provisioning/alerting/infrastructure.yml'
@@ -335,8 +375,6 @@ jobs:
               - 'monitoring/grafana/provisioning/alerting/email-delivery.yml'
               - 'monitoring/grafana/provisioning/alerting/contract-decode.yml'
               - 'monitoring/prometheus-compose.yml'
-              - 'scripts/systemd/moto-*backup*'
-              - 'scripts/systemd/moto-release-retention*'
             # Script suites without another trigger (#4436). Each runs when its
             # script or suite changes; the runner guard reruns when a test
             # file or a Playwright config appears or moves.
@@ -366,10 +404,10 @@ jobs:
               - 'scripts/check-pr-body*'
               - 'scripts/check-contract-*'
               - 'scripts/check-caddyfile*'
-              # The Sie-Anrede check (ADR 0294). Go strings and frontend
+              # The form-of-address check (ADR 0328). Go strings and frontend
               # texts reach it in the backend and frontend quality jobs;
               # e-mail templates and the check itself only here.
-              - 'scripts/check-du-form*'
+              - 'scripts/check-anrede*'
               - 'backend/templates/email/**'
               - 'scripts/seed-smoke-clock*'
               - 'scripts/clock-boundaries*'
@@ -478,13 +516,20 @@ jobs:
           full=$(jq 'any(.[]; . == "backend/go.mod" or . == "backend/go.sum") or
             (map(select(endswith(".go")) | split("/")[:-1] | join("/")) | unique | length >= 64)' <<< "$CHANGED_FILES")
           echo "full=$full" >> "$GITHUB_OUTPUT"
-          # The backend test job selects its packages itself and needs its
-          # runner before that. A changed test file selects only its own
-          # package, so test files in at most 15 directories plus ./test stay
-          # within the 16 packages four vCPUs are sized for. Every other
-          # change may reach any number of importers and gets sixteen.
-          small=$(jq 'length > 0 and all(.[]; endswith("_test.go")) and
-            (map(split("/")[:-1] | join("/")) | unique | length <= 15)' <<< "$CHANGED_FILES")
+          # Size only inputs whose package is known without the import graph.
+          # backend-affected-packages.sh adds ./test and treats the shared
+          # fixture, architecture register and query-budget trees specially.
+          small=$(jq '
+            def local_test_package:
+              if . == "backend/api/contract/contract.json" or test("^frontend/src/lib/contract/[^/]*\\.generated\\.ts$") then "backend/cmd"
+              elif (startswith("backend/") | not) or
+                 test("^backend/(testdata|architecture/(policy|command-effects|passthrough)|test/query-budgets)/") then null
+              elif contains("/testdata/") then split("/testdata/")[0]
+              elif endswith("_test.go") or test("^backend/templates/email/[^/]+\\.html$") then
+                split("/")[:-1] | join("/")
+              else null end;
+            map(local_test_package) | length > 0 and all(.[]; . != null) and (unique | length <= 15)
+          ' <<< "$CHANGED_FILES")
           echo "small=$small" >> "$GITHUB_OUTPUT"
 
   ci-scripts:
@@ -494,17 +539,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # These suites have separate fixtures and no ordering dependency.
-        # Keep the existing path selection without buying unused runners.
-        # "selection" starts wherever "ratchets" does: its script self-tests
-        # ran after the source ratchets in one job of 233-271 s (#6962).
+        # Selection tests the CI scripts; ratchets runs Go tests from backend/test.
         suite: >-
-          ${{ fromJSON(
-            needs.detect-changes.outputs.restore-changed == 'true' && needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","restore","release-restore","ratchets","selection"]'
-            || needs.detect-changes.outputs.restore-changed == 'true' && '["unit","restore","release-restore"]'
-            || needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","ratchets","selection"]'
-            || '["unit"]'
-          ) }}
+          ${{ fromJSON(format('["unit"{0}{1}{2}]',
+            needs.detect-changes.outputs.daily-restore-changed == 'true' && ',"restore"' || '',
+            needs.detect-changes.outputs.release-restore-changed == 'true' && ',"release-restore"' || '',
+            needs.detect-changes.outputs.toolchain-changed == 'true' && ',"ratchets","selection"' || '')) }}
+        # The full backend job runs every test in ./test, with the same tags and history.
+        exclude: ${{ fromJSON(needs.detect-changes.outputs.full-backend-suite == 'true' && '[{"suite":"ratchets"}]' || '[]') }}
     permissions:
       contents: read
     # Blacksmith: in a private repository GitHub-hosted runners bill at a
@@ -525,16 +567,29 @@ jobs:
         if: matrix.suite == 'ratchets'
         run: git fetch --no-tags --unshallow --filter=blob:none origin "$(git rev-parse HEAD)" +refs/heads/development:refs/remotes/origin/development
 
-      - name: Verify pre-push failure and selection behavior
+      - name: Verify developer and release scripts
         if: matrix.suite == 'unit'
-        run: node --test scripts/pre-push.test.mjs scripts/check-secrets.test.mjs scripts/dev-native.test.mjs scripts/check-release-architecture.test.mjs scripts/release-backup.test.mjs scripts/daily-backup.test.mjs scripts/demo-environment.test.mjs scripts/env-check.test.mjs scripts/report-sentry-deploy.test.mjs scripts/deploy-grafana-provisioning.test.mjs scripts/deploy-caddy-remote.test.mjs scripts/posthog-dashboards.test.mjs scripts/worktree-ports.test.mjs scripts/worktree-teardown.test.mjs
+        env:
+          RUN_SCRIPT_FIXTURES: ${{ needs.detect-changes.outputs.run-script-fixtures }}
+        run: |
+          suites=(
+            scripts/check-release-architecture.test.mjs scripts/daily-backup.test.mjs scripts/demo-environment.test.mjs
+            scripts/env-check.test.mjs scripts/report-sentry-deploy.test.mjs scripts/deploy-grafana-provisioning.test.mjs
+            scripts/deploy-caddy-remote.test.mjs scripts/posthog-dashboards.test.mjs
+            scripts/worktree-ports.test.mjs scripts/worktree-teardown.test.mjs
+          )
+          if [[ "$RUN_SCRIPT_FIXTURES" != 'false' ]]; then
+            node --test scripts/pre-push.test.mjs scripts/check-secrets.test.mjs scripts/dev-native.test.mjs scripts/release-backup.test.mjs "${suites[@]}"
+          else
+            node --test "${suites[@]}"
+          fi
 
       - name: Verify repository script suites
         if: matrix.suite == 'unit'
         run: |
           node scripts/check-agent-context.mjs
-          node scripts/check-du-form.mjs
-          node --test scripts/check-du-form.test.mjs scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/check-contract-compat.test.mjs scripts/check-contract-shrink.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/db-snapshot-cache.test.mjs scripts/seed-smoke-build.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
+          node scripts/check-anrede.mjs
+          node --test scripts/check-anrede.test.mjs scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/check-contract-compat.test.mjs scripts/check-contract-shrink.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/db-snapshot-cache.test.mjs scripts/seed-smoke-build.test.mjs scripts/query-budget-scoreboard.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
           node scripts/check-caddyfile.mjs deploy/caddy/Caddyfile
           python3 -m unittest scripts/runtime_checkpoint_compare_test.py scripts/runtime_checkpoint_report_test.py scripts/check_runtime_env_test.py scripts/check_db_connection_budget_test.py scripts/normalize_ci_needs_test.py
 
@@ -551,12 +606,26 @@ jobs:
 
       - name: Install daily backup test tools
         if: matrix.suite == 'restore'
-        run: sudo apt-get update -qq && sudo apt-get install -y age rclone
+        # Both tools are in Ubuntu's signed universe updates. Refreshing every
+        # index on the runner took 97 s before the 3 s package installation.
+        run: |
+          . /etc/os-release
+          for pocket in updates security; do
+            echo "deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu $VERSION_CODENAME-$pocket universe"
+          done > "$RUNNER_TEMP/restore-tools.list"
+          sources=(-o "Dir::Etc::sourcelist=$RUNNER_TEMP/restore-tools.list" -o Dir::Etc::sourceparts=-)
+          packages=(install -y --no-install-recommends age rclone)
+          if ! sudo apt-get "${sources[@]}" update -qq || ! sudo apt-get "${sources[@]}" "${packages[@]}"; then
+            # A new image or dependency may need the runner's remaining sources.
+            sudo apt-get update -qq
+            sudo apt-get "${packages[@]}"
+          fi
 
       - name: Verify encrypted daily backup and isolated restore
         if: matrix.suite == 'restore'
         run: |
-          node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-s3.integration.test.mjs scripts/daily-backup-roles-diagnostics.integration.test.mjs scripts/daily-backup-roles-school-erasure.integration.test.mjs scripts/daily-backup-roles-billing-retention.integration.test.mjs scripts/daily-backup-roles-data-return.integration.test.mjs scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs scripts/email-delivery-alerts.integration.test.mjs scripts/contract-decode-alerts.integration.test.mjs
+          # Node defaults to one test file on 2 vCPU. These drills use private Compose projects.
+          node --test --test-concurrency=2 scripts/daily-backup.integration.test.mjs scripts/daily-backup-s3.integration.test.mjs scripts/daily-backup-roles-diagnostics.integration.test.mjs scripts/daily-backup-roles-school-erasure.integration.test.mjs scripts/daily-backup-roles-billing-retention.integration.test.mjs scripts/daily-backup-roles-data-return.integration.test.mjs
           sudo install -d /usr/local/lib/moto-backup
           sudo install scripts/daily-backup.sh /usr/local/lib/moto-backup/
           # Verify the templates as the installed instances, so %i resolves.
@@ -568,6 +637,14 @@ jobs:
           done
           systemd-analyze verify "$units"/*
           systemd-analyze verify scripts/systemd/moto-release-retention@.service scripts/systemd/moto-release-retention@.timer
+
+      # An alert-only PR already has the unit worker; it needs Loki/promtool,
+      # not a separate VM, PostgreSQL, or the encryption and restore tools.
+      - name: Verify deployment alert rules
+        if: >-
+          needs.detect-changes.outputs.run-restore-alerts == 'true' &&
+          (matrix.suite == 'restore' || (matrix.suite == 'unit' && needs.detect-changes.outputs.daily-restore-changed != 'true'))
+        run: node --test scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs scripts/email-delivery-alerts.integration.test.mjs scripts/contract-decode-alerts.integration.test.mjs
 
       - name: Verify external erasure ledger unit and restore suites
         if: matrix.suite == 'restore'
@@ -625,8 +702,12 @@ jobs:
     uses: ./.github/workflows/lint.yml
     with:
       run-backend: ${{ needs.detect-changes.outputs.run-backend-lint == 'true' }}
+      check-migration-history: ${{ needs.detect-changes.outputs.check-migration-history != 'false' }}
       full-backend: ${{ needs.detect-changes.outputs.full-backend-lint == 'true' }}
       run-frontend: ${{ needs.detect-changes.outputs.run-frontend-lint == 'true' }}
+      build-frontend: ${{ needs.detect-changes.outputs.build-frontend == 'true' }}
+      storybook-mode: ${{ needs.detect-changes.outputs.storybook-mode }}
+      build-storybook: ${{ needs.detect-changes.outputs.storybook-mode == 'full' || needs.detect-changes.outputs.storybook-build-input == 'true' }}
       run-error-codes: ${{ needs.detect-changes.outputs.run-error-codes == 'true' }}
 
   backend-architecture-ratchet:
@@ -826,6 +907,7 @@ jobs:
       full-backend-suite: ${{ needs.detect-changes.outputs.full-backend-suite == 'true' }}
       backend-small-runner: ${{ needs.detect-changes.outputs.small-backend-suite == 'true' && needs.detect-changes.outputs.full-backend-suite != 'true' }}
       full-frontend-suite: ${{ needs.detect-changes.outputs.full-frontend-suite == 'true' }}
+      full-frontend-dom: ${{ needs.detect-changes.outputs.full-frontend-dom == 'true' }}
       frontend-guards-only: ${{ needs.detect-changes.outputs.frontend-guards-only == 'true' }}
       run-frontend-runner-tests: ${{ needs.detect-changes.outputs.run-frontend-runner-tests == 'true' }}
 

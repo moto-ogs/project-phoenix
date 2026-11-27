@@ -156,7 +156,7 @@ func (s *Service) sendStaffMessagePush(ctx context.Context, thread *StaffMessage
 			Scope:           deliveryPorts.ScopeStaff,
 			StaffAccountIDs: optedIn,
 		},
-	}.Public())
+	})
 	switch {
 	case s.deliveryPolicy.IsNotificationsDisabled(err), s.deliveryPolicy.IsOutsideActiveWindow(err):
 		s.Logger.Info("staffmessaging: push suppressed by tenant notification gate",

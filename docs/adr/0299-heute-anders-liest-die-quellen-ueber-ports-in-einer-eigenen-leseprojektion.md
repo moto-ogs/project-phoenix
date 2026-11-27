@@ -362,7 +362,7 @@ Projektion nutzt „change“.
 - Rechte-Regel: Jedes Konto des Staff-Portals sieht die Kurzinfo, auch ohne
   `meals:read`. Sie nennt kein Gericht. Den Link auf die Seite Speiseplan
   bekommt nur ein Konto, das den Speiseplan lesen darf (Regel von
-  `GET /api/meal-plan/`), damit niemand auf einer leeren Seite landet.
+  `GET /api/meal-plan/days`), damit niemand auf einer leeren Seite landet.
 - Live: Meal Plan meldet ein gespeichertes oder gelöschtes Menü mit dem Event
   `meal_plan_changed` ohne Inhalt an die Schule. Die Wurzel bindet es als
   Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie
@@ -510,3 +510,48 @@ Projektion nutzt „change“.
   den Block als `class_day_changed`. Eine abgesagte oder geänderte
   Termin-Ausnahme sendet kein Signal an das Schulportal; der Block holt sie
   beim Fokus und beim erneuten Verbinden.
+
+## Nachtrag 2026-11-26: Vorschau auf morgen (#7657)
+
+- **Punkt 6 wird erweitert.** Die Übersicht liest heute oder morgen. Die
+  Routen `GET /api/day-changes/today` und `GET /school/day-changes/today`
+  nehmen den optionalen Parameter `date` (`YYYY-MM-DD`). Ohne ihn liest das
+  Backend heute wie bisher. Die Projektion prüft den Tag
+  (`daychangesview.Query.On`): erlaubt sind heute und der nächste
+  Kalendertag in der Zeitzone der Schule. Jeder andere Tag und ein falsches
+  Format antworten mit 400 und `general.input`. Ein eigener Pfad
+  `/tomorrow` hätte die Route verdoppelt; der Filter ist ein Parameter
+  (Backend-Regel 6). Der Pfad behält seinen Namen, damit Frontend, Proxy und
+  Analytics-Routen unverändert bleiben.
+- Die Quellen-Ports nahmen den Tag schon als `calendar.Date`; keine Quelle
+  liest die Uhr. Sichtregel, Savepoint, Status pro Quelle und Query-Budget
+  sind für morgen dieselben wie für heute.
+- Morgen ist der nächste Kalendertag, auch am Wochenende oder an einem
+  Schließtag. Der Schließtag steht dann als Eintrag da; die Vorschau springt
+  nicht zum nächsten Betreuungstag. Es gibt keine Uhrzeit, ab der die
+  Vorschau erscheint, und keine Schuleinstellung.
+- Frontend: ein Umschalter „Heute / Morgen“ im Kopf von „Heute anders“
+  (`components/home/day-switch.tsx`), im Staff-Portal und in moto schule.
+  Die Sätze sind dieselben, nur „heute“ wird „morgen“. Der Klassenbericht
+  von moto schule wird für den gezeigten Tag geladen. Das Ereignis
+  `day_changes_tomorrow_shown` zählt, ob die Vorschau genutzt wird.
+- **Nicht in diesem Schritt:** Elternportal (#7671) und Träger-Portal
+  (#7672) haben eigene Lesewege (`ChildQuery.ChildDay`,
+  `traegerview.DayChangesReport`). Sie folgen in einem eigenen Ticket.
+
+## Nachtrag 2026-11-27: Vorschau auf morgen im Eltern- und Träger-Portal (#8236)
+
+- **Elternportal.** `GET /parent/me/children/{studentId}/day-changes` nimmt
+  das optionale `date`. `daychangesview.ChildQuery.ChildDayOn` prüft den Tag
+  wie `Query.On` (heute oder morgen der Schule). Der Port
+  `care.ChildDayChanges` bekommt den Tag; der leere Tag liest heute wie
+  bisher. Die Beziehungsprüfung (`parent_portal.access`, `WithPermittedChild`)
+  läuft zuerst und in derselben Transaktion: Ein Kind ohne Recht antwortet
+  auch mit einem unzulässigen Tag mit 403/404, nie mit 400.
+- **Träger-Portal.** `GET /traeger/schools/day-changes` nimmt `date`.
+  `traegerview.DayChangesReport.SchoolsDayChanges` bekommt den Tag; erlaubt
+  sind heute und morgen in Berlin, wie die Übersicht bisher heute las. Nur
+  die Schulen des Trägers, ohne Person und ohne Grund, mit denselben
+  Statements wie für heute.
+- Andere Tage und falsche Formate antworten in beiden Portalen mit 400 und
+  `general.input`. Kein Query-Budget wächst.

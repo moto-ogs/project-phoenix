@@ -39,9 +39,7 @@ type recordingStore struct {
 	createdRecord schoolmembership.CreateExternalCaregiverRecord
 	recordFilter  schoolmembership.ExternalCaregiverRecordFilter
 
-	entryLock    string
 	createdEntry schoolmembership.CreateClassListEntry
-	updatedEntry schoolmembership.UpdateClassListEntry
 	entryFilter  schoolmembership.ClassListEntryFilter
 }
 
@@ -121,12 +119,6 @@ func (e *recordingStore) CreateExternalCaregiverRecord(_ context.Context, fields
 	return schoolmembership.ExternalCaregiverRecord{StaffID: fields.StaffID}, domain.OperationStats{}, nil
 }
 
-func (e *recordingStore) FindClassListEntry(_ context.Context, id int64, lock string) (schoolmembership.ClassListEntry, bool, domain.OperationStats, error) {
-	e.calls++
-	e.entryLock = lock
-	return schoolmembership.ClassListEntry{ID: id}, true, domain.OperationStats{}, nil
-}
-
 func (e *recordingStore) ListClassListEntries(_ context.Context, filter schoolmembership.ClassListEntryFilter) ([]schoolmembership.ClassListEntry, domain.OperationStats, error) {
 	e.calls++
 	e.entryFilter = filter
@@ -137,12 +129,6 @@ func (e *recordingStore) CreateClassListEntry(_ context.Context, fields schoolme
 	e.calls++
 	e.createdEntry = schoolmembership.CreateClassListEntry{ClassListEntryFields: fields, CreatedBy: createdBy}
 	return schoolmembership.ClassListEntry{FirstName: fields.FirstName}, domain.OperationStats{}, nil
-}
-
-func (e *recordingStore) UpdateClassListEntry(_ context.Context, id int64, fields schoolmembership.ClassListEntryFields) (schoolmembership.ClassListEntry, domain.OperationStats, error) {
-	e.calls++
-	e.updatedEntry = schoolmembership.UpdateClassListEntry{ID: id, ClassListEntryFields: fields}
-	return schoolmembership.ClassListEntry{ID: id}, domain.OperationStats{}, nil
 }
 
 // StaffEmployments and SaveStaffEmployment are the Workforce half of a staff
@@ -528,37 +514,6 @@ func TestListStaffNormalizesTenantIDsLikeTheOtherIDFilters(t *testing.T) {
 	}
 }
 
-func TestClassListEntryReadsRequirePositiveIDs(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-
-	module, engine := newModule()
-	_, err := module.FindClassListEntry(ctx, 0)
-	requireInvalid(t, engine, err, "class list entry ID is required")
-
-	module, engine = newModule()
-	_, err = module.FindClassListEntryForMutation(ctx, -3)
-	requireInvalid(t, engine, err, "class list entry ID is required")
-}
-
-func TestFindClassListEntryForMutationAsksForTheRowLock(t *testing.T) {
-	t.Parallel()
-	module, engine := newModule()
-
-	if _, err := module.FindClassListEntry(context.Background(), 7); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if engine.entryLock != "" {
-		t.Fatalf("a plain read must not lock, got %q", engine.entryLock)
-	}
-	if _, err := module.FindClassListEntryForMutation(context.Background(), 7); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if engine.entryLock != "UPDATE" {
-		t.Fatalf("expected the UPDATE lock, got %q", engine.entryLock)
-	}
-}
-
 func TestClassListEntryWritesTrimAndValidate(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -582,12 +537,6 @@ func TestClassListEntryWritesTrimAndValidate(t *testing.T) {
 	requireInvalid(t, engine, err, "school class is required")
 
 	module, engine = newModule()
-	_, err = module.UpdateClassListEntry(ctx, schoolmembership.UpdateClassListEntry{ClassListEntryFields: schoolmembership.ClassListEntryFields{
-		FirstName: "Zoe", LastName: "Aalders", SchoolClass: "1a",
-	}})
-	requireInvalid(t, engine, err, "class list entry ID is required")
-
-	module, engine = newModule()
 	requireInvalid(t, engine, module.DeleteClassListEntry(ctx, 0), "class list entry ID is required")
 
 	module, engine = newModule()
@@ -607,16 +556,6 @@ func TestClassListEntryWritesTrimAndValidate(t *testing.T) {
 	}
 	if engine.createdEntry.CreatedBy != nil {
 		t.Fatalf("a zero actor means no creating account, got %v", *engine.createdEntry.CreatedBy)
-	}
-
-	module, engine = newModule()
-	if _, err := module.UpdateClassListEntry(ctx, schoolmembership.UpdateClassListEntry{ID: 9, ClassListEntryFields: schoolmembership.ClassListEntryFields{
-		FirstName: "Zoe", LastName: "Aalders ", SchoolClass: " 1b",
-	}}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if engine.updatedEntry.ID != 9 || engine.updatedEntry.SchoolClass != "1b" || engine.updatedEntry.LastName != "Aalders" {
-		t.Fatalf("expected the trimmed update, got %+v", engine.updatedEntry)
 	}
 }
 

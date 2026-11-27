@@ -1,4 +1,7 @@
 {{define "styles"}}
+{{/* No greater-than sign in this block, not in a selector and not in a comment:
+     html2text reads it as the end of the style tag and the text part of every
+     mail comes out empty. */}}
 <style type="text/css">
 body {
     background-color: #f8fafc;
@@ -17,6 +20,9 @@ body {
     border: 1px solid #e5e7eb;
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
     overflow: hidden;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .email-body {
@@ -38,18 +44,24 @@ h1 {
     letter-spacing: 0;
 }
 
-.school-brand {
-    display: block;
+.school-brand,
+.sender-brand {
     width: 100%;
-    margin-bottom: 36px;
+    margin: 0 0 36px 0;
+    border-collapse: collapse;
+}
+
+.school-brand-mark {
+    width: 48px;
+    padding: 0;
+    vertical-align: middle;
 }
 
 .school-logo,
 .school-logo-fallback {
-    display: inline-block;
+    display: block;
     width: 48px;
     height: 48px;
-    vertical-align: middle;
 }
 
 .school-logo {
@@ -70,9 +82,34 @@ h1 {
 }
 
 .school-brand-copy {
-    display: inline-block;
-    padding-left: 14px;
+    padding: 0 0 0 18px;
     vertical-align: middle;
+}
+
+.sender-brand-copy {
+    height: 48px;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.sender-brand-mark {
+    width: 42px;
+    padding: 0 0 0 12px;
+    text-align: right;
+    vertical-align: middle;
+    white-space: nowrap;
+    color: #4b5563;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.moto-wordmark {
+    color: #111827;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 48px;
+    margin: 0;
 }
 
 .school-kicker {
@@ -100,6 +137,7 @@ h1 {
 
 .button-wrapper {
     margin: 32px 0;
+    text-align: center;
 }
 
 .button {
@@ -130,6 +168,54 @@ h1 {
     font-weight: 500;
 }
 
+/* A text the school wrote: it keeps its line breaks and reads as body copy. */
+.letter-text {
+    background-color: #f9fafb;
+    border-left: 3px solid #d1d5db;
+    border-radius: 12px;
+    color: #4b5563;
+    padding: 16px;
+    white-space: pre-wrap;
+}
+
+.action-notice {
+    background-color: #fff3e5;
+    border-color: #f78c10;
+}
+
+.action-notice p,
+.highlight-box .decision-label,
+.appointment-details p {
+    color: #111827;
+}
+
+.decision-confirmed {
+    color: #3f6f12;
+    font-weight: 700;
+}
+
+.decision-waiting {
+    color: #9b5609;
+    font-weight: 700;
+}
+
+.holiday-child + .holiday-child {
+    border-top: 1px solid #e5e7eb;
+    margin-top: 16px;
+    padding-top: 16px;
+}
+
+.action-notice .button-wrapper {
+    margin: 16px 0 0;
+}
+
+.button-validity {
+    margin: -16px 0 24px;
+    color: #6b7280;
+    font-size: 14px;
+    text-align: center;
+}
+
 .link-box {
     background-color: #f9fafb;
     border: 1px solid #e5e7eb;
@@ -148,7 +234,7 @@ h1 {
 
 .security-note {
     font-size: 13px;
-    color: #9ca3af;
+    color: #6b7280;
     margin-top: 32px;
     padding-top: 24px;
     border-top: 1px solid #f3f4f6;
@@ -207,8 +293,6 @@ a {
         padding: 32px 24px;
     }
 
-    /* button-wrapper text-align removed - inline styles in templates take precedence for email client compatibility */
-
     .button {
         padding: 14px 16px;
         display: block;
@@ -222,6 +306,28 @@ a {
 
     p {
         font-size: 14px;
+    }
+
+    /* The paragraph rule above beats every inline and class size on a phone.
+       These paragraphs keep their own size. */
+    .school-kicker {
+        font-size: 12px;
+    }
+
+    .school-name {
+        font-size: 18px;
+    }
+
+    .moto-wordmark {
+        font-size: 22px;
+    }
+
+    .code-label {
+        font-size: 13px;
+    }
+
+    .code-value {
+        font-size: 32px;
     }
 }
 </style>

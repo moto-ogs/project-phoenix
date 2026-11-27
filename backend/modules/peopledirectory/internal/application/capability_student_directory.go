@@ -155,19 +155,6 @@ func (s *Service) CountStudentsByGroup(ctx context.Context, groupIDs []int64) (m
 	return counts, MapError(err)
 }
 
-func (s *Service) ListEnrolledStudentIDsByNameAndBirthday(
-	ctx context.Context,
-	tenantID int64,
-	firstName, lastName, birthday string,
-) ([]int64, error) {
-	if err := peopledirectory.ValidateStudentMatch(tenantID, firstName, lastName, birthday); err != nil {
-		return nil, err
-	}
-
-	ids, err := s.students.ListEnrolledIDsByNameAndBirthday(ctx, tenantID, firstName, lastName, birthday)
-	return ids, MapError(err)
-}
-
 func (s *Service) ListAllStudentIDs(ctx context.Context) ([]int64, error) {
 	ids, err := s.students.ListAllIDs(ctx)
 	return ids, MapError(err)
@@ -188,19 +175,6 @@ func (s *Service) ListStudentRoster(ctx context.Context, today string) ([]people
 	}
 
 	values, err := s.students.ListRoster(ctx, today)
-	return toPublicRoster(values), MapError(err)
-}
-
-func (s *Service) ListStudentRosterByGroup(ctx context.Context, groupIDs []int64, today string) ([]peopledirectory.StudentRosterEntry, error) {
-	groupIDs = peopledirectory.PositiveIDs(groupIDs)
-	if len(groupIDs) == 0 {
-		return []peopledirectory.StudentRosterEntry{}, nil
-	}
-	if err := peopledirectory.ValidateRosterDay(today); err != nil {
-		return nil, err
-	}
-
-	values, err := s.students.ListRosterByGroups(ctx, groupIDs, today)
 	return toPublicRoster(values), MapError(err)
 }
 

@@ -118,17 +118,6 @@ describe("fetchDayLog", () => {
     });
   });
 
-  it("narrows the request to one group via group_id", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: dayLogPayload }));
-
-    await fetchDayLog("2026-07-24", "7");
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/students/day-log?date=2026-07-24&group_id=7",
-      expect.objectContaining({ method: "GET" }),
-    );
-  });
-
   it("carries the backend code, details, field errors and request ID", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(

@@ -60,7 +60,7 @@ export function roomsCatalogTopic(presenceMode: HelpPresenceMode): HelpTopic {
       {
         title: "Einen Raum sperren",
         description:
-          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort.",
+          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort. Wer in der Zeit einen Termin im Raum hat, bekommt den Hinweis `Raum gesperrt`. Am Tag der Sperre sieht das Team den Raum mit dem Grund auf der `Startseite` unter `Heute anders`.",
         steps: [
           "Öffne `Räume` und wähle den Raum aus der Liste.",
           "Öffne den Reiter `Stammdaten`.",

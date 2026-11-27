@@ -93,6 +93,10 @@ type savepointCleanupDelivery struct {
 	enrollmentCompose.EnrollmentDeletionDelivery
 }
 
+type savepointCleanupAudit struct {
+	enrollmentCompose.EnrollmentDeletionAudit
+}
+
 func runSavepointCleanup(ctx context.Context, requests *savepointCleanupRequests) error {
 	_, err := enrollmentCompose.NewRejectedCleanup(enrollmentCompose.RejectedCleanupDependencies{
 		Now:         time.Now,
@@ -101,6 +105,8 @@ func runSavepointCleanup(ctx context.Context, requests *savepointCleanupRequests
 		LateInvites: savepointCleanupLateInvites{},
 		Delivery:    savepointCleanupDelivery{},
 		Settings:    savepointCleanupRetention{},
+		Preview:     &enrollmentCompose.DeletionPreview{},
+		Audit:       savepointCleanupAudit{},
 		Logger:      slog.New(slog.DiscardHandler),
 	}).CleanupRejectedEnrollments(ctx)
 	return err

@@ -165,7 +165,7 @@ func (o payrollMailOutbox) Enqueue(ctx context.Context, message workforce.Payrol
 // payrollTemplateData is the template data of the payroll mails.
 func payrollTemplateData(content workforce.PayrollMailContent) map[string]any {
 	return map[string]any{
-		"LogoURL": content.LogoURL, "SchoolName": content.SchoolName, "FirstName": content.FirstName,
+		"LogoURL": content.LogoURL, "SchoolName": content.SchoolName, "FirstName": content.FirstName, "LastName": content.LastName,
 		"MonthLabel": content.MonthLabel, "Correction": content.Correction, "LinkURL": content.LinkURL,
 		"ExpiresAt": content.ExpiresAt, "ReasonText": content.ReasonText,
 	}

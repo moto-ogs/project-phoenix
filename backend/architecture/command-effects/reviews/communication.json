@@ -143,6 +143,26 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.NotificationPreferences.FilterNotOptedOut",
+      "reason": "The messaging and announcement producers use the same consent port directly. The existing Delivery binding still reads the tenant gate and consent records only; no write, lock, or scope change.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.NotificationPreferences.FilterOptedIn",
+      "reason": "The messaging and announcement producers use the same consent port directly. The existing Delivery binding still reads the tenant gate and consent records only; no write, lock, or scope change.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.AttachmentDigests",
       "classification": "query",
       "effect": "query",
@@ -1531,26 +1551,6 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationOptIns.FilterOptedIn",
-      "reason": "Read-only newly exposed target: communication reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through modules/delivery/internal/notifications.PreferenceService.FilterOptedIn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationPreferences.FilterNotOptedOut",
-      "reason": "Read-only newly exposed target: communication reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationPreferences.FilterOptedIn",
       "reason": "Read-only newly exposed target: communication reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through modules/delivery/internal/notifications.PreferenceService.FilterOptedIn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",

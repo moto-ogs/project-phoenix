@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   mutatePeriods: vi.fn(),
   create: vi.fn(),
   toastSuccess: vi.fn(),
+  hasOwnStaff: { value: true },
 }));
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
@@ -60,6 +61,11 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutateMatching: () => () => Promise.resolve(),
 }));
 
+// Das eigene Personalprofil entscheidet, ob der Plan bearbeitbar ist (#7351).
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => mocks.hasOwnStaff.value,
+}));
+
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-07-06",
 }));
@@ -84,11 +90,18 @@ vi.mock("~/lib/calendar-period-api", () => ({
 
 // Der Zeitraum-Switcher öffnet hier nur den Dialog.
 vi.mock("~/components/timetable/period-switcher-dropdown", () => ({
-  PeriodSwitcherDropdown: ({ onCreate }: { onCreate: () => void }) => (
-    <button type="button" onClick={onCreate}>
-      Neuer Zeitraum
-    </button>
-  ),
+  PeriodSwitcherDropdown: ({
+    onCreate,
+    canManage = true,
+  }: {
+    onCreate: () => void;
+    canManage?: boolean;
+  }) =>
+    canManage ? (
+      <button type="button" onClick={onCreate}>
+        Neuer Zeitraum
+      </button>
+    ) : null,
 }));
 
 // Eigene Tests in absence-plan-gaps.test.tsx; hier zählt nur das Raster.
@@ -160,6 +173,7 @@ async function createPeriod() {
 describe("DienstplanView: Kalenderzeitraum anlegen (#6593)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.hasOwnStaff.value = true;
     window.history.replaceState(null, "", "/acme/dienstplan");
     mocks.useSWRAuth.mockImplementation((key: string | null) => {
       if (key === "database-calendar-periods-list") {
@@ -219,6 +233,26 @@ describe("DienstplanView: Kalenderzeitraum anlegen (#6593)", () => {
     );
     // Anker: der Dienstplan ist weiter gerendert.
     expect(screen.getByTestId("dienstplan-grid")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: TITLE }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("schließt den Zeitraumdialog bei bestätigt fehlendem Personalprofil", async () => {
+    const { rerender } = render(<DienstplanView />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Neuer Zeitraum" }),
+    );
+    expect(screen.getByRole("heading", { name: TITLE })).toBeVisible();
+
+    mocks.hasOwnStaff.value = false;
+    rerender(<DienstplanView />);
+
+    // Anker: der Plan bleibt geladen, aber ohne Planungsaktionen.
+    expect(screen.getByTestId("dienstplan-grid")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Neuer Zeitraum" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: TITLE }),
     ).not.toBeInTheDocument();

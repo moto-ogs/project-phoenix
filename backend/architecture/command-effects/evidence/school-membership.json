@@ -41,14 +41,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.AssignGroup",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.AssignGroup",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.BindSchedule",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.BindSchedule",
@@ -188,22 +180,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.Enroll",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.Enroll",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntry",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntryForMutation",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -436,14 +412,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateClassAssignment",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.UpdateClassAssignment",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.UpdateClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -841,14 +809,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.AssignGroup",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.AssignGroup",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.BindSchedule",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.BindSchedule",
@@ -996,22 +956,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.Enroll",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.Enroll",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.FindClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.FindClassListEntryForMutation",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1249,14 +1193,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.UpdateClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateClassListEntry",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.UpdateEmploymentDetails",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateEmploymentDetails",
@@ -1300,38 +1236,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.MovePendingWindow",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.PendingWindows.MovePendingWindow",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntry",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntry",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntryForMutation",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntryForMutation",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntryForMutation",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1695,14 +1599,6 @@
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ChildQuotaLimits.ChildQuotaLimit",
       "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.AssignStudentGroup",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.AssignStudentGroup",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.ChangeStudentClass",

@@ -1272,6 +1272,11 @@
     },
     {
       "decision": "0084",
+      "id": "api/traegerDayChangeSchools.TraegerSchoolsWithNames",
+      "reason": "ADR 0084 section 1 (#8146): Consumer-port adapter of the Träger projection's school set for „Heute anders“; it reads the Träger's schools with their names at Organisation \u0026 Tenancy in one statement, translates a deactivated, deleted or unknown Träger onto the projection's ErrTraegerUnavailable and the schools into the projection's TraegerSchool vocabulary."
+    },
+    {
+      "decision": "0084",
       "id": "api/traegerDocumentAccessLog.RecordAccess",
       "reason": "ADR 0084 (#4692): Consumer-port adapter that writes a download of the Träger-Büro into the access log of a school as audit.data_access_log entry of the Träger portal (ADR 0084 section 7)."
     },
@@ -1954,71 +1959,6 @@
       "decision": "0090",
       "id": "roots/owners/EnrollmentCollectionSettings.LockClassCollectionPair",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Create",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Decide",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByIDForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindPendingByIDForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListDecidedForTenant",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForTenant",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListRecentForStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListWithOptions",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.LockStudentRequests",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Redecide",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.UpdatePending",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
@@ -3407,27 +3347,7 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalExceptionsByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalNotesByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/carePlanRecords.DeleteArrivalSchedulesByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeletePickupExceptionsByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeletePickupNotesByStudent",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -4446,6 +4366,11 @@
       "reason": "ADR 0120 addendum (#4722): Consumer-port adapter of Enrollment's holiday guest people; it translates the health information of a guest into the People Directory's enrollment profile patch for the health field of its child, in the hosting school's tenant transaction."
     },
     {
+      "decision": "0329",
+      "id": "roots/owners/holidayHostTraeger.HolidayHostTraeger",
+      "reason": "ADR 0329 (#4817): Consumer-port adapter of Enrollment's HolidayHostTraeger; it translates the school row of Organisation \u0026 Tenancy to the ID of its Träger for the extra days a school plans for itself, in the school's tenant transaction."
+    },
+    {
       "decision": "0075",
       "id": "roots/owners/holidayOwnChildPlans.ApplyHolidayOwnChildPlans",
       "reason": "Consumer-owned port translation (ADR 0068, ADR 0075): maps Care Plan exceptions onto Enrollment's own-child plan values. Reconciliation decisions live in Enrollment; no persistence or business policy in the binding."
@@ -4463,7 +4388,7 @@
     {
       "decision": "0216",
       "id": "roots/owners/holidayParentAccountLinks.HolidayParentAccountLink",
-      "reason": "ADR 0216: Consumer-port adapter of Enrollment's setup link of a parent account; it signs the link through Identity \u0026 Access, which reads nothing and so runs in the registration's Träger transaction or when Delivery sends the acceptance mail, and translates the token into the page of the parents portal and its sign-in."
+      "reason": "ADR 0216: Binds Identity \u0026 Access's setup token for the Träger to the parent portal setup page. Missing configuration and token issuance failures are returned to the caller."
     },
     {
       "decision": "0116",
@@ -4787,8 +4712,8 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/parentExcusedRequestReads.FindByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "id": "roots/owners/parentExcusedRequestReads.FindIdentity",
+      "reason": "Projects the submitter and child IDs for parent sharing and translates Care Plan's tenant-scoped not-found sentinel into the workflow contract."
     },
     {
       "decision": "0090",
@@ -5848,12 +5773,12 @@
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",

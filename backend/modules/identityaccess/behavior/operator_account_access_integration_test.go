@@ -3,7 +3,9 @@ package behavior_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
@@ -619,12 +621,15 @@ func TestIntegration_GrantAccountTenantAccess_RequiresNamesWithoutPerson(t *test
 
 func TestIntegration_GrantAccountTenantAccess_ReactivatesAccountAfterRestoringLastRevokedSchool(t *testing.T) {
 	t.Parallel()
+	testpkg.SetupIsolatedTestDB(t)
 	db := testpkg.SetupTestDB(t)
 
-	service := buildOperatorAccountAccess(t, db)
+	auth := buildOperatorIdentity(t, db)
+	service := operatorAccountAccess{module: auth}
 	ctx := context.Background()
 
-	account := testpkg.CreateTestAccount(t, db, "access-reactivate")
+	email, _ := uniqueTestCredentials("access-reactivate")
+	account := testpkg.CreateTestAccountWithPassword(t, db, email, testPassword)
 	// This test's subject is the account's ONLY school, so the mapping
 	// CreateTestAccount adds for the test's own tenant has to go (#2419).
 	testpkg.UnclaimTestAccount(t, db, account.ID)
@@ -641,6 +646,9 @@ func TestIntegration_GrantAccountTenantAccess_ReactivatesAccountAfterRestoringLa
 	_, err := service.RevokeAccountTenantAccess(ctx, account.ID, accessTargetTenantID(t), operator.ID, testClientIP)
 	require.NoError(t, err)
 	assertAccountActive(t, db, account.ID, false)
+
+	// Model a pending wipe that has not yet been claimed by the scheduler.
+	pendingID := insertPendingAccountWideWipe(t, db, account.ID, accessTargetTenantID(t), "account_deactivated", time.Now())
 
 	// Restoring the final revoked school access also restores login capability.
 	entries, err := service.GrantAccountTenantAccess(ctx, account.ID, accessTargetTenantID(t),
@@ -668,6 +676,27 @@ func TestIntegration_GrantAccountTenantAccess_ReactivatesAccountAfterRestoringLa
 		Scan(ctx, &position)
 	require.NoError(t, err)
 	assert.Equal(t, "Gruppenleitung", position)
+
+	history, err := db.NewSelect().TableExpr("audit.auth_events").
+		Where("id = ? AND event_type = ?", pendingID, authEventTokenRevoked).
+		Where(`metadata @> ?`, `{"pending_account_wide_wipe":true}`).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, int(history), "completion must not update or delete the pending event")
+
+	completed, err := db.NewSelect().TableExpr("audit.auth_events").
+		Where("account_id = ? AND event_type = ?", account.ID, authEventAccountWideWipeCompleted).
+		Where(`metadata->>'pending_event_id' = ?`, strconv.FormatInt(pendingID, 10)).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, int(completed))
+
+	_, _, err = tenantPasswordLogin(auth, email, testPassword, testClientIP.String(), "", "")
+	require.NoError(t, err)
+	_, err = auth.CleanupExpiredTokens(ctx)
+	require.NoError(t, err)
+
+	assertTokenCountByPortal(t, db, account.ID, "tenant", 1)
 }
 
 func TestIntegration_GrantAccountTenantAccess_DoesNotReactivateManuallyDeactivatedAccount(t *testing.T) {

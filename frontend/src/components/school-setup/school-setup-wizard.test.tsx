@@ -110,7 +110,7 @@ vi.mock("./use-work-time-coverage", () => ({
 const api = vi.hoisted(() => ({
   setSchoolSetupStepSkipped: vi.fn(),
   completeSchoolSetup: vi.fn(),
-  setSchoolSetupDismissed: vi.fn(),
+  dismissSchoolSetup: vi.fn(),
 }));
 vi.mock("~/lib/school-setup-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/school-setup-api")>()),
@@ -510,7 +510,7 @@ describe("SchoolSetupWizard", () => {
 
   it("hides the checklist for good only after a confirmation", async () => {
     setupState = newSchool();
-    api.setSchoolSetupDismissed.mockResolvedValue({
+    api.dismissSchoolSetup.mockResolvedValue({
       ...newSchool(),
       dismissed: true,
     });
@@ -524,21 +524,19 @@ describe("SchoolSetupWizard", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
     );
-    expect(api.setSchoolSetupDismissed).not.toHaveBeenCalled();
+    expect(api.dismissSchoolSetup).not.toHaveBeenCalled();
     expect(
       screen.getByText(/Du kannst sie nicht wieder einblenden/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
-    expect(api.setSchoolSetupDismissed).not.toHaveBeenCalled();
+    expect(api.dismissSchoolSetup).not.toHaveBeenCalled();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
-    await waitFor(() =>
-      expect(api.setSchoolSetupDismissed).toHaveBeenCalledWith(true),
-    );
+    await waitFor(() => expect(api.dismissSchoolSetup).toHaveBeenCalledWith());
   });
 
   it("names the Träger in the confirmation of a session from the Träger-Portal", () => {

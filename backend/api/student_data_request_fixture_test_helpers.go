@@ -18,7 +18,7 @@ import (
 // suites stage and read back over the Care Plan owner.
 type StudentDataRequestTestRows interface {
 	Create(ctx context.Context, row *careplan.StudentDataChangeRequest) error
-	FindByID(ctx context.Context, raw any) (*careplan.StudentDataChangeRequest, error)
+	FindByID(ctx context.Context, id int64) (*careplan.StudentDataChangeRequest, error)
 	ListByStudent(ctx context.Context, studentID int64, statuses []string, limit int) ([]*careplan.StudentDataChangeRequest, error)
 	ListPendingForTenant(ctx context.Context, filters careplan.RequestQueueFilter) ([]*careplan.StudentDataChangeRequest, error)
 	HasPendingForField(ctx context.Context, studentID int64, target, field string) (bool, error)
@@ -46,11 +46,7 @@ func (r studentDataRequestRepository) Create(ctx context.Context, row *careplan.
 	return nil
 }
 
-func (r studentDataRequestRepository) FindByID(ctx context.Context, raw any) (*careplan.StudentDataChangeRequest, error) {
-	id, err := owners.LegacyScheduleID(raw)
-	if err != nil {
-		return nil, err
-	}
+func (r studentDataRequestRepository) FindByID(ctx context.Context, id int64) (*careplan.StudentDataChangeRequest, error) {
 	value, err := r.capability.FindStudentDataRequest(ctx, id, false)
 	if errors.Is(err, careplan.ErrStudentDataRequestNotFound) {
 		return nil, owners.RetainedNotFound("find by id")

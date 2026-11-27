@@ -1,8 +1,15 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import {
+  isAccessRefusal,
+  markRefused,
+  noteShownDataRefusal,
+  refusalFor,
+} from "~/lib/access-refusal";
 import { metadataLoadError } from "./metadata-load-error";
 import {
+  isRefusal,
   type RefusalGuard,
   useConfirmedResource,
   useRefusalGuard,
@@ -12,8 +19,11 @@ import {
   type SWRResponse,
   revalidateOrThrow,
   useOpeningRead,
+  useInvalidateMatching,
   useSWRAuth,
+  useSWRCacheKey,
 } from "~/lib/swr";
+import { isDiscardedAnswer, useSWRRequestGuard } from "~/lib/swr/hooks";
 
 type TraegerReaderOptions<T> = Omit<ReaderOptions<T>, "onSuccess" | "onError">;
 
@@ -64,9 +74,11 @@ export function useFreshTraegerResource<T>(
   key: string | null,
   fetcher: () => Promise<T>,
   object: string,
-  options?: Pick<TraegerReaderOptions<T>, "isPaused">,
+  options?: Pick<TraegerReaderOptions<T>, "isPaused"> & {
+    readonly refusalKey?: string;
+  },
 ) {
-  const { scoped, guard } = useTraegerScope(key);
+  const { scoped, guard } = useTraegerScope(key, options?.refusalKey);
   const opened = useOpeningRead(scoped, fetcher, {
     showCached: false,
     isPaused: options?.isPaused,
@@ -84,11 +96,92 @@ export function useFreshTraegerResource<T>(
   };
 }
 
+/**
+ * First pages, later pages and downloads share one permission across filters.
+ * The family itself is not a data key: ordinary list refreshes only invalidate
+ * the concrete keys, while a refusal also ends requests under the family key.
+ * Downloads withdraw the data but never report a refused list refresh.
+ */
+export function useTraegerListRequest(
+  family: string,
+  shownRows: () => { readonly key: string } | null,
+) {
+  const { data: session } = useSession();
+  const key = session?.user.scope === "org" ? family : null;
+  const cacheKey = useSWRCacheKey();
+  const scoped = key === null ? null : cacheKey(key);
+  const begin = useSWRRequestGuard();
+  const invalidate = useInvalidateMatching();
+
+  async function run<T>(
+    fetch: () => Promise<T>,
+    {
+      dataKey,
+      onRefusal,
+    }: {
+      dataKey?: string;
+      onRefusal?: (error: unknown) => void;
+    },
+  ) {
+    const complete = begin(key);
+    const completeData = dataKey === undefined ? complete : begin(dataKey);
+    const shown = shownRows();
+    let result: T;
+    try {
+      result = await fetch();
+    } catch (error) {
+      if (!isRefusal(error)) {
+        completeData(() => undefined);
+        throw error;
+      }
+      // Record refusals before the opening read can discard an old sort's
+      // answer. A second denial must not keep reopening the cleared list.
+      complete(() => {
+        onRefusal?.(error);
+        if (scoped === null || refusalFor(scoped) !== undefined) return;
+        if (
+          shown !== null &&
+          shown.key === dataKey &&
+          shown === shownRows() &&
+          completeData.isCurrent() &&
+          isAccessRefusal(error)
+        ) {
+          noteShownDataRefusal();
+        }
+        markRefused(scoped, error);
+        void invalidate((cached) => cached.startsWith(family), { clear: true });
+      });
+      throw error;
+    }
+    completeData(() => undefined);
+    return { result, isCurrent: completeData.isCurrent };
+  }
+
+  async function request<T>(fetch: () => Promise<T>, dataKey?: string) {
+    try {
+      return await run(fetch, { dataKey });
+    } catch (error) {
+      if (!isDiscardedAnswer(error)) throw error;
+    }
+  }
+
+  return {
+    read: async <T>(
+      dataKey: string,
+      fetch: () => Promise<T>,
+      onRefusal?: (error: unknown) => void,
+    ) => (await run(fetch, { dataKey, onRefusal })).result,
+    request,
+  };
+}
+
 /** The key only for a Träger session, with its refusal guard. */
-function useTraegerScope(key: string | null) {
+function useTraegerScope(key: string | null, refusalKey?: string) {
   const { data: session } = useSession();
   const scoped = session?.user.scope === "org" ? key : null;
-  const guard = useRefusalGuard(scoped);
+  const guard = useRefusalGuard(
+    scoped === null ? null : (refusalKey ?? scoped),
+  );
   return { scoped, guard };
 }
 

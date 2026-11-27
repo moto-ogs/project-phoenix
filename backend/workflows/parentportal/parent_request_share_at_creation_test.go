@@ -52,7 +52,7 @@ func buildSharingAtCreationServices(t *testing.T) (*parentService.Portal, parent
 		ParentRequestShares:    owners.BindParentRequestShareRecords(repos.ParentRequestShare),
 		ParentRequestEvents:    owners.NewParentRequestEvents(repos.ParentRequestEvent),
 		ExcusedRequests:        owners.NewParentExcusedAbsenceRequests(excused),
-		ExcusedRequestRepo:     reposCare.ExcusedAbsenceRequest,
+		ExcusedRequestRepo:     owners.NewParentExcusedRequestReads(reposCare.CarePlan()),
 		Settings: excusedApprovalSettings{
 			sickRequiresApproval:    true,
 			excusedRequiresApproval: true,

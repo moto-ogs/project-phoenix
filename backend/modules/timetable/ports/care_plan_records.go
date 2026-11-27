@@ -202,13 +202,11 @@ type CareArrivalRecords interface {
 	CreateArrivalException(context.Context, CareArrivalException) (CareArrivalException, error)
 	FindArrivalException(context.Context, int64) (CareArrivalException, error)
 	UpdateArrivalException(context.Context, CareArrivalException) error
-	DeleteArrivalExceptionsByStudent(context.Context, int64) error
 	ListArrivalExceptions(context.Context, CareScheduleFilter) ([]CareArrivalException, error)
 
 	CreateArrivalNote(context.Context, CareArrivalNote) (CareArrivalNote, error)
 	FindArrivalNote(context.Context, int64) (CareArrivalNote, error)
 	UpdateArrivalNote(context.Context, CareArrivalNote) error
-	DeleteArrivalNotesByStudent(context.Context, int64) error
 	ListArrivalNotes(context.Context, CareScheduleFilter) ([]CareArrivalNote, error)
 }
 
@@ -224,13 +222,11 @@ type CarePickupRecords interface {
 	CreatePickupException(context.Context, CarePickupException) (CarePickupException, error)
 	FindPickupException(context.Context, int64) (CarePickupException, error)
 	UpdatePickupException(context.Context, CarePickupException) error
-	DeletePickupExceptionsByStudent(context.Context, int64) error
 	ListPickupExceptions(context.Context, CareScheduleFilter) ([]CarePickupException, error)
 
 	CreatePickupNote(context.Context, CarePickupNote) (CarePickupNote, error)
 	FindPickupNote(context.Context, int64) (CarePickupNote, error)
 	UpdatePickupNote(context.Context, CarePickupNote) error
-	DeletePickupNotesByStudent(context.Context, int64) error
 	ListPickupNotes(context.Context, CareScheduleFilter) ([]CarePickupNote, error)
 }
 

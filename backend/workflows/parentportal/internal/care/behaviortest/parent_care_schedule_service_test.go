@@ -113,7 +113,7 @@ func TestCreateCareScheduleRequest_Happy(t *testing.T) {
 	svc, db, _, _ := buildCareScheduleService(t, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	view, err := svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	view, err := svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, view.PendingRequest, "the created request surfaces on the read view")
 	assert.True(t, view.PendingRequest.SubmittedBySelf)
@@ -155,7 +155,7 @@ func TestCreateCareScheduleRequest_RequiresRequestSubmit(t *testing.T) {
 	`, chain.TenantID, chain.StudentID, chain.GuardianProfileID)
 	require.NoError(t, err)
 
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.ErrorIs(t, err, parentportal.ErrGuardianPermissionDenied,
 		"submitting a care-schedule change request requires request.submit, not just notes.write")
 }
@@ -168,7 +168,7 @@ func TestCreateCareScheduleRequest_MessagingDisabledStillAllowed(t *testing.T) {
 	svc, db, _, _ := buildCareScheduleService(t, false) // messaging OFF
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	view, err := svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	view, err := svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, view.PendingRequest)
 }
@@ -193,7 +193,7 @@ func TestCreateCareScheduleRequest_RejectsArrivalWhenLegacySettingIsEnabled(t *t
 	payload := map[string]any{"weekdays": []any{map[string]any{
 		"weekday": 1, "arrival": "08:00", "pickup": "16:00",
 	}}}
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, payload)
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, payload, nil)
 	require.ErrorIs(t, err, parentportal.ErrCareRequestFieldDisabled)
 
 	var count int
@@ -216,7 +216,7 @@ func TestGetAndCreateCareScheduleRequest_AllFieldsDisabled(t *testing.T) {
 	assert.False(t, view.CanRequest)
 	assert.Equal(t, parentportal.CareScheduleRequestCapabilities{}, view.RequestCapabilities)
 
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.ErrorIs(t, err, parentportal.ErrCareRequestFieldDisabled)
 }
 
@@ -235,7 +235,7 @@ func TestGetChildCareSchedule_ReadViewReflectsPendingRequest(t *testing.T) {
 	assert.True(t, view.CanRequest, "messaging on + request.submit enables the request action")
 
 	// After filing a request, the read view surfaces it with its diff.
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 
 	view, err = svc.GetChildCareSchedule(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)

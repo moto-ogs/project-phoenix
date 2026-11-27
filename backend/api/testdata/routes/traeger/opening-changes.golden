@@ -1,0 +1,4 @@
+DELETE /traeger/opening-changes/{id}
+GET /traeger/opening-changes/
+POST /traeger/opening-changes/
+PUT /traeger/opening-changes/{id}

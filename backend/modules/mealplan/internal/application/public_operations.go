@@ -55,15 +55,7 @@ func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) (
 	if err != nil {
 		return mealplan.Day{}, err
 	}
-	expected := command.ExpectedVersion
-	if expected == "" && command.ExpectedDishes != nil {
-		read, err := normalizeDishes(*command.ExpectedDishes)
-		if err != nil {
-			return mealplan.Day{}, err
-		}
-		expected = dayVersion(read)
-	}
-	version, err := s.replace(ctx, date, dishes, expected, command.AccountID)
+	version, err := s.replace(ctx, date, dishes, command.ExpectedVersion, command.AccountID)
 	if err != nil {
 		return mealplan.Day{}, mapPublicError(err)
 	}

@@ -184,14 +184,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useToast: () => mockToast,
 }));
 
-// Mock icons
-vi.mock("./student-detail-components", () => ({
-  ChevronDownIcon: ({ className }: { className?: string }) => (
-    <span data-testid="chevron-icon" className={className} />
-  ),
-  WarningIcon: () => <span data-testid="warning-icon" />,
-}));
-
 describe("PersonalInfoEditPanel", () => {
   const mockOnCancel = vi.fn();
   const mockOnSave = vi.fn();

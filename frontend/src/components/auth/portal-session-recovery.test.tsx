@@ -55,6 +55,9 @@ vi.mock("~/lib/tenant-context", () => ({ TenantProvider: passthrough }));
 vi.mock("~/components/auth/tenant-auth-wrapper", () => ({
   TenantAuthWrapper: passthrough,
 }));
+vi.mock("~/components/settings/contrast-account-sync", () => ({
+  ContrastAccountSync: empty,
+}));
 
 const messages: unknown[] = [];
 class RecordingChannel {

@@ -35,13 +35,33 @@ const tenantMutate = vi.hoisted(() =>
 );
 vi.mock("~/lib/swr", () => ({ useTenantMutate: () => tenantMutate }));
 
-import {
-  PickupChangeAlert,
-  StudentPickupChanges,
-  upcomingPickupChanges,
-} from "./pickup-change-alert";
+import { StudentPickupChanges } from "./pickup-change-alert";
 
 const TODAY = "2026-09-09";
+
+beforeEach(() => {
+  notices.list = [];
+  notices.markRead.mockClear();
+  refreshes.length = 0;
+  tenantMutate.mockClear();
+  fetchPickup.mockReset().mockResolvedValue({ exceptions: [] });
+});
+
+function renderBanner(
+  exceptions: readonly PickupException[],
+  fresh: PickupChangeNotice[],
+) {
+  notices.list = fresh;
+  // The banner renders from the loaded record even if the cache discards refresh.
+  if (fresh.length > 0) tenantMutate.mockResolvedValueOnce(undefined);
+  return render(
+    <StudentPickupChanges
+      studentId="7"
+      exceptions={exceptions}
+      today={TODAY}
+    />,
+  );
+}
 
 function exception(over: Partial<PickupException>): PickupException {
   return {
@@ -57,124 +77,112 @@ function exception(over: Partial<PickupException>): PickupException {
   };
 }
 
-describe("upcomingPickupChanges", () => {
-  it("keeps changed days from today on, sorted, and drops the rest", () => {
-    const changes = upcomingPickupChanges(
-      [
-        exception({
-          id: "2",
-          exceptionDate: "2026-09-11",
-          pickupTime: "15:00:00",
-        }),
-        exception({ id: "1" }),
-        exception({ id: "3", exceptionDate: "2026-09-08" }),
-        exception({ id: "4", exceptionDate: "2026-09-10", source: "staff" }),
-        exception({
-          id: "6",
-          exceptionDate: "2026-09-13",
-          pickupTime: undefined,
-          source: "staff",
-        }),
-        exception({
-          id: "5",
-          exceptionDate: "2026-09-12",
-          pickupTime: undefined,
-        }),
-      ],
-      TODAY,
-    );
-
-    expect(changes).toEqual([
-      { date: TODAY, time: "14:30" },
-      { date: "2026-09-10", time: "14:30" },
-      { date: "2026-09-11", time: "15:00" },
-    ]);
-  });
-});
-
 // The banner is an event (#7707): it lists only the changes the reader has
 // not seen yet; the lasting state stands in the Betreuungszeiten.
-describe("PickupChangeAlert", () => {
+describe("StudentPickupChanges banner", () => {
   it("names the day and the new time of an unseen change", () => {
-    render(
-      <PickupChangeAlert
-        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
-        today={TODAY}
-        fresh={[notice()]}
-      />,
-    );
+    renderBanner([exception({ exceptionDate: "2026-09-10" })], [notice()]);
 
     expect(
-      screen.getByText("Abholzeit an einzelnen Tagen geändert"),
+      screen.getByText("Abholung an einzelnen Tagen geändert"),
     ).toBeInTheDocument();
     expect(screen.getByText("Morgen: 14:30 Uhr")).toBeInTheDocument();
   });
 
-  it("lists several unseen days with their weekday", () => {
-    render(
-      <PickupChangeAlert
-        exceptions={[
-          exception({}),
-          exception({
-            id: "2",
-            exceptionDate: "2026-09-14",
-            pickupTime: "13:00",
-          }),
-        ]}
-        today={TODAY}
-        fresh={[
-          notice({ date: TODAY }),
-          notice({ requestId: "22", date: "2026-09-14" }),
-        ]}
-      />,
+  it("lists timed changes from today on in date order, without seconds", () => {
+    renderBanner(
+      [
+        exception({
+          id: "2",
+          exceptionDate: "2026-09-14",
+          pickupTime: "13:00:00",
+          source: "staff",
+        }),
+        exception({}),
+        exception({ id: "3", exceptionDate: "2026-09-08" }),
+        exception({
+          id: "4",
+          exceptionDate: "2026-09-11",
+          pickupTime: undefined,
+        }),
+      ],
+      [
+        notice({ requestId: "22", date: "2026-09-14" }),
+        notice({ date: TODAY }),
+        notice({ requestId: "23", date: "2026-09-08" }),
+        notice({ requestId: "24", date: "2026-09-11" }),
+      ],
     );
 
-    expect(screen.getByText("Heute: 14:30 Uhr")).toBeInTheDocument();
-    expect(
-      screen.getByText("Montag, 14.09.2026: 13:00 Uhr"),
-    ).toBeInTheDocument();
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Heute: 14:30 Uhr");
+    expect(rows[1]).toHaveTextContent("Montag, 14.09.2026: 13:00 Uhr");
   });
 
   it("shows nothing for changes the reader has already seen", () => {
-    const { container } = render(
-      <PickupChangeAlert
-        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
-        today={TODAY}
-      />,
+    const { container } = renderBanner(
+      [exception({ exceptionDate: "2026-09-10" })],
+      [],
     );
 
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows nothing once the change is withdrawn or past", () => {
-    const { container } = render(
-      <PickupChangeAlert
-        exceptions={[exception({ exceptionDate: "2026-09-08" })]}
-        today={TODAY}
-        fresh={[notice({ date: "2026-09-08" })]}
-      />,
+  it("does not report a return to the regular time while an exception remains", () => {
+    const { container } = renderBanner(
+      [exception({ exceptionDate: "2026-09-10" })],
+      [notice({ withdrawn: true })],
     );
 
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("closes through its X", () => {
-    const onDismiss = vi.fn();
-    render(
-      <PickupChangeAlert
-        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
-        today={TODAY}
-        fresh={[notice()]}
-        onDismiss={onDismiss}
-      />,
+  it("names an unseen pickup person without presenting an existing time as new", () => {
+    renderBanner(
+      [exception({ exceptionDate: "2026-09-10" })],
+      [notice({ pickupTime: "", pickupPerson: "Tante Frieda" })],
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Hinweis zur geänderten Abholzeit schließen",
-      }),
+    expect(
+      screen.getByText("Morgen: Tante Frieda holt ab"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Neu")).toBeInTheDocument();
+    expect(screen.queryByText("Morgen: 14:30 Uhr")).not.toBeInTheDocument();
+  });
+
+  it("names a withdrawn pickup person without presenting a time change", () => {
+    renderBanner(
+      [],
+      [
+        notice({
+          pickupTime: "",
+          pickupPerson: "Tante Frieda",
+          withdrawn: true,
+        }),
+      ],
     );
-    expect(onDismiss).toHaveBeenCalledOnce();
+
+    expect(
+      screen.getByText("Morgen: Abholperson zurückgenommen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("wieder normale Abholzeit"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names both legs of a withdrawn pickup change", () => {
+    renderBanner(
+      [],
+      [notice({ pickupPerson: "Tante Frieda", withdrawn: true })],
+    );
+
+    expect(
+      screen.getByText("Morgen: wieder normale Abholzeit"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Morgen: Abholperson zurückgenommen"),
+    ).toBeInTheDocument();
   });
 });
 
@@ -185,6 +193,7 @@ function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
     studentFirstName: "Mia",
     date: "2026-09-10",
     pickupTime: "14:30",
+    pickupPerson: "",
     withdrawn: false,
     informedAt: "2026-09-09T11:00:00Z",
     ...over,
@@ -193,25 +202,22 @@ function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
 
 // The changes the reader had not seen yet carry „Neu“; a taken-back change
 // has no exception any more and says that the regular time applies (#6855).
-describe("PickupChangeAlert with unseen changes", () => {
+describe("StudentPickupChanges with unseen changes", () => {
   it("lists only unseen days, including a taken-back day", () => {
-    render(
-      <PickupChangeAlert
-        exceptions={[
-          exception({ exceptionDate: "2026-09-10" }),
-          exception({ id: "2", exceptionDate: "2026-09-14" }),
-        ]}
-        today={TODAY}
-        fresh={[
-          notice(),
-          notice({
-            requestId: "22",
-            date: "2026-09-11",
-            pickupTime: "",
-            withdrawn: true,
-          }),
-        ]}
-      />,
+    renderBanner(
+      [
+        exception({ exceptionDate: "2026-09-10" }),
+        exception({ id: "2", exceptionDate: "2026-09-14" }),
+      ],
+      [
+        notice(),
+        notice({
+          requestId: "22",
+          date: "2026-09-11",
+          pickupTime: "",
+          withdrawn: true,
+        }),
+      ],
     );
 
     expect(screen.getByText("Morgen: 14:30 Uhr")).toBeInTheDocument();
@@ -227,14 +233,6 @@ describe("PickupChangeAlert with unseen changes", () => {
 });
 
 describe("StudentPickupChanges", () => {
-  beforeEach(() => {
-    notices.list = [];
-    notices.markRead.mockClear();
-    refreshes.length = 0;
-    tenantMutate.mockClear();
-    fetchPickup.mockReset().mockResolvedValue({ exceptions: [] });
-  });
-
   it("reloads the pickup times, then confirms only this child's loaded changes", async () => {
     const mine = notice();
     notices.list = [mine, notice({ requestId: "30", studentId: "8" })];
@@ -251,6 +249,24 @@ describe("StudentPickupChanges", () => {
     );
     expect(refreshes).toEqual([expect.stringContaining("7")]);
     expect(screen.getByText("Neu")).toBeInTheDocument();
+  });
+
+  it("shows and confirms a pickup-person-only notice", async () => {
+    const personOnly = notice({
+      pickupTime: "",
+      pickupPerson: "Tante Frieda",
+    });
+    notices.list = [personOnly];
+    render(
+      <StudentPickupChanges studentId="7" exceptions={[]} today={TODAY} />,
+    );
+
+    expect(
+      screen.getByText("Morgen: Tante Frieda holt ab"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(notices.markRead).toHaveBeenCalledWith("7", [personOnly]),
+    );
   });
 
   it("keeps notices unread when fetching fresh pickup times fails", async () => {
@@ -345,7 +361,7 @@ describe("StudentPickupChanges", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Hinweis zur geänderten Abholzeit schließen",
+        name: "Hinweis zur geänderten Abholung schließen",
       }),
     );
     expect(screen.queryByTestId("pickup-change-alert")).not.toBeInTheDocument();

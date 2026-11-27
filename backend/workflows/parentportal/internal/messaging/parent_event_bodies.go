@@ -28,10 +28,10 @@ func (s *Service) EmitSelfServicePill(ctx context.Context, tenantID, studentID, 
 // WakeChildGuardians fans a message-INDEPENDENT parent_child_updated SSE event
 // to EVERY guardian of the child, so a SECOND guardian's already-open parents-
 // app tab refetches the child's care state after THIS guardian's self-service
-// write (sick note, care exception). emitSelfServicePill only appends a pill to
+// write (sick note, care exception). EmitSelfServicePill only appends a pill to
 // the ACTING guardian's own thread and wakes that guardian; a co-guardian would
 // otherwise keep showing a stale "Heute" pickup time or presence until they
-// refocus or reload (#1725 review). Like emitSelfServicePill it MUST be
+// refocus or reload (#1725 review). Like EmitSelfServicePill it MUST be
 // scheduled from a tenant.RegisterAfterCommit callback: BroadcastChildUpdate-
 // ToGuardians opens its own detached tenant transaction to read the guardian
 // list, so a woken client never reads the pre-commit snapshot. A nil emitter is

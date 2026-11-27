@@ -136,64 +136,12 @@ export function SimpleEmptyState({
   return <UIEmptyState title={title} description={description} />;
 }
 
-export function SelectWithChevron({
-  children,
-  value,
-  onChange,
-  id,
-  name,
-  disabled,
-  required,
-  "aria-label": ariaLabel,
-  "aria-invalid": ariaInvalid,
-  "aria-describedby": ariaDescribedBy,
-}: React.SelectHTMLAttributes<HTMLSelectElement> & {
-  readonly children: React.ReactNode;
-}) {
-  const options = Children.toArray(children)
-    .filter(isValidElement)
-    .map((child) => {
-      const optionProps = (
-        child as React.ReactElement<
-          React.OptionHTMLAttributes<HTMLOptionElement>
-        >
-      ).props;
-      return {
-        value: optionProps.value != null ? String(optionProps.value) : "",
-        label:
-          typeof optionProps.children === "string"
-            ? optionProps.children
-            : String(optionProps.children ?? ""),
-        disabled: optionProps.disabled,
-      };
-    });
-
-  // Without an explicit aria-label, name the field (trigger AND popup listbox)
-  // from the associated FormField <label>, which carries id `${id}-label`.
-  // CustomSelect forwards ariaLabelledBy to the popup, which cannot be reached
-  // by the label's htmlFor the way the trigger button is.
-  const ariaLabelledBy = !ariaLabel && id ? `${id}-label` : undefined;
-
-  return (
-    <CustomSelect
-      id={id}
-      name={name}
-      value={value != null ? String(value) : ""}
-      options={options}
-      onChange={(next) =>
-        onChange?.({
-          target: { value: next },
-        } as unknown as React.ChangeEvent<HTMLSelectElement>)
-      }
-      disabled={disabled}
-      required={required}
-      ariaLabel={ariaLabel}
-      ariaLabelledBy={ariaLabelledBy}
-      ariaDescribedBy={ariaDescribedBy}
-      invalid={ariaInvalid === true || ariaInvalid === "true"}
-    />
-  );
-}
+export const POSITION_OPTIONS = [
+  { value: "", label: "Position auswählen..." },
+  { value: "Pädagogische Fachkraft", label: "Pädagogische Fachkraft" },
+  { value: "OGS-Büro", label: "OGS-Büro" },
+  { value: "Extern", label: "Extern" },
+] as const;
 
 export function PlusIcon() {
   return <Plus className="h-5 w-5" strokeWidth={2} aria-hidden="true" />;

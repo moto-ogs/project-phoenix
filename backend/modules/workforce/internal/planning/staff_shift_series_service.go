@@ -118,17 +118,15 @@ type staffShiftSeriesService struct {
 	shiftTypes    ShiftTypeService
 	shiftService  StaffShiftService
 	// lockStaffShifts is the per-staff write lock shared with single-shift
-	// CRUD. Nil skips the lock (unit tests without a database).
+	// CRUD.
 	lockStaffShifts func(ctx context.Context, staffID int64) error
 	broadcaster     realtime.Broadcaster
 	logger          *slog.Logger
 	today           func() calendar.Date
 	// nonWorkingDays is the School Calendar read behind the holiday, Ferien
 	// and closing-day skips (#3820). Nil skips none.
+	absences       SickReportReader
 	nonWorkingDays SeriesNonWorkingDayReader
-	// sickReports cancels the occurrences on a staff member's full sick days
-	// (#6302). Nil plans every occurrence.
-	sickReports SickReportReader
 	// guard checks the occurrences over all Einsatzorte of a Personalakte
 	// (#4708). Nil checks nothing.
 	guard *planGuard
@@ -146,7 +144,7 @@ func NewStaffShiftSeriesService(
 	lockStaffShifts func(ctx context.Context, staffID int64) error,
 	logger *slog.Logger,
 	shiftService StaffShiftService,
-	opts ...StaffShiftSeriesOption,
+	schedule SeriesSchedule,
 ) StaffShiftSeriesService {
 	service := &staffShiftSeriesService{
 		seriesRepo:      seriesRepo,
@@ -158,45 +156,28 @@ func NewStaffShiftSeriesService(
 		shiftService:    shiftService,
 		lockStaffShifts: lockStaffShifts,
 		logger:          logger,
+		today:           schedule.Today,
+		broadcaster:     schedule.Broadcaster,
+		nonWorkingDays:  schedule.NonWorkingDays,
+		absences:        schedule.Absences,
 	}
 	// The series checks its occurrences with the working-time check of the
 	// shift service (#4708).
 	if shifts, ok := shiftService.(*staffShiftService); ok {
-		service.guard = shifts.guard
+		service.guard = shifts.Guard
 	}
-	for _, opt := range opts {
-		if opt != nil {
-			opt(service)
-		}
-	}
-	if service.today == nil {
-		panic("workforce staff shift series: the school day clock is required (WithStaffShiftSeriesToday)")
+	if service.today == nil || service.absences == nil {
+		panic("workforce staff shift series: the school day clock and absence reader are required")
 	}
 	return service
 }
 
-// StaffShiftSeriesOption binds an optional collaborator at construction time
-// (#3219; see StaffShiftOption).
-type StaffShiftSeriesOption func(*staffShiftSeriesService)
-
-// WithStaffShiftSeriesToday overrides the calendar-day clock the
-// materializer and the replans compare against; the service requires it.
-func WithStaffShiftSeriesToday(today func() calendar.Date) StaffShiftSeriesOption {
-	return func(s *staffShiftSeriesService) {
-		if today != nil {
-			s.today = today
-		}
-	}
-}
-
-// WithStaffShiftSeriesBroadcaster injects the tenant-wide SSE broadcaster
-// used to invalidate time-tracking views after committed series writes.
-func WithStaffShiftSeriesBroadcaster(broadcaster realtime.Broadcaster) StaffShiftSeriesOption {
-	return func(s *staffShiftSeriesService) { s.broadcaster = broadcaster }
-}
-
-func (s *staffShiftSeriesService) todayDate() calendar.Date {
-	return s.today()
+// SeriesSchedule supplies the school clock and optional calendar and broadcast integrations.
+type SeriesSchedule struct {
+	Absences       SickReportReader
+	Today          func() calendar.Date
+	NonWorkingDays SeriesNonWorkingDayReader
+	Broadcaster    realtime.Broadcaster
 }
 
 // updateTodayOccurrence keeps a currently planned series occurrence as the
@@ -234,7 +215,7 @@ func (s *staffShiftSeriesService) updateTodayOccurrence(
 	// A cancellation (and its replacement coverage) is a deliberate current-day
 	// deviation. Resizing it through UpdateShift can invalidate its covers, so
 	// retain the cancellation and apply the permanent rule only from tomorrow.
-	if occurrence.Date != s.todayDate() || occurrence.Cancelled ||
+	if occurrence.Date != s.today() || occurrence.Cancelled ||
 		(occurrence.Detached && !updateRetainedOccurrence) {
 		return false, nil
 	}
@@ -278,13 +259,6 @@ func (s *staffShiftSeriesService) getLogger() *slog.Logger {
 
 func (s *staffShiftSeriesService) broadcastTimeTrackingChanged(ctx context.Context) {
 	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger())
-}
-
-func (s *staffShiftSeriesService) lockShiftWrites(ctx context.Context, staffID int64) error {
-	if s.lockStaffShifts == nil {
-		return nil
-	}
-	return s.lockStaffShifts(ctx, staffID)
 }
 
 // weekCycle is the period's A/B alternation in the School Calendar's
@@ -336,7 +310,7 @@ type seriesMaterialization struct {
 // cascade's state (#6302).
 func (s *staffShiftSeriesService) materializeSeries(ctx context.Context, series *StaffShiftSeries, period *SeriesPeriod) (seriesMaterialization, error) {
 	var result seriesMaterialization
-	from, to := seriesWindow(series, period, s.todayDate())
+	from, to := seriesWindow(series, period, s.today())
 	if to.Before(from) {
 		return result, nil
 	}
@@ -360,7 +334,7 @@ func (s *staffShiftSeriesService) materializeSeries(ctx context.Context, series 
 	if err != nil {
 		return result, err
 	}
-	sickDays, err := sickDaysIn(ctx, s.sickReports, series.StaffID, from, to)
+	sickDays, err := sickDaysIn(ctx, s.absences, series.StaffID, from, to)
 	if err != nil {
 		return result, err
 	}
@@ -536,13 +510,13 @@ func (s *staffShiftSeriesService) CreateSeries(ctx context.Context, series *Staf
 	if err != nil {
 		return nil, err
 	}
-	if !hasFutureSeriesOccurrence(series, period, s.todayDate()) {
+	if !hasFutureSeriesOccurrence(series, period, s.today()) {
 		return nil, withReason(fmt.Errorf(
 			"%w: no occurrences left to create for the selected weekdays and week pattern",
 			ErrSeriesInvalid,
 		), workforce.ErrShiftSeriesNoOccurrences)
 	}
-	if err := s.lockShiftWrites(ctx, series.StaffID); err != nil {
+	if err := s.lockStaffShifts(ctx, series.StaffID); err != nil {
 		return nil, err
 	}
 	written, err := s.seriesRepo.CreateStaffShiftSeries(ctx, seriesRowToCapability(series))
@@ -570,7 +544,7 @@ func (s *staffShiftSeriesService) CreateSeries(ctx context.Context, series *Staf
 // ensureShiftTypeActive mirrors the single-shift rule: a freshly assigned
 // type must exist and be active; nil is an untyped series.
 func (s *staffShiftSeriesService) ensureShiftTypeActive(ctx context.Context, id *int64) error {
-	if id == nil || s.shiftTypes == nil {
+	if id == nil {
 		return nil
 	}
 	shiftType, err := s.shiftTypes.GetShiftType(ctx, *id)
@@ -605,14 +579,14 @@ func (s *staffShiftSeriesService) EndSeries(ctx context.Context, seriesID int64,
 		return nil, err
 	}
 	effective := from
-	tomorrow := s.todayDate().AddDays(1)
+	tomorrow := s.today().AddDays(1)
 	if tomorrow.After(effective) {
 		effective = tomorrow
 	}
 	if effective.Before(series.ValidFrom) {
 		effective = series.ValidFrom
 	}
-	if err := s.lockShiftWrites(ctx, series.StaffID); err != nil {
+	if err := s.lockStaffShifts(ctx, series.StaffID); err != nil {
 		return nil, err
 	}
 	if err := shiftWriteError("cap staff shift series valid_until", s.seriesRepo.CapStaffShiftSeries(ctx, series.ID, effective.String())); err != nil {

@@ -394,6 +394,21 @@ export const SchoolDayClosingSchema: z.ZodType<SchoolDayClosing, unknown> = obje
   until: nullable(calendarDate),
 });
 
+/** Go: traegerview.SchoolDayOpening */
+export interface SchoolDayOpening {
+  opens_at: string;
+  closes_at: string;
+  since: string | null;
+  until: string | null;
+}
+
+export const SchoolDayOpeningSchema: z.ZodType<SchoolDayOpening, unknown> = object<SchoolDayOpening>({
+  opens_at: str,
+  closes_at: str,
+  since: nullable(calendarDate),
+  until: nullable(calendarDate),
+});
+
 /** Go: traegerview.SchoolDayChanges */
 export interface SchoolDayChanges {
   id: string;
@@ -403,6 +418,9 @@ export interface SchoolDayChanges {
   city: string;
   closing_days: SchoolDayClosing[] | null;
   cancelled_blocks: number;
+  opening_changes: SchoolDayOpening[] | null;
+  meal_cancelled: boolean;
+  closed_rooms: number;
 }
 
 export const SchoolDayChangesSchema: z.ZodType<SchoolDayChanges, unknown> = object<SchoolDayChanges>({
@@ -413,6 +431,9 @@ export const SchoolDayChangesSchema: z.ZodType<SchoolDayChanges, unknown> = obje
   city: str,
   closing_days: nullable(arr(SchoolDayClosingSchema)),
   cancelled_blocks: safeInt,
+  opening_changes: nullable(arr(SchoolDayOpeningSchema)),
+  meal_cancelled: bool,
+  closed_rooms: safeInt,
 });
 
 /** Go: traegerview.SchoolsDayChanges */
@@ -770,6 +791,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/day-changes",
     portals: ["org"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(SchoolsDayChangesSchema),
   },
   "GET /traeger/schools/export": {

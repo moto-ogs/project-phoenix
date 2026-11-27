@@ -99,7 +99,7 @@ School-level feature flags still apply after guardian permission passes.
 Before adding new parent portal guardian authorization code, search:
 
 ```bash
-rg "GuardianPermission|parent_portal|StudentGuardianHasPermission|ResolvePermittedChild" backend
+rg "GuardianPermission|parent_portal|ResolvePermittedChild" backend
 ```
 
 Then extend the existing helper/service path rather than creating a new authorization mechanism.

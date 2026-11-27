@@ -17,6 +17,7 @@ const (
 	settingClassTimetableChangedEnabled        = "notifications.class_timetable_changed_enabled"
 	settingSchoolClosingDayEnabled             = "notifications.school_closing_day_enabled"
 	settingOpeningChangeEnabled                = "notifications.opening_change_enabled"
+	settingRoomClosedEnabled                   = "notifications.room_closed_enabled"
 	settingOnDutyOnly                          = "notifications.on_duty_only"
 	settingRemindersPickupUpcomingEnabled      = "reminders.pickup_upcoming_enabled"
 	settingRemindersPickupOverdueEnabled       = "reminders.pickup_overdue_enabled"

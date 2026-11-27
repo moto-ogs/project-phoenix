@@ -76,15 +76,16 @@ const moduleFuncLenThreshold = 60
 var moduleFuncLenAllowlist = map[string]int{
 	// Lowered by #7808: the cross-tenant visitor read left the presence wiring.
 	"api/active_test_helpers.go:buildActiveTestModule":            181,
-	"api/auth_test_helpers.go:NewAuthTestModule":                  164,
+	"api/auth_test_helpers.go:NewAuthTestModule":                  161,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
 	"api/guardians_composition.go:NewGuardiansResource":           91,
-	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,
+	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    76,
 	"api/iot/compose/compose.go:(*Resource).Router":               104,
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
-	// activity read; gofmt splits its root step (+2).
-	"api/root_serve.go:composeServeRoot":                                 508,
+	// activity read; gofmt splits its root step (+2). The room-closure
+	// notification binding adds four lines (#8234).
+	"api/root_serve.go:composeServeRoot":                                 505,
 	"api/root_test_root.go:composeTestRootWith":                          280,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,
 	"api/serve_mounts_students.go:requestReviewDependencies":             100,
@@ -564,7 +565,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 118,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 129,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 128,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStudents": 119,
 	// ADR 0087.
@@ -588,10 +589,10 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"realtime/hub.go:(*Hub).Unregister": 61,
 	"roots/owners/parent_messaging_announcement_access_port.go:BindParentAnnouncementAccess": 125,
-	"roots/owners/root_identity.go:BuildIdentityAccess":                                      106,
+	"roots/owners/root_identity.go:BuildIdentityAccess":                                      105,
 	// ADR 0078: the worker composes the Meal Plan whose orders it settles.
 	// ADR 0263: the worker hands its clock to the Timetable owner (+3).
-	"roots/owners/root_worker.go:ComposeWorker": 345,
+	"roots/owners/root_worker.go:ComposeWorker": 344,
 	// ADR 0110: the worker passes the retention of the public holiday
 	// registrations.
 	"roots/owners/worker.go:NewWorker": 87,

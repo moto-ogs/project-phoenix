@@ -8,7 +8,6 @@ import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { staffTimeKeys } from "~/lib/swr/staff-keys";
 
 import { EditHistoryAccordion } from "~/components/time-tracking/edit-history-accordion";
-import { Alert } from "~/components/ui/alert";
 import {
   DataTable,
   type DataTableColumn,
@@ -263,7 +262,6 @@ export function StaffSessionTable({
   accountStartDateError,
   onRetryAccountStartDate,
   today,
-  isAdminView,
   plannedShifts,
   editsUnresolved,
   onEditDay,
@@ -331,7 +329,6 @@ export function StaffSessionTable({
   readonly accountStartDateError: unknown;
   readonly onRetryAccountStartDate?: () => void;
   readonly today: Date;
-  readonly isAdminView: boolean;
   // Planned Dienstplan shifts for the visible range. When provided (admin
   // detail view, #1844), a "Plan" column shows the geplante Schicht next to the
   // Ist times so plan, actual and — via the audit expand — the deviation reason
@@ -416,7 +413,7 @@ export function StaffSessionTable({
   // Planned Dienstplan shifts per day for the "Plan" column (#1844). Absent
   // unless the caller passes plannedShifts (admin detail view).
   const showPlan = plannedShifts != null;
-  const canEdit = isAdminView && !editsUnresolved;
+  const canEdit = !editsUnresolved;
   const shiftsByDate = useMemo(() => {
     const map = new Map<string, PlanShift[]>();
     for (const shift of plannedShifts ?? []) {
@@ -979,98 +976,84 @@ export function StaffSessionTable({
         </div>
       ),
     },
-    ...(isAdminView
-      ? [
-          {
-            key: "actions",
-            header: "Aktionen",
-            headerSrOnly: true,
-            render: (row: DayRow) =>
-              row.canEdit && (
-                // Zeilenaktion nur im Kebab der Zeile (BAUARTEN-SPEC Bauart 1
-                // Regel 4). stopPropagation hält den Menüklick vom Zeilenklick
-                // fern, der die Änderungshistorie auf- und zuklappt.
-                <div
-                  className="flex shrink-0 items-center"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  role="presentation"
-                >
-                  <OverflowMenu
-                    ariaLabel={`Aktionen für ${formatShortDate(row.day)}`}
-                    triggerSize="sm"
-                    items={[
+    {
+      key: "actions",
+      header: "Aktionen",
+      headerSrOnly: true,
+      render: (row: DayRow) =>
+        row.canEdit && (
+          // Zeilenaktion nur im Kebab der Zeile (BAUARTEN-SPEC Bauart 1
+          // Regel 4). stopPropagation hält den Menüklick vom Zeilenklick
+          // fern, der die Änderungshistorie auf- und zuklappt.
+          <div
+            className="flex shrink-0 items-center"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <OverflowMenu
+              ariaLabel={`Aktionen für ${formatShortDate(row.day)}`}
+              triggerSize="sm"
+              items={[
+                {
+                  label:
+                    row.session == null
+                      ? "Eintrag nachtragen"
+                      : row.hasMultipleBlocks
+                        ? "Block nachtragen"
+                        : "Eintrag bearbeiten",
+                  description:
+                    row.session == null || row.hasMultipleBlocks
+                      ? "Öffnet ein Formular, um Arbeitszeit mit Begründung nachzutragen."
+                      : "Öffnet den Eintrag, jede Änderung braucht eine Begründung.",
+                  icon: <SquarePen className="h-4 w-4" aria-hidden />,
+                  onClick: () => {
+                    // On a multi-block day the entry adds a further
+                    // block; each existing block has its own menu in its
+                    // sub-row.
+                    const targetSession = row.hasMultipleBlocks
+                      ? null
+                      : (row.originalSession ?? null);
+                    const targetDate = targetSession
+                      ? row.originalSessionDate
+                      : row.day;
+                    if (onEditDay) {
+                      onEditDay(targetDate, targetSession, row.absence ?? null);
+                    } else {
+                      setEditModal({
+                        mode: targetSession == null ? "nachtragen" : "edit",
+                        date: targetDate,
+                        session: targetSession,
+                      });
+                    }
+                  },
+                },
+                ...(row.session == null &&
+                row.absence == null &&
+                toISODate(row.day) < todayKey &&
+                onBackfillAbsence
+                  ? [
                       {
-                        label:
-                          row.session == null
-                            ? "Eintrag nachtragen"
-                            : row.hasMultipleBlocks
-                              ? "Block nachtragen"
-                              : "Eintrag bearbeiten",
+                        label: "Abwesenheit nachtragen",
                         description:
-                          row.session == null || row.hasMultipleBlocks
-                            ? "Öffnet ein Formular, um Arbeitszeit mit Begründung nachzutragen."
-                            : "Öffnet den Eintrag, jede Änderung braucht eine Begründung.",
-                        icon: <SquarePen className="h-4 w-4" aria-hidden />,
-                        onClick: () => {
-                          // On a multi-block day the entry adds a further
-                          // block; each existing block has its own menu in its
-                          // sub-row.
-                          const targetSession = row.hasMultipleBlocks
-                            ? null
-                            : (row.originalSession ?? null);
-                          const targetDate = targetSession
-                            ? row.originalSessionDate
-                            : row.day;
-                          if (onEditDay) {
-                            onEditDay(
-                              targetDate,
-                              targetSession,
-                              row.absence ?? null,
-                            );
-                          } else {
-                            setEditModal({
-                              mode:
-                                targetSession == null ? "nachtragen" : "edit",
-                              date: targetDate,
-                              session: targetSession,
-                            });
-                          }
-                        },
+                          "Öffnet ein Formular, um für diesen Tag eine Abwesenheit einzutragen.",
+                        icon: <CalendarPlus className="h-4 w-4" aria-hidden />,
+                        onClick: () => onBackfillAbsence(row.day, "absence"),
                       },
-                      ...(row.session == null &&
-                      row.absence == null &&
-                      toISODate(row.day) < todayKey &&
-                      onBackfillAbsence
-                        ? [
-                            {
-                              label: "Abwesenheit nachtragen",
-                              description:
-                                "Öffnet ein Formular, um für diesen Tag eine Abwesenheit einzutragen.",
-                              icon: (
-                                <CalendarPlus className="h-4 w-4" aria-hidden />
-                              ),
-                              onClick: () =>
-                                onBackfillAbsence(row.day, "absence"),
-                            },
-                            {
-                              label: "Krankmeldung nachtragen",
-                              description:
-                                "Öffnet ein Formular, um diesen Tag als krank einzutragen.",
-                              icon: (
-                                <Thermometer className="h-4 w-4" aria-hidden />
-                              ),
-                              onClick: () => onBackfillAbsence(row.day, "sick"),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </div>
-              ),
-          },
-        ]
-      : []),
+                      {
+                        label: "Krankmeldung nachtragen",
+                        description:
+                          "Öffnet ein Formular, um diesen Tag als krank einzutragen.",
+                        icon: <Thermometer className="h-4 w-4" aria-hidden />,
+                        onClick: () => onBackfillAbsence(row.day, "sick"),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        ),
+    },
   ];
 
   const renderSubRows = (
@@ -1260,12 +1243,6 @@ export function StaffSessionTable({
         }
         emptyState="In diesem Zeitraum gibt es keine Tage."
       />
-      {!isAdminView && (
-        <Alert
-          type="info"
-          message="Eigene Arbeitszeiten können auf der Seite Zeiterfassung bearbeitet werden."
-        />
-      )}
       {!onEditDay && editModal && (
         <AdminSessionEditModal
           isOpen

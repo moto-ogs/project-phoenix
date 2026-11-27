@@ -32,6 +32,7 @@ type seriesTestEnv struct {
 	seriesRows     *seriesFixtureStore
 	exceptionRows  *exceptionFixtureStore
 	series         planning.StaffShiftSeriesService
+	shiftTypes     planning.ShiftTypeService
 	shifts         planning.StaffShiftService
 	capStaffSeries func(context.Context, int64, string) (int64, error)
 }
@@ -57,15 +58,13 @@ func setupSeriesTest(t *testing.T) *seriesTestEnv {
 	shiftTypes := planning.NewShiftTypeService(workTime, slog.Default())
 	lockStaffShifts := workforceCompose.NewStaffShiftLock(db)
 	shifts := planning.NewStaffShiftService(shiftRows.Capability, owners.NewPlanStaffDirectory(repoFactoryPeople.Staff), shiftTypes, lockStaffShifts, slog.Default(),
-		planning.WithStaffShiftSeriesExceptions(exceptionRows.Capability),
-		planning.WithStaffShiftDeviationEvents(owners.NewShiftMoveAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DeviationEvent)),
-		// The shift writes decide on the series' day, not the wall clock.
-		planning.WithStaffShiftToday(today),
+		owners.NewShiftMoveAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DeviationEvent),
+		planning.ShiftSchedule{Absences: shiftRows.Capability, Today: today, Exceptions: exceptionRows.Capability, LockStaffRows: api.ShiftPlanningTestStaffRowLock(testpkg.NewDatabase(t, db))},
 	)
 	series := planning.NewStaffShiftSeriesService(
 		seriesRows.Capability, exceptionRows.Capability, shiftRows.Capability, owners.NewPlanStaffDirectory(repoFactoryPeople.Staff), planning.SchoolCalendarPeriods(calendarOwner),
 		shiftTypes, lockStaffShifts, slog.Default(), shifts,
-		planning.WithStaffShiftSeriesToday(today),
+		planning.SeriesSchedule{Absences: shiftRows.Capability, Today: today},
 	)
 
 	env := &seriesTestEnv{
@@ -79,6 +78,7 @@ func setupSeriesTest(t *testing.T) *seriesTestEnv {
 		exceptionRows:  exceptionRows,
 		series:         series,
 		shifts:         shifts,
+		shiftTypes:     shiftTypes,
 		capStaffSeries: workTime.CapStaffShiftSeriesForStaff,
 	}
 	return env

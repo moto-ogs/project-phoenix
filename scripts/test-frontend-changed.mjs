@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { parseArgs } from "node:util";
 
 // Vitest's module graph cannot discover dependencies created by filesystem scans.
 // Only allowlisted source paths use changed-file selection. Except Markdown
@@ -70,6 +71,11 @@ if (movedOnly) {
   process.exit(0);
 }
 
+function frontendGuidance(file) {
+  return file.startsWith("frontend/") &&
+    (file.endsWith(".md") || /^frontend\/\.(?:agents|claude)\//.test(file));
+}
+
 function selectionMode(files) {
   let changed;
   if (files !== undefined) {
@@ -78,32 +84,51 @@ function selectionMode(files) {
   } else changed = changedPaths();
   // Tests in these source areas use Vitest's changed graph too. Declaration
   // files have no runtime emission; source-scanning guards still run with them.
-  // Markdown skips lint/build, but tests may read it. Keep its guard-only
+  // Guidance skips lint/build, but tests may read it. Keep its guard-only
   // route aligned with the workflow filters; never silently skip consumers.
   // Every other path/type outside this allowlist defaults to the full suite.
   const sourceModule = /^frontend\/src\/(?:app|components|contexts|hooks|i18n|lib|server)\/.+\.(?:[cm]?[jt]s|[jt]sx)$/;
-  const frontend = [...changed].filter(file => file.startsWith("frontend/") && !file.endsWith(".md"));
-  // Its behavior suite is an unconditional external guard, including on deletion.
-  if (frontend.some(file => !sourceModule.test(file) &&
-    file !== "frontend/scripts/product-screenshots/quality.ts") ||
-    ["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
-      ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
+  const frontend = [...changed].filter(file => file.startsWith("frontend/") && !frontendGuidance(file));
+  if (["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
+    ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
+  const messages = "frontend/src/i18n/messages/";
+  let fullDom = changed.has(messages + "de.generated.ts");
+  for (const file of frontend) {
+    // A deleted catalogue or fragment can no longer be followed by Vitest.
+    // The sparse planner knows only names; the executing checkout checks existence.
+    if (file.startsWith(messages) && files === undefined && !existsSync(resolve(cwd, "..", file))) return "full";
+    if (sourceModule.test(file) || file === "frontend/scripts/product-screenshots/quality.ts") continue;
+    const fragment = /^frontend\/src\/i18n\/messages\/([a-z]{2})\/(?:[A-Za-z][A-Za-z0-9_]*\/)*[A-Za-z][A-Za-z0-9_]*\.json$/.exec(file);
+    if (!fragment || !changed.has(messages + fragment[1] + ".generated.ts")) return "full";
+    // Facades embed their fragments, so the Node graph must see both inputs.
+    // DOM setup injects the German catalogue even into tests that do not import it.
+    fullDom = true;
+  }
+  if (fullDom) return "full-dom";
   if (frontend.length) return "incremental";
-  if ([...changed].some(file => file.startsWith("frontend/") && file.endsWith(".md") ||
+  if ([...changed].some(file => frontendGuidance(file) ||
     file.startsWith("backend/") && !file.endsWith(".md") ||
     file === "scripts/dev-native.sh" || file === ".github/workflows/e2e.yml" ||
     file === ".github/workflows/lint.yml")) return "guards";
   return "none";
 }
-const mode = base === "--check-guards" ? undefined : selectionMode(modeFiles ? JSON.parse(readFileSync(0, "utf8")) : undefined);
+let mode = base === "--check-guards" ? undefined : selectionMode(modeFiles ? JSON.parse(readFileSync(0, "utf8")) : undefined);
 if (modeOnly) {
   process.stdout.write(mode + "\n");
   process.exit(0);
 }
 
 if (mode === "none") process.exit(0);
+if (mode === "full-dom") {
+  const { values, positionals } = parseArgs({
+    args: options, options: { project: { type: "string", multiple: true } }, strict: false, allowPositionals: true,
+  });
+  const projects = values.project ?? [];
+  mode = !positionals.length && projects.length && projects.every(p => p === "api-node" || p === "logic-node")
+    ? "incremental" : "full";
+}
 if (mode === "full") {
-  console.log("==> vitest full (input outside source-path allowlist)");
+  console.log("==> vitest full");
   vitest(["run", ...options]);
   movedClockRun();
   process.exit(0);
@@ -206,8 +231,9 @@ if (base === "--check-guards") {
         const imported = localFile(file, specifier);
         if (imported) {
           const path = relative(cwd, imported);
-          // Backend/catalog imports are outside Vitest's frontend graph.
-          if (isAbsolute(path) || path === ".." || path.startsWith(".." + sep)) io = true;
+          // External inputs and guidance get only guards, not graph selection.
+          if (isAbsolute(path) || path === ".." || path.startsWith(".." + sep) ||
+            frontendGuidance("frontend/" + path.split(sep).join("/"))) io = true;
           else dependencies.push(imported);
         } else io = true; // Unresolved local imports must never opt a test out.
       }

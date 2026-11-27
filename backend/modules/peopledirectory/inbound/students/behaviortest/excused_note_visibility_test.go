@@ -44,10 +44,10 @@ func TestPendingExcusedNote_HiddenFromReadOnlySupervisor(t *testing.T) {
 	// Seed a pending excused request covering today for this child.
 	const note = "Zahnarzttermin am Vormittag"
 	err := testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		_, e := tc.module.ExcusedRequests.CreateRequest(
-			txCtx, student.ID, submitterAccount.ID,
-			[]excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, note,
-		)
+		_, e := tc.module.ExcusedRequests.Submit(txCtx, excusedrequests.SubmitInput{
+			StudentID: student.ID, GuardianAccountID: submitterAccount.ID,
+			Dates: []excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, Note: note, AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return e
 	})
 	require.NoError(t, err)
@@ -97,10 +97,10 @@ func TestPendingExcusedNote_ShownToAbsenceReviewer(t *testing.T) {
 
 	const note = "Familienfeier, kommt später"
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		_, e := tc.module.ExcusedRequests.CreateRequest(
-			txCtx, student.ID, submitterAccount.ID,
-			[]excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, note,
-		)
+		_, e := tc.module.ExcusedRequests.Submit(txCtx, excusedrequests.SubmitInput{
+			StudentID: student.ID, GuardianAccountID: submitterAccount.ID,
+			Dates: []excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, Note: note, AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return e
 	}))
 

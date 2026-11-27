@@ -474,7 +474,7 @@ func checkMissingSetupTestDB(t *testing.T, root string) []string {
 				break
 			}
 		}
-		if !usesSetup && routeSizedSetupCall.MatchString(contentStr) {
+		if !usesSetup && hasRouteSizedSetupCall(f.content) {
 			usesSetup = true
 		}
 
@@ -539,7 +539,7 @@ func TestHermeticSetupScanIgnoresProseButRequiresRealSetup(t *testing.T) {
 // from the baseline is allowed zero matches.
 var tenantContext1Baseline = map[string]int{}
 
-// walkGoFiles feeds every Go file under root to visit, as (rel, pkg, code):
+// walkTestCode feeds every Go test file under root to visit, as (rel, pkg, code):
 // the backend-relative path with forward slashes, its package directory, and
 // the file with line comments stripped.
 //
@@ -552,16 +552,16 @@ var tenantContext1Baseline = map[string]int{}
 //
 // internal/testdb is excluded because it owns the lifecycle the gates check;
 // this file is excluded because it contains every pattern by definition.
-func walkGoFiles(root string, testOnly bool, visit func(rel, pkg string, code []byte)) error {
+func walkTestCode(root string, visit func(rel, pkg, code string)) error {
 	return walkGoFilesRaw(root, func(rel, pkg string, content []byte) {
-		if testOnly && !strings.HasSuffix(rel, "_test.go") {
+		if !strings.HasSuffix(rel, "_test.go") {
 			return
 		}
-		visit(rel, pkg, []byte(stripLineComments(string(content))))
+		visit(rel, pkg, stripLineComments(string(content)))
 	})
 }
 
-// walkGoFilesRaw is walkGoFiles without the comment stripping, for the checks
+// walkGoFilesRaw includes non-test Go files and keeps comments for checks
 // that need the comments themselves (the serial ratchet reads the reason
 // written above a test). It iterates the shared goSourceIndex instead of
 // walking the tree itself; the exclusions are unchanged.
@@ -580,16 +580,6 @@ func walkGoFilesRaw(root string, visit func(rel, pkg string, content []byte)) er
 	return nil
 }
 
-// countMatchesPerPackage counts regex matches per package directory.
-// testOnly restricts the scan to _test.go files.
-func countMatchesPerPackage(root string, re *regexp.Regexp, testOnly bool) (map[string]int, error) {
-	counts := make(map[string]int)
-	err := walkGoFiles(root, testOnly, func(_, pkg string, code []byte) {
-		counts[pkg] += len(re.FindAll(code, -1))
-	})
-	return counts, err
-}
-
 // shrinkOnlyViolations compares current per-package counts against a
 // shrink-only baseline and reports every package above its allowance.
 // A package absent from the baseline is allowed zero.
@@ -605,7 +595,7 @@ func shrinkOnlyViolations(current, baseline map[string]int) []string {
 	return violations
 }
 
-// bootstrapTenantPattern matches every spelling of "pin this to the fixed
+// bootstrapTenantPatterns match every spelling of "pin this to the fixed
 // bootstrap tenant" that turned up during the #2419 migration. Each one was
 // found the hard way, by a test that kept failing after the obvious spellings
 // were gone:
@@ -620,41 +610,71 @@ func shrinkOnlyViolations(current, baseline map[string]int) []string {
 // Counting only some of them is what makes a ratchet decoration: the next
 // test reaches the bootstrap tenant through a spelling nobody counted and
 // the gate stays green.
-var bootstrapTenantPattern = regexp.MustCompile(
-	`TenantContext\(1\)` +
-		`|WithTenantID\(.*,\s*1\)` +
-		`|TenantID:\s*1\b` +
-		`|SetTenantID\(1\)` +
-		`|ForTenant\([^)\n]*,\s*1\s*[,)]` +
-		`|tenant_id\s*=\s*\?[^,\n]*,\s*1\s*\)` +
-		`|tenant_id\s*=\s*1\b`)
+var bootstrapTenantPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`TenantContext\(1\)`),
+	regexp.MustCompile(`WithTenantID\(.*,\s*1\)`),
+	regexp.MustCompile(`TenantID:\s*1\b`),
+	regexp.MustCompile(`SetTenantID\(1\)`),
+	regexp.MustCompile(`ForTenant\([^)\n]*,\s*1\s*[,)]`),
+	regexp.MustCompile(`tenant_id\s*=\s*\?[^,\n]*,\s*1\s*\)`),
+	regexp.MustCompile(`tenant_id\s*=\s*1\b`),
+}
+
+var allBootstrapTenantPatterns = func() *regexp.Regexp {
+	var patterns []string
+	for _, pattern := range bootstrapTenantPatterns {
+		patterns = append(patterns, pattern.String())
+	}
+	return regexp.MustCompile(strings.Join(patterns, "|"))
+}()
 
 // checkBootstrapTenantRatchet enforces the shrink-only bootstrap-tenant baseline.
 func checkBootstrapTenantRatchet(t *testing.T, root string) []string {
 	t.Helper()
-	re := bootstrapTenantPattern
 	// Test files only. The bootstrap tenant is a test construct; the same
 	// literal in production code means something else entirely — the
 	// historical migrations that lifted the single-tenant era onto tenant 1
 	// are immutable history, and api/testutil's default claims carry it on
 	// purpose as the value the per-test rebase maps away from.
-	current, err := countMatchesPerPackage(root, re, true)
+	current := make(map[string]int)
+	err := walkTestCode(root, func(_, pkg, code string) {
+		if matchesAnyPattern(code, bootstrapTenantPatterns) {
+			// Only a positive file needs the combined, non-overlapping count.
+			current[pkg] += len(allBootstrapTenantPatterns.FindAllStringIndex(code, -1))
+		}
+	})
 	if err != nil {
 		t.Fatalf("walk source files: %v", err)
 	}
 	return shrinkOnlyViolations(current, tenantContext1Baseline)
 }
 
-// globalStateMutation matches the process-global writes that make a test
+// globalStateMutations match the process-global writes that make a test
 // unsafe to run beside another: viper keys, environment variables, the
 // default logger, the working directory.
 // Each entry was found by a test that failed once the suite went parallel:
 // the settings registry (a package-level map every settings test reads),
 // os.Stdout/os.Stderr reassignment (how the cmd tests capture output), and
 // os.Unsetenv (the other half of os.Setenv).
-var globalStateMutation = regexp.MustCompile(
-	`viper\.(Set|SetDefault|Reset)\b|t\.Setenv|os\.(Set|Unset)env|log\.SetOutput|slog\.SetDefault` +
-		`|os\.Chdir|config\.(Register|ResetRegistry)\(|SeedTestJWTConfig\(|os\.(Stdout|Stderr)\s*=`)
+var globalStateMutations = []*regexp.Regexp{
+	regexp.MustCompile(`viper\.(Set|SetDefault|Reset)\b`),
+	regexp.MustCompile(`t\.Setenv`),
+	regexp.MustCompile(`os\.(Setenv|Unsetenv|Chdir|(Stdout|Stderr)\s*=)`),
+	regexp.MustCompile(`log\.SetOutput`),
+	regexp.MustCompile(`slog\.SetDefault`),
+	regexp.MustCompile(`config\.(Register|ResetRegistry)\(`),
+	regexp.MustCompile(`SeedTestJWTConfig\(`),
+}
+
+// Each expression has a literal prefix so the regexp engine skips unrelated source.
+func matchesAnyPattern(body string, patterns []*regexp.Regexp) bool {
+	for _, pattern := range patterns {
+		if pattern.MatchString(body) {
+			return true
+		}
+	}
+	return false
+}
 
 // stripLineComments blanks out // comments so a pattern match means code, not
 // prose about the code.
@@ -697,7 +717,7 @@ func splitGoFuncs(text string) []goFunc {
 // callsAny reports whether body calls any of the named functions.
 func callsAny(body string, names map[string]bool) bool {
 	for name := range names {
-		if regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\s*\(`).MatchString(body) {
+		if strings.Contains(body, name) && regexp.MustCompile(`\b`+regexp.QuoteMeta(name)+`\s*\(`).MatchString(body) {
 			return true
 		}
 	}
@@ -705,8 +725,8 @@ func callsAny(body string, names map[string]bool) bool {
 }
 
 type globalStateFile struct {
-	rel  string
-	text string
+	rel   string
+	funcs []goFunc
 }
 
 // checkParallelGlobalState finds tests that call t.Parallel() while reaching
@@ -719,15 +739,15 @@ func checkParallelGlobalState(t *testing.T, root string) []string {
 	t.Helper()
 	pkgFuncs := make(map[string]map[string]string)
 	pkgFiles := make(map[string][]globalStateFile)
-	err := walkGoFiles(root, true, func(rel, pkg string, code []byte) {
-		text := string(code)
+	err := walkTestCode(root, func(rel, pkg, text string) {
 		if pkgFuncs[pkg] == nil {
 			pkgFuncs[pkg] = make(map[string]string)
 		}
-		for _, f := range splitGoFuncs(text) {
+		funcs := splitGoFuncs(text)
+		for _, f := range funcs {
 			pkgFuncs[pkg][f.name] = f.body
 		}
-		pkgFiles[pkg] = append(pkgFiles[pkg], globalStateFile{rel: rel, text: text})
+		pkgFiles[pkg] = append(pkgFiles[pkg], globalStateFile{rel: rel, funcs: funcs})
 	})
 	if err != nil {
 		t.Fatalf("walk source files: %v", err)
@@ -744,7 +764,7 @@ func checkParallelGlobalState(t *testing.T, root string) []string {
 func taintedGlobalHelpers(funcs map[string]string) map[string]bool {
 	tainted := make(map[string]bool)
 	for name, body := range funcs {
-		if !strings.HasPrefix(name, "Test") && globalStateMutation.MatchString(body) {
+		if !strings.HasPrefix(name, "Test") && matchesAnyPattern(body, globalStateMutations) {
 			tainted[name] = true
 		}
 	}
@@ -766,9 +786,9 @@ func taintedGlobalHelpers(funcs map[string]string) map[string]bool {
 func parallelGlobalStateViolations(files []globalStateFile, tainted map[string]bool) []string {
 	var violations []string
 	for _, file := range files {
-		for _, f := range splitGoFuncs(file.text) {
+		for _, f := range file.funcs {
 			parallel := strings.HasPrefix(f.name, "Test") && strings.Contains(f.body, "t.Parallel()")
-			if parallel && (globalStateMutation.MatchString(f.body) || callsAny(f.body, tainted)) {
+			if parallel && (matchesAnyPattern(f.body, globalStateMutations) || callsAny(f.body, tainted)) {
 				violations = append(violations, "  "+file.rel+": "+f.name)
 			}
 		}
@@ -788,10 +808,18 @@ var sharedPoolAssign = regexp.MustCompile(
 var routeSizedSetupCall = regexp.MustCompile(
 	`(?m)^\s*(?:[\w,\s]+:?=\s*|return\s+)?(?:\w+\.)?(?:setup|Setup|build)\w+(?:Route|Router|Module)\(t(?:,|\))`)
 
+func hasRouteSizedSetupCall(content []byte) bool {
+	if !bytes.Contains(content, []byte("Route(t")) && !bytes.Contains(content, []byte("Router(t")) &&
+		!bytes.Contains(content, []byte("Module(t")) {
+		return false
+	}
+	return routeSizedSetupCall.Match(content)
+}
+
 func usesSharedDBSetup(content []byte) bool {
 	return bytes.Contains(content, []byte("SetupTestDB(")) ||
 		bytes.Contains(content, []byte("SetupAPITest(")) ||
-		routeSizedSetupCall.Match(content)
+		hasRouteSizedSetupCall(content)
 }
 
 // privatePoolAssign captures variables bound to a PRIVATE pool, which the
@@ -819,6 +847,9 @@ func checkSharedPoolClose(t *testing.T, root string) []string {
 }
 
 func sharedPoolCloseViolations(rel, text string) []string {
+	if !strings.Contains(text, ".Close()") {
+		return nil
+	}
 	shared := make(map[string]bool)
 	for _, match := range sharedPoolAssign.FindAllStringSubmatch(text, -1) {
 		shared[match[1]] = true
@@ -991,6 +1022,9 @@ func checkSerialTests(t *testing.T, root string) map[string]int {
 
 	counts := make(map[string]int)
 	err := walkGoFilesRaw(root, func(_, pkg string, content []byte) {
+		if !bytes.Contains(content, []byte("func Test")) {
+			return
+		}
 		for _, f := range splitGoFuncs(string(content)) {
 			if !topLevelTestDecl.MatchString(f.body) || topLevelParallelCall.MatchString(f.body) {
 				continue

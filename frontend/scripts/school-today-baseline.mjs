@@ -46,9 +46,7 @@ export default {
   "src/components/enrollment/admin-child-data-correction.tsx": [
     "max={todayISO()}",
   ],
-  "src/components/class-day/class-day-class.tsx": [
-    "const at = now ?? new Date();",
-  ],
+  "src/components/class-day/class-day-class.tsx": ["const at = new Date();"],
   "src/components/class-day/day-changes.ts": [
     "now: Date = new Date(),",
     "now: Date = new Date(),",

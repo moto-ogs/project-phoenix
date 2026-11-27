@@ -61,7 +61,7 @@ vi.mock("./use-school-setup", () => ({
 }));
 vi.mock("~/lib/school-setup-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/school-setup-api")>()),
-  setSchoolSetupDismissed: () =>
+  dismissSchoolSetup: () =>
     Promise.resolve({ ...newSchool(), dismissed: true }),
 }));
 vi.mock("./use-work-time-coverage", () => ({

@@ -34,43 +34,6 @@ func classListEntryFieldsOf(entry schoolmembership.ClassListEntry) schoolmembers
 
 // --- class list entries ---
 
-func (s *Service) FindClassListEntry(ctx context.Context, id int64) (schoolmembership.ClassListEntry, error) {
-	if id <= 0 {
-		return schoolmembership.ClassListEntry{}, invalid("class list entry ID is required")
-	}
-	return s.findClassListEntry(ctx, id, "")
-}
-
-// FindClassListEntryForMutation locks the row for the caller's transaction.
-func (s *Service) FindClassListEntryForMutation(ctx context.Context, id int64) (schoolmembership.ClassListEntry, error) {
-	if id <= 0 {
-		return schoolmembership.ClassListEntry{}, invalid("class list entry ID is required")
-	}
-	return s.findClassListEntry(ctx, id, "UPDATE")
-}
-
-func (s *Service) findClassListEntry(ctx context.Context, id int64, lock string) (result schoolmembership.ClassListEntry, err error) {
-	run := s.runRead
-	if lock != "" {
-		run = s.runWrite
-	}
-	err = run(ctx, "find_class_list_entry", func(txCtx context.Context, stats *domain.OperationStats) error {
-		var found bool
-		var queryStats domain.OperationStats
-		if err := admitLeaf(txCtx, lock != "", "users.class_list_entries"); err != nil {
-			return err
-		}
-		result, found, queryStats, err = s.store.FindClassListEntry(txCtx, id, lock)
-		stats.Add(queryStats)
-		if err == nil && !found {
-			result = schoolmembership.ClassListEntry{}
-			return schoolmembership.ErrClassListEntryNotFound
-		}
-		return err
-	})
-	return result, err
-}
-
 // ListClassListEntries returns the entries matching the filter, ordered by
 // last name, first name (both case-folded) and ID.
 func (s *Service) ListClassListEntries(ctx context.Context, filter schoolmembership.ClassListEntryFilter) (result []schoolmembership.ClassListEntry, err error) {
@@ -96,34 +59,6 @@ func (s *Service) CreateClassListEntry(ctx context.Context, input schoolmembersh
 		var createStats domain.OperationStats
 		result, createStats, err = s.store.CreateClassListEntry(txCtx, fields, createdBy)
 		stats.Add(createStats)
-		return err
-	})
-	return result, err
-}
-
-func (s *Service) UpdateClassListEntry(ctx context.Context, input schoolmembership.UpdateClassListEntry) (result schoolmembership.ClassListEntry, err error) {
-	if input.ID <= 0 {
-		return schoolmembership.ClassListEntry{}, invalid("class list entry ID is required")
-	}
-	if err := validateClassListEntryFields(&input.ClassListEntryFields); err != nil {
-		return schoolmembership.ClassListEntry{}, err
-	}
-	id, fields := input.ID, input.ClassListEntryFields
-	err = s.runWrite(ctx, "update_class_list_entry", func(txCtx context.Context, stats *domain.OperationStats) error {
-		if err := admitLeaf(txCtx, true, "users.class_list_entries"); err != nil {
-			return err
-		}
-		_, found, queryStats, err := s.store.FindClassListEntry(txCtx, id, "UPDATE")
-		stats.Add(queryStats)
-		if err != nil {
-			return err
-		}
-		if !found {
-			return schoolmembership.ErrClassListEntryNotFound
-		}
-		var updateStats domain.OperationStats
-		result, updateStats, err = s.store.UpdateClassListEntry(txCtx, id, fields)
-		stats.Add(updateStats)
 		return err
 	})
 	return result, err
@@ -180,38 +115,9 @@ func (s *Service) ListClassListEntriesInDisplayOrder(ctx context.Context, filter
 	return result, err
 }
 
-// MatchingStudentIDs names the still-enrolled students sharing an entry's
-// name and class: the hint for a deliberate "Zuordnen" resolution, never an
-// automatic merge (#2382: gleichnamige Kinder dürfen nicht verwechselt
-// werden).
-// It is a read over whatever the rows carry, so it trims but does not
-// validate: an entry with an empty field would otherwise fail the whole
-// listing instead of simply matching nobody.
-func (s *Service) MatchingStudentIDs(ctx context.Context, fields schoolmembership.ClassListEntryFields) (result []int64, err error) {
-	fields.FirstName = textnorm.Name(fields.FirstName)
-	fields.LastName = textnorm.Name(fields.LastName)
-	fields.SchoolClass = strings.TrimSpace(fields.SchoolClass)
-	collaborators, err := s.classListAdministration()
-	if err != nil {
-		return nil, err
-	}
-	err = s.runRead(ctx, "match_class_list_entry_students", func(txCtx context.Context, _ *domain.OperationStats) error {
-		result, err = collaborators.Students.ListStudentIDsByNameAndClass(txCtx, fields.FirstName, fields.LastName, fields.SchoolClass)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if result == nil {
-		result = []int64{}
-	}
-	return result, nil
-}
-
-// MatchingStudentIDsForEntries is MatchingStudentIDs for a whole listing. The
-// hints come from one name read and one student read shared by all entries
-// (decision E2 of #5891: an early shared read may replace later per-entry
-// READ COMMITTED reads; the listing takes no lock).
+// MatchingStudentIDsForEntries reads the namesake hints for a whole listing.
+// It uses one name read and one student read shared by all entries; a row
+// with a missing field matches nobody and never fails the listing (#5891).
 func (s *Service) MatchingStudentIDsForEntries(ctx context.Context, entries []schoolmembership.ClassListEntryFields) (result [][]int64, err error) {
 	keys := make([]schoolmembership.ClassListEntryFields, len(entries))
 	for i, fields := range entries {
@@ -418,7 +324,7 @@ func (s *Service) lockClassListEntry(ctx context.Context, id int64, stats *domai
 	if err := admitLeaf(ctx, true, "users.class_list_entries"); err != nil {
 		return schoolmembership.ClassListEntry{}, err
 	}
-	entry, found, queryStats, err := s.store.FindClassListEntry(ctx, id, "UPDATE")
+	entry, found, queryStats, err := s.store.FindClassListEntry(ctx, id)
 	stats.Add(queryStats)
 	if err != nil {
 		return schoolmembership.ClassListEntry{}, err

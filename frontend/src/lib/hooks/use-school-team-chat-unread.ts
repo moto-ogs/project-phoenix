@@ -49,7 +49,6 @@ export function useSchoolTeamChatUnread(): SchoolTeamChatUnread {
       fetcher: schoolStaffMessagesApi.fetchUnreadCount,
       eventNames: ["team-messages-unread-refresh"],
       eventDebounceMs: 500,
-      refetchOnFocus: true,
       // A switched-off Team-Chat is an answer, not a failure to log.
       onError: () => undefined,
     },

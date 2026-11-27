@@ -3,7 +3,6 @@ package owners
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"time"
 
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
@@ -12,11 +11,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 )
 
-// operatorLinkWiring is the configuration the operator link deliveries are
-// composed with. dispatcher may be nil: the link is then not mailed, as
-// before.
+// operatorLinkWiring binds operator link mails to the durable outbox.
 type operatorLinkWiring struct {
-	dispatcher  email.Dispatcher
 	durable     DurableMailOutbox
 	defaultFrom email.Email
 	// frontendURL is the host of the staff frontend, which serves the
@@ -30,7 +26,6 @@ type operatorLinkWiring struct {
 	emailChangeExpiry   time.Duration
 	// backoff spaces the send retries; nil uses the production spacing.
 	backoff []time.Duration
-	logger  *slog.Logger
 }
 
 func operatorProvisioningDependencies(
@@ -47,7 +42,7 @@ func operatorProvisioningDependencies(
 	return &identityaccessCompose.OperatorProvisioningDependencies{
 		DeliveryFor: func(tokens identityaccess.OperatorLinkDeliveryRecorder) identityaccessCompose.OperatorLinkDelivery {
 			return operatorLinkDelivery{
-				dispatcher: wiring.dispatcher, durable: wiring.durable, from: wiring.defaultFrom,
+				durable: wiring.durable, from: wiring.defaultFrom,
 				frontendURL: wiring.frontendURL, operatorURL: wiring.operatorFrontendURL,
 				backoff: backoff, tokens: tokens, logger: logger,
 			}
@@ -77,7 +72,6 @@ type operatorLinkRecords interface {
 // change messages, and records the outcome of the two that carry a link
 // back through the module once the send settles.
 type operatorLinkDelivery struct {
-	dispatcher  email.Dispatcher
 	durable     DurableMailOutbox
 	from        email.Email
 	frontendURL string
@@ -88,9 +82,6 @@ type operatorLinkDelivery struct {
 }
 
 func (d operatorLinkDelivery) DispatchOperatorInvitation(ctx context.Context, invitation identityaccess.OperatorInvitation, inviterName string, expiry time.Duration) error {
-	if d.dispatcher == nil {
-		return nil
-	}
 	message := *identityMessage(d.from, email.NewEmail("", invitation.Email), identityaccess.OperatorInvitationMail(invitation, inviterName, d.frontendURL, d.operatorURL, expiry))
 	return enqueueDurableMail(ctx, d.durable, DurableMail{
 		Message: message, Type: "operator_invitation", ReferenceID: invitation.ID,
@@ -99,9 +90,6 @@ func (d operatorLinkDelivery) DispatchOperatorInvitation(ctx context.Context, in
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeVerification(ctx context.Context, change identityaccess.OperatorEmailChange, expiry time.Duration) error {
-	if d.dispatcher == nil {
-		return nil
-	}
 	message := *identityMessage(d.from, email.NewEmail("", change.NewEmail), identityaccess.OperatorEmailChangeVerificationMail(change, d.frontendURL, expiry))
 	return enqueueDurableMail(ctx, d.durable, DurableMail{
 		Message: message, Type: "operator_email_change_verify", ReferenceID: change.ID,
@@ -110,9 +98,6 @@ func (d operatorLinkDelivery) DispatchOperatorEmailChangeVerification(ctx contex
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeRequested(ctx context.Context, operator identityaccess.Operator, maskedNewEmail string) error {
-	if d.dispatcher == nil {
-		return nil
-	}
 	return enqueueDurableMail(ctx, d.durable, DurableMail{
 		Message: *identityMessage(d.from, email.NewEmail(operator.DisplayName, operator.Email), identityaccess.OperatorEmailChangeRequestedMail(operator, maskedNewEmail, d.frontendURL)),
 		Type:    "operator_email_change_requested", ReferenceID: operator.ID, Backoff: d.backoff,
@@ -120,58 +105,43 @@ func (d operatorLinkDelivery) DispatchOperatorEmailChangeRequested(ctx context.C
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeConfirmed(ctx context.Context, oldEmail, displayName string) error {
-	if d.dispatcher == nil {
-		return nil
-	}
 	return enqueueDurableMail(ctx, d.durable, DurableMail{
 		Message: *identityMessage(d.from, email.NewEmail(displayName, oldEmail), identityaccess.OperatorEmailChangeConfirmedMail(displayName, d.frontendURL)),
 		Type:    "operator_email_change_confirmed", Backoff: d.backoff,
 	})
 }
 
-func (d operatorLinkDelivery) recordInvitationDelivery(ctx context.Context, meta email.DeliveryMetadata, baseRetry int, result email.DeliveryResult) {
-	delivery := operatorTokenDelivery(baseRetry, result)
-	if err := d.tokens.RecordOperatorInvitationDelivery(ctx, meta.ReferenceID, delivery); err != nil {
+func (d operatorLinkDelivery) recordInvitationDelivery(ctx context.Context, attempt transactionalMailAttempt) {
+	delivery := attempt.tokenDelivery()
+	if err := d.tokens.RecordOperatorInvitationDelivery(ctx, attempt.referenceID, delivery); err != nil {
 		d.logger.Error("failed to update invitation delivery status",
-			slog.Int64("token_id", meta.ReferenceID),
+			slog.Int64("token_id", attempt.referenceID),
 			slog.Any("error", err),
 		)
 		return
 	}
-	d.logPermanentFailure(meta, result, "operator invitation email permanently failed")
+	d.logPermanentFailure(attempt, "operator invitation email permanently failed")
 }
 
-func (d operatorLinkDelivery) recordEmailChangeDelivery(ctx context.Context, meta email.DeliveryMetadata, baseRetry int, result email.DeliveryResult) {
-	delivery := operatorTokenDelivery(baseRetry, result)
-	if err := d.tokens.RecordOperatorEmailChangeDelivery(ctx, meta.ReferenceID, delivery); err != nil {
+func (d operatorLinkDelivery) recordEmailChangeDelivery(ctx context.Context, attempt transactionalMailAttempt) {
+	delivery := attempt.tokenDelivery()
+	if err := d.tokens.RecordOperatorEmailChangeDelivery(ctx, attempt.referenceID, delivery); err != nil {
 		d.logger.Error("failed to update email change delivery status",
-			slog.Int64("token_id", meta.ReferenceID),
+			slog.Int64("token_id", attempt.referenceID),
 			slog.Any("error", err),
 		)
 		return
 	}
-	d.logPermanentFailure(meta, result, "email change verification email permanently failed")
+	d.logPermanentFailure(attempt, "email change verification email permanently failed")
 }
 
-func (d operatorLinkDelivery) logPermanentFailure(meta email.DeliveryMetadata, result email.DeliveryResult, message string) {
-	if !result.Final || result.Status != email.DeliveryStatusFailed {
+func (d operatorLinkDelivery) logPermanentFailure(attempt transactionalMailAttempt, message string) {
+	if !attempt.final || attempt.err == nil {
 		return
 	}
 	d.logger.Error(message,
-		slog.Int64("token_id", meta.ReferenceID),
-		slog.String("recipient", identityaccessCompose.MaskEmail(meta.Recipient)),
-		slog.Any("error", result.Err),
+		slog.Int64("token_id", attempt.referenceID),
+		slog.String("recipient", identityaccessCompose.MaskEmail(attempt.recipient)),
+		slog.Any("error", attempt.err),
 	)
-}
-
-func operatorTokenDelivery(baseRetry int, result email.DeliveryResult) identityaccess.TokenDelivery {
-	delivery := identityaccess.TokenDelivery{RetryCount: baseRetry + result.Attempt}
-	if result.Status == email.DeliveryStatusSent {
-		sentAt := result.SentAt
-		delivery.SentAt = &sentAt
-	} else if result.Err != nil {
-		message := strings.TrimSpace(result.Err.Error())
-		delivery.Error = &message
-	}
-	return delivery
 }

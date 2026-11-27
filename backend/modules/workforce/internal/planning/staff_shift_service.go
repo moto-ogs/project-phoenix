@@ -59,30 +59,17 @@ type StaffShiftService interface {
 	ApplyCancellation(ctx context.Context, input CancelShiftInput) (*CancelShiftResult, error)
 }
 
-// StaffShiftOption binds an optional collaborator at construction time. The
-// options replaced the post-construction setters when the service moved out
-// of services/schedule (#3219): the composition surface guard records
-// mutable wiring per package, and a relocated setter counts as growth.
-type StaffShiftOption func(*staffShiftService)
-
-// WithStaffShiftSeriesExceptions wires the series exception repository
-// (#1889). When set, deleting a series-backed shift records the date as a
-// series exception so re-plans never regenerate the removed occurrence.
-// Optional so unit tests without series stay unchanged.
-func WithStaffShiftSeriesExceptions(repo seriesExceptionOperations) StaffShiftOption {
-	return func(s *staffShiftService) { s.exceptionRepo = repo }
-}
-
-// WithStaffShiftDeviationEvents wires the Änderungsprotokoll (#1884); when
-// set, MoveShift appends a shift_moved entry inside the same tenant tx.
-func WithStaffShiftDeviationEvents(audit ShiftMoveAudit) StaffShiftOption {
-	return func(s *staffShiftService) { s.shiftMoveAudit = audit }
-}
-
-// WithStaffShiftBroadcaster injects the tenant-wide SSE broadcaster used to
-// invalidate time-tracking views after committed shift writes.
-func WithStaffShiftBroadcaster(broadcaster realtime.Broadcaster) StaffShiftOption {
-	return func(s *staffShiftService) { s.broadcaster = broadcaster }
+// ShiftSchedule binds the school absence reader, clock, series exceptions and staff locks shared
+// by single-shift writes. The broadcaster and working-time guard may be absent.
+type ShiftSchedule struct {
+	Absences   SickReportReader
+	Today      func() calendar.Date
+	Exceptions interface {
+		RecordSeriesException(context.Context, workforce.StaffShiftSeriesException) error
+	}
+	LockStaffRows func(context.Context, []int64) error
+	Broadcaster   realtime.Broadcaster
+	Guard         *planGuard
 }
 
 type StaffShiftUpdateOptions struct {
@@ -115,69 +102,29 @@ type StaffShiftUpdateOptions struct {
 }
 
 type staffShiftService struct {
-	repo          staffShiftOperations
-	staffRepo     staffDirectory
-	shiftTypes    ShiftTypeService
-	exceptionRepo seriesExceptionOperations
-	// shiftMoveAudit appends shift_moved Änderungsprotokoll rows (#1884).
-	// Optional so unit tests without audit stay unchanged; production wiring
-	// always sets it, making the event write fail-closed there (an audit
-	// failure rolls the move back).
+	repo           staffShiftOperations
+	staffRepo      staffDirectory
+	shiftTypes     ShiftTypeService
 	shiftMoveAudit ShiftMoveAudit
-	// lockStaffShifts serializes the writes of one staff member. Nil skips the
-	// lock, which is what unit tests without a database exercise.
+	// lockStaffShifts serializes the writes of one staff member.
 	lockStaffShifts func(ctx context.Context, staffID int64) error
-	broadcaster     realtime.Broadcaster
 	logger          *slog.Logger
-	// lockObserver, when set, is invoked with the sorted, de-duplicated staff-id
-	// set of every lockStaffWritesOrdered acquisition. It is a test-only seam: the
-	// lock is a no-op without one bound, so a unit test cannot otherwise assert
-	// which staff members an operation serializes on (e.g. that a dropped cover's
-	// staff is folded into the cancellation lock set, #1841). Nil in production.
-	lockObserver func(staffIDs []int64)
-	// sickReports and today give a created or moved shift the sick state of
-	// its day (#6302). A nil reader plans everybody healthy.
-	sickReports SickReportReader
-	today       func() calendar.Date
-	// guard is the working-time check over all Einsatzorte of a
-	// Personalakte (#4708). Nil checks nothing.
-	guard *planGuard
-	// lockStaffRows: see WithStaffShiftStaffRowLocks. Nil locks nothing.
-	lockStaffRows func(ctx context.Context, staffIDs []int64) error
+	ShiftSchedule
 }
 
 // NewStaffShiftService creates a new staff shift service. lockStaffShifts is
 // the per-staff write lock that makes the overlap check safe under
 // concurrency; the composition binds the advisory lock over its database
-// handle, and a nil lock (unit tests) skips it. shiftTypes resolves the active
-// flag when a shift is assigned a type; it may be nil in unit tests that never
-// attach a shift type.
-func NewStaffShiftService(repo staffShiftOperations, staffRepo staffDirectory, shiftTypes ShiftTypeService, lockStaffShifts func(ctx context.Context, staffID int64) error, logger *slog.Logger, opts ...StaffShiftOption) StaffShiftService {
-	service := &staffShiftService{repo: repo, staffRepo: staffRepo, shiftTypes: shiftTypes, lockStaffShifts: lockStaffShifts, logger: logger}
-	for _, opt := range opts {
-		if opt != nil {
-			opt(service)
-		}
+// handle.
+func NewStaffShiftService(repo staffShiftOperations, staffRepo staffDirectory, shiftTypes ShiftTypeService, lockStaffShifts func(ctx context.Context, staffID int64) error, logger *slog.Logger, audit ShiftMoveAudit, schedule ShiftSchedule) StaffShiftService {
+	if schedule.Absences == nil || schedule.Today == nil || schedule.Exceptions == nil || schedule.LockStaffRows == nil {
+		panic("workforce staff shifts: absence reader, clock, series exceptions and staff row locks are required")
 	}
-	if service.today == nil {
-		panic("workforce staff shifts: the school day clock is required (WithStaffShiftToday)")
-	}
-	return service
+	return &staffShiftService{repo: repo, staffRepo: staffRepo, shiftTypes: shiftTypes, lockStaffShifts: lockStaffShifts, logger: logger, shiftMoveAudit: audit, ShiftSchedule: schedule}
 }
 
 func (s *staffShiftService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger())
-}
-
-// lockShiftWrites takes the per-staff write lock before the overlap
-// read-check so concurrent writers serialize on the same staff member.
-// Unit tests construct the service without a lock; they exercise the overlap
-// logic, not concurrency, so a nil lock is a no-op.
-func (s *staffShiftService) lockShiftWrites(ctx context.Context, staffID int64) error {
-	if s.lockStaffShifts == nil {
-		return nil
-	}
-	return s.lockStaffShifts(ctx, staffID)
+	queueStaffTimeTrackingChanged(ctx, s.Broadcaster, s.getLogger())
 }
 
 func (s *staffShiftService) getLogger() *slog.Logger {
@@ -189,8 +136,7 @@ func (s *staffShiftService) getLogger() *slog.Logger {
 // (ErrShiftTypeInactive -> 400). A nil id is an untyped shift and always valid.
 // Deactivation must block *new* assignments even for a stale client or a direct
 // API caller that still sends the id; callers skip this check when an update
-// keeps the shift's already-attached (possibly inactive) type. A nil
-// shiftTypes dependency (unit tests without a shift type) skips the lookup.
+// keeps the shift's already-attached (possibly inactive) type.
 func (s *staffShiftService) ensureShiftTypeActive(ctx context.Context, id *int64) error {
 	return s.ensureShiftTypeAssignable(ctx, id, nil)
 }
@@ -202,7 +148,7 @@ func (s *staffShiftService) ensureShiftTypeActive(ctx context.Context, id *int64
 // its already-attached inactive type (#1841). A type still has to exist — an
 // unknown id maps to ErrShiftTypeNotFound regardless of the allowlist.
 func (s *staffShiftService) ensureShiftTypeAssignable(ctx context.Context, id *int64, allowedInactive map[int64]bool) error {
-	if id == nil || s.shiftTypes == nil {
+	if id == nil {
 		return nil
 	}
 	shiftType, err := s.shiftTypes.GetShiftType(ctx, *id)
@@ -287,14 +233,10 @@ func (s *staffShiftService) ListShiftsForStaff(ctx context.Context, staffID int6
 // color) and sets workforce.ShiftRecord.ShiftType, so a reader who cannot call the
 // admin-only /api/shift-types endpoint still gets the label (#1844). One tenant
 // has a handful of shift types, so a single ListShiftTypes call is cheaper than
-// per-shift lookups. A nil shiftTypes dependency (unit tests) is a no-op; a
-// lookup error propagates — these reads run inside TenantTxMiddleware, where a
+// per-shift lookups. Lookup errors propagate — these reads run inside TenantTxMiddleware, where a
 // failed statement can abort the transaction, so swallowing it would return a
 // 200 whose commit then fails after the response was written.
 func (s *staffShiftService) attachShiftTypes(ctx context.Context, shifts []*workforce.ShiftRecord) error {
-	if s.shiftTypes == nil || len(shifts) == 0 {
-		return nil
-	}
 	needsType := false
 	for _, sh := range shifts {
 		if sh.ShiftTypeID != nil {
@@ -389,11 +331,8 @@ func (s *staffShiftService) lockStaffWritesOrdered(ctx context.Context, staffIDs
 		unique = append(unique, id)
 	}
 	slices.Sort(unique)
-	if s.lockObserver != nil {
-		s.lockObserver(unique)
-	}
 	for _, id := range unique {
-		if err := s.lockShiftWrites(ctx, id); err != nil {
+		if err := s.lockStaffShifts(ctx, id); err != nil {
 			return err
 		}
 	}
@@ -750,7 +689,7 @@ func (s *staffShiftService) DeleteShift(ctx context.Context, id int64) error {
 	// concurrent series splits on the same staff member: without the lock a
 	// racing split could re-point the row while the exception lands on the
 	// old, capped series.
-	if err := s.lockShiftWrites(ctx, existing.StaffID); err != nil {
+	if err := s.lockStaffShifts(ctx, existing.StaffID); err != nil {
 		return err
 	}
 	// MoveShift may have changed the owner while this delete waited for the old
@@ -769,7 +708,7 @@ func (s *staffShiftService) DeleteShift(ctx context.Context, id int64) error {
 	}
 	// Deleting a series-backed row records the date as a series exception so
 	// re-plans and splits never regenerate the removed occurrence (#1889).
-	if existing.SeriesID != nil && s.exceptionRepo != nil {
+	if existing.SeriesID != nil {
 		if err := s.recordSeriesException(ctx, existing, seriesOccurrenceDate(existing)); err != nil {
 			return fmt.Errorf("record series exception for deleted shift: %w", err)
 		}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -173,40 +174,36 @@ func studentOutcomeArgs(tenantID int64) []any {
 	return args
 }
 
-// studentOutcomeRow renders one owner row as "<label> <jsonb text>". It drops
-// identities, keys and the tenant; a timestamp, an actor or the sealed health
-// field (its ciphertext differs per seal; tests compare the opened text) only
-// says whether it is set. The owner label keeps the row attributable. The
-// keys keep the order jsonb printed them in, and the values stay its text, so
-// the result is the jsonb text of the remaining object; a row without label or
-// without any remaining column is empty.
+var studentColumnName = regexp.MustCompile(`^[a-z0-9_]+$`)
+
+// studentOutcomeRow normalizes one owner's row for comparison across tenants.
+// Keep JSON values raw: for example, decoding a large number into float64
+// before comparing it could hide a change in its last digit.
 func studentOutcomeRow(t *testing.T, owner sql.NullString, record string) string {
 	t.Helper()
-	decoder := json.NewDecoder(strings.NewReader(record))
-	opening, err := decoder.Token()
-	require.NoError(t, err)
-	require.Equal(t, json.Delim('{'), opening, record)
-	var fields []string
-	for decoder.More() {
-		token, err := decoder.Token()
-		require.NoError(t, err)
-		key, ok := token.(string)
-		require.True(t, ok, record)
-		require.Regexp(t, `^[a-z0-9_]+$`, key, "a column name needs no JSON escaping")
-		var value json.RawMessage
-		require.NoError(t, decoder.Decode(&value))
-		if key == "id" || strings.HasSuffix(key, "_id") || key == "created_at" || key == "updated_at" {
-			continue
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(record), &fields); err != nil {
+		t.Fatalf("decode student owner row: %v", err)
+	}
+	for key, value := range fields {
+		if !studentColumnName.MatchString(key) {
+			t.Fatalf("unexpected column name %q", key)
 		}
-		if strings.HasSuffix(key, "_at") || strings.HasSuffix(key, "_since") || strings.HasSuffix(key, "_by") || key == "health_data" {
-			value = json.RawMessage(strconv.FormatBool(string(value) != "null"))
+		switch {
+		case key == "id", strings.HasSuffix(key, "_id"), key == "created_at", key == "updated_at":
+			delete(fields, key)
+		case strings.HasSuffix(key, "_at"), strings.HasSuffix(key, "_since"), strings.HasSuffix(key, "_by"), key == "health_data":
+			fields[key] = json.RawMessage(strconv.FormatBool(string(value) != "null"))
 		}
-		fields = append(fields, `"`+key+`": `+string(value))
 	}
 	if !owner.Valid || len(fields) == 0 {
 		return ""
 	}
-	return owner.String + " {" + strings.Join(fields, ", ") + "}"
+	normalized, err := json.Marshal(fields) // sorted keys, independent of map order
+	if err != nil {
+		t.Fatalf("encode student owner row: %v", err)
+	}
+	return owner.String + " " + string(normalized)
 }
 
 // mixedStudentFile has eleven rows. Rows 1 to 7 form one batch segment: a

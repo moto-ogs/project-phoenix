@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	eventContract "github.com/moto-ogs/project-phoenix/modules/communication/eventcontract"
 
@@ -207,7 +206,7 @@ func newRequestCapabilities(s *CareScheduleRequestService, messenger compose.Req
 	if c.edits, err = compose.NewRequestEdits(s.RequestRecords, editAdapter, effects, c.diffs, s.todayDate); err != nil {
 		return c, fmt.Errorf("care request edits: %w", err)
 	}
-	decisionAdapter := requestDecisionAdapter{editAdapter}
+	decisionAdapter := requestDecisionAdapter{editAdapter, s.DayLocker}
 	if c.decisions, err = compose.NewRequestDecisions(compose.RequestDecisionDependencies{Records: s.RequestRecords, People: decisionAdapter,
 		Guardians: messenger, Plans: decisionAdapter, Effects: effects, Today: s.todayDate}); err != nil {
 		return c, fmt.Errorf("care request decisions: %w", err)
@@ -279,12 +278,6 @@ func (s *CareScheduleRequestService) CreateRequest(ctx context.Context, studentI
 	return s.Requests.submissions.CreateRequest(ctx, studentID, guardianAccountID, payload)
 }
 
-// CreatePickupChangeRequest is the legacy mandatory-reason entry point; the
-// owner names its input.
-func (s *CareScheduleRequestService) CreatePickupChangeRequest(ctx context.Context, studentID, guardianAccountID int64, date timezone.Date, pickupTime time.Time, reason string) (*carerequests.Request, error) {
-	return s.CreatePickupChange(ctx, carerequests.MandatoryReasonPickupChange(studentID, guardianAccountID, date, pickupTime, reason))
-}
-
 func (s *CareScheduleRequestService) CreatePickupChange(ctx context.Context, input carerequests.PickupChangeCreateInput) (*carerequests.Request, error) {
 	return s.Requests.submissions.CreatePickupChange(ctx, input)
 }
@@ -327,6 +320,7 @@ func (s *CareScheduleRequestService) applyPickupChangeRequest(ctx context.Contex
 	return approvals.ApplyPickupApproval(ctx, carerequests.PickupApproval{
 		TenantID: req.TenantID, StudentID: req.StudentID, Payload: req.Payload,
 		ExpectedImpactToken: expectedImpactToken, RequireImpactToken: requireImpactToken,
+		GuardianAccountID: req.SubmittedBy,
 	})
 }
 

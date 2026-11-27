@@ -122,6 +122,7 @@ type StaffWelcome struct {
 	Recipient  string
 	HelpURL    string
 	FirstName  string
+	LastName   string
 	LogoURL    string
 	SchoolName string
 }
@@ -129,12 +130,15 @@ type StaffWelcome struct {
 // NewStaffWelcome is the welcome that follows a school invitation accepted
 // at origin.
 func NewStaffWelcome(invitation SchoolInvitation, schoolName, origin, helpURL string) StaffWelcome {
-	firstName := ""
+	firstName, lastName := "", ""
 	if invitation.FirstName != nil {
 		firstName = strings.TrimSpace(*invitation.FirstName)
 	}
+	if invitation.LastName != nil {
+		lastName = strings.TrimSpace(*invitation.LastName)
+	}
 	return StaffWelcome{
-		Recipient: invitation.Email, HelpURL: helpURL, FirstName: firstName,
+		Recipient: invitation.Email, HelpURL: helpURL, FirstName: firstName, LastName: lastName,
 		LogoURL: origin + motoLogoPath, SchoolName: schoolName,
 	}
 }
@@ -167,6 +171,7 @@ func StaffWelcomeMail(welcome StaffWelcome, replyGoesToSchool func() bool) (Mail
 		Content: map[string]any{
 			"HelpURL":           welcome.HelpURL,
 			"FirstName":         strings.TrimSpace(welcome.FirstName),
+			"LastName":          strings.TrimSpace(welcome.LastName),
 			"LogoURL":           welcome.LogoURL,
 			"SchoolName":        welcome.SchoolName,
 			"ReplyGoesToSchool": replyGoesToSchool(),
@@ -201,7 +206,7 @@ func MFACodeMailContent(message MFACodeMail, origin string) Mail {
 		return parentMFACodeMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Dein moto-Anmeldecode",
+		Subject:  "Ihr moto-Anmeldecode",
 		Template: "mfa-email-code.html",
 		Content: map[string]any{
 			"LogoURL":              trimmedLogoURL(origin),
@@ -220,7 +225,7 @@ func TrustedDeviceAddedMailContent(message TrustedDeviceMail, origin string) Mai
 		return parentTrustedDeviceMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Neues vertrautes Gerät zu deinem moto-Konto hinzugefügt",
+		Subject:  "Neues vertrautes Gerät zu Ihrem moto-Konto hinzugefügt",
 		Template: "trusted-device-added.html",
 		Content: map[string]any{
 			"LogoURL":     trimmedLogoURL(origin),
@@ -239,7 +244,7 @@ func TrustedDeviceAddedMailContent(message TrustedDeviceMail, origin string) Mai
 // and may switch the factor on again in its account.
 func CatererMFAResetMailContent(message CatererMFAResetMail, origin string) Mail {
 	return Mail{
-		Subject:  "Deine Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
+		Subject:  "Ihre Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
 		Template: "caterer-mfa-reset.html",
 		Content: map[string]any{
 			"LogoURL": trimmedLogoURL(origin),
@@ -253,7 +258,7 @@ func adminActor(byOperator bool) string {
 	if byOperator {
 		return "Das moto-Team"
 	}
-	return "Die Verwaltung deiner Schule"
+	return "Die Verwaltung Ihrer Schule"
 }
 
 // MFAResetByAdminMailContent tells an account holder that an administrator
@@ -263,7 +268,7 @@ func MFAResetByAdminMailContent(message MFAResetByAdminMail, origin string) Mail
 		return parentMFAResetMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Deine Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
+		Subject:  "Ihre Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
 		Template: "account-mfa-reset.html",
 		Content: map[string]any{
 			"LogoURL":    trimmedLogoURL(origin),
@@ -368,9 +373,9 @@ func TraegerInvitationMail(invitation TraegerInvitation, traegerName, origin, tr
 // have been them.
 func TraegerAccountChangeMail(notice TraegerAccountChangeNotice, origin string) Mail {
 	removed := notice.Action == TraegerAccountMemberRemoved
-	subject := "Deine Rollen im Träger-Büro haben sich geändert"
+	subject := "Ihre Rollen im Träger-Büro haben sich geändert"
 	if removed {
-		subject = "Du bist nicht mehr im Träger-Büro"
+		subject = "Sie sind nicht mehr im Träger-Büro"
 	}
 	occurred := notice.OccurredAt.In(calendar.Berlin)
 	return Mail{
@@ -427,7 +432,7 @@ func (m DemoAccessMessage) PersonName() string {
 // form carried reaches this mail: no name, no school.
 func DemoAccessLinkMail(entryURL, origin string) Mail {
 	return Mail{
-		Subject:  "Dein Link zur moto-Demo",
+		Subject:  "Ihr Link zur moto-Demo",
 		Template: DemoAccessTemplate,
 		Content: map[string]any{
 			"EntryURL": entryURL,

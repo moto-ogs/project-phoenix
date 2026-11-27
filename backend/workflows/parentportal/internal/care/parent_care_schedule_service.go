@@ -135,17 +135,9 @@ func (s *Service) GetChildCareSchedule(ctx context.Context, accountID, studentID
 	return view, nil
 }
 
-// CreateCareScheduleRequest stores a pending change request for the child's
-// weekly plan and returns the refreshed view. Requires
-// parent_portal.request.submit and the field-level school settings. Messaging
-// is independent: notification pills are best-effort when messages are on.
-func (s *Service) CreateCareScheduleRequest(ctx context.Context, accountID, studentID int64, payload map[string]any) (*ChildCareSchedule, error) {
-	return s.CreateSignedCareScheduleRequest(ctx, accountID, studentID, payload, nil)
-}
-
-// CreateSignedCareScheduleRequest is CreateCareScheduleRequest with the
-// signature a weekday the child walks home alone needs (#4780). Such a
-// request also needs parent_portal.pickup.manage.
+// CreateSignedCareScheduleRequest stores a pending change to the child's
+// weekly plan and returns the refreshed view. A weekday the child walks home
+// alone also requires a signature and parent_portal.pickup.manage (#4780).
 func (s *Service) CreateSignedCareScheduleRequest(ctx context.Context, accountID, studentID int64, payload map[string]any, signature *PickupSignatureInput) (*ChildCareSchedule, error) {
 	payload, alone, err := weeklyAloneRequest(payload, signature)
 	if err != nil {
@@ -340,25 +332,13 @@ func (s *Service) absentToday(ctx context.Context, studentIDs []int64, today cal
 	return absent, nil
 }
 
-// MapCareRequestError translates the schedule-domain sentinels into this
-// package's parent-facing sentinels (which the handler maps to HTTP codes);
-// anything else is wrapped as an internal error.
-// EditCareScheduleRequest rewrites the caller's own pending weekly-plan
+// EditSignedCareScheduleRequest rewrites the caller's own pending weekly-plan
 // request (#2267, story 37). It replaces withdrawal, so the request keeps its
 // id and its share. Editing proposes a new plan, so it needs the same
 // parent_portal.request.submit as filing one (#4603), like the offering and
 // Stammdaten edits. It does not re-check the per-field capability switches: a
 // request already filed must stay correctable even after the school turns a
-// field off — that is the school's switch, not the guardian's authority.
-func (s *Service) EditCareScheduleRequest(
-	ctx context.Context, accountID, studentID, requestID int64,
-	payload map[string]any, expectedVersion string,
-) (*ChildCareSchedule, error) {
-	return s.EditSignedCareScheduleRequest(ctx, accountID, studentID, requestID, payload, expectedVersion, nil)
-}
-
-// EditSignedCareScheduleRequest is EditCareScheduleRequest with the fresh
-// signature an edited request that lets the child walk home alone needs.
+// field off. A weekday the child walks home alone requires a fresh signature.
 func (s *Service) EditSignedCareScheduleRequest(
 	ctx context.Context, accountID, studentID, requestID int64,
 	payload map[string]any, expectedVersion string, signature *PickupSignatureInput,
@@ -416,6 +396,9 @@ func (s *Service) EditSignedCareScheduleRequest(
 	return view, nil
 }
 
+// MapCareRequestError translates the schedule-domain sentinels into this
+// package's parent-facing sentinels (which the handler maps to HTTP codes);
+// anything else is wrapped as an internal error.
 func MapCareRequestError(err error, op string) error {
 	switch {
 	case errors.Is(err, carerequests.ErrNotFound):
@@ -426,6 +409,8 @@ func MapCareRequestError(err error, op string) error {
 		return ErrCareRequestAlreadyPending
 	case errors.Is(err, carerequests.ErrInvalidPayload):
 		return ErrInvalidCareRequestPayload
+	case errors.Is(err, carerequests.ErrPickupChangeConflict):
+		return ErrCareExceptionConflict
 	case errors.Is(err, carerequests.ErrPickupChangeCutoffPassed):
 		return ErrPickupChangeCutoffPassed
 	default:

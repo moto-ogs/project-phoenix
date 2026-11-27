@@ -163,6 +163,18 @@
       "legacy": "traeger.no_membership"
     },
     {
+      "code": "traeger.opening_change_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.opening_change_invalid"
+    },
+    {
+      "code": "traeger.opening_change_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.opening_change_not_found"
+    },
+    {
       "code": "traeger.report_template_invalid",
       "class": "input",
       "parameters": [],

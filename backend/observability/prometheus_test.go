@@ -163,8 +163,11 @@ func TestObserveCommunicationOperationRecordsRuntimeEvidence(t *testing.T) {
 	queriesBefore := testutil.ToFloat64(communicationQueries.WithLabelValues(operation))
 	rowsBefore := testutil.ToFloat64(communicationRows.WithLabelValues(operation))
 	conflictsBefore := testutil.ToFloat64(communicationDuplicatePreventionConflicts.WithLabelValues(operation))
-	durationsBefore := testutil.CollectAndCount(communicationDuration)
-	statementsBefore := testutil.CollectAndCount(communicationStatementDuration)
+	// Count observations for this operation, not series created by parallel tests.
+	duration := communicationDuration.WithLabelValues(operation).(prometheus.Histogram)
+	statementDuration := communicationStatementDuration.WithLabelValues(operation).(prometheus.Histogram)
+	durationsBefore := histogramSampleCount(t, duration)
+	statementsBefore := histogramSampleCount(t, statementDuration)
 
 	ObserveCommunicationOperation(operation, 2*time.Millisecond, 3, 1, 1, time.Millisecond, "ignored_on_success", nil)
 
@@ -172,8 +175,17 @@ func TestObserveCommunicationOperationRecordsRuntimeEvidence(t *testing.T) {
 	assert.Equal(t, queriesBefore+3, testutil.ToFloat64(communicationQueries.WithLabelValues(operation)))
 	assert.Equal(t, rowsBefore+1, testutil.ToFloat64(communicationRows.WithLabelValues(operation)))
 	assert.Equal(t, conflictsBefore+1, testutil.ToFloat64(communicationDuplicatePreventionConflicts.WithLabelValues(operation)))
-	assert.Equal(t, durationsBefore+1, testutil.CollectAndCount(communicationDuration))
-	assert.Equal(t, statementsBefore+1, testutil.CollectAndCount(communicationStatementDuration))
+	assert.Equal(t, durationsBefore+1, histogramSampleCount(t, duration))
+	assert.Equal(t, statementsBefore+1, histogramSampleCount(t, statementDuration))
+}
+
+func histogramSampleCount(t *testing.T, histogram prometheus.Histogram) uint64 {
+	t.Helper()
+	registry := prometheus.NewRegistry()
+	require.NoError(t, registry.Register(histogram))
+	families, err := registry.Gather()
+	require.NoError(t, err)
+	return families[0].Metric[0].GetHistogram().GetSampleCount()
 }
 
 func TestFeedbackHTTPResponseUsesActualStatusClassAndStableCode(t *testing.T) {

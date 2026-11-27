@@ -1,21 +1,19 @@
 {{define "invitation.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>Einladung zu moto</h1>
     {{if .FirstName}}
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}}{{if .LastName}} {{.LastName}}{{end}},</p>
     {{else}}
-    <p>Hallo,</p>
+    <p>Guten Tag,</p>
     {{end}}
     {{if .SchoolName}}
-    <p>du wurdest mit der Rolle <strong>{{.RoleName}}</strong> bei <strong>{{.SchoolName}}</strong> zur moto-Plattform eingeladen. Klicke auf den Button unten, um dein Konto einzurichten.</p>
+    <p>Sie wurden mit der Rolle <strong>{{.RoleName}}</strong> bei <strong>{{.SchoolName}}</strong> zur moto-Plattform eingeladen. Klicken Sie auf den Button unten, um Ihr Konto einzurichten.</p>
     {{else}}
-    <p>du wurdest mit der Rolle <strong>{{.RoleName}}</strong> zur moto-Plattform eingeladen. Klicke auf den Button unten, um dein Konto einzurichten.</p>
+    <p>Sie wurden mit der Rolle <strong>{{.RoleName}}</strong> zur moto-Plattform eingeladen. Klicken Sie auf den Button unten, um Ihr Konto einzurichten.</p>
     {{end}}
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.InvitationURL}}">Einladung annehmen</a>
     </div>
 
@@ -23,13 +21,10 @@
         <p>Diese Einladung läuft in {{.ExpiryHours}} Stunden ab.</p>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.InvitationURL}}">{{.InvitationURL}}</a>
-    </div>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link:</p>
+    {{template "link-box" .InvitationURL}}
 
-    <p class="security-note">Falls du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>
-</div>
+    <p class="security-note">Falls Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
 
 {{template "footer" .}}
 {{end}}

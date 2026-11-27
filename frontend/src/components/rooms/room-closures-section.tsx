@@ -211,7 +211,6 @@ export function RoomClosuresSection({
         <>
           {creating && RoomClosureModal ? (
             <RoomClosureModal
-              isOpen
               onClose={() => setCreating(false)}
               onSaved={() => {
                 refresh();

@@ -8,7 +8,6 @@ import { devicesConfig } from "./devices.config";
 import { groupsConfig } from "./groups.config";
 import { permissionsConfig } from "./permissions.config";
 import { rolesConfig } from "./roles.config";
-import { roomsConfig } from "./rooms.config";
 import { teachersConfig } from "./teachers.config";
 import type { Group } from "~/lib/group-helpers";
 import { buildBackendGroup } from "~/test/fixtures/groups";
@@ -28,46 +27,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const pagination = {
-  current_page: 1,
-  page_size: 50,
-  total_pages: 1,
-  total_records: 0,
-};
-
 describe("list", () => {
-  // A paginated route answers its page beside the data.
   it.each([
-    [
-      "rooms",
-      () => roomsConfig.api.list(),
-      "/api/rooms?include_system=true",
-      true,
-    ],
-    ["groups", () => groupsConfig.api.list(), "/api/groups", true],
-    ["devices", () => devicesConfig.api.list(), "/api/iot", false],
-    ["roles", () => rolesConfig.api.list(), "/api/auth/roles", false],
+    ["devices", () => devicesConfig.api.list(), "/api/iot"],
+    ["roles", () => rolesConfig.api.list(), "/api/auth/roles"],
     [
       "activities",
       () => activitiesConfig.api.list(),
       "/api/activities?include_system=true",
-      false,
     ],
     [
       "permissions",
       () => permissionsConfig.api.list(),
       "/api/auth/permissions",
-      false,
     ],
-    ["staff", () => teachersConfig.api.list(), "/api/staff", false],
-  ])("reads the %s list from its route", async (_entity, list, url, paged) => {
-    fetchMock.mockResolvedValueOnce(
-      Response.json(paged ? { data: [], pagination } : { data: [] }),
-    );
+    ["staff", () => teachersConfig.api.list(), "/api/staff"],
+  ])("reads the %s list from its route", async (_entity, list, url) => {
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [] }));
 
-    await expect(list()).resolves.toEqual(
-      paged ? { data: [], pagination } : [],
-    );
+    await expect(list()).resolves.toEqual([]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(url);
   });
 });
@@ -89,7 +67,9 @@ describe("groups", () => {
       teacher_ids: ["8"],
     };
 
-    await groupsConfig.api.update!("3", loaded);
+    await expect(groupsConfig.api.update("3", loaded)).resolves.toMatchObject({
+      id: "3",
+    });
 
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/groups/3");
@@ -123,7 +103,7 @@ describe("roles", () => {
     );
 
     await expect(
-      rolesConfig.api.update!(
+      rolesConfig.api.update(
         "4",
         { name: "Springkraft", baseRole: "user" },
         {

@@ -10,25 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type shiftMoveExceptionRepo struct {
-	createFunc func(context.Context, *StaffShiftSeriesException) error
-}
-
-func (m *shiftMoveExceptionRepo) Create(ctx context.Context, exception *StaffShiftSeriesException) error {
-	if m.createFunc != nil {
-		return m.createFunc(ctx, exception)
-	}
-	return nil
-}
-
-func (*shiftMoveExceptionRepo) FindDatesBySeriesID(context.Context, int64) ([]calendar.Date, error) {
-	return nil, nil
-}
-
-func (*shiftMoveExceptionRepo) RepointToSeriesFrom(context.Context, int64, int64, calendar.Date) (int64, error) {
-	return 0, nil
-}
-
 func TestShiftService_MoveAcrossStaffPreservesIdentityAndConsumesSeriesOccurrence(t *testing.T) {
 	t.Parallel()
 
@@ -50,13 +31,11 @@ func TestShiftService_MoveAcrossStaffPreservesIdentityAndConsumesSeriesOccurrenc
 		persisted = shift
 		return nil
 	}
-	var exception *StaffShiftSeriesException
-	svc.(*staffShiftService).exceptionRepo = &shiftMoveExceptionRepo{
-		createFunc: func(_ context.Context, row *StaffShiftSeriesException) error {
-			exception = row
-			return nil
-		},
-	}
+	var exception *workforce.StaffShiftSeriesException
+	svc.(*staffShiftService).Exceptions = shiftExceptionRecorder(func(_ context.Context, row workforce.StaffShiftSeriesException) error {
+		exception = &row
+		return nil
+	})
 
 	moved, err := svc.MoveShift(context.Background(), MoveShiftInput{
 		ShiftID:       existing.ID,
@@ -81,7 +60,7 @@ func TestShiftService_MoveAcrossStaffPreservesIdentityAndConsumesSeriesOccurrenc
 	assert.False(t, moved.Detached)
 	require.NotNil(t, exception)
 	assert.Equal(t, seriesID, exception.SeriesID)
-	assert.Equal(t, existing.Date, exception.Date)
+	assert.Equal(t, existing.Date.String(), exception.Date)
 	assert.Equal(t, existing.CreatedBy, exception.CreatedBy)
 }
 
@@ -130,12 +109,10 @@ func TestShiftService_MoveSeriesDateRetainsDeviationAndConsumesOriginalDate(t *t
 		return existing, nil
 	}
 	var exceptionDate calendar.Date
-	svc.(*staffShiftService).exceptionRepo = &shiftMoveExceptionRepo{
-		createFunc: func(_ context.Context, row *StaffShiftSeriesException) error {
-			exceptionDate = row.Date
-			return nil
-		},
-	}
+	svc.(*staffShiftService).Exceptions = shiftExceptionRecorder(func(_ context.Context, row workforce.StaffShiftSeriesException) error {
+		exceptionDate = calendar.Date(row.Date)
+		return nil
+	})
 
 	moved, err := svc.MoveShift(context.Background(), MoveShiftInput{
 		ShiftID:       existing.ID,
@@ -173,12 +150,10 @@ func TestShiftService_MoveSeriesNoOpDoesNotDetachOrWrite(t *testing.T) {
 		return nil
 	}
 	exceptions := 0
-	svc.(*staffShiftService).exceptionRepo = &shiftMoveExceptionRepo{
-		createFunc: func(_ context.Context, _ *StaffShiftSeriesException) error {
-			exceptions++
-			return nil
-		},
-	}
+	svc.(*staffShiftService).Exceptions = shiftExceptionRecorder(func(_ context.Context, _ workforce.StaffShiftSeriesException) error {
+		exceptions++
+		return nil
+	})
 
 	moved, err := svc.MoveShift(context.Background(), MoveShiftInput{
 		ShiftID:       existing.ID,
@@ -198,12 +173,8 @@ func TestShiftService_MoveSeriesNoOpDoesNotDetachOrWrite(t *testing.T) {
 	assert.Zero(t, exceptions)
 }
 
-func (m *shiftMoveExceptionRepo) RecordSeriesException(ctx context.Context, v workforce.StaffShiftSeriesException) error {
-	return m.Create(ctx, &StaffShiftSeriesException{ID: v.ID, SeriesID: v.SeriesID, TenantID: v.TenantID, Date: calendar.Date(v.Date), CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt})
-}
-func (*shiftMoveExceptionRepo) SeriesExceptionDates(context.Context, int64) ([]string, error) {
-	return nil, nil
-}
-func (*shiftMoveExceptionRepo) RepointSeriesExceptions(context.Context, int64, int64, string) (int64, error) {
-	return 0, nil
+type shiftExceptionRecorder func(context.Context, workforce.StaffShiftSeriesException) error
+
+func (record shiftExceptionRecorder) RecordSeriesException(ctx context.Context, v workforce.StaffShiftSeriesException) error {
+	return record(ctx, v)
 }

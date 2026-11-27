@@ -14,7 +14,10 @@ vi.mock("./session-cache", () => ({
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { EditActions } from "~/components/ui/edit-actions";
-import { SearchBar } from "~/components/ui/page-header/SearchBar";
+import {
+  SearchBarDraftProvider,
+  SharedSearchBar,
+} from "~/components/ui/page-header/SearchBar";
 import type { bffFile, bffJson } from "./bff-fetch";
 
 /** The proxy's refusal of a call from an older bundle (proxy.ts). */
@@ -164,7 +167,17 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
   });
 
   it("reloads although someone typed into the page's search", async () => {
-    render(<SearchBar value="" onChange={() => undefined} />);
+    const onChange = () => undefined;
+    render(
+      <SearchBarDraftProvider
+        value=""
+        onChange={onChange}
+        debounceMs={undefined}
+        resetKey={undefined}
+      >
+        <SharedSearchBar value="" onChange={onChange} />
+      </SearchBarDraftProvider>,
+    );
     fireEvent.input(screen.getByPlaceholderText("Name suchen..."), {
       target: { value: "Mia" },
     });

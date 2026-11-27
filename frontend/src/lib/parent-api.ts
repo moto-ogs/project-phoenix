@@ -1280,6 +1280,8 @@ export async function submitCareException(
     recipientGuardianProfileIds?: string[];
     /** Kontaktperson, die das Kind an diesem Tag abholt (#4780). */
     pickupPersonGuardianProfileId?: string;
+    /** Eine andere Person mit Namen statt einer Kontaktperson (#8162). */
+    pickupPersonName?: string;
     /** Nötig für eine Abholperson oder den Heimweg allein (#4780). */
     signature?: SignatureValue | null;
     /** Der vom Server geladene Wortlaut neben der Unterschrift (#4780). */
@@ -1298,6 +1300,7 @@ export async function submitCareException(
           params.recipientGuardianProfileIds ?? [],
         pickup_person_guardian_profile_id:
           params.pickupPersonGuardianProfileId || undefined,
+        pickup_person_name: params.pickupPersonName || undefined,
         ...(params.signature
           ? {
               signature: signatureRequestBody(
@@ -1322,6 +1325,8 @@ export async function updatePickupChangeRequest(
     reason: string;
     expectedVersion: string;
     pickupPersonGuardianProfileId?: string;
+    /** Eine andere Person mit Namen statt einer Kontaktperson (#8162). */
+    pickupPersonName?: string;
     signature?: SignatureValue | null;
     signatureStatement?: string;
   },
@@ -1340,6 +1345,7 @@ export async function updatePickupChangeRequest(
           expected_version: input.expectedVersion,
           pickup_person_guardian_profile_id:
             input.pickupPersonGuardianProfileId ?? "",
+          pickup_person_name: input.pickupPersonName || undefined,
           ...(input.signature
             ? {
                 signature: signatureRequestBody(
@@ -1743,13 +1749,18 @@ export async function updateOfferingChangeRequest(
 }
 
 /** Returns the school's courses with this child's state. */
-/** „Heute anders“ eines Kindes (#7671): was heute für das Kind anders ist. */
+/**
+ * „Heute anders“ eines Kindes (#7671). Ohne `date` liest das Backend heute;
+ * `date` nennt morgen für die Vorschau (#8236), andere Tage lehnt es ab.
+ */
 export async function getChildDayChanges(
   studentId: string,
+  date?: string,
 ): Promise<parentMeContract.ChildDayChangesResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/day-changes", {
       params: { studentId },
+      ...(date ? { query: { date } } : {}),
     }),
   );
 }

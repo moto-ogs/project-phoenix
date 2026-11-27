@@ -6,7 +6,6 @@ import {
   getDeviceStatusDisplayName,
   getDeviceStatusColor,
   formatLastSeen,
-  getDeviceTypeEmoji,
   generateDefaultDeviceName,
   type Device,
 } from "./iot-helpers";
@@ -288,20 +287,6 @@ describe("iot-helpers", () => {
     it("should handle date at midnight", () => {
       const result = formatLastSeen("2024-01-15T00:00:00Z");
       expect(result).toMatch(/\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}/);
-    });
-  });
-
-  describe("getDeviceTypeEmoji", () => {
-    it("should return emoji for terminal", () => {
-      expect(getDeviceTypeEmoji("terminal")).toBe("📡");
-    });
-
-    it("should return emoji for info_point", () => {
-      expect(getDeviceTypeEmoji("info_point")).toBe("ℹ️");
-    });
-
-    it("should return wrench emoji for unknown type", () => {
-      expect(getDeviceTypeEmoji("unknown")).toBe("🔧");
     });
   });
 

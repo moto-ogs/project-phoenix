@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/roots/owners"
+
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -88,10 +90,10 @@ func TestNativePickupSchedulesPersistAndRejectDuplicateStaffEdits(t *testing.T) 
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
 		return service.CreateStudentPickupNote(txCtx, note)
 	}))
-	notes, err := service.GetStudentPickupNotesForDate(ctx, student.ID, date)
+	storedNote, err := service.GetStudentPickupNoteByID(ctx, note.ID)
 	require.NoError(t, err)
-	require.Len(t, notes, 1)
-	require.Equal(t, note.ID, notes[0].ID)
+	require.Equal(t, note.Content, storedNote.Content)
+	require.Equal(t, note.NoteDate, storedNote.NoteDate)
 
 	exception, err := service.CreateOrReclaimException(ctx, student.ID, date, &clock, nil, staff.ID, nil)
 	require.NoError(t, err)
@@ -110,10 +112,12 @@ func TestNativePickupSchedulesPersistAndRejectDuplicateStaffEdits(t *testing.T) 
 	require.NoError(t, err)
 	require.Equal(t, student.ID, preserved.StudentID)
 	require.NoError(t, service.DeleteStudentPickupException(ctx, reclaimed.ID, reclaimed.StudentID))
-	missing, err := service.GetStudentPickupExceptionForDate(ctx, student.ID, date)
+	data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 	require.NoError(t, err)
-	require.Nil(t, missing)
-	require.NoError(t, service.DeleteAllStudentPickupNotes(ctx, student.ID))
+	require.Empty(t, data.Exceptions)
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return service.DeleteStudentPickupNote(txCtx, note.ID)
+	}))
 	require.NoError(t, service.DeleteStudentPickupSchedule(ctx, weekly.ID))
 }
 
@@ -124,7 +128,7 @@ func TestNativePickupApprovalRecordsPreserveDayAndConflict(t *testing.T) {
 	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	student := testpkg.CreateTestStudent(t, db, "Approval", "Records", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Approval", "Writer")
-	records, err := compose.NewPickupApprovalExceptions(owner)
+	records, err := compose.NewPickupApprovalExceptions(owners.CarePlanRequestRecords(owner))
 	require.NoError(t, err)
 	date := decisionTestToday.AddDays(7)
 	missing, err := records.FindForDate(ctx, student.ID, date)

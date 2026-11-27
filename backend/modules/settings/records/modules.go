@@ -77,17 +77,21 @@ var moduleCatalog = []ModuleDefinition{
 func Modules() []ModuleDefinition {
 	out := make([]ModuleDefinition, len(moduleCatalog))
 	for i, module := range moduleCatalog {
-		module.Requires = append([]ModuleKey(nil), module.Requires...)
-		out[i] = module
+		out[i] = module.clone()
 	}
 	return out
 }
 
+func (module ModuleDefinition) clone() ModuleDefinition {
+	module.Requires = append([]ModuleKey(nil), module.Requires...)
+	return module
+}
+
 // LookupModule returns the definition of a module key.
 func LookupModule(key ModuleKey) (ModuleDefinition, bool) {
-	for _, module := range Modules() {
+	for _, module := range moduleCatalog {
 		if module.Key == key {
-			return module, true
+			return module.clone(), true
 		}
 	}
 	return ModuleDefinition{}, false
@@ -95,9 +99,9 @@ func LookupModule(key ModuleKey) (ModuleDefinition, bool) {
 
 // ModuleForSettingKey returns the module whose switch is settingKey.
 func ModuleForSettingKey(settingKey string) (ModuleDefinition, bool) {
-	for _, module := range Modules() {
+	for _, module := range moduleCatalog {
 		if module.SettingKey == settingKey {
-			return module, true
+			return module.clone(), true
 		}
 	}
 	return ModuleDefinition{}, false
@@ -106,10 +110,10 @@ func ModuleForSettingKey(settingKey string) (ModuleDefinition, bool) {
 // ModuleDependents returns the modules that require key, in catalog order.
 func ModuleDependents(key ModuleKey) []ModuleDefinition {
 	var dependents []ModuleDefinition
-	for _, module := range Modules() {
+	for _, module := range moduleCatalog {
 		for _, required := range module.Requires {
 			if required == key {
-				dependents = append(dependents, module)
+				dependents = append(dependents, module.clone())
 			}
 		}
 	}

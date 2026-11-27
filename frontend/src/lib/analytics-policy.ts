@@ -563,6 +563,9 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "day_changes_entry_clicked",
   "day_changes_show_all",
   "day_changes_done_expanded",
+  // Umschalter auf „Morgen“ (#7657), ohne Eigenschaft: ob die Vorschau
+  // genutzt wird.
+  "day_changes_tomorrow_shown",
   // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
   // (onboarding_surface); das Portal steht in `surface`.
   "onboarding_surface_shown",

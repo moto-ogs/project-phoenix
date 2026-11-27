@@ -71,11 +71,6 @@ type CreateClassListEntry struct {
 	CreatedBy *int64
 }
 
-type UpdateClassListEntry struct {
-	ID int64
-	ClassListEntryFields
-}
-
 // ClassListEntryFilter narrows a listing. Every field is optional; the name
 // and class matches are case-insensitive and ignore surrounding whitespace.
 // Name matches also ignore canonical Unicode form.
@@ -92,7 +87,7 @@ type ClassListEntryFilter struct {
 // create, rename, delete and "Zuordnen". Each command guards the name and
 // class against both a second entry AND a regular student, and appends an
 // audit.class_list_entry_changes row in the same transaction as the write.
-// The plain Create/Update/DeleteClassListEntry commands stay unaudited on
+// The plain CreateClassListEntry and DeleteClassListEntry commands stay unaudited on
 // purpose — the import and the grade-transition ledger record their own
 // trail and must not produce a second one.
 type (
@@ -166,7 +161,6 @@ type ClassListEntryTrail interface {
 // /api/class-list-entries routes and the class-list exports reach.
 type ClassListEntries interface {
 	ListClassListEntriesInDisplayOrder(context.Context, ClassListEntryFilter) ([]ClassListEntry, error)
-	MatchingStudentIDs(context.Context, ClassListEntryFields) ([]int64, error)
 	MatchingStudentIDsForEntries(context.Context, []ClassListEntryFields) ([][]int64, error)
 	AddClassListEntry(context.Context, AddClassListEntry) (ClassListEntry, error)
 	ReviseClassListEntry(context.Context, ReviseClassListEntry) (ClassListEntry, error)

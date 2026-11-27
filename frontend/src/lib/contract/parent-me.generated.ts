@@ -35,7 +35,7 @@ import {
   type SwitchOffRequest,
 } from "./shared.generated";
 
-export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "class_dismissal_changed", "class_trip", "closing_day", "meal_cancelled", "opening_changed"] as const;
+export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day", "meal_cancelled", "opening_changed"] as const;
 export type ChildDayChangeKind = (typeof CHILD_DAY_CHANGE_KIND_VALUES)[number];
 
 export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days", "meal_plan"] as const;
@@ -539,6 +539,8 @@ export interface ChildDayChangeEntry {
   entered_by_you: boolean;
   child_status: OpenEnum<ChildDayStatus> | null;
   pickup_time: string | null;
+  pickup_person_name: string | null;
+  pickup_person_one_time: boolean;
   activity_title: string | null;
   room_name: string | null;
   previous_room_name: string | null;
@@ -562,6 +564,8 @@ export const ChildDayChangeEntrySchema: z.ZodType<ChildDayChangeEntry, unknown> 
   entered_by_you: bool,
   child_status: nullable(str),
   pickup_time: nullable(str),
+  pickup_person_name: nullable(str),
+  pickup_person_one_time: bool,
   activity_title: nullable(str),
   room_name: nullable(str),
   previous_room_name: nullable(str),
@@ -932,6 +936,7 @@ export interface PickupChangeRequestResponse {
   is_self: boolean;
   pickup_person?: string;
   pickup_person_guardian_profile_id?: string;
+  pickup_person_one_time?: boolean;
   signed: boolean;
   version: string;
 }
@@ -951,6 +956,7 @@ export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestRes
   is_self: bool,
   pickup_person: optional(str),
   pickup_person_guardian_profile_id: optional(int64String),
+  pickup_person_one_time: optional(bool),
   signed: bool,
   version: str,
 });
@@ -2352,6 +2358,7 @@ export interface SubmitCareExceptionRequest {
   reason?: string;
   recipient_guardian_profile_ids?: string[] | null;
   pickup_person_guardian_profile_id?: string | null;
+  pickup_person_name?: string | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2785,6 +2792,7 @@ export interface EditPickupChangeRequestBody {
   reason?: string;
   expected_version?: string;
   pickup_person_guardian_profile_id?: string | null;
+  pickup_person_name?: string | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2959,6 +2967,9 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/day-changes",
     portals: ["parent"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(ChildDayChangesResponseSchema),
   },
   "GET /parent/me/children/{studentId}/excused-requests": {

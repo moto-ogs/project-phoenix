@@ -246,6 +246,16 @@ func OwnTraegerClosingDays(tb testing.TB, db *bun.DB, organizationID int64) {
 	})
 }
 
+// OwnTraegerOpeningChanges removes the opening changes a test plans for the
+// Träger (#8202) when the test ends.
+func OwnTraegerOpeningChanges(tb testing.TB, db *bun.DB, organizationID int64) {
+	tb.Helper()
+	tb.Cleanup(func() {
+		_, err := db.ExecContext(context.Background(), `DELETE FROM schedule.traeger_opening_changes WHERE organization_id = ?`, organizationID)
+		require.NoError(tb, err, "Failed to clean up test Träger opening changes")
+	})
+}
+
 // OwnTraegerContributionRules removes the contribution rules, the billing
 // runs with their invoices, the cost bearers and the number ranges a test
 // creates for the Träger (#4664, #4668, #5627) when the test ends. The frozen contributions go with

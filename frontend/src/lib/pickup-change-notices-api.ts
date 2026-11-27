@@ -16,7 +16,9 @@ export interface PickupChangeNotice {
   date: string;
   /** The approved time ("15:00"); empty when the change was taken back. */
   pickupTime: string;
-  /** A corrected decision took the time back; the regular time applies. */
+  /** Who the family named to collect the child (#8162); empty for none. */
+  pickupPerson: string;
+  /** A corrected decision took the approved pickup change back. */
   withdrawn: boolean;
   informedAt: string;
 }
@@ -33,6 +35,7 @@ function mapNotice(data: pickupChangeNoticeResponse): PickupChangeNotice {
     studentFirstName: data.student_first_name,
     date: data.date,
     pickupTime: data.pickup_time ?? "",
+    pickupPerson: data.pickup_person ?? "",
     withdrawn: data.withdrawn,
     informedAt: data.informed_at,
   };

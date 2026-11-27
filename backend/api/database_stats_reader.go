@@ -9,7 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devicefleetRepositoryAdapter "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose/repositoryadapter"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
-	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
@@ -37,8 +36,7 @@ func DatabaseStatsPermissions() []string {
 // (#4013): the retained student, staff and group rows, the rooms, the
 // activities, the roles and permissions and the devices. It redacts every
 // count the caller's permissions do not cover.
-func newDatabaseStats(people peopleCompose.Repositories, groups owners.EducationGroupRows, roomOwner facilitiesModule.Capability, timetable timetableCompose.Repositories, identity identityaccess.Owner, deviceOwner devicefleet.Capability, logger *slog.Logger) DatabaseStatsReader {
-	rooms := facilitiesCompose.NewRoomRepository(roomOwner)
+func newDatabaseStats(people peopleCompose.Repositories, groups owners.EducationGroupRows, rooms facilitiesModule.Query, timetable timetableCompose.Repositories, identity identityaccess.Owner, deviceOwner devicefleet.Capability, logger *slog.Logger) DatabaseStatsReader {
 	devices := devicefleetRepositoryAdapter.NewDeviceRepository(deviceOwner)
 	stats := transactionruntime.NewDatabaseStats(statsContract.StatsDependencies{
 		Students: func(ctx context.Context) (int, error) {
@@ -49,7 +47,7 @@ func newDatabaseStats(people peopleCompose.Repositories, groups owners.Education
 			return len(rows), err
 		},
 		Rooms: func(ctx context.Context) (int, error) {
-			rows, err := rooms.List(ctx, nil)
+			rows, err := rooms.ListRooms(ctx, facilitiesModule.RoomFilter{})
 			return len(rows), err
 		},
 		Activities: func(ctx context.Context) (int, error) {

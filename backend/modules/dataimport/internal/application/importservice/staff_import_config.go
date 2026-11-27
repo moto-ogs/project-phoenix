@@ -133,11 +133,13 @@ type indexedStaff struct {
 	LastName        string
 }
 
-// NewStaffImportConfig creates a new staff import configuration; the clock
-// (deps.Now) is required.
+// NewStaffImportConfig binds the staff import to its record owners and clock.
 func NewStaffImportConfig(deps ports.StaffImportDeps) *StaffImportConfig {
 	if deps.Now == nil {
 		panic("data import: the staff import requires the clock")
+	}
+	if deps.Persons == nil || deps.Membership == nil {
+		panic("data import: the staff import requires People Directory and School Membership")
 	}
 	deps.Persons = ports.ObservePersonDirectory(deps.Persons)
 	deps.Membership = ports.ObserveStaffMembership(deps.Membership)

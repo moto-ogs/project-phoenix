@@ -31,13 +31,6 @@ func TestExcusedRequestContractMatchesPersistedVocabulary(t *testing.T) {
 	assert.Equal(t, absencerecords.StudentStatusSourceParent, careplan.StudentStatusSourceParent)
 	assert.Equal(t, absencerecords.StudentStatusDayStatuses(), careplan.StudentStatusDayStatusesExcept(""))
 
-	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, careplan.ExcusedRequestStatusPending)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusApproved, careplan.ExcusedRequestStatusApproved)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusRejected, careplan.ExcusedRequestStatusRejected)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusWithdrawn, careplan.ExcusedRequestStatusWithdrawn)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusDone, careplan.ExcusedRequestStatusDone)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusCareEnded, careplan.ExcusedRequestStatusCareEnded)
-
 	assert.Equal(t, protocol.ParentRequestTypeExcusedAbsence, careplan.ParentRequestTypeExcusedAbsence)
 	assert.Equal(t, protocol.ParentRequestEventSubmitted, careplan.ParentRequestEventSubmitted)
 	assert.Equal(t, protocol.ParentRequestEventGuardianEdit, careplan.ParentRequestEventGuardianEdit)

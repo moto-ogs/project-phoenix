@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,8 +40,6 @@ type childReadRig struct {
 	// bookConference runs a write as the Elternsprechtag booking, in the
 	// unit the portal guards.
 	bookConference func(ctx context.Context, accountID, studentID int64, write func(context.Context) error) error
-	// childCheckDelay slows the child lookup of the administrative part.
-	childCheckDelay *atomic.Int64
 	// settings writes the school's settings, e.g. child photos on or off.
 	settings childReadSettings
 	// now is the portal's clock, the one its decisions read.
@@ -57,7 +54,7 @@ func newChildReadRig(t *testing.T) childReadRig {
 	return newChildReadRigOn(t, testpkg.SetupIsolatedTestDB(t))
 }
 
-// newChildReadRigOn builds the rig on db, a pool on the test's isolated clone.
+// newChildReadRigOn builds the rig on the supplied pool.
 // with adjusts the portal's dependencies before they are composed.
 func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dependencies)) childReadRig {
 	t.Helper()
@@ -89,14 +86,13 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	require.NoError(t, err)
 	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar, nil)
 	require.NoError(t, err)
-	childCheckDelay := &atomic.Int64{}
 	// The portal's People Directory reads the photo feature from the school's
 	// settings, as in production (#7208): a photo consent needs photos on.
 	photoPeople, err := owners.NewPeopleDirectoryWithObserver(database, func(peopleCompose.Observation) {}, nil, owners.StudentPhotoRuntime{Settings: settings.Settings})
 	require.NoError(t, err)
 	deps := WithParentEnrollmentBudgetReads(portalCompose.Dependencies{
 		GuardianChanges: owners.ParentGuardianChanges(), DeparturePolicy: owners.ParentDeparturePolicy(), GuardianPolicy: owners.NewParentGuardianPolicy(), Fingerprints: owners.SecurityFingerprints{}, Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{}, Logger: slog.Default(), Now: now,
-		ChildRepo: owners.ParentChildReadsWithDelay(repos.ParentChildReads(), childCheckDelay), StudentRepo: owners.NewParentStudentReads(people.Student), PersonRepo: owners.NewParentPersonReads(people.Person), GuardianProfileRepo: owners.NewParentGuardianProfileReads(people.GuardianProfile), GuardianPhoneRepo: owners.NewParentGuardianPhoneReads(people.GuardianPhoneNumber), StudentGuardianRepo: owners.NewParentStudentGuardianReads(people.StudentGuardian),
+		ChildRepo: repos.ParentChildReads(), StudentRepo: owners.NewParentStudentReads(people.Student), PersonRepo: owners.NewParentPersonReads(people.Person), GuardianProfileRepo: owners.NewParentGuardianProfileReads(people.GuardianProfile), GuardianPhoneRepo: owners.NewParentGuardianPhoneReads(people.GuardianPhoneNumber), StudentGuardianRepo: owners.NewParentStudentGuardianReads(people.StudentGuardian),
 		Memberships: owners.NewParentSchoolMembershipLock(database),
 		Settings:    settings.Settings, CareRequests: module.CareRequests, OfferingChanges: owners.NewParentOfferingChangeRequests(module.OfferingChanges), CareOfferingRepo: owners.NewParentCareOfferingReads(catalog), MealPlan: meals.Capability, CareProfiles: profiles, People: photoPeople, CarePlan: owners.NewParentCarePlanCommands(repos.CareExceptions, nil), CareExceptions: owners.NewParentCareExceptions(repos.CareExceptions), CarePlanPolicy: owners.NewParentCarePlanPolicy(), DataRequests: owners.NewParentDataRequestCommands(repos.CareExceptions), ChangeRequestRepo: owners.NewParentDataRequestReads(repos.CareExceptions), ExcusedRequests: owners.NewParentExcusedAbsenceRequests(repos.ExcusedRequests), StudentConsents: owners.NewParentStudentConsents(owners.NewStudentConsentsFor(photoPeople, owners.NewTestAuditPersistence(database, nil).StudentConsentChange), owners.MustNewRoomHistoryStops(database)),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(sharing.FamilyProtection), ParentRequestShares: owners.BindParentRequestShareRecords(sharing.ParentRequestShare), ParentRequestEvents: owners.NewParentRequestEvents(sharing.ParentRequestEvent),
@@ -110,7 +106,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Use(RequestSettingsCacheMiddleware, RequestIdentityCacheMiddleware)
 	router.Mount("/parent", parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: deps.Now, Parent: portal, MessageAttachmentFiles: NewMemoryMessageAttachmentStorageForTests()}).Router(ParentSessionChain))
-	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings, now: deps.Now, portal: portal}
+	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), settings: settings.Settings, now: deps.Now, portal: portal}
 }
 
 type childReadSettings interface {
@@ -191,8 +187,7 @@ func (r childReadRig) get(t *testing.T, path, token string) (*httptest.ResponseR
 	return rec, queries
 }
 
-// serve answers path without counting statements, for a pool testpkg did
-// not open.
+// serve answers path without counting statements.
 func (r childReadRig) serve(t *testing.T, path, token string) *httptest.ResponseRecorder {
 	t.Helper()
 	return testutil.ExecuteRequest(r.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, path, nil, testutil.WithJWTBearer(token)))
@@ -539,11 +534,17 @@ func TestParentChildReadsFailAFailedStartOnce(t *testing.T) {
 // window of decided requests starts when the child check is done, as before
 // the handoff. With a slow child check, a request decided just inside the
 // window at the time of the request is outside it once the check is done.
-// The window is read on the portal's clock, which runs on from the rig's
-// fixed day, so the test reads that clock too.
+// The child lookup advances the portal's clock without sleeping.
 func TestParentExcusedRequestsStartTheirWindowAfterTheChildCheck(t *testing.T) {
 	t.Parallel()
-	rig := newChildReadRig(t)
+	now := childReadToday.BerlinMidnight().Add(10 * time.Hour)
+	var childCheckDuration time.Duration
+	rig := newChildReadRigOn(t, testpkg.SetupTestDB(t), func(deps *portalCompose.Dependencies) {
+		deps.Now = func() time.Time { return now }
+		deps.ChildRepo = owners.ParentChildReadsAfterCheck(deps.ChildRepo, func() {
+			now = now.Add(childCheckDuration)
+		})
+	})
 	family := rig.family(t)
 	path := childReadRoutes(family.StudentID, family.requestID)["excused_requests"]
 	decide := func(at time.Time) string {
@@ -555,17 +556,13 @@ func TestParentExcusedRequestsStartTheirWindowAfterTheChildCheck(t *testing.T) {
 	// calendar weeks back in the local zone, so a daylight saving change
 	// inside the window moves both alike.
 	const margin, slow = 2 * time.Second, 4 * time.Second
-	windowStart := func() time.Time { return rig.now().AddDate(0, 0, -14) }
-
-	inside := decide(windowStart().Add(margin))
-	rec, _ := rig.get(t, path, family.token)
+	inside := decide(now.AddDate(0, 0, -14).Add(margin))
+	rec := rig.serve(t, path, family.token)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Contains(t, rec.Body.String(), inside, "inside the window without a delay")
 
-	rig.childCheckDelay.Store(int64(slow))
-	t.Cleanup(func() { rig.childCheckDelay.Store(0) })
-	leaving := decide(windowStart().Add(margin))
-	rec, _ = rig.get(t, path, family.token)
+	childCheckDuration = slow
+	rec = rig.serve(t, path, family.token)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.NotContains(t, rec.Body.String(), leaving, "the window starts after the slow child check")
+	require.NotContains(t, rec.Body.String(), inside, "the window starts after the slow child check")
 }

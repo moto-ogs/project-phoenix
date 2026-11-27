@@ -112,6 +112,24 @@ func optionalID(r *http.Request, name string) (int64, error) {
 	return id, nil
 }
 
+// Sort directions of the list of contracts.
+const (
+	contractOrderAscending  = "asc"
+	contractOrderDescending = "desc"
+)
+
+// contractOrderOf reads the direction of the list's order: a column ascends
+// unless order=desc.
+func contractOrderOf(raw string) (bool, error) {
+	switch raw {
+	case "", contractOrderAscending:
+		return false, nil
+	case contractOrderDescending:
+		return true, nil
+	}
+	return false, errors.New("invalid order")
+}
+
 func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
 	if !ok {
@@ -134,8 +152,14 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 			*target = value
 		}
 	}
+	descending, err := contractOrderOf(query.Get("order"))
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	list, err := rs.contracts.ListContracts(r.Context(), reviewer, carecontract.ContractFilter{
 		Status: query.Get("status"), SchoolID: schoolID, Search: query.Get("search"), Offset: offset, Limit: limit,
+		Sort: query.Get("sort"), Descending: descending, Revision: query.Get("revision"),
 	})
 	if err != nil {
 		renderError(w, r, err)

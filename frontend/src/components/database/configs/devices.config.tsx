@@ -1,31 +1,16 @@
 // Device Entity Configuration
 
-"use client";
-
-import { useState } from "react";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { defineEntityConfig } from "@/lib/database/types";
+import type { EntityConfig, EntityFormConfig } from "@/lib/database/types";
 import type { Device } from "@/lib/iot-helpers";
 import { bffJson } from "~/lib/bff-fetch";
 import {
   mapDeviceResponse,
   prepareDeviceForBackend,
-  getDeviceTypeDisplayName,
-  getDeviceStatusDisplayName,
-  getDeviceStatusColor,
-  formatLastSeen,
-  formatRelativeLastSeen,
-  getDeviceTypeEmoji,
   generateDefaultDeviceName,
   DEVICE_TYPE_OPTIONS,
 } from "@/lib/iot-helpers";
 import { devicesConcept } from "~/lib/concepts/devices";
 import type * as iotContract from "~/lib/contract/iot.generated";
-import { useClipboardCopy } from "~/lib/use-clipboard-copy";
 
 /**
  * The body of a device edit: the fields of the form and the `version` of the
@@ -37,96 +22,17 @@ function toDeviceUpdateRequest(
   return { ...prepareDeviceForBackend(data), expected_version: data.version };
 }
 
-/**
- * Der API-Schlüssel eines Geräts: verborgen, mit zwei Schaltflächen aus dem
- * Kit. Vorher zwei bunte Eigenbau-Knöpfe, die ihren Text per DOM-Zugriff
- * umschrieben, und ein blauer Hinweiskasten mit Schloss-Emoji.
- */
-function ApiKeyField({ device }: Readonly<{ device: Device }>) {
-  const [visible, setVisible] = useState(false);
-  const { copied, copy } = useClipboardCopy("DeviceApiKeyField", 2000);
-  const { showMessage } = useApiErrorDisplay();
-
-  if (!device.api_key) {
-    return (
-      <span className="text-xs text-gray-500">Nur bei Erstellung sichtbar</span>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <Input
-            aria-label={`API-Schlüssel für ${device.name}`}
-            type={visible ? "text" : "password"}
-            controlSize="compact"
-            value={device.api_key}
-            readOnly
-            className="font-mono"
-            onClick={(event) => event.currentTarget.select()}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="compact"
-          onClick={() => setVisible((value) => !value)}
-          tooltip={
-            visible
-              ? "Verbirgt den Schlüssel wieder hinter Punkten."
-              : "Zeigt den Schlüssel lesbar auf dem Bildschirm."
-          }
-        >
-          {visible ? "Verbergen" : "Anzeigen"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="compact"
-          onClick={() => {
-            void copy(device.api_key!).then((ok) => {
-              if (!ok) {
-                showMessage(
-                  "Der Schlüssel konnte nicht kopiert werden. Bitte zeige ihn an und kopiere ihn selbst.",
-                );
-              }
-            });
-          }}
-          tooltip="Kopiert den Schlüssel, damit du ihn am Gerät einfügst."
-        >
-          {copied ? "Kopiert" : "Kopieren"}
-        </Button>
-      </div>
-      <Alert
-        type="info"
-        message={
-          'Der Schlüssel ist verborgen. Mit „Anzeigen" machst du ihn sichtbar.'
-        }
-      />
-    </div>
-  );
-}
-
-export const devicesConfig = defineEntityConfig<Device>({
+export const devicesConfig = {
   name: {
     singular: "Gerät",
     plural: "Geräte",
   },
-
-  concept: devicesConcept,
-
-  backUrl: "/database",
 
   // The catalog proxy hands on the contract's device; the client maps it
   // once (#7563).
   api: {
     list: async () =>
       (await bffJson("tenant", "GET /api/iot/")).map(mapDeviceResponse),
-    get: async (id) =>
-      mapDeviceResponse(
-        await bffJson("tenant", "GET /api/iot/{id}", { params: { id } }),
-      ),
     create: async (data) =>
       mapDeviceResponse(
         await bffJson("tenant", "POST /api/iot/", {
@@ -196,150 +102,5 @@ export const devicesConfig = defineEntityConfig<Device>({
     },
   },
 
-  detail: {
-    header: {
-      title: (device) => device.name ?? device.device_id,
-      subtitle: (device) => getDeviceTypeDisplayName(device.device_type),
-      avatar: {
-        text: (device) => device.name?.[0] ?? device.device_id?.[0] ?? "D",
-        size: "lg",
-      },
-    },
-
-    sections: [
-      {
-        title: "Geräteinformationen",
-        items: [
-          {
-            label: "Geräte-ID",
-            value: (device) => device.device_id,
-          },
-          {
-            label: "Typ",
-            value: (device) => getDeviceTypeDisplayName(device.device_type),
-          },
-          {
-            label: "Name",
-            value: (device) => device.name ?? "Nicht gesetzt",
-          },
-          {
-            label: "Verbindung",
-            value: (device) => (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="font-medium">
-                  {device.is_online ? "Online" : "Offline"}
-                </span>
-                {!device.is_online && (
-                  <span className="text-gray-500">
-                    · {formatRelativeLastSeen(device.last_seen)}
-                  </span>
-                )}
-              </span>
-            ),
-          },
-          {
-            label: "Letzter Standort",
-            value: (device) => device.room_name ?? "Noch nicht verwendet",
-          },
-          {
-            label: "Status",
-            value: (device) => (
-              <StatusColorBadge
-                label={getDeviceStatusDisplayName(device.status)}
-                color={getDeviceStatusColor(device.status)}
-              />
-            ),
-          },
-        ],
-      },
-      {
-        title: "Systemdaten",
-        columns: 2,
-        items: [
-          {
-            label: "Erstellt am",
-            value: (device) =>
-              new Date(device.created_at).toLocaleString("de-DE"),
-          },
-          {
-            label: "Aktualisiert am",
-            value: (device) =>
-              new Date(device.updated_at).toLocaleString("de-DE"),
-          },
-        ],
-      },
-      {
-        title: "API-Schlüssel",
-        items: [
-          {
-            label: "API-Schlüssel",
-            value: (device) => <ApiKeyField device={device} />,
-          },
-        ],
-      },
-    ],
-  },
-
-  list: {
-    title: "Gerät auswählen",
-    description: "Verwalte IoT-Geräte und deren Status",
-    searchPlaceholder: "Geräte suchen…",
-
-    searchStrategy: "frontend",
-    searchableFields: ["device_id", "device_type", "name"],
-    minSearchLength: 0,
-
-    filters: [
-      {
-        id: "device_type",
-        label: "Typ",
-        type: "select",
-        options: "dynamic",
-      },
-      {
-        id: "status",
-        label: "Status",
-        type: "select",
-        options: [
-          { value: "active", label: "Aktiv" },
-          { value: "inactive", label: "Inaktiv" },
-          { value: "maintenance", label: "Wartung" },
-          { value: "offline", label: "Offline" },
-        ],
-      },
-      {
-        id: "is_online",
-        label: "Online",
-        type: "select",
-        options: [
-          { value: "true", label: "Online" },
-          { value: "false", label: "Offline" },
-        ],
-      },
-    ],
-
-    item: {
-      title: (device) => device.name ?? device.device_id,
-      subtitle: (device) => getDeviceTypeDisplayName(device.device_type),
-      description: (device) =>
-        `Zuletzt gesehen: ${formatLastSeen(device.last_seen)}`,
-      avatar: {
-        text: (device) => getDeviceTypeEmoji(device.device_type),
-      },
-    },
-  },
-
-  onCreateSuccess: (_device: Device) => {
-    // The database page will automatically open the detail modal if the device has an API key
-    // This callback can be used for additional logic if needed
-  },
-
-  labels: {
-    createButton: "Neues Gerät registrieren",
-    createModalTitle: "Neues Gerät",
-    editModalTitle: "Gerät bearbeiten",
-    detailModalTitle: "Gerätedetails",
-    deleteConfirmation:
-      "Bist du sicher, dass du dieses Gerät löschen möchtest? Dieser Vorgang kann nicht rückgängig gemacht werden.",
-  },
-});
+  createTitle: "Neues Gerät",
+} satisfies EntityConfig<Device> & EntityFormConfig<Device>;

@@ -74,10 +74,6 @@ function groupAssignmentsByStaffAndDate(
 }
 
 export interface UseDienstplanDataResult {
-  /** `time_tracking:manage` — gates shift editing and the sick-report
-   *  context action; the caller uses it to decide whether to wire up
-   *  `onSickReport`. */
-  canManageAbsences: boolean;
   /** True when the caller lacks the full overview permission set
    *  (`schedules:read` + `users:read` on top of `time_tracking:manage`), i.e.
    *  the reduced staff/shifts-only path. Inverse of `canUseAssignmentOverview`;
@@ -98,7 +94,6 @@ export interface UseDienstplanDataResult {
   allShifts: StaffShift[];
   shiftTypes: ShiftType[] | undefined;
   shiftTypesError: Error | undefined;
-  shiftTypesLoading: boolean;
   mutateShiftTypes: KeyedMutator<ShiftType[]>;
   /** Set when the active data path (overview, or legacy staff/shifts) failed
    *  to load; the caller replaces the grid with a blocking error state. */
@@ -188,7 +183,6 @@ export function useDienstplanData(
   const {
     data: shiftTypes,
     error: shiftTypesError,
-    isLoading: shiftTypesLoading,
     mutate: mutateShiftTypes,
   } = useSWRAuth<ShiftType[]>(tenantDailyKeys.shiftTypes(), () =>
     // Auch entfernte Dienstarten: geplante Dienste tragen sie weiter (#6845).
@@ -272,7 +266,6 @@ export function useDienstplanData(
     [canUseAssignmentOverview, overviewRead, legacyShiftsRead],
   );
   return {
-    canManageAbsences,
     reducedPath: !canUseAssignmentOverview,
     sortedStaff,
     shiftsByStaff,
@@ -282,7 +275,6 @@ export function useDienstplanData(
     allShifts,
     shiftTypes,
     shiftTypesError,
-    shiftTypesLoading,
     mutateShiftTypes,
     scheduleError,
     scheduleLoading,

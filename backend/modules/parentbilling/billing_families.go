@@ -199,4 +199,7 @@ type BillingFamilies interface {
 	// no child of a contract of the family and has no number is
 	// ErrChildNotFound.
 	SetChildDebtorNumber(ctx context.Context, reviewer HolidayReviewer, input ChildDebtorNumberInput) (FamilyChild, error)
+	// InvoiceJournal lists the documents of every family in one list by
+	// number (#4819).
+	InvoiceJournal
 }

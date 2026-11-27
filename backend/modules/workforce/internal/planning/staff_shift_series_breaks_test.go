@@ -51,10 +51,10 @@ func (p *plannedDates) bulkCreate(_ context.Context, created []*workforce.ShiftR
 
 func newBreakSeriesService(reader SeriesNonWorkingDayReader, planned *plannedDates, series *seriesMockRepo) StaffShiftSeriesService {
 	service := newSeriesServiceForTest(seriesServiceMocks{
-		series: series,
-		shifts: &seriesShiftMockRepo{bulkCreateFn: planned.bulkCreate},
+		nonWorkingDays: reader,
+		series:         series,
+		shifts:         &seriesShiftMockRepo{bulkCreateFn: planned.bulkCreate},
 	})
-	WithStaffShiftSeriesNonWorkingDays(reader)(service.(*staffShiftSeriesService))
 	return service
 }
 

@@ -10,7 +10,7 @@ import {
   useCareTermTranslations,
   useProvideCareFacilityTerm,
 } from "./care-facility-term";
-import { useErrorCareFacilityTerm } from "./care-facility-term-context";
+import { useErrorCareTermValues } from "./care-facility-term-context";
 
 function tenantWithTerm(careFacilityTerm: string | undefined) {
   vi.mocked(useTenantSafe).mockReturnValue({
@@ -190,21 +190,22 @@ describe("care term on the error path (#6258)", () => {
       );
 
     expect(
-      renderHook(() => useErrorCareFacilityTerm(), { wrapper: inTenant("GTS") })
-        .result.current,
+      renderHook(() => useErrorCareTermValues().careTerm, {
+        wrapper: inTenant("GTS"),
+      }).result.current,
     ).toBe("GTS");
     expect(
-      renderHook(() => useErrorCareFacilityTerm(), {
+      renderHook(() => useErrorCareTermValues().careTerm, {
         wrapper: inTenant("GTS", "Ganztag Nord"),
       }).result.current,
     ).toBe("Ganztag Nord");
     expect(
-      renderHook(() => useErrorCareFacilityTerm(), {
+      renderHook(() => useErrorCareTermValues().careTerm, {
         wrapper: inTenant(undefined),
       }).result.current,
     ).toBe("OGS");
-    expect(renderHook(() => useErrorCareFacilityTerm()).result.current).toBe(
-      "OGS",
-    );
+    expect(
+      renderHook(() => useErrorCareTermValues().careTerm).result.current,
+    ).toBe("OGS");
   });
 });

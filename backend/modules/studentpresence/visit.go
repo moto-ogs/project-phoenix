@@ -19,15 +19,14 @@ type Visit struct {
 }
 
 // VisitFilter selects recorded intervals. Nil ID lists are unrestricted;
-// non-nil empty lists select nothing. Overlap includes both endpoints.
+// non-nil empty lists select nothing. Time bounds include both endpoints.
 type VisitFilter struct {
 	// ClosedSince leaves current visits intact while restricting completed history.
-	ClosedSince                                                *time.Time
-	IDs, StudentIDs, ActiveGroupIDs                            []int64
-	EnteredFrom, EnteredUntil                                  *time.Time
-	OverlapFrom, OverlapUntil                                  *time.Time
-	OpenOnly, ClosedOnly, NewestFirst, StudentOrder, ForUpdate bool
-	Limit, Offset                                              int
+	ClosedSince                                     *time.Time
+	IDs, StudentIDs, ActiveGroupIDs                 []int64
+	EnteredFrom, EnteredUntil                       *time.Time
+	OpenOnly, ClosedOnly, NewestFirst, StudentOrder bool
+	Limit, Offset                                   int
 }
 
 type VisitQuery interface {

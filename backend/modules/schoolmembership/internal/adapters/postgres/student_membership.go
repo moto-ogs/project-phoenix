@@ -118,23 +118,6 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
 	return id, stats, err
 }
 
-func (s *Store) AssignStudentGroup(ctx context.Context, studentID int64, groupID *int64) (bool, domain.OperationStats, error) {
-	db, scope, err := s.database(ctx)
-	if err != nil {
-		return false, domain.OperationStats{}, err
-	}
-	if err = requireStudentWriteTenant(scope.TenantID); err != nil {
-		return false, domain.OperationStats{}, err
-	}
-	query := withStudentTenant(studentUpdate(db), scope).Set("group_id = ?", groupID).
-		Where("student.student_profile_id = ?", studentID).
-		// A child without an OGS place has no group (#4803); clearing one is allowed.
-		Where("NOT student.without_care_place OR ?::bigint IS NULL", groupID).
-		Where("student.status <> 'alumnus' OR student.group_id = ?::bigint OR (student.group_id IS NULL AND ?::bigint IS NULL)", groupID, groupID)
-	changed, stats, err := execStudents(ctx, query, "assign student group")
-	return changed == 1, stats, err
-}
-
 // LockStudentWindow reads the child's class, status, window and group under a
 // row lock, for a write that decides on them (#6505).
 func (s *Store) LockStudentWindow(ctx context.Context, id int64) (schoolmembership.StudentEnrollment, bool, domain.OperationStats, error) {

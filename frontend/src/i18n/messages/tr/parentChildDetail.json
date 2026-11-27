@@ -51,7 +51,7 @@
     "lastName": "Soyad",
     "salutationLabel": "Hitap şekli",
     "salutationNone": "Belirtilmedi",
-    "salutationHint": "İsteğe bağlı. Hitap şekliyle Almanca e-postalar örneğin “Liebe Karin” veya “Lieber Jonas” diye başlar.",
+    "salutationHint": "İsteğe bağlı. Hitap şekliyle Almanca e-postalar örneğin “Liebe Frau Klein” veya “Lieber Herr Klein” diye başlar.",
     "email": "E-posta",
     "street": "Sokak ve kapı numarası",
     "postalCode": "Posta kodu",

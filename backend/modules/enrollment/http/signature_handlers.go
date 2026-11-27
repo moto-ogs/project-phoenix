@@ -92,25 +92,12 @@ func (rs *Resource) loadAdminSignature(ctx context.Context, detail *AdminRequest
 		_, err := rs.attachAdminSignature(savepointCtx, detail, requestID)
 		return err
 	}); err != nil {
-		if !rs.transactions && rs.runInTenantTxForTest == nil && errors.Is(err, tenant.ErrSavepointControl) {
-			// Bare route unit tests deliberately run without a tenant transaction.
-			// There is no transaction to protect there, so retain the direct,
-			// best-effort enrichment that those handlers historically used.
-			rs.loadAdminSignatureBestEffort(ctx, detail, requestID)
-			return nil, nil
-		}
 		rs.logAdminSignatureLoadFailure(err)
 		if errors.Is(err, tenant.ErrSavepointControl) {
 			return nil, err
 		}
 	}
 	return nil, nil
-}
-
-func (rs *Resource) loadAdminSignatureBestEffort(ctx context.Context, detail *AdminRequestDetail, requestID int64) {
-	if _, err := rs.attachAdminSignature(ctx, detail, requestID); err != nil {
-		rs.logAdminSignatureLoadFailure(err)
-	}
 }
 
 func (rs *Resource) logAdminSignatureLoadFailure(err error) {

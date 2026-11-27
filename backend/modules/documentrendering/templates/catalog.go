@@ -9,8 +9,9 @@ type kindCatalog struct {
 	placeholders []Placeholder
 	standard     Template
 	// forOne is the body of the standard template for a letter to one
-	// person, another payer: the same text in the du-form (ADR 0294, #7463).
-	// Only the kinds parent billing writes to a payer have one.
+	// person, another payer, who did not book the care and is not the
+	// parent of the child (#7463). Only the confirmation letter words that
+	// differently; every other kind writes the same text to a payer.
 	forOne Template
 }
 
@@ -48,15 +49,15 @@ var samples = map[string]Value{
 	pDate.Name:          {Text: "02.11.2026"},
 	pSender.Name:        {Text: "Träger Musterstadt"},
 	pContact.Name:       {Text: "Paula Kern"},
-	pQuestions.Name:     {Text: "Bei Fragen erreicht ihr Paula Kern unter 05402 1234-0."},
+	pQuestions.Name:     {Text: "Bei Fragen erreichen Sie Paula Kern unter 05402 1234-0."},
 	pPeriod.Name:        {Text: "Herbstferien 2026"},
 	pNumber.Name:        {Text: "FE-2026-0001"},
 	pNoticeNumber.Name:  {Text: "GB-2026-0001"},
 	pDebtorNumber.Name:  {Text: sampleDebtorNumber},
 	pTotal.Name:         {Text: "92,50 €"},
 	pDue.Name:           {Text: "16.11.2026"},
-	pPaymentNote.Name:   {Text: "Bitte überweist 92,50 € bis zum 16.11.2026 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer FE-2026-0001 an."},
-	pNotes.Name:         {Text: "Bitte denkt an: Frühstück, Wechselkleidung, Hausschuhe."},
+	pPaymentNote.Name:   {Text: "Bitte überweisen Sie 92,50 € bis zum 16.11.2026 auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer FE-2026-0001 an."},
+	pNotes.Name:         {Text: "Bitte denken Sie an: Frühstück, Wechselkleidung, Hausschuhe."},
 	pOffer.Name:         {Text: "Offene Ganztagsschule"},
 	pPlace.Name:         {Text: "OGS Am Lindenhof"},
 	pContractStart.Name: {Text: "01.08.2026"},
@@ -86,11 +87,11 @@ var catalog = map[Kind]kindCatalog{
 		standard: Template{
 			Subject:    "Bestätigung und Rechnung: {{zeitraum}}",
 			Salutation: standardSalutation,
-			Body: "wir bestätigen die Anmeldung von {{kinder}} für „{{zeitraum}}“. Ihr habt gebucht:\n\n" +
+			Body: "wir bestätigen die Anmeldung von {{kinder}} für „{{zeitraum}}“. Sie haben gebucht:\n\n" +
 				"{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n" +
-				"# Bitte beachtet\n{{hinweise}}\n\n" +
-				"# Notfallnummern\nIn dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:\n{{notfallnummern}}\n\n" +
+				"# Bitte beachten Sie\n{{hinweise}}\n\n" +
+				"# Notfallnummern\nIn dringenden Fällen und wenn Ihr Kind krank ist, erreichen Sie die Betreuung hier:\n{{notfallnummern}}\n\n" +
 				"{{rueckfragen}}",
 			Closing: standardClosing,
 		},
@@ -99,8 +100,8 @@ var catalog = map[Kind]kindCatalog{
 			Body: "wir bestätigen die Anmeldung von {{kinder}} für „{{zeitraum}}“. Diese Betreuung ist gebucht:\n\n" +
 				"{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n" +
-				"# Bitte beachte\n{{hinweise}}\n\n" +
-				"# Notfallnummern\nIn dringenden Fällen und wenn das Kind krank ist, erreichst du die Betreuung hier:\n{{notfallnummern}}\n\n" +
+				"# Bitte beachten Sie\n{{hinweise}}\n\n" +
+				"# Notfallnummern\nIn dringenden Fällen und wenn das Kind krank ist, erreichen Sie die Betreuung hier:\n{{notfallnummern}}\n\n" +
 				"{{rueckfragen}}",
 		},
 	},
@@ -109,14 +110,9 @@ var catalog = map[Kind]kindCatalog{
 		standard: Template{
 			Subject:    "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
 			Salutation: standardSalutation,
-			Body: "für {{kinder}} berechnen wir euch:\n\n{{positionen}}\n\n" +
+			Body: "für {{kinder}} berechnen wir Ihnen:\n\n{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 			Closing: standardClosing,
-		},
-		forOne: Template{
-			Subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
-			Body: "für {{kinder}} berechnen wir dir:\n\n{{positionen}}\n\n" +
-				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 		},
 	},
 	KindFeeNotice: {
@@ -130,11 +126,6 @@ var catalog = map[Kind]kindCatalog{
 			Body: "für die Betreuung von {{kinder}} setzen wir für {{zeitraum}} diesen Elternbeitrag fest:\n\n{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 			Closing: standardClosing,
-		},
-		forOne: Template{
-			Subject: "Bescheid über den Elternbeitrag {{bescheidnummer}}",
-			Body: "für die Betreuung von {{kinder}} setzen wir für {{zeitraum}} diesen Elternbeitrag fest:\n\n{{positionen}}\n\n" +
-				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 		},
 	},
 	KindContract: {
@@ -150,9 +141,9 @@ var catalog = map[Kind]kindCatalog{
 	KindCancellation: {
 		placeholders: with(pOffer, pPlace, pEndsOn),
 		standard: Template{
-			Subject:    "Bestätigung eurer Kündigung",
+			Subject:    "Bestätigung Ihrer Kündigung",
 			Salutation: standardSalutation,
-			Body: "wir haben eure Kündigung für {{kinder}} erhalten.\n\n" +
+			Body: "wir haben Ihre Kündigung für {{kinder}} erhalten.\n\n" +
 				"Die Betreuung im Angebot „{{angebot}}“ in der {{betreuungsort}} endet am {{kuendigung_zum}}.\n\n{{rueckfragen}}",
 			Closing: standardClosing,
 		},
@@ -163,8 +154,8 @@ var catalog = map[Kind]kindCatalog{
 			Subject:    "Zahlungserinnerung zur Rechnung {{rechnungsnummer}}",
 			Salutation: standardSalutation,
 			Body: "für die Rechnung {{rechnungsnummer}} haben wir noch keine Zahlung erhalten.\n\n" +
-				"**Bitte überweist {{summe}} bis zum {{zahlen_bis}}.**\n\n" +
-				"Habt ihr schon bezahlt? Dann ist dieses Schreiben erledigt.\n\n{{rueckfragen}}",
+				"**Bitte überweisen Sie {{summe}} bis zum {{zahlen_bis}}.**\n\n" +
+				"Haben Sie schon bezahlt? Dann ist dieses Schreiben erledigt.\n\n{{rueckfragen}}",
 			Closing: standardClosing,
 		},
 	},
@@ -174,7 +165,7 @@ var catalog = map[Kind]kindCatalog{
 			Subject:    "Bescheinigung über Betreuungskosten",
 			Salutation: standardSalutation,
 			Body: "hiermit bescheinigen wir: {{kinder}} wurde im Zeitraum {{zeitraum}} im Angebot „{{angebot}}“ in der {{betreuungsort}} betreut.\n\n" +
-				"Ihr habt dafür {{summe}} bezahlt.\n\n{{rueckfragen}}",
+				"Sie haben dafür {{summe}} bezahlt.\n\n{{rueckfragen}}",
 			Closing: standardClosing,
 		},
 	},

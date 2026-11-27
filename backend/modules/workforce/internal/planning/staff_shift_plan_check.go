@@ -9,7 +9,7 @@ import (
 // refuseWhenPlanningOff refuses a new shift while the Träger plans outside
 // moto (ADR 0242 point 6).
 func (s *staffShiftService) refuseWhenPlanningOff(ctx context.Context) error {
-	return s.guard.ensurePlanningOn(ctx)
+	return s.Guard.ensurePlanningOn(ctx)
 }
 
 // writeCheckedShift checks the shift against the school's other shifts of
@@ -25,7 +25,7 @@ func (s *staffShiftService) writeCheckedShift(ctx context.Context, shift, stored
 	if stored != nil {
 		before = []*workforce.ShiftRecord{stored}
 	}
-	override, err := s.guard.check(ctx, shift.StaffID, before, []*workforce.ShiftRecord{shift}, shift.WorkingTime)
+	override, err := s.Guard.check(ctx, shift.StaffID, before, []*workforce.ShiftRecord{shift}, shift.WorkingTime)
 	if err != nil {
 		return err
 	}
@@ -34,5 +34,5 @@ func (s *staffShiftService) writeCheckedShift(ctx context.Context, shift, stored
 		return err
 	}
 	applyShiftToRow(shift, written)
-	return s.guard.record(ctx, override, shift, nil, actorStaffID)
+	return s.Guard.record(ctx, override, shift, nil, actorStaffID)
 }

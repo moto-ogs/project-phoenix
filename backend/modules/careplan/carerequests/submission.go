@@ -35,17 +35,6 @@ type PickupChangeCreateInput struct {
 	Cutoff SameDayCutoff
 }
 
-// MandatoryReasonPickupChange is the Gehzeit change of the legacy submission
-// entry point (Service.CreatePickupChangeRequest): it always requires a
-// reason, whatever the school's reason policy says. A caller that resolved
-// the policy builds its own PickupChangeCreateInput.
-func MandatoryReasonPickupChange(studentID, guardianAccountID int64, date calendar.Date, pickupTime time.Time, reason string) PickupChangeCreateInput {
-	return PickupChangeCreateInput{
-		StudentID: studentID, GuardianAccountID: guardianAccountID,
-		Date: date, PickupTime: pickupTime, Reason: reason, ReasonRequired: true,
-	}
-}
-
 type Submissions interface {
 	CreateRequest(context.Context, int64, int64, json.RawMessage) (*Request, error)
 	CreatePickupChange(context.Context, PickupChangeCreateInput) (*Request, error)
@@ -60,8 +49,7 @@ func ValidatePickupChange(input PickupChangeCreateInput, today calendar.Date) (s
 	if input.StudentID <= 0 || input.GuardianAccountID <= 0 || input.Date.IsZero() ||
 		(input.PickupTime.IsZero() && input.DepartureMode == "" && input.PickupPerson == nil) ||
 		(input.DepartureMode != "" && !RequestableDepartureMode(input.DepartureMode)) ||
-		(input.PickupPerson != nil && (input.PickupPerson.GuardianProfileID <= 0 ||
-			strings.TrimSpace(input.PickupPerson.Name) == "" || !PickupPersonAllowed(input.DepartureMode))) ||
+		(input.PickupPerson != nil && !input.PickupPerson.valid(input.DepartureMode)) ||
 		(reason == "" && input.ReasonRequired) || utf8.RuneCountInString(reason) > 255 {
 		return "", ErrInvalidPayload
 	}

@@ -11,7 +11,6 @@ import (
 
 type StudentArrivalExceptionRecords interface {
 	Create(arg0 context.Context, arg1 *StudentArrivalException) error
-	DeleteByStudentID(arg0 context.Context, arg1 int64) error
 	FindByID(arg0 context.Context, arg1 int64) (*StudentArrivalException, error)
 	FindByStudentID(arg0 context.Context, arg1 int64) ([]*StudentArrivalException, error)
 	FindByStudentIDAndDate(arg0 context.Context, arg1 int64, arg2 calendar.Date) (*StudentArrivalException, error)
@@ -33,11 +32,6 @@ func FromStudentArrivalExceptionRecords(value ports.StudentArrivalExceptionRecor
 
 func (adapter fromStudentArrivalExceptionRecords) Create(arg0 context.Context, arg1 *StudentArrivalException) error {
 	result0 := adapter.value.Create(arg0, toNative12(arg1))
-	return result0
-}
-
-func (adapter fromStudentArrivalExceptionRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {
-	result0 := adapter.value.DeleteByStudentID(arg0, arg1)
 	return result0
 }
 

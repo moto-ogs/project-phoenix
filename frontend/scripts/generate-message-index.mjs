@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { format, resolveConfig } from "prettier";
 import {
   assertLocaleDirectories,
-  composeMessages,
   readMessageSources,
   renderMessageFacade,
   renderMessageLoaders,
@@ -40,13 +39,10 @@ export async function synchronizeMessageFacades({
   const catalogs = new Map();
   for (const locale of locales) {
     const sources = readMessageSources(join(directory, locale));
-    catalogs.set(locale, composeMessages(sources));
+    const { messages, source } = renderMessageFacade(sources, locale);
+    catalogs.set(locale, messages);
     const file = join(directory, `${locale}.generated.ts`);
-    await synchronizeDerivative(
-      file,
-      renderMessageFacade(sources, locale),
-      check,
-    );
+    await synchronizeDerivative(file, source, check);
   }
   await synchronizeDerivative(
     join(directory, "loaders.generated.ts"),

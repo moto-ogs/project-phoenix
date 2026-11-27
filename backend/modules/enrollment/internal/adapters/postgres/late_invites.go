@@ -192,28 +192,3 @@ func (r *Store) DeleteLateInvitesSettledBefore(ctx context.Context, cutoff time.
 	}
 	return res.RowsAffected()
 }
-
-// DeleteByUsedRequestID removes late-invite PII linked to a request before the
-// request deletion can clear used_request_id through ON DELETE SET NULL.
-func (r *Store) DeleteLateInvitesByUsedRequestID(ctx context.Context, requestID int64) (int64, error) {
-	tenantID, err := r.tenantID(ctx)
-	if err != nil {
-		return 0, err
-	}
-	db, err := r.resolve(ctx)
-	if err != nil {
-		return 0, err
-	}
-
-	res, err := db.NewDelete().
-		Model((*lateInviteRow)(nil)).
-		ModelTableExpr(lateInviteTableExpr).
-		Where("tenant_id = ?", tenantID).
-		Where(`"late_invite".used_request_id = ?`, requestID).
-		Exec(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete enrollment late invites by used request: %w", err)
-	}
-	affected, _ := res.RowsAffected()
-	return affected, nil
-}

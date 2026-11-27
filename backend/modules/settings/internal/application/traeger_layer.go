@@ -112,10 +112,7 @@ var schoolBoundKeys = map[string]bool{
 // or the parent report modes (ADR 0086 section 3). Side-effect handlers are
 // refused where they are bound (sideeffects.NewRegistryWith).
 func ValidateTraegerLevels(registry *config.Registry) error {
-	for key, definition := range registry.AllDefinitions() {
-		if !definition.Levels.AtTraeger() {
-			continue
-		}
+	for _, key := range registry.TraegerLevelKeys() {
 		if _, module := config.ModuleForSettingKey(key); module || schoolBoundKeys[key] || isParentReportSettingKey(key) {
 			return fmt.Errorf("settings: %s is bound to the school and cannot have a Träger level", key)
 		}

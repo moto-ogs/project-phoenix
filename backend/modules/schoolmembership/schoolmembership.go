@@ -267,20 +267,14 @@ type StaffQuery interface {
 
 // ClassListQuery reads the Klassenliste entries.
 type ClassListQuery interface {
-	FindClassListEntry(context.Context, int64) (ClassListEntry, error)
-	// FindClassListEntryForMutation locks the row for the caller's transaction.
-	FindClassListEntryForMutation(context.Context, int64) (ClassListEntry, error)
 	// ListClassListEntries returns the entries matching the filter, ordered
 	// by last name, first name (both case-folded) and ID.
 	ListClassListEntries(context.Context, ClassListEntryFilter) ([]ClassListEntry, error)
 	// ListClassListEntriesInDisplayOrder returns them in class-then-name
 	// display order instead.
 	ListClassListEntriesInDisplayOrder(context.Context, ClassListEntryFilter) ([]ClassListEntry, error)
-	// MatchingStudentIDs names the enrolled students sharing an entry's name
-	// and class: the "Zuordnen" hint, never an automatic merge.
-	MatchingStudentIDs(context.Context, ClassListEntryFields) ([]int64, error)
-	// MatchingStudentIDsForEntries answers MatchingStudentIDs for every
-	// entry from one shared read; result[i] answers entries[i].
+	// MatchingStudentIDsForEntries lists enrolled namesakes and classmates for
+	// the "Zuordnen" hint. Result i answers entry i.
 	MatchingStudentIDsForEntries(context.Context, []ClassListEntryFields) ([][]int64, error)
 }
 
@@ -318,7 +312,6 @@ type StaffCommand interface {
 // ClassListCommand writes the Klassenliste entries.
 type ClassListCommand interface {
 	CreateClassListEntry(context.Context, CreateClassListEntry) (ClassListEntry, error)
-	UpdateClassListEntry(context.Context, UpdateClassListEntry) (ClassListEntry, error)
 	// DeleteClassListEntry removes the entry; entries carry no tombstone.
 	DeleteClassListEntry(context.Context, int64) error
 

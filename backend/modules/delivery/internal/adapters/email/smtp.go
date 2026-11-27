@@ -174,7 +174,6 @@ func (m *SMTPMailer) SendWithReceipt(ctx context.Context, email mailcontract.Mes
 	messageID := msg.GetMessageID()
 	m.logger.Info("sending email",
 		slog.String("message_id", messageID),
-		slog.String("subject", email.Subject),
 		slog.String("template", email.Template))
 	err = m.sendMessageContext(ctx, msg)
 	if err != nil {

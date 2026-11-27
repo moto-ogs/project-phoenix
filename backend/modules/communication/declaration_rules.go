@@ -101,16 +101,6 @@ func DeclarationAllowedActions(rules DeclarationRules, canSubmit bool, myLatest 
 	return actions
 }
 
-// DeclarationActionAllowed reports whether action is in the allowed set.
-func DeclarationActionAllowed(rules DeclarationRules, canSubmit bool, myLatest, action string, now time.Time) bool {
-	for _, allowed := range DeclarationAllowedActions(rules, canSubmit, myLatest, now) {
-		if allowed == action {
-			return true
-		}
-	}
-	return false
-}
-
 // DeclarationOwesAction reports whether the guardian still owes something for
 // the child: they may declare, nothing of theirs counts yet, and the child is
 // not settled already (with "any", another guardian may have done it).

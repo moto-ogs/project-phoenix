@@ -112,8 +112,13 @@ type HolidayRegistrationWeek struct {
 // PublicHolidayRegistrationOfferResponse is the body of GET
 // /traeger/holiday-registrations/{token}.
 type PublicHolidayRegistrationOfferResponse struct {
-	TraegerName          string                    `json:"traeger_name"`
-	Name                 string                    `json:"name"`
+	TraegerName string `json:"traeger_name"`
+	Name        string `json:"name"`
+	// Kind is "holiday" or "extra_day"; an extra day is one day at each of
+	// its schools. IncludedInFee marks an extra day the monthly contribution
+	// covers: it has no price (#4817).
+	Kind                 string                    `json:"kind"`
+	IncludedInFee        bool                      `json:"included_in_fee"`
 	RegistrationOpensOn  calendar.Date             `json:"registration_opens_on"`
 	RegistrationClosesOn calendar.Date             `json:"registration_closes_on"`
 	Binding              bool                      `json:"binding"`
@@ -393,7 +398,7 @@ func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capabil
 		})
 	}
 	return PublicHolidayRegistrationOfferResponse{
-		TraegerName: link.Traeger.Name, Name: offer.Name, RegistrationOpensOn: offer.RegistrationOpensOn,
+		TraegerName: link.Traeger.Name, Name: offer.Name, Kind: offer.Kind, IncludedInFee: offer.IncludedInFee, RegistrationOpensOn: offer.RegistrationOpensOn,
 		RegistrationClosesOn: offer.RegistrationClosesOn, Binding: offer.Binding, Notes: offer.Notes, Open: offer.Open,
 		Weeks: weeks, Schools: schools, CaptchaSiteKey: siteKey, MaxDaysPerChild: offer.MaxDaysPerChild,
 		AllocationMode: offer.AllocationMode, Criteria: offer.Criteria,

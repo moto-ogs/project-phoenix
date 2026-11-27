@@ -30,20 +30,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Clickable: Story = {
-  args: {
-    onClick: () => {
-      // no-op for story purposes
-    },
-  },
-};
-
-export const PlainChrome: Story = {
-  args: {
-    chrome: "plain",
-  },
-};
-
 export const NoMeta: Story = {
   args: {
     schoolClass: undefined,

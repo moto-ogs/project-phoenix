@@ -7,7 +7,6 @@ import sq from "~/i18n/messages/sq.generated";
 import tr from "~/i18n/messages/tr.generated";
 import uk from "~/i18n/messages/uk.generated";
 import {
-  CARE_TERM_PLACEHOLDERS,
   careFacilityName,
   careTermValues,
   careTermValuesOf,
@@ -148,12 +147,6 @@ describe("care term declension", () => {
     expect(same.careInCap).toBe("In der GTS/OGS");
     expect(same.carePron).toBe("sie");
   });
-
-  it("covers every placeholder name", () => {
-    expect(Object.keys(careTermValuesOf("OGS")).sort()).toEqual(
-      [...CARE_TERM_PLACEHOLDERS].sort(),
-    );
-  });
 });
 
 function leaves(node: unknown, prefix = ""): [string, string][] {
@@ -166,7 +159,7 @@ function leaves(node: unknown, prefix = ""): [string, string][] {
 
 // A misspelt placeholder would reach families as „{careNmo}“.
 describe("care placeholders in the catalogs", () => {
-  const known = new Set<string>(CARE_TERM_PLACEHOLDERS);
+  const known = new Set(Object.keys(careTermValuesOf("OGS")));
 
   it("uses only placeholders the frontend fills", () => {
     const used = new Set<string>();

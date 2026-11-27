@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { useShellAuth } from "~/lib/shell-auth-context";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 // #6870: the header shows the name of the current Träger membership, not the
 // e-mail address of the session; the page „Konto“ updates it in place.
@@ -111,12 +110,10 @@ describe("Träger header name (#6870)", () => {
     });
     mockUseSession.mockReturnValue(sessionOf("4", 7, "kasse@traeger.example"));
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.localhost:3000");
-    _resetTraegerHostCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
   });
 
   it("shows the name of the membership instead of the e-mail address", async () => {

@@ -21,9 +21,8 @@ type ParentRouteTestRepositories struct {
 	// ParentPortalRepositories carries the guardian child repository
 	// (ParentChild) without the school names.
 	carePlanCompose.ParentPortalRepositories
-	StudentStatusDay      *owners.StudentStatusDayRepository
-	CareExceptions        careplan.Capability
-	ExcusedAbsenceRequest *owners.ExcusedAbsenceRequestRepository
+	StudentStatusDay *owners.StudentStatusDayRepository
+	CareExceptions   careplan.Capability
 	// ExcusedRequests is the Care Plan excused-absence workflow over the same
 	// graph, scoped school-wide because parent routes never decide requests.
 	ExcusedRequests careplan.ExcusedAbsenceRequests
@@ -70,7 +69,7 @@ func NewParentRouteTestRepositories(db transactionruntime.Database, members owne
 		ParentPortalRepositories: carePlanCompose.ParentPortalRepositories{
 			ParentChild: carePlanCompose.NewParentChildRepository(owners.NewPeopleIdentityAccess(db, nil).ListActiveAccountSchoolIDs, owners.ParentPortalDirectory{People: people}),
 		},
-		StudentStatusDay: owners.NewStudentStatusDayRepository(care), CareExceptions: care, ExcusedAbsenceRequest: owners.NewExcusedAbsenceRequestRepository(care),
+		StudentStatusDay: owners.NewStudentStatusDayRepository(care), CareExceptions: care,
 		ExcusedRequests: excusedRequests,
 	}, nil
 }

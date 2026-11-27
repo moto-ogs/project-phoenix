@@ -97,17 +97,15 @@ func (b BlockStartBinding) EarliestPlannedBlockStartForClass(ctx context.Context
 }
 
 // dayTimeBinding reads Care Plan's effective pickup and arrival times and
-// the Abholart of single days.
-// The pickup reader is embedded: its GetBulkDayDepartureModesForDate already
-// answers the day report's Abholart read. Pickups is the same reader.
+// the Abholart of single days. The embedded pickup reader also answers the
+// day report's Abholart read via GetBulkDayDepartureModesForDate.
 type DayTimeBinding struct {
 	ClassDayPickupReader
-	Pickups  ClassDayPickupReader
 	Arrivals ArrivalTimeReader
 }
 
 func (b DayTimeBinding) EffectivePickups(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]EffectivePickup, error) {
-	effective, err := b.Pickups.GetBulkEffectivePickupTimesForDate(ctx, studentIDs, date)
+	effective, err := b.GetBulkEffectivePickupTimesForDate(ctx, studentIDs, date)
 	if err != nil {
 		return nil, err
 	}

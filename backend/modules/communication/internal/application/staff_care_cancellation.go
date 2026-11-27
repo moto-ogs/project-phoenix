@@ -168,12 +168,12 @@ func (s *service) notifyCareCancellation(ctx context.Context, a *StaffParentAnno
 	for _, locale := range locales {
 		title, body := s.deliveryPolicy.ParentAnnouncementCopy(locale, shape.copyKind)
 		recipients := groups[locale]
-		err := s.notifier.Notify(ctx, NotificationEvent{
+		err := s.notifier.Notify(ctx, communication.NotificationEvent{
 			Type:           shape.notificationType,
 			IdempotencyKey: fmt.Sprintf("%s:%s", shape.idempotencyKey, locale),
 			RelatedType:    shape.relatedType, RelatedID: a.ID,
 			Title: title, Body: body, DeepLink: shape.deepLink, Priority: priority,
-			Audience: NotificationAudience{
+			Audience: communication.NotificationAudience{
 				TenantID: a.GetTenantID(), Scope: ScopeGuardian,
 				GuardianAccountIDs: recipients, StudentIDs: studentIDs,
 			},
@@ -181,7 +181,7 @@ func (s *service) notifyCareCancellation(ctx context.Context, a *StaffParentAnno
 				PushAccountIDs: slices.DeleteFunc(slices.Clone(recipients), func(id int64) bool { return !slices.Contains(push, id) }),
 				Title:          a.Title, Body: a.Body,
 			},
-		}.Public())
+		})
 		if s.deliveryPolicy.IsNotificationsDisabled(err) {
 			s.logger.Info("care cancellation notice suppressed by tenant notification gate",
 				slog.Int64("announcement_id", a.ID),

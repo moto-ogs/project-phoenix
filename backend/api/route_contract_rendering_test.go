@@ -44,6 +44,7 @@ func TestRegisteredResponseTypesRenderWithinTheContract(t *testing.T) {
 	require.NoError(t, err)
 	doc, err := ContractDocument()
 	require.NoError(t, err)
+	validator := doc.AnswerValidator()
 	routes := map[string]contract.Route{}
 	for _, route := range doc.Routes {
 		routes[route.Key()] = route
@@ -61,7 +62,7 @@ func TestRegisteredResponseTypesRenderWithinTheContract(t *testing.T) {
 			}
 			for name, shape := range renderShapes {
 				body := renderedAnswer(t, route, reflect.TypeOf(zero), shape)
-				violations := doc.Violations(route, contract.Answer{Status: 200, Body: body, Variant: variant})
+				violations := validator.Violations(route, contract.Answer{Status: 200, Body: body, Variant: variant})
 				assert.Emptyf(t, violations, "%s (variant %q, shape %s) renders outside its contract:\n%s", route.Key(), variant, name, body)
 				rendered++
 			}

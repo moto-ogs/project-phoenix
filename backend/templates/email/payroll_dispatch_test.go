@@ -51,10 +51,10 @@ func TestPayrollDispatchTemplates_Render(t *testing.T) {
 			name:     "notice",
 			template: "payroll-dispatch-problem.html",
 			data: map[string]any{
-				"LogoURL": "https://example.com/logo.png", "FirstName": "Lea", "MonthLabel": "September 2026",
+				"LogoURL": "https://example.com/logo.png", "FirstName": "Lea", "LastName": "Becker", "MonthLabel": "September 2026",
 				"ReasonText": "Bei einigen Mitarbeitenden fehlt die Personalnummer.", "LinkURL": "https://park.example.com/payroll",
 			},
-			mustContain: []string{"Monatsdatei September 2026 nicht verschickt", "Hallo Lea",
+			mustContain: []string{"Monatsdatei September 2026 nicht verschickt", "Guten Tag Lea Becker,",
 				"fehlt die Personalnummer", "https://park.example.com/payroll", "Abrechnung öffnen"},
 		},
 	}

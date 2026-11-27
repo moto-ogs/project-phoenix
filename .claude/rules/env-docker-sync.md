@@ -7,6 +7,7 @@ paths:
   - "frontend/src/env.js"
   - "frontend/src/lib/env-validation.js"
   - ".github/workflows/build.yml"
+  - ".github/workflows/frontend-image.yml"
 ---
 
 # Environment & Docker File Sync
@@ -118,8 +119,7 @@ When modifying any file, update its counterpart:
 - [ ] If needs per-service override: add to `environment:` block in `environments/*.compose.yml`
 - [ ] If `NEXT_PUBLIC_*`: client-accessible, no server import restrictions
 - [ ] If server-only: use `getServerApiUrl()` pattern, don't import in mixed client/server files
-- [ ] If required in `env.js` (no `.optional()` / `.default()`): add as `ARG` + `ENV` in `frontend/Dockerfile.prod`
-- [ ] If required in `env.js` (no `.optional()` / `.default()`): add as `build-args` in `.github/workflows/build.yml`
+- [ ] For required `env.js` values (no `.optional()` / `.default()`), add `ARG` + `ENV` in `frontend/Dockerfile.prod` and `build-args` in `.github/workflows/frontend-image.yml`.
 
 ## Deployed Environments (SOPS)
 

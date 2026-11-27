@@ -690,8 +690,7 @@ func holidayClosureWeekLine(booking changedBooking, schools map[int64]string) st
 	if school := schools[booking.HostSchoolID]; school != "" {
 		place = school + ", " + booking.TimeModelName
 	}
-	return fmt.Sprintf("%s bis %s: %s (%s bis %s Uhr)", booking.StartsOn.Format("02.01.2006"), booking.EndsOn.Format("02.01.2006"),
-		place, booking.StartsAt, booking.EndsAt)
+	return fmt.Sprintf("%s: %s (%s bis %s Uhr)", enrollment.HolidayWeekSpan(booking.StartsOn, booking.EndsOn), place, booking.StartsAt, booking.EndsAt)
 }
 
 var germanWeekdays = [...]string{"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"}

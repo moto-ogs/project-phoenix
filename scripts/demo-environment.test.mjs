@@ -7,6 +7,7 @@ import { compileFunction } from 'node:vm';
 import test from 'node:test';
 
 const build = readFileSync(new URL('../.github/workflows/build.yml', import.meta.url), 'utf8');
+const frontendImage = readFileSync(new URL('../.github/workflows/frontend-image.yml', import.meta.url), 'utf8');
 const rollback = readFileSync(new URL('../.github/workflows/rollback.yml', import.meta.url), 'utf8');
 const uptime = readFileSync(new URL('../.github/workflows/demo-uptime.yml', import.meta.url), 'utf8');
 const generator = readFileSync(new URL('../scripts/create-demo-env.py', import.meta.url), 'utf8');
@@ -111,28 +112,27 @@ for (const environment of ['demo', 'production', 'staging']) {
 }
 
 test('demo browser hosts are generated at build time', t => {
-  const context = { needs: { 'check-environment': { outputs: { environment: 'demo' } } } };
-  // GitHub permits hyphens in property names; JavaScript bracket syntax is equivalent here.
+  const context = { inputs: { environment: 'demo' } };
   for (const [name, expected] of [
-    ['Determine API URL', 'url=https://api.demo.moto-app.de'],
     ['Determine operator hostname', 'hostname=operator.demo.moto-app.de'],
     ['Determine parents hostname', 'hostname=eltern.demo.moto-app.de'],
     ['Determine school hostname', 'hostname=schule.demo.moto-app.de'],
     ['Determine tenant domain', 'domain=demo.moto-app.de'],
   ]) {
-    const script = interpolate(stepRun(build, name).replaceAll('needs.check-environment', 'needs["check-environment"]'), context);
+    const script = interpolate(stepRun(frontendImage, name), context);
     const result = runStep(t, script);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.output.trim(), expected);
   }
-  const metadata = build.split('      - name: Extract metadata for frontend\n')[1]
-    .split('      - name: Determine API URL')[0];
-  const tags = interpolate(metadata.replaceAll('needs.check-environment', 'needs["check-environment"]'),
+  const metadata = frontendImage.split('      - name: Extract metadata for frontend\n')[1]
+    .split('      - name: Determine operator hostname')[0];
+  const tags = interpolate(metadata,
     { ...context, env: { FRONTEND_IMAGE: 'frontend' } });
   assert.match(tags, /type=sha,prefix=demo-,format=short/);
   assert.match(tags, /type=ref,event=branch,enable=false/);
   assert.match(tags, /type=raw,value=latest,enable=false/);
-  assert.match(build, /NEXT_PUBLIC_APP_ENV=\$\{\{ needs.check-environment.outputs.environment \}\}/);
+  assert.match(frontendImage, /^            API_URL=http:\/\/server:8080$/m);
+  assert.match(frontendImage, /NEXT_PUBLIC_APP_ENV=\$\{\{ inputs.environment \}\}/);
 });
 
 // Staging and production share a host but not a concurrency group; demo has its

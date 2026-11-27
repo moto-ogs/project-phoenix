@@ -84,7 +84,6 @@ const meta: Meta<typeof GuardianList> = {
     onInvite: () => undefined,
     invitingGuardianId: null,
     readOnly: false,
-    showRelationship: true,
   },
 };
 

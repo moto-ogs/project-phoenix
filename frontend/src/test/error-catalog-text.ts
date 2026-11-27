@@ -1,8 +1,5 @@
 import type { AppLocale } from "~/i18n/locales";
-import {
-  CARE_TERM_PLACEHOLDERS,
-  careTermValuesOf,
-} from "~/lib/care-facility-term-value";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import {
   ERROR_CODE_CLASSES,
@@ -29,8 +26,8 @@ export function catalogText(
   const template =
     catalog.codes[code] ?? catalog.classes[ERROR_CODE_CLASSES[code]]!;
   const care = careTermValuesOf(undefined);
-  const text = CARE_TERM_PLACEHOLDERS.reduce(
-    (filled, key) => filled.replaceAll(`{${key}}`, care[key]),
+  const text = Object.entries(care).reduce(
+    (filled, [key, value]) => filled.replaceAll(`{${key}}`, value),
     template.replaceAll("{object}", object),
   );
   return text.charAt(0).toUpperCase() + text.slice(1);

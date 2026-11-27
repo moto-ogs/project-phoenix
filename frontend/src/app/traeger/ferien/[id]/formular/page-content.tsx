@@ -16,6 +16,7 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
+import { holidayListBack } from "~/components/traeger/holiday-period-format";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
@@ -49,8 +50,8 @@ export default function TraegerHolidayFormPage() {
     <TenantPage
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
-      backHref={traegerPath("/traeger/ferien")}
-      backLabel="Zurück zu den Ferien"
+      backHref={traegerPath(holidayListBack(period?.kind).path)}
+      backLabel={holidayListBack(period?.kind).label}
       info={
         <p>
           Hier legst du fest, was Eltern bei der Ferienanmeldung zusätzlich
@@ -77,6 +78,7 @@ export default function TraegerHolidayFormPage() {
         "formular",
         period?.registrationCount,
         period?.allocationMode,
+        period?.kind,
       )}
       overflowMenu={
         billingHref

@@ -739,7 +739,7 @@ function BillingFamiliesContent() {
   return (
     <TenantPage
       title={billingAreaTitle("familien")}
-      info={`Hier siehst du pro Familie alle Rechnungen, Stornos und Gutschriften und ${scope === "child" ? "die Debitorennummer jedes Kindes" : "ihre Debitorennummer"}. Eine Familie ist eine E-Mail-Adresse. Familien mit Vertrag stehen hier schon vor der ersten Rechnung, Familien aus der Ferienbetreuung nach dem Bestätigen der Anmeldung. Den Zahlungsweg einer Familie legst du über das Menü in ihrer Zeile fest, auch vor der ersten Rechnung. Die offene Forderung ist, was die Rechnungen nach Storno und Gutschrift noch verlangen. Zahlungen sieht moto nicht. Ob eine Familie schon gezahlt hat, prüfst du in deiner Buchhaltung.`}
+      info={`Hier siehst du pro Familie alle Rechnungen, Stornos und Gutschriften und ${scope === "child" ? "die Debitorennummer jedes Kindes" : "ihre Debitorennummer"}. Eine Familie ist eine E-Mail-Adresse. Familien mit Vertrag stehen hier schon vor der ersten Rechnung, Familien aus der Ferienbetreuung nach dem Bestätigen der Anmeldung. Den Zahlungsweg einer Familie legst du über das Menü in ihrer Zeile fest, auch vor der ersten Rechnung. Die offene Forderung ist, was die Rechnungen nach Storno und Gutschrift noch verlangen. Zahlungen sieht moto nicht. Ob eine Familie schon gezahlt hat, prüfst du in deiner Buchhaltung. Alle Rechnungen in einer Liste findest du unter „Abrechnungsläufe“ im Reiter „Rechnungsausgangsbuch“.`}
       tabs={billingTabs("familien")}
       stats={
         families && families.length > 0 ? (

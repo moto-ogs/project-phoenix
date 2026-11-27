@@ -24,7 +24,6 @@ export function useCareWithdrawalsPending(): UseUnreadCountResult {
       fetcher: async () => (await fetchCareWithdrawals({ pageSize: 1 })).total,
       eventNames: [CHANGE_REQUESTS_REFRESH_EVENT],
       eventDebounceMs: 500,
-      refetchOnFocus: true,
     },
   );
 }

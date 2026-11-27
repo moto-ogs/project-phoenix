@@ -144,6 +144,19 @@ func HolidayHostRouteContracts() []common.RouteContract {
 	}
 }
 
+// SchoolExtraDayRouteContracts registers the extra care days a school
+// plans for itself (#4817, ADR 0329), relative to /api/holiday-extra-days.
+func SchoolExtraDayRouteContracts() []common.RouteContract {
+	portals := staffPortal
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: []capability.HolidayPeriod{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: HolidayPeriodRequest{}, Response: capability.HolidayPeriod{}},
+		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: capability.HolidayPeriod{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: HolidayPeriodRequest{}, Response: capability.HolidayPeriod{}},
+		{Method: "POST", Pattern: "/{id}/publish", Portals: portals, Response: capability.HolidayPeriod{}},
+	}
+}
+
 // HolidayGuestRouteContracts registers the holiday guests of a school
 // (#2352), relative to /api/holiday-guests.
 func HolidayGuestRouteContracts() []common.RouteContract {

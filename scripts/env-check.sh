@@ -62,31 +62,6 @@ get_shared_sops_keys() {
   done
 }
 
-# Extract environment keys from a docker-compose file (under environment: blocks)
-get_compose_env_keys() {
-  local file="$1"
-  if [[ ! -f "$file" ]]; then
-    echo "ERROR: File not found: $file" >&2
-    return 1
-  fi
-  grep -E '^\s+[A-Z_]+:' "$file" \
-    | grep -v '^\s*#' \
-    | sed 's/:.*//' \
-    | sed 's/^[[:space:]]*//' \
-    | sort -u
-}
-
-# Extract service names from a docker-compose file
-get_compose_services() {
-  local file="$1"
-  grep -E '^  [a-z]' "$file" \
-    | grep -v '^\s*#' \
-    | sed 's/:.*//' \
-    | sed 's/^[[:space:]]*//' \
-    | grep -v -E '^(driver|image|restart|depends_on|condition|command|ports|volumes|env_file|environment|logging|options|tag|healthcheck|test|interval|timeout|retries|start_period|networks|container_name)$' \
-    | sort -u
-}
-
 # ============================================================
 # CHECK 1: SOPS environment files have matching keys
 # ============================================================

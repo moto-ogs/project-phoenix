@@ -3,14 +3,11 @@ package owners
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NewCarePlanRows binds the Timetable composition's retained schedule and
@@ -199,10 +196,6 @@ func (r carePlanRecords) UpdateArrivalException(ctx context.Context, value timet
 	return carePlanScheduleError(r.capability.UpdateArrivalException(ctx, CareArrivalExceptionFromRows(value)))
 }
 
-func (r carePlanRecords) DeleteArrivalExceptionsByStudent(ctx context.Context, studentID int64) error {
-	return carePlanScheduleError(r.capability.DeleteArrivalExceptionsByStudent(ctx, studentID))
-}
-
 func (r carePlanRecords) ListArrivalExceptions(ctx context.Context, filter timetablePorts.CareScheduleFilter) ([]timetablePorts.CareArrivalException, error) {
 	values, err := r.capability.ListArrivalExceptions(ctx, carePlanScheduleFilter(filter))
 	return carePlanSlice(values, CareArrivalExceptionToRows), carePlanScheduleError(err)
@@ -220,10 +213,6 @@ func (r carePlanRecords) FindPickupException(ctx context.Context, id int64) (tim
 
 func (r carePlanRecords) UpdatePickupException(ctx context.Context, value timetablePorts.CarePickupException) error {
 	return carePlanScheduleError(r.capability.UpdatePickupException(ctx, CarePickupExceptionFromRows(value)))
-}
-
-func (r carePlanRecords) DeletePickupExceptionsByStudent(ctx context.Context, studentID int64) error {
-	return carePlanScheduleError(r.capability.DeletePickupExceptionsByStudent(ctx, studentID))
 }
 
 func (r carePlanRecords) ListPickupExceptions(ctx context.Context, filter timetablePorts.CareScheduleFilter) ([]timetablePorts.CarePickupException, error) {
@@ -245,10 +234,6 @@ func (r carePlanRecords) UpdateArrivalNote(ctx context.Context, value timetableP
 	return carePlanScheduleError(r.capability.UpdateArrivalNote(ctx, careArrivalNoteFromRows(value)))
 }
 
-func (r carePlanRecords) DeleteArrivalNotesByStudent(ctx context.Context, studentID int64) error {
-	return carePlanScheduleError(r.capability.DeleteArrivalNotesByStudent(ctx, studentID))
-}
-
 func (r carePlanRecords) ListArrivalNotes(ctx context.Context, filter timetablePorts.CareScheduleFilter) ([]timetablePorts.CareArrivalNote, error) {
 	values, err := r.capability.ListArrivalNotes(ctx, carePlanScheduleFilter(filter))
 	return carePlanSlice(values, careArrivalNoteToRows), carePlanScheduleError(err)
@@ -266,10 +251,6 @@ func (r carePlanRecords) FindPickupNote(ctx context.Context, id int64) (timetabl
 
 func (r carePlanRecords) UpdatePickupNote(ctx context.Context, value timetablePorts.CarePickupNote) error {
 	return carePlanScheduleError(r.capability.UpdatePickupNote(ctx, carePickupNoteFromRows(value)))
-}
-
-func (r carePlanRecords) DeletePickupNotesByStudent(ctx context.Context, studentID int64) error {
-	return carePlanScheduleError(r.capability.DeletePickupNotesByStudent(ctx, studentID))
 }
 
 func (r carePlanRecords) ListPickupNotes(ctx context.Context, filter timetablePorts.CareScheduleFilter) ([]timetablePorts.CarePickupNote, error) {
@@ -297,59 +278,6 @@ func (r carePlanRecords) ListCareScheduleRequests(ctx context.Context, filter ti
 
 func (r carePlanRecords) DecideCareScheduleRequest(ctx context.Context, decision timetablePorts.CareScheduleRequestDecision) error {
 	return carePlanRequestError(r.capability.DecideCareScheduleRequest(ctx, careplan.CareScheduleRequestDecision(decision)))
-}
-
-func LegacyScheduleID(raw any) (int64, error) {
-	if typed, ok := raw.(ident.ID); ok {
-		raw = typed.Int64()
-	}
-	switch value := raw.(type) {
-	case int64:
-		return value, nil
-	case int:
-		return int64(value), nil
-	case int32:
-		return int64(value), nil
-	default:
-		return 0, fmt.Errorf("unsupported id type %T", raw)
-	}
-}
-
-// legacyScheduleQueryOptions translates the retained repository query shape
-// into the owner's schedule query options.
-func legacyScheduleQueryOptions(options *peoplePorts.QueryOptions) *careplan.StudentScheduleQueryOptions {
-	if options == nil {
-		return nil
-	}
-	result := &careplan.StudentScheduleQueryOptions{}
-	if options.Filter != nil {
-		result.Filter = legacyScheduleQueryFilter(*options.Filter)
-	}
-	if options.Pagination != nil {
-		result.Limit = options.Pagination.PageSize
-		result.Offset = options.Pagination.Offset()
-	}
-	if options.Sorting != nil {
-		result.Sorting = make([]careplan.StudentScheduleSortField, 0, len(options.Sorting.Fields))
-		for _, field := range options.Sorting.Fields {
-			result.Sorting = append(result.Sorting, careplan.StudentScheduleSortField{Field: field.Field, Descending: field.Direction == peoplePorts.SortDesc})
-		}
-	}
-	return result
-}
-
-func legacyScheduleQueryFilter(filter peoplePorts.QueryFilter) *careplan.StudentScheduleQueryFilter {
-	result := &careplan.StudentScheduleQueryFilter{}
-	for _, condition := range filter.Conditions() {
-		result.Conditions = append(result.Conditions, careplan.StudentScheduleQueryCondition{Field: condition.Field, Operator: string(condition.Operator), Value: condition.Value})
-	}
-	for _, child := range filter.OrFilters() {
-		result.Or = append(result.Or, *legacyScheduleQueryFilter(child))
-	}
-	for _, child := range filter.AndFilters() {
-		result.And = append(result.And, *legacyScheduleQueryFilter(child))
-	}
-	return result
 }
 
 // noRowsError is the bare not-found sentinel pair without an operation.

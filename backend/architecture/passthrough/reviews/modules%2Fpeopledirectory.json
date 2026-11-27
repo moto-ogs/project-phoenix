@@ -887,11 +887,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListEnrolledStudentIDsByNameAndBirthday",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListEnrolledStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -978,11 +973,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListStudentRoster",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListStudentRosterByGroup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

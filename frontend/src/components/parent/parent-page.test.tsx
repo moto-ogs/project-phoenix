@@ -95,20 +95,6 @@ describe("ParentPage", () => {
     expect(screen.queryByText("Inhalt")).not.toBeInTheDocument();
   });
 
-  it("keeps overlays mounted in every state", () => {
-    render(
-      withIntl(
-        <ParentPage
-          header={header}
-          loading
-          overlays={<div role="dialog" aria-label="Dialog" />}
-        />,
-      ),
-    );
-
-    expect(screen.getByRole("dialog", { name: "Dialog" })).toBeInTheDocument();
-  });
-
   it("renders plain children without any translation provider", () => {
     render(
       <ParentPage>

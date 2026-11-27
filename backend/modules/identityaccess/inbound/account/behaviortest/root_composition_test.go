@@ -73,7 +73,7 @@ func submitParentCareScheduleRequest(t *testing.T, ctx context.Context, db *bun.
 	t.Helper()
 	portal, composeErr := api.NewParentCareScheduleTestService(testpkg.NewDatabase(t, db), module, live, api.NewActiveTestSettings(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db)))
 	require.NoError(t, composeErr)
-	view, err := portal.CreateCareScheduleRequest(ctx, accountID, studentID, payload)
+	view, err := portal.CreateSignedCareScheduleRequest(ctx, accountID, studentID, payload, nil)
 	if err != nil {
 		return 0, err
 	}

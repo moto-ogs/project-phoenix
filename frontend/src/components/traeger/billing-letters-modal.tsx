@@ -323,7 +323,8 @@ export function BillingLettersModal<T = BillingLetters>({
           label={source?.notesLabel ?? "Hinweise für die Eltern (freiwillig)"}
           placeholder={
             source?.notesPlaceholder ??
-            "Zum Beispiel: Bitte denkt an Frühstück, Wechselkleidung und Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."
+            // sie-anrede-erlaubt (ADR 0328): Beispiel für einen Text im Brief an Eltern.
+            "Zum Beispiel: Bitte denken Sie an Frühstück, Wechselkleidung und Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."
           }
           rows={5}
           value={notes}

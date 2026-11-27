@@ -272,60 +272,55 @@ test("development's base measurement is built like a pull request's, under the s
   );
 });
 
-test("a lint.yml-only PR selects frontend checks and the reusable frontend build", () => {
+test("frontend changes build; validator-only inputs run quality without either application build", () => {
   const main = workflow("main.yml");
-  const filter = main.jobs["detect-changes"].steps.find(
-    (step) => step.id === "filter",
+  const detector = main.jobs["detect-changes"];
+  const filters = parse(
+    detector.steps.find((step) => step.id === "filter").with.filters,
   );
-  const filters = parse(filter.with.filters);
   assert.ok(filters["workflow-lint"].includes(".github/workflows/lint.yml"));
-  const context = {
-    ...bundleContext("pull_request", "development"),
-    steps: {
-      scope: { outputs: { release: "false" } },
-      filter: {
-        outputs: new Proxy(
-          { "workflow-lint": "true" },
-          { get: (values, key) => values[key] ?? "false" },
-        ),
+  const jobs = workflow("lint.yml").jobs;
+  for (const [changedFilter, quality, builds] of [
+    ["workflow-lint", true, true],
+    ["frontend", true, true],
+    ["frontend-quality-only", true, false],
+    ["quality-scripts", true, false],
+    ["unrelated-docs", false, false],
+  ]) {
+    const context = {
+      ...bundleContext("pull_request", "development"),
+      steps: {
+        scope: { outputs: { release: "false" } },
+        filter: { outputs: { [changedFilter]: "true" } },
       },
-    },
-  };
-  const outputs = main.jobs["detect-changes"].outputs;
-  assert.equal(expression(outputs["run-frontend"], context), true);
-  const lintContext = {
-    needs: {
-      "detect-changes": {
-        outputs: {
-          "run-frontend-lint": String(
-            expression(outputs["run-frontend-lint"], context),
-          ),
-        },
-      },
-    },
-  };
-  const runFrontend = expression(
-    main.jobs.lint.with["run-frontend"],
-    lintContext,
-  );
-  assert.equal(runFrontend, true);
-  assert.equal(
-    expression(workflow("lint.yml").jobs["frontend-build"].if, {
-      inputs: { "run-frontend": runFrontend },
-    }),
-    true,
-  );
-  context.steps.filter.outputs["workflow-lint"] = "false";
-  assert.equal(
-    expression(outputs["run-frontend"], context),
-    false,
-    "unrelated docs still skip frontend tests",
-  );
-  assert.equal(
-    expression(outputs["run-frontend-lint"], context),
-    false,
-    "unrelated docs still skip frontend builds",
-  );
+    };
+    const outputs = Object.fromEntries(
+      ["run-frontend-lint", "build-frontend"].map((key) => [
+        key,
+        String(expression(detector.outputs[key], context)),
+      ]),
+    );
+    const caller = { needs: { "detect-changes": { outputs } } };
+    const inputs = Object.fromEntries(
+      ["run-frontend", "build-frontend"].map((key) => [
+        key,
+        expression(main.jobs.lint.with[key], caller),
+      ]),
+    );
+    assert.equal(
+      expression(jobs["frontend-quality"].if, { inputs }),
+      quality,
+      changedFilter,
+    );
+    for (const job of ["frontend-merge-build", "frontend-build"])
+      assert.equal(expression(jobs[job].if, { inputs }), builds, changedFilter);
+    if (changedFilter === "workflow-lint" || changedFilter === "unrelated-docs")
+      assert.equal(
+        expression(detector.outputs["run-frontend"], context),
+        quality,
+        changedFilter,
+      );
+  }
 });
 
 test("bundle builds need no artifact-read token and do not persist checkout credentials", () => {

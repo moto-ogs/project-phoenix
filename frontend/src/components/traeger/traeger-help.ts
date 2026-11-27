@@ -83,6 +83,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
     return HELP_TOPICS.traegerHolidayContribution;
   }
   if (onPage(page, "/einstellungen")) return HELP_TOPICS.traegerSettings;
+  if (onPage(page, "/abrechnung/rechnungsausgangsbuch")) {
+    return HELP_TOPICS.traegerInvoiceJournal;
+  }
   if (onPage(page, "/abrechnung/jahresbescheide")) {
     return HELP_TOPICS.traegerCareNotices;
   }
@@ -113,6 +116,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/vertraege")) return HELP_TOPICS.traegerCareContracts;
   if (onPage(page, "/zeitvergleich"))
     return HELP_TOPICS.traegerCareTimeOverruns;
+  if (onPage(page, "/ferien/zusatztage")) {
+    return HELP_TOPICS.traegerExtraCareDay;
+  }
   if (HOLIDAY_FORM_PAGE.test(page)) return HELP_TOPICS.traegerHolidayForm;
   if (HOLIDAY_PLACES_PAGE.test(page)) return HELP_TOPICS.traegerHolidayPlaces;
   if (HOLIDAY_REGISTRATIONS_PAGE.test(page)) {

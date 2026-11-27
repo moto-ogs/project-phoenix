@@ -29,7 +29,7 @@ func TestBillingLetterTemplate_Renders(t *testing.T) {
 	}))
 	body := out.String()
 	for _, want := range []string{"Guten Tag Eva Muster,", "Herbstferien 2026", "FE-2026-0001", "Träger Bissendorf",
-		"Öffne das Schreiben im Anhang.", "Die Kontaktdaten stehen im Schreiben."} {
+		"Öffnen Sie das Schreiben im Anhang.", "Die Kontaktdaten stehen im Schreiben."} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 }

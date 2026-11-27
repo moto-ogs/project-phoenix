@@ -55,7 +55,9 @@ export function useHolidayPeriodBillingHref(
   const allowed =
     billingBooked &&
     hasPermission(session ?? null, TRAEGER_BILLING_RIGHT) &&
-    period?.status === "published";
+    period?.status === "published" &&
+    // An extra day the monthly fee covers is never billed (#4817).
+    !period.includedInFee;
   // Ein Fehler beim Laden der Läufe zeigt nichts an: Die Aktion führt dann
   // zur gefilterten Liste, und die meldet ihren eigenen Ladefehler.
   const { data: runs, error } = useSWRAuth(

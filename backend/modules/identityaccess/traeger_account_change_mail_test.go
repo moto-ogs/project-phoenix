@@ -36,12 +36,12 @@ func TestTraegerAccountChangeMailRendersBothChanges(t *testing.T) {
 	}
 
 	changed := identityaccess.TraegerAccountChangeMail(notice, "https://moto.example")
-	assert.Equal(t, "Deine Rollen im Träger-Büro haben sich geändert – Träger Nord", changed.Subject)
+	assert.Equal(t, "Ihre Rollen im Träger-Büro haben sich geändert – Träger Nord", changed.Subject)
 	body := render(changed)
-	assert.Contains(t, body, "<strong>leitung@example.test</strong> hat am 02.11.2026 um 23:30 Uhr deine Rollen")
+	assert.Contains(t, body, "<strong>leitung@example.test</strong> hat am 02.11.2026 um 23:30 Uhr Ihre Rollen")
 	assert.Contains(t, body, "Vorher: <strong>Nur lesen</strong>")
 	assert.Contains(t, body, "Jetzt: <strong>Abrechnung und Nur lesen</strong>")
-	assert.Contains(t, body, "wende dich an leitung@example.test")
+	assert.Contains(t, body, "wenden Sie sich an leitung@example.test")
 	assert.Contains(t, body, "mailto:kontakt@moto-ogs.de")
 	assert.Contains(t, body, "Die neuen Rollen gelten nach wenigen Minuten.", "an added role reaches the session later")
 	assert.NotContains(t, body, "abgemeldet")
@@ -49,17 +49,17 @@ func TestTraegerAccountChangeMailRendersBothChanges(t *testing.T) {
 	// A withdrawn role ends the person's sessions at once (#6850).
 	notice.RolesBefore, notice.RolesAfter = notice.RolesAfter, notice.RolesBefore
 	body = render(identityaccess.TraegerAccountChangeMail(notice, "https://moto.example"))
-	assert.Contains(t, body, "Du wurdest deshalb im Träger-Portal abgemeldet. Melde dich neu an.")
+	assert.Contains(t, body, "Sie wurden deshalb im Träger-Portal abgemeldet. Melden Sie sich neu an.")
 	assert.NotContains(t, body, "gelten nach wenigen Minuten")
 	notice.RolesBefore, notice.RolesAfter = notice.RolesAfter, notice.RolesBefore
 
 	notice.Action, notice.RolesAfter = identityaccess.TraegerAccountMemberRemoved, nil
 	notice.ActorAccountID, notice.ActorEmail = notice.TargetAccountID, notice.TargetEmail
 	removed := identityaccess.TraegerAccountChangeMail(notice, "https://moto.example")
-	assert.Equal(t, "Du bist nicht mehr im Träger-Büro – Träger Nord", removed.Subject)
+	assert.Equal(t, "Sie sind nicht mehr im Träger-Büro – Träger Nord", removed.Subject)
 	body = render(removed)
-	assert.Contains(t, body, "Das geschah am 02.11.2026 um 23:30 Uhr mit deinem eigenen Konto.")
+	assert.Contains(t, body, "Das geschah am 02.11.2026 um 23:30 Uhr mit Ihrem eigenen Konto.")
 	assert.Contains(t, body, "Bisher: <strong>Nur lesen</strong>")
-	assert.Contains(t, body, "Du kannst dich im Träger-Portal nicht mehr anmelden.")
-	assert.NotContains(t, body, "wende dich an kollegin@example.test", "a change of one's own names nobody to ask")
+	assert.Contains(t, body, "Sie können sich im Träger-Portal nicht mehr anmelden.")
+	assert.NotContains(t, body, "wenden Sie sich an kollegin@example.test", "a change of one's own names nobody to ask")
 }

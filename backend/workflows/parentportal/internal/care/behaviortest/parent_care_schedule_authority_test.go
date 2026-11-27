@@ -34,7 +34,7 @@ func TestGetAndCreateCareScheduleRequest_BookingsAuthoritative(t *testing.T) {
 	assert.False(t, view.CanRequest)
 	assert.Equal(t, parentportal.CareScheduleRequestCapabilities{}, view.RequestCapabilities)
 
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.ErrorIs(t, err, parentportal.ErrCareRequestBookingsAuthoritative)
 }
 
@@ -45,7 +45,7 @@ func TestExistingCareScheduleRequestSurvivesBookingAuthorityChange(t *testing.T)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	weeklyPlan := careScheduleServiceWithSettings(t, db, repos, reposPeople, weeklyPlanSettings(false))
 
-	created, err := weeklyPlan.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	created, err := weeklyPlan.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, created.PendingRequest)
 
@@ -58,10 +58,7 @@ func TestExistingCareScheduleRequestSurvivesBookingAuthorityChange(t *testing.T)
 
 	// Withdrawal was retired (#2267); editing the own pending request is the
 	// path that replaced it, and it must stay open after the switch.
-	edited, err := bookingLed.EditCareScheduleRequest(
-		testpkg.WithPackageTenantRuntime(context.Background()),
-		chain.AccountID, chain.StudentID, view.PendingRequest.ID, carePayload(), view.PendingRequest.Version,
-	)
+	edited, err := bookingLed.EditSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, view.PendingRequest.ID, carePayload(), view.PendingRequest.Version, nil)
 	require.NoError(t, err)
 	require.NotNil(t, edited.PendingRequest)
 	assert.Equal(t, view.PendingRequest.ID, edited.PendingRequest.ID)
@@ -74,7 +71,7 @@ func TestExistingCareScheduleRequestCanBeDecidedAfterAuthorityChange(t *testing.
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	var requests carerequests.Service
 	weeklyPlan := careScheduleServiceWithSettings(t, db, repos, reposPeople, weeklyPlanSettings(false), &requests)
-	created, err := weeklyPlan.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	created, err := weeklyPlan.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, created.PendingRequest)
 

@@ -258,7 +258,7 @@ func (s *Scheduler) runDailyGDPRCleanupForTenant(tenantCtx context.Context, tena
 	if switchErr != nil || timeErr != nil {
 		return s.failUnreadableCleanupSettings(tenantCtx, tenantID, dayCache, taskName, attempts, cleanupTime, timeErr == nil, errors.Join(switchErr, timeErr))
 	}
-	now := s.cleanupNow()
+	now := s.clock()
 	state, due, err := s.dailyCleanupDue(tenantCtx, dayCache, taskName, tenantID, cleanupTime, now)
 	if err != nil || !due {
 		return err
@@ -308,7 +308,7 @@ func (s *Scheduler) resolveCleanupTime(ctx context.Context) (string, error) {
 // the wait after the last failure is over. Nothing ran, so the transaction
 // commits the failure streak and the job run still reports the failure.
 func (s *Scheduler) failUnreadableCleanupSettings(tenantCtx context.Context, tenantID int64, dayCache *sync.Map, taskName string, attempts *cleanupAttempts, cleanupTime string, timeKnown bool, err error) error {
-	now := s.cleanupNow()
+	now := s.clock()
 	var (
 		state  cleanupRunState
 		due    bool

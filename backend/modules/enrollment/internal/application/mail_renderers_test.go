@@ -231,7 +231,7 @@ func TestRolloverOptInRendererSubjectFallbacks(t *testing.T) {
 	row.Payload[enrollment.EnrollmentPayloadPhaseName] = ""
 	mail, err = render(NewMailRenderers(nil, "", enrollmentTestToday).RolloverOptIn, row)
 	require.NoError(t, err)
-	assert.Equal(t, "Bitte bestätige die Anmeldung", mail.Subject)
+	assert.Equal(t, "Bitte bestätigen Sie die Anmeldung", mail.Subject)
 }
 
 func TestRolloverOptOutRendererHappyPath(t *testing.T) {
@@ -380,7 +380,7 @@ func TestChangeRequestRenderersRequireOnlyTheRecipient(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	assert.Equal(t, "enrollment-change-request-question.html", mail.Template)
-	assert.Equal(t, "Rückfrage zu deiner Änderungsanfrage - OGS Sonnenschule", mail.Subject)
+	assert.Equal(t, "Rückfrage zu Ihrer Änderungsanfrage - OGS Sonnenschule", mail.Subject)
 	assert.Equal(t, "https://admin", contentOf(t, mail)["AdminURL"])
 }
 
@@ -450,18 +450,18 @@ func TestRenderersPassTheCareFacilityTermToTheHeader(t *testing.T) {
 		mail, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
 		require.NoError(t, err, name)
 		assert.Equal(t, "GTS", contentOf(t, mail)["CareFacilityTerm"], name)
-		assert.Equal(t, "Deine GTS", contentOf(t, mail)["CareFacilityOwn"], name)
+		assert.Equal(t, "Ihre GTS", contentOf(t, mail)["CareFacilityOwn"], name)
 
 		// A school's own name carries its article (#8136); a payload queued
-		// before the article existed keeps "Deine".
+		// before the article existed keeps "Ihre".
 		payload[enrollment.EnrollmentPayloadCareFacilityTerm] = "Hort"
 		older, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
 		require.NoError(t, err, name)
-		assert.Equal(t, "Deine Hort", contentOf(t, older)["CareFacilityOwn"], name)
+		assert.Equal(t, "Ihre Hort", contentOf(t, older)["CareFacilityOwn"], name)
 		payload[enrollment.EnrollmentPayloadCareFacilityArticle] = "der"
 		declined, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
 		require.NoError(t, err, name)
-		assert.Equal(t, "Dein Hort", contentOf(t, declined)["CareFacilityOwn"], name)
+		assert.Equal(t, "Ihr Hort", contentOf(t, declined)["CareFacilityOwn"], name)
 		delete(payload, enrollment.EnrollmentPayloadCareFacilityArticle)
 	}
 }

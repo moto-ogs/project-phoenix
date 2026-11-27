@@ -105,7 +105,6 @@ describe("ShiftEditModal", () => {
 
     render(
       <ShiftEditModal
-        isOpen={true}
         mode="edit"
         staffId="7"
         staffName="Ada Lovelace"
@@ -141,7 +140,6 @@ describe("ShiftEditModal", () => {
   it("caps break minutes at the selected shift duration", () => {
     render(
       <ShiftEditModal
-        isOpen={true}
         mode="edit"
         staffId="7"
         staffName="Ada Lovelace"
@@ -211,7 +209,6 @@ describe("ShiftEditModal", () => {
         });
       return (
         <ShiftEditModal
-          isOpen={true}
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -291,7 +288,6 @@ describe("ShiftEditModal", () => {
         setShift({ ...opened, startTime: "09:00", version: "shift-v2" });
       return (
         <ShiftEditModal
-          isOpen={true}
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -349,7 +345,6 @@ describe("ShiftEditModal", () => {
 
     render(
       <ShiftEditModal
-        isOpen={true}
         mode="edit"
         staffId="7"
         staffName="Ada Lovelace"
@@ -419,7 +414,6 @@ describe("ShiftEditModal", () => {
 
     render(
       <ShiftEditModal
-        isOpen={true}
         mode="edit"
         staffId="7"
         staffName="Ada Lovelace"
@@ -480,7 +474,6 @@ describe("ShiftEditModal", () => {
       version: "shift-v2",
     };
     const props = {
-      isOpen: true,
       mode: "edit" as const,
       staffId: "7",
       staffName: "Ada Lovelace",
@@ -513,7 +506,7 @@ describe("ShiftEditModal", () => {
     );
 
     // A new opening without input follows the newest shift.
-    view.rerender(<ShiftEditModal {...props} isOpen={false} shift={opened} />);
+    view.rerender(<></>);
     view.rerender(<ShiftEditModal {...props} shift={opened} />);
     view.rerender(<ShiftEditModal {...props} shift={newer} />);
     expect(screen.getByLabelText("Beginn")).toHaveValue("09:00");

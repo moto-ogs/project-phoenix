@@ -37,14 +37,9 @@ func TestClassListConversionTurnsEntriesIntoChildrenWithoutCarePlace(t *testing.
 	require.NoError(t, err)
 
 	actor := testpkg.CreateTestAccount(t, db, "konvertierung@example.com")
-	var created, joined int
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
-		result, err := module.ClassListConversion.ConvertClassListEntries(txCtx, &actor.ID)
-		created, joined = result.Created, result.Joined
-		return err
+		return module.ClassListConversion.ConvertClassListEntries(txCtx, actor.ID)
 	}))
-	assert.Equal(t, 1, created)
-	assert.Equal(t, 1, joined)
 
 	var entries int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM users.class_list_entries WHERE tenant_id = ?`, tenantID).Scan(ctx, &entries))
@@ -104,10 +99,7 @@ func TestClassListConversionLeavesAChildWhoseCareEndedItsOGSHistory(t *testing.T
 
 	actor := testpkg.CreateTestAccount(t, db, "konvertierung-ende@example.com")
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
-		result, err := module.ClassListConversion.ConvertClassListEntries(txCtx, &actor.ID)
-		assert.Equal(t, 1, result.Created)
-		assert.Zero(t, result.Joined)
-		return err
+		return module.ClassListConversion.ConvertClassListEntries(txCtx, actor.ID)
 	}))
 
 	var matched int64
@@ -343,9 +335,7 @@ func TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater(t *tes
 
 	actor := testpkg.CreateTestAccount(t, db, "konvertierung-spaeter@example.com")
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
-		result, err := module.ClassListConversion.ConvertClassListEntries(txCtx, &actor.ID)
-		assert.Equal(t, 1, result.Joined)
-		return err
+		return module.ClassListConversion.ConvertClassListEntries(txCtx, actor.ID)
 	}))
 
 	people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))

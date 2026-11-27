@@ -154,6 +154,7 @@ type QualificationNotifier func(ctx context.Context, notice QualificationNotice)
 type QualificationMailContent struct {
 	SchoolName        string
 	FirstName         string
+	LastName          string
 	StaffName         string
 	QualificationName string
 	ExpiresOn         string

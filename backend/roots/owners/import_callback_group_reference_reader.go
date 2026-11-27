@@ -7,6 +7,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 )
 
+// NewGroupReferenceReader binds import name matching to the owner's group query.
+// The 1000-group bound preserves the import preload contract.
 func NewGroupReferenceReader(groups schoolstructure.GroupListing) func(ctx context.Context) ([]dataimport.Reference, error) {
 	return func(ctx context.Context) ([]dataimport.Reference, error) {
 		rows, err := groups.ListGroups(ctx, 1000)

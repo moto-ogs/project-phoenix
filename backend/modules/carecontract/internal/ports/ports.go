@@ -252,7 +252,7 @@ type Store interface {
 	// covers the child.
 	LockChildLinks(ctx context.Context, organizationID int64) error
 	InsertContract(ctx context.Context, organizationID, accountID int64, contract NewContract) (int64, error)
-	ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error)
+	ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, string, error)
 	CountContracts(ctx context.Context, organizationID int64) (map[string]int, error)
 	Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ContractRecord, error)
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)

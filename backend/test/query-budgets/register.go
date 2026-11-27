@@ -79,16 +79,11 @@ func assertQueryBudget(tb testing.TB, scenario string, budget queryBudget, obser
 	if observed.HTTPRequest && len(route) == 0 {
 		tb.Errorf("query budget %q: measured HTTP request has no resolved route", scenario)
 	}
-	if err := measuredRouteError(budget.route, route); err != nil && (len(budget.route) != 0 || getenv("PHX_QUERY_BUDGET_CAPTURE_ROUTES") == "") {
+	if err := measuredRouteError(budget.route, route); err != nil {
 		tb.Errorf("query budget %q: %v", scenario, err)
 	}
 
-	if path := getenv("PHX_QUERY_BUDGET_CAPTURE_ROUTES"); path != "" {
-		if err := appendBudgetReport(path, budgetReport{Scenario: scenario, Route: route, Test: tb.Name(), Actual: len(queries), Max: budget.max, Exact: budget.exact}); err != nil {
-			tb.Errorf("capture budget route: %v", err)
-		}
-	}
-	emitQueryFeedback(tb, scenario, queries, budget, getenv)
+	emitQueryFeedback(tb, scenario, observed, budget, getenv)
 	got := len(queries)
 	switch {
 	case got > budget.max:

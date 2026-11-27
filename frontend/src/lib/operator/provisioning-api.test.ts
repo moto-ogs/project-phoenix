@@ -724,33 +724,19 @@ describe("OperatorProvisioningService", () => {
   });
 
   describe("setDeviceAPIKey", () => {
-    it("encodes the device id and sends manual api key", async () => {
-      mockBffJson.mockResolvedValue(mockBackendDevice);
-
-      await operatorProvisioningService.setDeviceAPIKey(
-        "1/unsafe",
-        "manual-key",
-      );
-
-      expect(mockBffJson).toHaveBeenCalledWith(
-        "platform",
-        "POST /operator/devices/{id}/set-api-key",
-        { params: { id: "1/unsafe" }, body: { api_key: "manual-key" } },
-      );
-    });
-
     it("sends an empty body when auto-generating a key", async () => {
       mockBffJson.mockResolvedValue({
         ...mockBackendDevice,
         api_key: "generated-key",
       });
 
-      const result = await operatorProvisioningService.setDeviceAPIKey("1");
+      const result =
+        await operatorProvisioningService.setDeviceAPIKey("1/unsafe");
 
       expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
         "POST /operator/devices/{id}/set-api-key",
-        { params: { id: "1" }, body: {} },
+        { params: { id: "1/unsafe" }, body: {} },
       );
       expect(result.apiKey).toBe("generated-key");
     });

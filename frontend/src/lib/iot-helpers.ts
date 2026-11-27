@@ -165,18 +165,6 @@ export function formatRelativeLastSeen(lastSeen?: string): string {
 }
 
 /**
- * Get device type emoji icon
- */
-export function getDeviceTypeEmoji(deviceType: string): string {
-  const emojiMap: Record<string, string> = {
-    terminal: "📡",
-    info_point: "ℹ️",
-  };
-
-  return emojiMap[deviceType] ?? "🔧";
-}
-
-/**
  * Generate default device name based on type and ID
  */
 export function generateDefaultDeviceName(

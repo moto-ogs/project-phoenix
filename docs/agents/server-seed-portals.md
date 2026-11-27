@@ -84,6 +84,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/abrechnung/jahresbescheide/[id]/bescheid/[contractId]` | None. | Letter opening reads an individual contract notice and records access; print/download stay on action. |
 | `/abrechnung/jahresbescheide/[id]/lastschrift` | None. | The run read is audited and controls whether debit preparation exists. |
 | `/abrechnung/jahresbescheide/[id]/versand` | None. | Run and notice-letter status are audited; recipient documents and delivery actions are not prefetched. |
+| `/abrechnung/rechnungsausgangsbuch` | None. | Every page of the journal logs a read in the trail of each run it shows; filter, paging and export stay client-owned. |
 | `/abrechnung/kinderzahl` | None. | Child-number list records every number shown. |
 | `/abrechnung/kinderzahl/import` | None. | File picker, preview and import run only from interaction. |
 | `/abrechnung/kostentraeger` | None. | Shares log each contract shown; form select/edits remain opening-specific. |
@@ -134,6 +135,8 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/ferien/[id]/vergabe` | Period and schools. | Allocation board records every read; proposal/history stays under the period policy and opening. |
 | `/ferien/kriterien` | Criteria and order. | Reordering and edits use versions/actions. |
 | `/ferien/neu` | Schools. | Blank period creation form. |
+| `/ferien/zusatztage` | Period summaries and schools. | Extra care days are the periods of kind `extra_day`; downloads and creation are actions. |
+| `/ferien/zusatztage/neu` | Schools. | Blank extra day creation form. |
 | `/invite` | None. | The token opens the acceptance form; validation determines whether that form asks for an existing or new password. |
 | `/kinder` | Schools. | The children by name are person data: every page logs access at each school it shows, so the browser reads them on opening; school reiter, search, paging and exports are actions. |
 | `/konto` | Own profile, shared with the shell, then remembered devices. | Name and password updates are actions. |

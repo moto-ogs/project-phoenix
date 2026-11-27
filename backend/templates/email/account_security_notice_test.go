@@ -31,15 +31,15 @@ func TestAccountSecurityNoticeTemplates_Render(t *testing.T) {
 	}{
 		{
 			name: "second factor reset by the school", template: "account-mfa-reset.html",
-			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ResetAt": "12.11.2026 09:42", "Actor": "Die Verwaltung deiner Schule", "ByOperator": false},
-			mustContain:    []string{"Die Verwaltung deiner Schule hat am 12.11.2026 09:42", "gemerkten Geräte", "„Passwort vergessen?“", "bei der Verwaltung deiner Schule", `alt="moto"`},
+			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ResetAt": "12.11.2026 09:42", "Actor": "Die Verwaltung Ihrer Schule", "ByOperator": false},
+			mustContain:    []string{"Die Verwaltung Ihrer Schule hat am 12.11.2026 09:42", "gemerkten Geräte", "„Passwort vergessen?“", "bei der Verwaltung Ihrer Schule", `alt="moto"`},
 			mustNotContain: []string{"beim moto-Team", "href=\"http"},
 		},
 		{
 			name: "second factor reset by the moto team", template: "account-mfa-reset.html",
 			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ResetAt": "12.11.2026 09:42", "Actor": "Das moto-Team", "ByOperator": true},
 			mustContain:    []string{"Das moto-Team hat am 12.11.2026 09:42", "„Passwort vergessen?“", "beim moto-Team"},
-			mustNotContain: []string{"bei der Verwaltung deiner Schule"},
+			mustNotContain: []string{"bei der Verwaltung Ihrer Schule"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

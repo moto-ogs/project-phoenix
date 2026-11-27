@@ -2,15 +2,14 @@
  * Tests for Rooms Configuration
  * Tests room config structure and validation
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { roomsConfig } from "./rooms.config";
 import type { Room } from "@/lib/room-helpers";
-
-// Mock room-helpers
-vi.mock("@/lib/room-helpers", () => ({
-  mapRoomResponse: vi.fn((data: unknown) => data),
-  prepareRoomForBackend: vi.fn((data: unknown) => data),
-}));
+import { formValuesFor } from "~/components/database/database-form";
+import {
+  configToFormSection,
+  type EntityFormConfig,
+} from "~/lib/database/types";
 
 describe("roomsConfig", () => {
   it("exports a valid entity config", () => {
@@ -58,7 +57,12 @@ describe("roomsConfig", () => {
     // hue, defeating the whole point of the color picker. New rooms now
     // start with no color and the badge falls back to OTHER_ROOM blue until
     // an admin picks one.
-    expect(roomsConfig.form.defaultValues?.color).toBeUndefined();
+    const { form }: EntityFormConfig<Room> = roomsConfig;
+    const draft = formValuesFor(
+      form.sections.map(configToFormSection),
+      form.defaultValues,
+    );
+    expect(draft).toMatchObject({ color: "" });
   });
 
   it("preserves color through transformBeforeSubmit", () => {
@@ -109,93 +113,5 @@ describe("roomsConfig", () => {
 
     const validation = floorField?.validation?.("2");
     expect(validation).toBeNull();
-  });
-
-  it("has detail header configuration", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Normaler Raum",
-      building: "Building A",
-      floor: 2,
-      isOccupied: false,
-    };
-
-    expect(roomsConfig.detail.header?.title(mockRoom)).toBe("Room 101");
-    expect(roomsConfig.detail.header?.subtitle?.(mockRoom)).toBe(
-      "Building A, Etage 2",
-    );
-  });
-
-  it("shows only building when floor not set", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Normaler Raum",
-      building: "Building A",
-      isOccupied: false,
-    };
-
-    expect(roomsConfig.detail.header?.subtitle?.(mockRoom)).toBe("Building A");
-  });
-
-  it("shows only floor when building not set", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Normaler Raum",
-      floor: 2,
-      isOccupied: false,
-    };
-
-    expect(roomsConfig.detail.header?.subtitle?.(mockRoom)).toBe("Etage 2");
-  });
-
-  it("has list configuration", () => {
-    expect(roomsConfig.list.title).toBe("Raum auswählen");
-    expect(roomsConfig.list.searchStrategy).toBe("frontend");
-  });
-
-  it("displays occupied status in list", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Normaler Raum",
-      isOccupied: true,
-      groupName: "Group Blue",
-    };
-
-    const subtitle = roomsConfig.list.item.subtitle?.(mockRoom);
-    expect(subtitle).toContain("Belegt");
-    expect(subtitle).toContain("Group Blue");
-  });
-
-  it("displays free status in list", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Normaler Raum",
-      isOccupied: false,
-    };
-
-    const subtitle = roomsConfig.list.item.subtitle?.(mockRoom);
-    expect(subtitle).toBe("Frei");
-  });
-
-  it("shows category-specific emoji", () => {
-    const mockRoom: Room = {
-      id: "1",
-      name: "Room 101",
-      category: "Sport",
-      isOccupied: false,
-    };
-
-    const emoji = roomsConfig.list.item.avatar?.text(mockRoom);
-    expect(emoji).toBe("🏃");
-  });
-
-  it("has custom labels", () => {
-    expect(roomsConfig.labels?.createButton).toBe("Neuen Raum erstellen");
-    expect(roomsConfig.labels?.deleteConfirmation).toContain("löschen");
   });
 });

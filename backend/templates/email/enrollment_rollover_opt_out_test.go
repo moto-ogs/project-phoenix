@@ -32,15 +32,15 @@ func TestRolloverOptOutTemplate_NamesTheTermsConfirmation(t *testing.T) {
 	}
 
 	withTerms := render(true)
-	for _, want := range []string{"Die Betreuung deines Kindes läuft im neuen Zeitraum weiter.",
-		"Bitte bestätige die Vertragsbedingungen.", "Für den Vertrag im neuen Zeitraum brauchen wir deine Zustimmung.",
+	for _, want := range []string{"Die Betreuung Ihres Kindes läuft im neuen Zeitraum weiter.",
+		"Bitte bestätigen Sie die Vertragsbedingungen.", "Für den Vertrag im neuen Zeitraum brauchen wir Ihre Zustimmung.",
 		"Vertragsbedingungen bestätigen"} {
 		assert.Contains(t, withTerms, template.HTMLEscapeString(want))
 	}
-	assert.NotContains(t, withTerms, template.HTMLEscapeString("Du musst dafür nichts tun."))
+	assert.NotContains(t, withTerms, template.HTMLEscapeString("Sie müssen dafür nichts tun."))
 
 	withoutTerms := render(false)
-	assert.Contains(t, withoutTerms, template.HTMLEscapeString("Du musst dafür nichts tun."))
+	assert.Contains(t, withoutTerms, template.HTMLEscapeString("Sie müssen dafür nichts tun."))
 	assert.Contains(t, withoutTerms, template.HTMLEscapeString("Status ansehen oder abmelden"))
 	assert.NotContains(t, withoutTerms, template.HTMLEscapeString("Vertragsbedingungen bestätigen"))
 }

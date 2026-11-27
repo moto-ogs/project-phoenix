@@ -34,7 +34,6 @@ export function useSchoolStaffNoticesPending(): SchoolStaffNoticesPending {
       fetcher: schoolStaffNoticesApi.fetchTodaysNotices,
       count: countPendingAcknowledgements,
       eventNames: [STAFF_NOTICES_REFRESH_EVENT],
-      refetchOnFocus: true,
     },
   );
   return { pendingCount: unreadCount };

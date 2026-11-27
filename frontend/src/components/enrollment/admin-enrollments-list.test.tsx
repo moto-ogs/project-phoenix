@@ -72,7 +72,6 @@ vi.mock("~/lib/enrollment-form-schema-api", async (importOriginal) => {
 });
 
 vi.mock("~/lib/settings-api", () => ({
-  SETTINGS_SCHEMA_SWR_KEY: "settings-schema",
   fetchSettingsSchema: mocks.fetchSettingsSchema,
 }));
 

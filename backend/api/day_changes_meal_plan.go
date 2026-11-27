@@ -7,7 +7,7 @@ package api
 // both, also without meals:read: the entry names no dish and no person. A
 // cancelled lunch replaces a changed menu of the same day. The link leads to
 // the meal plan page only for an account that may read it (the rule of
-// GET /api/meal-plan/), so nobody lands on a page without content. A day
+// GET /api/meal-plan/days), so nobody lands on a page without content. A day
 // without either gives no entry.
 
 import (
