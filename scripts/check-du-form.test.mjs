@@ -64,6 +64,7 @@ describe('findInformalAddress', () => {
     assert.deepEqual(informal('Bitte öffnet den Anhang. Ihr dürft den Link weitergeben.'), ['öffnet', 'dürft']);
     assert.deepEqual(informal('Bitte prüfe die Angaben.'), ['prüfe']);
     assert.deepEqual(informal('Bitte nimm Kontakt auf.'), ['nimm']);
+    assert.deepEqual(informal('Bitte speichere diese E-Mail. Bitte schließt das Fenster.'), ['speichere', 'schließt']);
   });
 
   test('passes the Sie-form, other words and quoted text', () => {
