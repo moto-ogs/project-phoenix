@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // seedDayChangesTomorrowStep gives the preview on tomorrow (#7657) its own
@@ -11,7 +12,10 @@ import (
 // sick), and two children of Klasse 4b are on a day outing tomorrow and come
 // back at 12:30 (arrival exception "Ausflug: …", as the school portal writes
 // it). Like the class trips of today it runs on every day, weekends
-// included.
+// included. On a weekday lunch of tomorrow is cancelled as well (#8236): the
+// Träger-Portal shows the school under „Morgen“, and the parents of a child
+// booked for tomorrow read it in the child's day. The meal plan has no
+// weekend, and a closing day keeps no cancellation.
 type seedDayChangesTomorrowStep struct{}
 
 func (seedDayChangesTomorrowStep) Name() string { return "Seeding day changes of tomorrow" }
@@ -39,5 +43,9 @@ func (seedDayChangesTomorrowStep) Run(_ context.Context, rt *Runtime) error {
 			return fmt.Errorf("seed day outing of tomorrow: %w", err)
 		}
 	}
-	return nil
+	next := todaySeedDate().AddDays(1)
+	if weekday := next.Weekday(); weekday == time.Saturday || weekday == time.Sunday {
+		return nil
+	}
+	return seedMealCancellation(rt, next)
 }
