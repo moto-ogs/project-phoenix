@@ -43,8 +43,9 @@ Regel für alles, was moto verschickt.
 3. **Schreibweise.** „Sie“, „Ihr“, „Ihre“, „Ihnen“ stehen groß. Ein Schreiben
    an eine Familie oder an beide Eltern sagt ebenfalls „Sie“; „ihr“ als Anrede
    gibt es in Mails und Briefen nicht mehr.
-4. **Begrüßung ohne Vorname plus „Sie“.** Hat die Person eine Anrede gewählt,
-   beginnt die Mail mit „Liebe Frau Klein,“ oder „Lieber Herr Klein,“. Ohne
+4. **Begrüßung ohne Vorname plus „Sie“.** Wo eine Mail die selbst gewählte
+   Anrede nutzt (heute Elternnachrichten und Termine), beginnt sie mit „Liebe
+   Frau Klein,“ oder „Lieber Herr Klein,“. Ohne
    Anrede oder ohne Nachnamen bleibt sie neutral: „Guten Tag Karin Klein,“.
    Eine Begrüßung nur mit Vornamen („Hallo Karin,“) wird zu „Guten Tag Karin
    Klein,“. Das löst die Mischung „Liebe Karin, … Sie“, die ADR 0294 als

@@ -63,6 +63,7 @@ describe('findInformalAddress', () => {
     assert.deepEqual(informal('Falls du das nicht warst, kannst du sie ignorieren.'), ['du', 'kannst', 'du']);
     assert.deepEqual(informal('Bitte öffnet den Anhang. Ihr dürft den Link weitergeben.'), ['öffnet', 'dürft']);
     assert.deepEqual(informal('Bitte prüfe die Angaben.'), ['prüfe']);
+    assert.deepEqual(informal('Bitte nimm Kontakt auf.'), ['nimm']);
   });
 
   test('passes the Sie-form, other words and quoted text', () => {
@@ -70,7 +71,7 @@ describe('findInformalAddress', () => {
     assert.deepEqual(informal('Dirk und Duisburg, durch das Dach, Ihre Durchwahl, Dienstag.'), []);
     assert.deepEqual(informal('Im Portal heißt der Bereich „Deine Kinder“.'), []);
     assert.deepEqual(informal('Die Kosten übernimmt das Amt. Das ist erst ab Herbst fest.'), []);
-    assert.deepEqual(informal('Bitte öffnen Sie den Anhang. Bitte nicht überweisen. Bitte erst morgen.'), []);
+    assert.deepEqual(informal('Bitte öffnen Sie den Anhang. Bitte nicht überweisen. Bitte heute noch antworten.'), []);
   });
 });
 

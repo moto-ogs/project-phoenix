@@ -83,8 +83,8 @@ const FORMAL_ANYWHERE = /\b(Sie|Ihnen|Ihre?[mnrs]?)\b/;
 // they use.
 const INFORMAL = /(?<![\p{L}\p{N}_])([Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|ihr|[Kk]annst|[Mm]usst|[Hh]ast|[Bb]ist|[Ww]irst|[Ff]indest|[Ee]rhältst|[Mm]öchtest|[Dd]arfst|[Ss]iehst|[Bb]rauchst|[Bb]ekommst|[Hh]abt|[Ss]eid|[Mm]üsst|[Kk]önnt|[Dd]ürft|[Ww]ollt|[Ss]ollt|[Ww]isst)(?![\p{L}\p{N}_])/gu;
 // An imperative after „Bitte“ in the du- or ihr-form („Bitte öffne“, „Bitte
-// öffnet“); the Sie-form ends in -n („Bitte öffnen Sie“).
-const INFORMAL_PLEASE = /(?<![\p{L}\p{N}_])[Bb]itte (?!(?:nicht|erst|jetzt|direkt|sofort|selbst|rechtzeitig|bald|gut|unbedingt)(?![\p{L}]))(\p{L}+[et])(?![\p{L}\p{N}_])/gu;
+// öffnet“): the verbs moto's mails and letters ask for.
+const INFORMAL_PLEASE = /(?<![\p{L}\p{N}_])[Bb]itte (prüfe|prüft|öffne|öffnet|lies|lest|gib|gebt|melde|meldet|wende|wendet|wähle|wählt|klicke|klickt|kopiere|kopiert|antworte|antwortet|beachte|beachtet|bestätige|bestätigt|unterschreibe|unterschreibt|überweise|überweist|nimm|nehmt|sieh|seht|denk|denke|denkt|schicke|schickt|trage|tragt|lade|ladet|nutze|nutzt|reiche|reicht|kümmere|kümmert|hebe|hebt|drucke|druckt|stimme|stimmt|lehne|lehnt|ändere|ändert|entferne|entfernt|scanne|scannt|bringe|bringt|gebe)(?![\p{L}\p{N}_])/gu;
 
 const FORMAL = /(?<![\p{L}\p{N}_])(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)(?![\p{L}\p{N}_])/gu;
 // Abbreviations whose dot does not end a sentence („z. B. Ihre …“).
