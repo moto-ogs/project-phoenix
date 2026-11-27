@@ -51,6 +51,12 @@ eng begrenzte Befugnis, keine Träger-Sitzung.
      angelegt hat (`created_by_school_id`) und noch allein ausrichtet. Ein Tag
      des Träger-Büros, einer anderen Schule oder eines anderen Trägers ist für
      die Schule nicht vorhanden (404).
+   Ändern und Veröffentlichen prüfen das auf der gesperrten Zeile, damit eine
+   Änderung des Büros dazwischen nicht an der Prüfung vorbeigeht. Die Schule
+   schreibt genau einen Tag mit einer Betreuungszeit. Was nur das Büro
+   entscheidet, bleibt wie gespeichert: der Text der Zusage-Mail, die Plätze
+   des Tages (die Schule ersetzt die gespeicherte Woche nie) und eine zweite
+   Betreuungszeit, die das Büro ergänzt hat.
    Die Regeln eines Zusatztags (ein Werktag, kein Feiertag und kein
    Schließtag, Beitragswahl nach dem Veröffentlichen gesperrt) sind dieselben
    wie beim Träger-Büro, weil derselbe Befehl sie prüft.

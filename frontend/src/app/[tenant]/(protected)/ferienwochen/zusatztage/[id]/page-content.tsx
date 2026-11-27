@@ -43,14 +43,18 @@ export default function SchoolExtraDayPage() {
   const read = useSWRAuth(
     isReady && id ? holidayKeys.extraDay(id) : null,
     () => fetchSchoolExtraDay(id),
-    { keepPreviousData: false },
+    // The Träger-Büro changes the day without an event for the school: a
+    // return to the tab reads it again.
+    { keepPreviousData: false, revalidateOnFocus: true },
   );
   const loadError = useSwrLoadError(read.error, "den Zusatztag", () =>
     read.mutate(),
   );
   const invalidate = useInvalidateFamily();
   const [dirty, setDirty] = useState(false);
-  const day = read.data;
+  // A day the school no longer owns answers 404: the page then shows the
+  // error alone, not the name and the actions of the day it held before.
+  const day = read.error ? undefined : read.data;
   const { mutate } = read;
 
   const saved = useCallback(

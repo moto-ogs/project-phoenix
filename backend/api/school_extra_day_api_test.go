@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
+	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
 
 type schoolExtraDayBody struct {
@@ -226,4 +227,115 @@ func TestSchoolExtraCareDayOnAStatutoryHolidayIsRefused(t *testing.T) {
 	rec := schoolExtraDayJSON(t, school, planner, http.MethodPost, "/", extraDay(extraDayAscension, true, 0, office.schools[0]))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_week_no_care_day", decodeHolidayError(t, rec.Body.Bytes()).Code)
+}
+
+// What only the Träger-Büro decides stays when the school changes its day:
+// the acceptance mail text and the places of the day. A day the Büro
+// extended to another school is the Büro's, also for a change or a
+// publication the school sends afterwards.
+func TestSchoolExtraCareDayKeepsWhatTheOfficeDecides(t *testing.T) {
+	t.Parallel()
+	f := newHolidayRegistrationFixture(t)
+	office := newTraegerOffice(t, f.db, f.traeger, "Zusatztag Büro", identityaccess.TraegerRoleAdministration)
+	school := schoolExtraDayRouter(t, f, nil)
+	planner := schoolPlanner(t, f, office.schools[0], permissions.SchedulesUpdate)
+	read := func(id wireID) schoolExtraDayBody {
+		rec := schoolExtraDayJSON(t, school, planner, http.MethodGet, fmt.Sprintf("/%d", id), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return decodeSchoolPortalData[schoolExtraDayBody](t, rec.Body.Bytes())
+	}
+
+	// A school plans its one day: no day at all is refused.
+	empty := extraDay(extraDayBridge, true, 0)
+	rec := schoolExtraDayJSON(t, school, planner, http.MethodPost, "/", empty)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+
+	// A school cannot write the acceptance mail text of its Träger.
+	body := extraDay(extraDayBridge, true, 0, office.schools[0])
+	body["acceptance_mail_text"] = "Text der Schule"
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodPost, "/", body)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	day := decodeSchoolPortalData[schoolExtraDayBody](t, rec.Body.Bytes())
+
+	// The Büro writes its mail text and bounds the places of the day.
+	officeBody := extraDay(extraDayBridge, true, 0, office.schools[0])
+	officeBody["acceptance_mail_text"] = "Bitte bringen Sie Hausschuhe mit."
+	officeBody["weeks"].([]map[string]any)[0]["id"] = fmt.Sprint(day.Weeks[0].ID)
+	officeBody["weeks"].([]map[string]any)[0]["time_models"].([]map[string]any)[0]["id"] = fmt.Sprint(day.Weeks[0].TimeModels[0].ID)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(day.ID)), officeBody)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayCapacityPath(int64(day.ID), int64(day.Weeks[0].ID)), map[string]any{"capacity": 12})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	// The school renames its day and names neither the stored day nor the
+	// mail text: both stay, and so do the places.
+	renamed := extraDay(extraDayBridge, true, 0, office.schools[0])
+	renamed["name"] = "Brückentag der OGS Nord"
+	renamed["expected_version"] = read(day.ID).Version
+	renamed["weeks"].([]map[string]any)[0]["time_models"].([]map[string]any)[0]["id"] = fmt.Sprint(day.Weeks[0].TimeModels[0].ID)
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodPut, fmt.Sprintf("/%d", day.ID), renamed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(day.ID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	kept := decodeSchoolPortalData[struct {
+		Name               string `json:"name"`
+		AcceptanceMailText string `json:"acceptance_mail_text"`
+		Weeks              []struct {
+			ID       wireID `json:"id"`
+			Capacity *int   `json:"capacity"`
+		} `json:"weeks"`
+	}](t, rec.Body.Bytes())
+	assert.Equal(t, "Brückentag der OGS Nord", kept.Name)
+	assert.Equal(t, "Bitte bringen Sie Hausschuhe mit.", kept.AcceptanceMailText)
+	require.Len(t, kept.Weeks, 1)
+	assert.Equal(t, day.Weeks[0].ID, kept.Weeks[0].ID, "the day stays the stored day")
+	require.NotNil(t, kept.Weeks[0].Capacity)
+	assert.Equal(t, 12, *kept.Weeks[0].Capacity)
+
+	// The Büro offers the day at a second school: it is no longer the
+	// school's own.
+	version := read(day.ID).Version
+	shared := extraDay(extraDayBridge, true, 0, office.schools[0], office.schools[1])
+	shared["weeks"].([]map[string]any)[0]["id"] = fmt.Sprint(day.Weeks[0].ID)
+	shared["weeks"].([]map[string]any)[0]["time_models"].([]map[string]any)[0]["id"] = fmt.Sprint(day.Weeks[0].TimeModels[0].ID)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(day.ID)), shared)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	renamed["expected_version"] = version
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodPut, fmt.Sprintf("/%d", day.ID), renamed)
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodPost, fmt.Sprintf("/%d/publish", day.ID), nil)
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodGet, fmt.Sprintf("/%d", day.ID), nil)
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(day.ID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, enrollment.HolidayPeriodDraft, decodeSchoolPortalData[schoolExtraDayBody](t, rec.Body.Bytes()).Status, "the school published nothing")
+}
+
+// The list of the school's extra days reads the same statements for any
+// number of days.
+func TestSchoolExtraCareDayListStaysFlat(t *testing.T) {
+	t.Parallel()
+	f := newHolidayRegistrationFixture(t)
+	office := newTraegerOffice(t, f.db, f.traeger, "Zusatztag Budget", identityaccess.TraegerRoleAdministration)
+	school := schoolExtraDayRouter(t, f, nil)
+	planner := schoolPlanner(t, f, office.schools[0], permissions.SchedulesUpdate)
+	plan := func(date string) {
+		rec := schoolExtraDayJSON(t, school, planner, http.MethodPost, "/", extraDay(date, true, 0, office.schools[0]))
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	}
+	list := func() testpkg.QueryMeasurement {
+		counter := testpkg.CaptureQueriesForContext(t, f.db)
+		req := httptest.NewRequest(http.MethodGet, "/api/holiday-extra-days/", nil)
+		req.Header.Set("Authorization", "Bearer "+planner)
+		rec := httptest.NewRecorder()
+		testpkg.MeasuredHTTPRequest(counter, school, rec, req.WithContext(counter.Context(req.Context())))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return counter.Measurement(counter.Selects(""))
+	}
+	plan(extraDayBridge)
+	one := list()
+	plan(extraDayMonday)
+	assert.Len(t, list().Statements, len(one.Statements), "the list reads the same statements for any number of days")
+	querybudgets.AssertQueryBudget(t, "api.holiday_extra_days.list", one)
 }

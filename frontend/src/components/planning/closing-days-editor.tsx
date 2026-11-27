@@ -29,7 +29,7 @@ import {
 import { HolidayClosureNotices } from "~/components/planning/holiday-closure-notices";
 import { BulkCancelAppointmentsModal } from "~/components/timetable/bulk-cancel-appointments-modal";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -48,6 +48,7 @@ import { hasPermission } from "~/lib/auth-utils";
 import { useInvalidateClosingDays } from "~/lib/hooks/use-closing-days";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { closingDayKeys } from "~/lib/swr/staff-keys";
 import { formatDate } from "~/lib/date-helpers";
@@ -100,6 +101,8 @@ export function ClosingDaysEditor({
   } | null>(null);
   const { data: session } = useSession();
   const canManageSchedules = hasPermission(session, "schedules:manage");
+  const canPlanExtraDays = hasPermission(session, "schedules:update");
+  const tenantPath = useTenantAwarePath();
   const { success: toastSuccess } = useToast();
   const invalidateClosingDays = useInvalidateClosingDays();
   // Nach dem Speichern oder Löschen kann moto einen Elternhinweis
@@ -327,17 +330,32 @@ export function ClosingDaysEditor({
         title="Schließtage"
         description="Tage, an denen die OGS geschlossen hat, z. B. Ferien oder pädagogische Tage. Dann fallen Termine aus und Mitarbeitende haben kein Soll. Ausnahmen: Serien mit „Auch an Schließtagen planen“ und Sonderarbeitszeiten. Schließtage „Vom Träger“ ändert das Träger-Büro."
         actions={
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={beginCreate}
-            className="shrink-0 gap-2"
-            tooltip="Öffnet ein leeres Formular für einen neuen Schließtag."
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Schließtag anlegen
-          </Button>
+          <>
+            {/* Das Gegenstück zum Schließtag: ein einzelner Betreuungstag,
+                mit demselben Recht geplant (#4817, ADR 0329). */}
+            {canPlanExtraDays ? (
+              <ButtonLink
+                href={tenantPath("/ferienwochen/zusatztage")}
+                variant="outline"
+                size="md"
+                className="shrink-0"
+                tooltip="Öffnet die Zusatztage deiner OGS: einzelne Betreuungstage, zum Beispiel an einem Brückentag."
+              >
+                Zusatztage
+              </ButtonLink>
+            ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={beginCreate}
+              className="shrink-0 gap-2"
+              tooltip="Öffnet ein leeres Formular für einen neuen Schließtag."
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Schließtag anlegen
+            </Button>
+          </>
         }
       >
         <LoadErrorAlert

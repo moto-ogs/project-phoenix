@@ -109,6 +109,7 @@ export default function SchoolExtraDaysPage() {
   const read = useSWRAuth(
     isReady ? holidayKeys.extraDays() : null,
     fetchSchoolExtraDays,
+    { revalidateOnFocus: true },
   );
   const loadError = useSwrLoadError(read.error, "die Zusatztage", () =>
     read.mutate(),

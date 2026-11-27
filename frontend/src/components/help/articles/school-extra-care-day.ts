@@ -27,7 +27,7 @@ export function schoolExtraCareDayTopic(): HelpTopic {
         steps: [
           "Klappe in der Seitenleiste `Eltern` auf.",
           "Öffne `Ferienwochen`.",
-          "Wähle oben `Zusatztage`.",
+          "Wähle oben `Zusatztage`. Du findest `Zusatztage` auch bei den `Schließtagen`.",
           "Wähle `Zusatztag anlegen`.",
           "Trage den `Name des Zusatztags` ein, zum Beispiel Brückentag nach Himmelfahrt.",
           "Wähle den `Tag`. Möglich ist ein Tag von Montag bis Freitag.",
