@@ -612,6 +612,16 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target: facilities reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234) to remove accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
       "reason": "Read-only target (#8234): the root names the account of the request from the session claims already in the context, to leave the person who closed the room out of the audience. No database access, persistent, lock or scope effect.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
@@ -660,33 +670,11 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.CloseRoom",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.CloseRoom",
-      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/facilities/internal/application.NoticedClosures.CloseRoom, the room closures with the notice of #8234, which pass CloseRoom to the closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ListRoomClosures",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ListRoomClosures",
       "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.ListRoomClosures, the room closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.ListRoomClosures",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ListRoomClosures",
-      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/facilities/internal/application.NoticedClosures.ListRoomClosures, the room closures with the notice of #8234, which pass ListRoomClosures to the closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -704,17 +692,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.ReopenRoom",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ReopenRoom",
-      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/facilities/internal/application.NoticedClosures.ReopenRoom, the room closures with the notice of #8234, which pass ReopenRoom to the closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosedOn",
       "classification": "platform",
       "effect": "scope",
@@ -726,33 +703,11 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.RoomClosedOn",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
-      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/facilities/internal/application.NoticedClosures.RoomClosedOn, the room closures with the notice of #8234, which pass RoomClosedOn to the closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosureRanges",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
       "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.RoomClosureRanges. The caller enters the platform contract inside its own unit; the locked room rows remain held through the caller's write (ADR 0098).",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.NoticedClosures.RoomClosureRanges",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
-      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/facilities/internal/application.NoticedClosures.RoomClosureRanges, the room closures with the notice of #8234, which pass RoomClosureRanges to the closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
