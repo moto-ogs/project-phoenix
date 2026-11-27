@@ -15190,13 +15190,13 @@ export const traegerInvoiceJournalTopic =
       title: "Rechnungsausgangsbuch lesen",
       question: "Wo sehe ich alle ausgestellten Rechnungen in einer Liste?",
       summary:
-        "Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Stornos und Gutschriften. Fehlt in einem Nummernkreis eine Nummer, zeigt moto das als Warnung.",
+        "Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Stornos und Gutschriften. Eine Rechnung zeigt ihren Stand und was sie noch fordert. Fehlt in einem Nummernkreis eine Nummer, zeigt moto das als Warnung.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "ListSearch",
       image: "/help/screens/traeger-rechnungsausgangsbuch.webp",
       imageAlt:
-        "Das Rechnungsausgangsbuch: oben Suche und Filter, darunter die Warnung zu fehlenden Nummern, die Summen und die Liste der Dokumente mit Nummer, Datum, Dokumentart, Empfänger, Lauf und Beträgen.",
+        "Das Rechnungsausgangsbuch: oben Suche und Filter, darunter die Warnung zu fehlenden Nummern, die Summen und die Liste der Dokumente mit Nummer, Datum, Dokumentart und Stand, Empfänger mit Kindern, Lauf, Beträgen und offener Forderung.",
       requirements: [
         "Deine Rolle im Träger-Büro ist Abrechnung.",
         "Mindestens ein Lauf ist freigegeben. Ein Dokument steht erst in der Liste, wenn es seine Nummer hat.",
@@ -15207,19 +15207,24 @@ export const traegerInvoiceJournalTopic =
           title: "Liste öffnen und lesen",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Rechnungsausgangsbuch`.",
-            "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Das neueste Dokument steht oben.",
-            "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört. Wähle diese Nummer. moto sucht sie in allen Dokumenten und leert dabei die anderen Filter.",
+            "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Ohne eigene Sortierung steht das neueste Dokument oben. In einem Nummernkreis steht dann die höchste Nummer oben.",
+            "Neben der Dokumentart steht bei einer Rechnung ihr Stand, zum Beispiel `Forderung offen`, `Teilgutschrift` oder `Storniert`. Die Spalte `Offene Forderung` nennt, was die Rechnung noch fordert.",
+            "Unter dem Empfänger stehen die Vornamen der Kinder. Wähle einen unterstrichenen Empfängernamen. Du kommst zur Familie mit all ihren Dokumenten.",
+            "Neben einem Storno oder einer Gutschrift steht die Nummer der zugehörigen Rechnung. Wähle diese Nummer. moto zeigt die Rechnung und alle Dokumente, die genau diese Nummer als Bezug haben. Andere Filter werden dabei geleert.",
             "Wähle den Namen in der Spalte `Lauf`. Du kommst zum Lauf mit seinen Schreiben.",
-            "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen.",
+            "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen. Daneben steht die Summe der offenen Forderungen.",
+            "Wähle einen Spaltenkopf, zum Beispiel `Brutto` oder `Offene Forderung`. moto sortiert alle Dokumente zu Suche und Filter, nicht nur die geladenen Zeilen. Wähle ihn noch einmal für die andere Richtung.",
+            "Auf dem Handy wählst du über der Liste `Sortieren nach`. Dort wählst du aus, wonach und in welcher Richtung moto sortiert.",
           ],
         },
         {
           title: "Dokumente finden",
           description: "Zahl und Summen folgen immer der Suche und dem Filter.",
           steps: [
-            "Tippe in die Suche eine Nummer oder den Namen des Empfängers.",
+            "Tippe in die Suche eine Nummer, den Namen des Empfängers, den Vornamen eines Kindes oder eine Debitorennummer.",
             "Wähle neben der Suche `Zeitraum wählen` für die Dokumente eines Monats oder Jahres.",
-            "Daneben filterst du nach Dokumentart, Nummernkreis und Lauf. Auf dem Handy wählst du dafür das Filter-Symbol.",
+            "Daneben filterst du nach Dokumentart, Stand, Nummernkreis und Lauf. Auf dem Handy wählst du dafür das Filter-Symbol.",
+            "Der Filter `Stand` → `Forderung offen` zeigt nur Rechnungen, die noch den ganzen Betrag fordern. Rechnungen mit einer Teilgutschrift haben den Stand `Teilgutschrift`. Was nach der Gutschrift übrig bleibt, steht in `Offene Forderung`.",
             "Jeder Filter steht als Marke unter der Suche. Mit dem Kreuz an der Marke nimmst du ihn wieder weg.",
             "Stellen mehrere Stellen für deine Schulen Rechnungen aus, filterst du auch nach `Rechnungssteller`.",
           ],
@@ -15240,7 +15245,7 @@ export const traegerInvoiceJournalTopic =
           steps: [
             "Wähle oben rechts das Menü mit den drei Punkten.",
             "Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
-            "Die Datei enthält alle Dokumente zu Suche und Filter, aufsteigend nach Nummer. Am Ende stehen die Summen. Das Menü nennt vorher, wie viele Dokumente es sind.",
+            "Die Datei enthält alle Dokumente zu Suche und Filter, aufsteigend nach Nummer, auch wenn du die Liste anders sortiert hast. Sie nennt zusätzlich Stand, Kinder, Debitorennummer und offene Forderung. Am Ende stehen die Summen. Das Menü nennt vorher, wie viele Dokumente es sind.",
             "Die Liste enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -15254,7 +15259,8 @@ export const traegerInvoiceJournalTopic =
       ],
       notes: [
         "Die Steuer ist immer 0,00 €. Elternbeiträge stellt moto ohne Steuer aus.",
-        "Ob eine Familie gezahlt hat, steht hier nicht. Prüfe das in deiner Buchhaltung.",
+        "Ob eine Familie gezahlt hat, steht hier nicht. Die Spalte `Offene Forderung` zieht Gutschriften ab, aber keine Zahlungen. Zahlungen prüfst du in deiner Buchhaltung.",
+        "Ein Storno, eine Gutschrift und ein Jahresbescheid haben keinen Stand. In der Spalte `Offene Forderung` steht dort ein Strich. Jahresbescheide zählen in der Summe der offenen Forderungen nicht mit.",
       ],
       troubleshootingDetails: [
         "Ein Dokument fehlt in der Liste: Der Lauf ist noch nicht freigegeben. Entwürfe haben keine Nummer und stehen nur im Lauf.",

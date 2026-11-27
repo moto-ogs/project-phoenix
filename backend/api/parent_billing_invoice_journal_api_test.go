@@ -51,6 +51,11 @@ type journalDocumentBody struct {
 		Kind   string `json:"kind"`
 		Number string `json:"number"`
 	} `json:"reference"`
+	Status       string   `json:"status"`
+	OpenCents    int64    `json:"open_cents"`
+	ChildNames   []string `json:"child_names"`
+	DebtorNumber string   `json:"debtor_number"`
+	FamilyID     *wireID  `json:"family_id"`
 }
 
 type journalBody struct {
@@ -62,6 +67,7 @@ type journalBody struct {
 		GrossCents int64 `json:"gross_cents"`
 		TaxCents   int64 `json:"tax_cents"`
 		NetCents   int64 `json:"net_cents"`
+		OpenCents  int64 `json:"open_cents"`
 	} `json:"totals"`
 	Gaps []struct {
 		Service            string `json:"service"`
@@ -138,6 +144,8 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	for _, id := range []int64{f.siblings, f.again} {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
+	debtor := f.changeDebtorNumber(t, f.office.token, f.siblings, "XFE-0002")
+	require.Equal(t, http.StatusOK, debtor.Code, debtor.Body.String())
 	setNumberRange(t, f, billing, "FE-{NNNN}")
 	draft := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	empty := invoiceJournal(t, f.traeger, billing, nil)
@@ -203,6 +211,73 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Equal(t, "credits", credit.Reference.Kind)
 	assert.Equal(t, "FE-0002", credit.Reference.Number)
 	assert.EqualValues(t, secondRun, byNumber["FE-0007"].Run.ID, "the journal reaches across runs")
+
+	// #8138: an invoice carries its state and what it still asks for, as
+	// its family shows them; a correction asks for nothing of its own.
+	assert.Equal(t, "cancelled", byNumber["FE-0001"].Status)
+	assert.Zero(t, byNumber["FE-0001"].OpenCents, "a cancelled invoice asks for nothing")
+	assert.Equal(t, "partly_credited", byNumber["FE-0002"].Status)
+	assert.Equal(t, second.TotalCents-500, byNumber["FE-0002"].OpenCents, "a credit lowers what its invoice asks for")
+	assert.Equal(t, "open", byNumber["FE-0007"].Status)
+	assert.Equal(t, byNumber["FE-0007"].GrossCents, byNumber["FE-0007"].OpenCents)
+	assert.Empty(t, cancellation.Status)
+	assert.Empty(t, credit.Status)
+	assert.Zero(t, credit.OpenCents)
+	assert.Equal(t, byNumber["FE-0002"].OpenCents+byNumber["FE-0007"].OpenCents, journal.Totals.OpenCents,
+		"the open sum covers every invoice of the filter")
+	require.NotEmpty(t, byNumber["FE-0002"].ChildNames, "a document names the children it bills")
+	require.NotNil(t, byNumber["FE-0001"].FamilyID)
+	require.NotNil(t, cancellation.FamilyID)
+	assert.Equal(t, *byNumber["FE-0001"].FamilyID, *cancellation.FamilyID, "a correction opens the family of its invoice")
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, fmt.Sprintf("/traeger/billing-families/%d", int64(*credit.FamilyID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, "the family of a document opens: %s", rec.Body.String())
+	ofState := invoiceJournal(t, f.traeger, billing, url.Values{"status": {"partly_credited"}})
+	assert.Equal(t, []string{"FE-0002"}, journalNumbers(ofState))
+	assert.Equal(t, byNumber["FE-0002"].OpenCents, ofState.Totals.OpenCents)
+	assert.Contains(t, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(byNumber["FE-0002"].ChildNames[0])}})),
+		"FE-0002", "the search finds a document by a child it bills")
+	combinedNames := url.Values{"search": {"Ben Lia"}}
+	noMatch := invoiceJournal(t, f.traeger, billing, combinedNames)
+	assert.Zero(t, noMatch.TotalCount, "two siblings do not make one first name")
+	assert.Zero(t, noMatch.Totals.GrossCents)
+	assert.Zero(t, noMatch.Totals.OpenCents)
+	assert.Len(t, billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?"+combinedNames.Encode()), 1, "the export also omits the false match")
+	// A column orders every document of the filter in the database.
+	assert.Equal(t, []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"},
+		journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"sort": {"number"}})))
+	assert.Equal(t, []string{"FE-0007", "FE-0004", "FE-0003", "FE-0002", "FE-0001"},
+		journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"sort": {"number"}, "order": {"desc"}})))
+	for _, order := range []string{"asc", "desc"} {
+		for column, value := range map[string]func(journalDocumentBody) int64{
+			"gross": func(d journalDocumentBody) int64 { return d.GrossCents },
+			"open":  func(d journalDocumentBody) int64 { return d.OpenCents },
+		} {
+			sorted := invoiceJournal(t, f.traeger, billing, url.Values{"sort": {column}, "order": {order}})
+			require.Len(t, sorted.Documents, 5, column)
+			values := make([]int64, len(sorted.Documents))
+			for i, document := range sorted.Documents {
+				values[i] = value(document)
+				if column == "open" {
+					assert.Equal(t, i >= 3, document.Status == "", "%s: dashes follow amounts in %s order", document.Number, order)
+				}
+			}
+			if column == "open" {
+				values = values[:3]
+			}
+			if order == "asc" {
+				assert.IsNonDecreasing(t, values, "%s %s", column, order)
+			} else {
+				assert.IsNonIncreasing(t, values, "%s %s", column, order)
+			}
+		}
+	}
+	byRecipient := invoiceJournal(t, f.traeger, billing, url.Values{"sort": {"recipient"}})
+	names := make([]string, len(byRecipient.Documents))
+	for i, document := range byRecipient.Documents {
+		names[i] = document.RecipientLastName
+	}
+	assert.IsNonDecreasing(t, names)
+	assert.Len(t, invoiceJournal(t, f.traeger, billing, url.Values{"sort": {"issued"}, "order": {"desc"}}).Documents, 5)
 	assert.Equal(t, "holiday", byNumber["FE-0007"].Run.Kind)
 	require.Len(t, journal.NumberRanges, 1)
 	assert.Equal(t, 5, journal.NumberRanges[0].DocumentCount)
@@ -227,8 +302,13 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Len(t, only.Runs, 2, "the filters keep every run to choose from")
 	ofRun := invoiceJournal(t, f.traeger, billing, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(secondRun)}})
 	assert.Equal(t, []string{"FE-0007"}, journalNumbers(ofRun))
-	assert.ElementsMatch(t, []string{"FE-0002", "FE-0004"}, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})),
-		"a number finds its document and what refers to it")
+	assert.Subset(t, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})),
+		[]string{"FE-0001", "FE-0002", "FE-0004"}, "typing a number also searches debtor numbers")
+	jump := url.Values{"reference_number": {"FE-0002"}}
+	assert.ElementsMatch(t, []string{"FE-0002", "FE-0004"}, journalNumbers(invoiceJournal(t, f.traeger, billing, jump)))
+	jumpFile := billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?"+jump.Encode())
+	require.Len(t, jumpFile, 4)
+	assert.NotContains(t, strings.Join(jumpFile, "\n"), "FE-0001")
 	byName := invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(cancellation.RecipientLastName)}})
 	assert.Contains(t, journalNumbers(byName), "FE-0003", "the search finds a recipient by name")
 	issued := byNumber["FE-0001"].IssuedOn
@@ -243,7 +323,7 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Len(t, otherRange.Gaps, 1, "a gap stays in view under every filter")
 	assert.Zero(t, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"DE98ZZZ09999999999"}}).TotalCount)
 	for _, query := range []string{"from=gestern", "to=2026-13-01", "from=2026-02-01&to=2026-01-01", "service=mensa", "document_type=brief",
-		"run_kind=ferien", "run_id=5", "run_kind=holiday", "year=-1", "page=0", "search=" + strings.Repeat("a", 101)} {
+		"run_kind=ferien", "run_id=5", "run_kind=holiday", "year=-1", "page=0", "status=bezahlt", "sort=email", "sort=number&order=up", "search=" + strings.Repeat("a", 101)} {
 		rec = traegerJSON(t, f.traeger, billing, http.MethodGet, invoiceJournalPath+"?"+query, nil)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", query, rec.Body.String())
 	}
@@ -278,7 +358,9 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	// the sums.
 	lines := billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export")
 	require.Len(t, lines, 7, "the header, five documents and the sums")
-	assert.Equal(t, "Nummer;Ausgestellt am;Dokumentart;Empfänger;Rechnungssteller;Nummernkreis;Lauf;Bezug;Netto (Euro);Steuer (Euro);Brutto (Euro)", lines[0])
+	assert.Equal(t, "Nummer;Ausgestellt am;Dokumentart;Stand;Empfänger;Kinder;Debitorennummer;Rechnungssteller;Nummernkreis;Lauf;Bezug;Netto (Euro);Steuer (Euro);Brutto (Euro);Offene Forderung (Euro)", lines[0])
+	assert.Contains(t, lines[1], ";Storniert;", "the file names the state of an invoice")
+	assert.Contains(t, lines[2], ";Teilgutschrift;")
 	for i, number := range []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"} {
 		assert.True(t, strings.HasPrefix(lines[i+1], number+";"), "the file counts by number: %s", lines[i+1])
 	}
@@ -341,10 +423,24 @@ func TestInvoiceJournalCountsMonthlyInvoicesAndTheirCancellationsInOneRange(t *t
 		assert.EqualValues(t, run.ID, document.Run.ID)
 		require.NotNil(t, document.Run.Month)
 		assert.Equal(t, careMonth, *document.Run.Month)
-		if document.DocumentType == "cancellation" {
+		// #8138: a monthly invoice bills one child and opens its family.
+		assert.Len(t, document.ChildNames, 1, document.Number)
+		require.NotNil(t, document.FamilyID, document.Number)
+		switch {
+		case document.DocumentType == "cancellation":
 			cancellation = document
+			assert.Empty(t, document.Status)
+		case document.Number == mia.Number:
+			assert.Equal(t, "cancelled", document.Status)
+			assert.Zero(t, document.OpenCents)
+		default:
+			assert.Equal(t, "open", document.Status)
+			assert.Equal(t, document.GrossCents, document.OpenCents)
+			assert.Equal(t, document.OpenCents, journal.Totals.OpenCents, "only the invoice not taken back still asks")
 		}
 	}
+	assert.Equal(t, 2, invoiceJournal(t, f.traeger, f.office.token, url.Values{"search": {"mia"}}).TotalCount,
+		"the child finds its invoice and the Storno")
 	require.NotNil(t, cancellation.Reference, "the Storno names its invoice")
 	assert.Equal(t, mia.Number, cancellation.Reference.Number)
 	assert.Equal(t, "cancels", cancellation.Reference.Kind)
@@ -379,15 +475,24 @@ func TestInvoiceJournalListsJahresbescheideAsFeeNotices(t *testing.T) {
 	assert.Equal(t, "care", notice.Service, "a Jahresbescheid counts in the range of the care")
 	assert.Equal(t, run.Notices[0].Number, notice.Number)
 	assert.NotEmpty(t, notice.RecipientLastName)
+	assert.Equal(t, []string{"Mia"}, notice.ChildNames)
 	assert.Positive(t, notice.GrossCents)
+	// #8138: the state and the open amount follow the families (#4691),
+	// which count invoices only: a Jahresbescheid carries neither.
+	assert.Empty(t, notice.Status)
+	assert.Zero(t, notice.OpenCents)
+	assert.Zero(t, journal.Totals.OpenCents)
+	assert.Nil(t, notice.FamilyID)
 	var reads int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_notice_run_events
 		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, run.ID).Scan(context.Background(), &reads))
 	assert.Equal(t, 1, reads, "the read stands in the trail of the run of the Jahresbescheide")
+	assert.Equal(t, []string{notice.Number}, journalNumbers(invoiceJournal(t, f.traeger, f.office.token, url.Values{"search": {"MIA"}})))
 	lines := billingListCSV(t, f.traeger, f.office.token, invoiceJournalPath+"/export?run_kind=care_notice&run_id="+fmt.Sprint(run.ID))
 	require.Len(t, lines, 3)
 	assert.Contains(t, lines[1], ";Gebührenbescheid;")
 	assert.Contains(t, lines[1], ";Jahresbescheide 2030;")
+	assert.Contains(t, lines[1], ";Mia;")
 }
 
 func TestInvoiceJournalQueryBudgetIsFlat(t *testing.T) {

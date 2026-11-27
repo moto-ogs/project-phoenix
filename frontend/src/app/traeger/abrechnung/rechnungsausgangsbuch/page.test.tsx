@@ -23,9 +23,19 @@ const { mockFetchJournal, mockDownload, mockDownloadBlob } = vi.hoisted(() => ({
   mockDownloadBlob: vi.fn(),
 }));
 
-vi.mock("~/lib/traeger-invoice-journal-api", () => ({
-  fetchInvoiceJournal: (filter: InvoiceJournalFilter, page: number) =>
-    mockFetchJournal(filter, page),
+vi.mock("~/lib/traeger-invoice-journal-api", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/lib/traeger-invoice-journal-api")
+  >()),
+  // An order is passed on only when a column is chosen.
+  fetchInvoiceJournal: (
+    filter: InvoiceJournalFilter,
+    page: number,
+    order: unknown,
+  ) =>
+    order
+      ? mockFetchJournal(filter, page, order)
+      : mockFetchJournal(filter, page),
   downloadInvoiceJournal: (filter: InvoiceJournalFilter, format: string) =>
     mockDownload(filter, format),
 }));
@@ -67,6 +77,11 @@ const INVOICE: JournalDocument = {
   taxCents: 0,
   netCents: 12000,
   reference: null,
+  status: "open",
+  openCents: 12000,
+  childNames: ["Mia", "Noah"],
+  debtorNumber: "D-100",
+  familyId: "1",
 };
 
 const CANCELLATION: JournalDocument = {
@@ -90,6 +105,11 @@ const CANCELLATION: JournalDocument = {
   taxCents: 0,
   netCents: -4500,
   reference: { kind: "cancels", number: "MB-2026-0001" },
+  status: null,
+  openCents: 0,
+  childNames: ["Lena"],
+  debtorNumber: "",
+  familyId: "-1",
 };
 
 const GAP: JournalNumberGap = {
@@ -111,7 +131,7 @@ function journal(
     documents: [CANCELLATION, INVOICE],
     totalCount: 2,
     hasMore: false,
-    totals: { grossCents: 7500, taxCents: 0, netCents: 7500 },
+    totals: { grossCents: 7500, taxCents: 0, netCents: 7500, openCents: 12000 },
     gaps: [],
     numberRanges: [
       {
@@ -194,7 +214,9 @@ describe("TraegerInvoiceJournalPage", () => {
         range: null,
         documentType: "",
         run: null,
+        status: "",
         search: "",
+        referenceNumber: "",
       },
       1,
     );
@@ -218,11 +240,8 @@ describe("TraegerInvoiceJournalPage", () => {
       "Es fehlen die Nummern FE-2026-0002 und FE-2026-0003 (zwischen FE-2026-0001 und FE-2026-0004).",
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Nur Nummernkreis Ferienbetreuung 2026 zeigen",
-      }),
-    );
+    const gapActionName = "Nur Nummernkreis Ferienbetreuung 2026 zeigen";
+    fireEvent.click(screen.getByRole("button", { name: gapActionName }));
     await waitFor(() =>
       expect(mockFetchJournal).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -238,10 +257,26 @@ describe("TraegerInvoiceJournalPage", () => {
     // The range in view needs no button to itself.
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", {
-          name: /Nur diesen Nummernkreis zeigen/,
-        }),
+        screen.queryByRole("button", { name: gapActionName }),
       ).not.toBeInTheDocument(),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("table")).getByRole("button", {
+        name: /Offene Forderung/,
+      }),
+    );
+    const rangeFilter = expect.objectContaining({
+      range: { issuerKey: "", service: "holiday", year: 2026 },
+    });
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(rangeFilter, 1, {
+        sort: "open",
+        order: "asc",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: gapActionName }));
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(rangeFilter, 1),
     );
     expect(
       screen.getByText("Lücke im Nummernkreis Ferienbetreuung 2026"),
@@ -298,11 +333,31 @@ describe("TraegerInvoiceJournalPage", () => {
       expect(mockFetchJournal).toHaveBeenLastCalledWith(
         expect.objectContaining({
           documentType: "",
-          search: "MB-2026-0001",
+          search: "",
+          referenceNumber: "MB-2026-0001",
         }),
         1,
       ),
     );
+    mockFetchJournal.mockResolvedValueOnce(
+      journal({ documents: [], totalCount: 0 }),
+    );
+    fireEvent.change(
+      screen.getAllByPlaceholderText("Nummer, Name oder Kind")[0]!,
+      {
+        target: { value: "91234" },
+      },
+    );
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: "91234", referenceNumber: "" }),
+        1,
+      ),
+    );
+    expect(await screen.findByText(/passt zur Suche\./)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Sortieren nach" }),
+    ).not.toBeInTheDocument();
     expect(table).toBeDefined();
   });
 
@@ -344,6 +399,96 @@ describe("TraegerInvoiceJournalPage", () => {
     expect(
       screen.getAllByRole("button", { name: /Nur Nummernkreis .* zeigen/ }),
     ).toHaveLength(2);
+  });
+
+  it("shows what an invoice still asks for and opens its family (#8138)", async () => {
+    renderPage();
+
+    const table = await screen.findByRole("table");
+    // The invoice carries its state; the Storno has none of its own.
+    expect(await within(table).findAllByText(/Forderung offen/)).toHaveLength(
+      1,
+    );
+    expect(
+      within(table).getByRole("columnheader", { name: /Offene Forderung/ }),
+    ).toBeInTheDocument();
+    // 120,00 € stands as net, gross and open amount of the invoice.
+    expect(within(table).getAllByText("120,00 €")).toHaveLength(3);
+    expect(within(table).getByText("Mia, Noah")).toBeInTheDocument();
+    expect(
+      within(table).getByRole("link", { name: "Eva Muster" }),
+    ).toHaveAttribute("href", "/traeger/abrechnung/familien/1");
+    expect(
+      within(table).getByRole("link", { name: "Paul Muster" }),
+    ).toHaveAttribute("href", "/traeger/abrechnung/familien/-1");
+    // The open sum of the filter stands with the other sums.
+    expect(screen.getAllByText("120,00 €")).toHaveLength(4);
+  });
+
+  it("orders every document of the filter in the database by a column", async () => {
+    renderPage();
+    const table = await screen.findByRole("table");
+    fireEvent.click(
+      within(table).getByRole("button", { name: /Offene Forderung/ }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "asc",
+      }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("table")).getByRole("button", {
+        name: /Offene Forderung/,
+      }),
+    );
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "desc",
+      }),
+    );
+  });
+
+  it("uses the same server order for the mobile selection and desktop headers", async () => {
+    renderPage();
+    const mobileSort = await screen.findByRole("combobox", {
+      name: "Sortieren nach",
+    });
+    fireEvent.click(mobileSort);
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "Offene Forderung: absteigend",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "desc",
+      }),
+    );
+    const table = await screen.findByRole("table");
+    expect(
+      within(table).getByRole("columnheader", { name: /Offene Forderung/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("asks the server for the invoices in one state", async () => {
+    renderPage();
+    await screen.findByRole("table");
+    await openFilter("Stand");
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Teilgutschrift" }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "partly_credited" }),
+        1,
+      ),
+    );
   });
 
   it("asks the server for the chosen document type", async () => {
@@ -469,7 +614,7 @@ describe("TraegerInvoiceJournalPage", () => {
       journal({
         documents: [],
         totalCount: 0,
-        totals: { grossCents: 0, taxCents: 0, netCents: 0 },
+        totals: { grossCents: 0, taxCents: 0, netCents: 0, openCents: 0 },
         numberRanges: [],
         runs: [],
       }),
@@ -481,6 +626,9 @@ describe("TraegerInvoiceJournalPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.queryByText(/Summen für/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Sortieren nach" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the load error instead of an empty list", async () => {

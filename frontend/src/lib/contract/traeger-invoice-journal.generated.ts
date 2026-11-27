@@ -20,6 +20,9 @@ import {
 export const JOURNAL_DOCUMENT_TYPE_VALUES = ["cancellation", "confirmation", "credit", "fee_notice", "invoice"] as const;
 export type JournalDocumentType = (typeof JOURNAL_DOCUMENT_TYPE_VALUES)[number];
 
+export const JOURNAL_INVOICE_STATUS_VALUES = ["", "cancelled", "credited", "nothing_due", "open", "partly_credited"] as const;
+export type JournalInvoiceStatus = (typeof JOURNAL_INVOICE_STATUS_VALUES)[number];
+
 export const JOURNAL_REFERENCE_KIND_VALUES = ["amends", "cancels", "credits", "replaces"] as const;
 export type JournalReferenceKind = (typeof JOURNAL_REFERENCE_KIND_VALUES)[number];
 
@@ -72,6 +75,11 @@ export interface JournalDocument {
   tax_cents: number;
   net_cents: number;
   reference: JournalReference | null;
+  status: OpenEnum<JournalInvoiceStatus>;
+  open_cents: number;
+  child_names: string[] | null;
+  debtor_number: string;
+  family_id: string | null;
 }
 
 export const JournalDocumentSchema: z.ZodType<JournalDocument, unknown> = object<JournalDocument>({
@@ -89,6 +97,11 @@ export const JournalDocumentSchema: z.ZodType<JournalDocument, unknown> = object
   tax_cents: safeInt,
   net_cents: safeInt,
   reference: nullable(JournalReferenceSchema),
+  status: str,
+  open_cents: safeInt,
+  child_names: nullable(arr(str)),
+  debtor_number: str,
+  family_id: nullable(int64String),
 });
 
 /** Go: parentbilling.JournalTotals */
@@ -96,12 +109,14 @@ export interface JournalTotals {
   gross_cents: number;
   tax_cents: number;
   net_cents: number;
+  open_cents: number;
 }
 
 export const JournalTotalsSchema: z.ZodType<JournalTotals, unknown> = object<JournalTotals>({
   gross_cents: safeInt,
   tax_cents: safeInt,
   net_cents: safeInt,
+  open_cents: safeInt,
 });
 
 /** Go: parentbilling.JournalNumberGap */
@@ -174,11 +189,15 @@ export const routes = {
       "document_type": { kind: "string", values: ["cancellation", "confirmation", "credit", "fee_notice", "invoice"] },
       "from": { kind: "date" },
       "issuer": { kind: "string" },
+      "order": { kind: "string", values: ["asc", "desc"] },
       "page": { kind: "int" },
+      "reference_number": { kind: "string" },
       "run_id": { kind: "id" },
       "run_kind": { kind: "string", values: ["care", "care_notice", "holiday"] },
       "search": { kind: "string" },
       "service": { kind: "string", values: ["care", "holiday"] },
+      "sort": { kind: "string", values: ["gross", "issued", "number", "open", "recipient"] },
+      "status": { kind: "string", values: ["cancelled", "credited", "nothing_due", "open", "partly_credited"] },
       "to": { kind: "date" },
       "year": { kind: "int" },
     },
@@ -193,10 +212,12 @@ export const routes = {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
       "from": { kind: "date" },
       "issuer": { kind: "string" },
+      "reference_number": { kind: "string" },
       "run_id": { kind: "id" },
       "run_kind": { kind: "string", values: ["care", "care_notice", "holiday"] },
       "search": { kind: "string" },
       "service": { kind: "string", values: ["care", "holiday"] },
+      "status": { kind: "string", values: ["cancelled", "credited", "nothing_due", "open", "partly_credited"] },
       "to": { kind: "date" },
       "year": { kind: "int" },
     },

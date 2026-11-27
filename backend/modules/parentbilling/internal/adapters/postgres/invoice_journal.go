@@ -19,7 +19,11 @@ import (
 
 // journalRowsSQL lists every issued document of the Träger ?0 in one shape.
 // source and id name a document across the tables; service and number_year
-// name its number range together with issuer_key.
+// name its number range together with issuer_key. claim marks an invoice
+// that asks for money; a cancellation and a credit name the invoice they
+// take back by corrects_source and corrects_id. family_anchor is an invoice
+// of the document's family in the form FamilyDocuments reads a family by:
+// the ID of a holiday invoice, the negated ID of a monthly invoice.
 const journalRowsSQL = `
 	SELECT 'holiday'::text AS source, document.id, 'holiday'::text AS run_kind, document.run_id, run.period_name AS run_name,
 		NULL::date AS run_month, NULL::int AS run_year, run.issued_on AS run_issued_on, document.service::text AS service, document.issuer_key::text AS issuer_key,
@@ -29,7 +33,11 @@ const journalRowsSQL = `
 		document.recipient_first_name, document.recipient_last_name, document.total_cents,
 		COALESCE(reference.number, '')::text AS reference_number,
 		CASE WHEN document.reference_document_id IS NULL THEN '' WHEN document.kind = 'invoice' THEN 'replaces'
-			WHEN document.kind = 'credit' THEN 'credits' ELSE 'cancels' END AS reference_kind
+			WHEN document.kind = 'credit' THEN 'credits' ELSE 'cancels' END AS reference_kind,
+		document.kind = 'invoice' AS claim, CASE WHEN document.kind <> 'invoice' THEN document.kind::text ELSE '' END AS correction,
+		'holiday'::text AS corrects_source, CASE WHEN document.kind <> 'invoice' THEN document.reference_document_id END AS corrects_id,
+		CASE WHEN document.kind = 'invoice' THEN document.id ELSE document.reference_document_id END AS family_anchor,
+		COALESCE(document.debtor_number, '')::text AS debtor_number, NULL::text AS child_first_name
 	FROM parent_billing.documents AS document
 	JOIN parent_billing.runs AS run ON run.organization_id = document.organization_id AND run.id = document.run_id
 	LEFT JOIN parent_billing.documents AS reference
@@ -40,7 +48,8 @@ const journalRowsSQL = `
 		COALESCE(invoice.issuer->>'body', ''), COALESCE(invoice.issuer->>'name', ''),
 		invoice.number, invoice.number_year, invoice.number_sequence, invoice.issued_on, invoice.document_kind,
 		invoice.recipient_first_name, invoice.recipient_last_name, invoice.total_cents, COALESCE(replaced.number, ''),
-		CASE WHEN invoice.replaces_invoice_id IS NULL THEN '' ELSE 'replaces' END
+		CASE WHEN invoice.replaces_invoice_id IS NULL THEN '' ELSE 'replaces' END,
+		true, '', '', NULL, -invoice.id, COALESCE(invoice.debtor_number, ''), invoice.child_first_name
 	FROM parent_billing.care_invoices AS invoice
 	JOIN parent_billing.care_runs AS run ON run.organization_id = invoice.organization_id AND run.id = invoice.run_id
 	LEFT JOIN parent_billing.care_invoices AS replaced
@@ -50,7 +59,8 @@ const journalRowsSQL = `
 	SELECT 'care_cancellation', cancellation.id, 'care', cancellation.run_id, '', run.billing_month, NULL, run.issued_on, 'care', cancellation.issuer_key,
 		COALESCE(invoice.issuer->>'body', ''), COALESCE(invoice.issuer->>'name', ''),
 		cancellation.number, cancellation.number_year, cancellation.number_sequence, cancellation.issued_on, 'cancellation',
-		invoice.recipient_first_name, invoice.recipient_last_name, cancellation.total_cents, invoice.number, 'cancels'
+		invoice.recipient_first_name, invoice.recipient_last_name, cancellation.total_cents, invoice.number, 'cancels',
+		false, 'cancellation', 'care_invoice', invoice.id, -invoice.id, COALESCE(invoice.debtor_number, ''), invoice.child_first_name
 	FROM parent_billing.care_invoice_cancellations AS cancellation
 	JOIN parent_billing.care_invoices AS invoice
 		ON invoice.organization_id = cancellation.organization_id AND invoice.id = cancellation.invoice_id
@@ -61,7 +71,8 @@ const journalRowsSQL = `
 		COALESCE(notice.issuer->>'body', ''), COALESCE(notice.issuer->>'name', ''),
 		notice.number, notice.number_year, notice.number_sequence, notice.issued_on, 'fee_notice',
 		COALESCE(notice.recipient->>'first_name', ''), COALESCE(notice.recipient->>'last_name', ''), notice.total_cents,
-		COALESCE(amended.number, ''), CASE WHEN notice.amends_notice_id IS NULL THEN '' ELSE 'amends' END
+		COALESCE(amended.number, ''), CASE WHEN notice.amends_notice_id IS NULL THEN '' ELSE 'amends' END,
+		false, '', '', NULL, NULL, '', notice.child_first_name
 	FROM parent_billing.care_notices AS notice
 	JOIN parent_billing.care_notice_runs AS run ON run.organization_id = notice.organization_id AND run.id = notice.run_id
 	LEFT JOIN parent_billing.care_notices AS amended
@@ -75,6 +86,23 @@ const (
 	// they were numbered, whatever day each one names as its issue day.
 	journalByNumberDown = `number_year DESC, service, issuer_key, number_sequence DESC`
 	journalByNumber     = `number_year, issuer_key, service, number_sequence`
+	// journalByColumn orders a page by the column ?16 names, descending
+	// when ?17 is set (#8138). The statement stays one fixed text: the
+	// column is a parameter, not a part of the SQL. The issue day counts as
+	// days since a fixed day, so one term serves both directions; a number
+	// stands in its number range by its running number, not by its text.
+	journalByColumn = `CASE ?16 WHEN '` + parentbilling.JournalSortIssued + `' THEN issued_on - DATE '2000-01-01'
+			WHEN '` + parentbilling.JournalSortGross + `' THEN total_cents
+			WHEN '` + parentbilling.JournalSortOpen + `' THEN CASE WHEN status <> '' THEN open_cents END
+			WHEN '` + parentbilling.JournalSortNumber + `' THEN number_year END * (CASE WHEN ?17 THEN -1 ELSE 1 END) NULLS LAST,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND NOT ?17 THEN recipient_last_name END COLLATE public.german_name ASC,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND ?17 THEN recipient_last_name END COLLATE public.german_name DESC,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND NOT ?17 THEN recipient_first_name END COLLATE public.german_name ASC,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND ?17 THEN recipient_first_name END COLLATE public.german_name DESC,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortNumber + `' THEN service END,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortNumber + `' THEN issuer_key END,
+		CASE WHEN ?16 = '` + parentbilling.JournalSortNumber + `' THEN number_sequence END * (CASE WHEN ?17 THEN -1 ELSE 1 END),
+		issued_on DESC, number_year DESC, service, issuer_key, number_sequence DESC`
 )
 
 // journalHeadSQL and journalTailSQL read one page of the journal, the sums
@@ -88,18 +116,49 @@ const (
 // carries a start value the Träger-Büro set (#7358). The counter of a range
 // that went on past its last document leaves a gap at the end.
 const journalHeadSQL = `WITH journal AS MATERIALIZED (` + journalRowsSQL + `),
+ corrections AS (
+	SELECT corrects_source, corrects_id, bool_or(correction = 'cancellation') AS cancelled,
+		COALESCE(sum(-total_cents) FILTER (WHERE correction = 'credit'), 0) AS credited_cents
+	FROM journal WHERE corrects_id IS NOT NULL GROUP BY corrects_source, corrects_id),
+ stated AS MATERIALIZED (
+	SELECT journal.*,
+		CASE WHEN NOT journal.claim THEN ''
+			WHEN COALESCE(corrections.cancelled, false) THEN '` + parentbilling.InvoiceCancelled + `'
+			WHEN journal.total_cents <= 0 THEN '` + parentbilling.InvoiceNothingDue + `'
+			WHEN COALESCE(corrections.credited_cents, 0) >= journal.total_cents THEN '` + parentbilling.InvoiceCredited + `'
+			WHEN COALESCE(corrections.credited_cents, 0) > 0 THEN '` + parentbilling.InvoicePartlyCredited + `'
+			ELSE '` + parentbilling.InvoiceOpen + `' END AS status,
+		CASE WHEN NOT journal.claim OR COALESCE(corrections.cancelled, false) OR journal.total_cents <= 0 THEN 0
+			ELSE GREATEST(journal.total_cents - COALESCE(corrections.credited_cents, 0), 0) END::bigint AS open_cents
+	FROM journal
+	LEFT JOIN corrections ON journal.claim AND corrections.corrects_source = journal.source AND corrections.corrects_id = journal.id),
  filtered AS MATERIALIZED (
-	SELECT journal.*, row_number() OVER (ORDER BY `
+	SELECT stated.*, row_number() OVER (ORDER BY `
 
 const journalTailSQL = `, source, id) AS position
-	FROM journal
+	FROM stated
 	WHERE (?1::date IS NULL OR issued_on >= ?1::date) AND (?2::date IS NULL OR issued_on <= ?2::date)
 		AND (?3 OR issuer_key = ?4) AND (?5 = '' OR service = ?5) AND (?6 OR number_year = ?7)
 		AND (?8 = '' OR document_type = ?8) AND (?9 = '' OR run_kind = ?9) AND (?10 = 0 OR run_id = ?10)
+		AND (?18 = '' OR number = ?18 OR reference_number = ?18)
 		AND (?11 = '' OR position(lower(?11) IN lower(number)) > 0 OR position(lower(?11) IN lower(reference_number)) > 0
-			OR position(lower(?11) IN lower(recipient_first_name || ' ' || recipient_last_name)) > 0)),
+			OR position(lower(?11) IN lower(recipient_first_name || ' ' || recipient_last_name)) > 0
+			OR position(lower(?11) IN lower(debtor_number)) > 0
+			OR position(lower(?11) IN lower(child_first_name)) > 0
+			OR (source = 'holiday' AND EXISTS (
+				SELECT 1 FROM parent_billing.document_positions AS item
+				WHERE item.organization_id = ?0 AND item.document_id = stated.id
+					AND position(lower(?11) IN lower(item.child_first_name)) > 0)))
+		AND (?15 = '' OR status = ?15)),
  page AS MATERIALIZED (
-	SELECT * FROM filtered WHERE position > ?13 AND (?12 = 0 OR position <= ?13 + ?12)),
+	SELECT filtered.*,
+		CASE WHEN filtered.source = 'holiday' THEN COALESCE((
+				SELECT jsonb_agg(DISTINCT item.child_first_name ORDER BY item.child_first_name)
+				FROM parent_billing.document_positions AS item
+				WHERE item.organization_id = ?0 AND item.document_id = filtered.id), '[]'::jsonb)
+			WHEN filtered.child_first_name IS NULL THEN '[]'::jsonb
+			ELSE jsonb_build_array(filtered.child_first_name) END AS child_names
+	FROM filtered WHERE position > ?13 AND (?12 = 0 OR position <= ?13 + ?12)),
  holiday_reads AS (
 	INSERT INTO parent_billing.run_events (organization_id, run_id, action, actor_account_id, details)
 	SELECT ?0, run_id, 'read', ?14, jsonb_build_object('view', 'journal', 'document_ids', jsonb_agg(id ORDER BY id))
@@ -153,6 +212,7 @@ const journalTailSQL = `, source, id) AS position
  SELECT COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY position) FROM page), '[]'::jsonb) AS documents,
 	(SELECT count(*) FROM filtered) AS total_count,
 	COALESCE((SELECT sum(total_cents) FROM filtered), 0)::bigint AS gross_cents,
+	COALESCE((SELECT sum(open_cents) FROM filtered), 0)::bigint AS open_cents,
 	COALESCE((SELECT jsonb_agg(to_jsonb(named_gaps) ORDER BY number_year DESC, service, issuer_name, issuer_key, first_missing)
 		FROM named_gaps), '[]'::jsonb) AS gaps,
 	COALESCE((SELECT jsonb_agg(to_jsonb(ranges) ORDER BY number_year DESC, service, issuer_name, issuer_key) FROM ranges), '[]'::jsonb)
@@ -160,12 +220,13 @@ const journalTailSQL = `, source, id) AS position
 	COALESCE((SELECT jsonb_agg(to_jsonb(run_options) ORDER BY run_issued_on DESC, run_kind, run_id DESC) FROM run_options), '[]'::jsonb)
 		AS runs`
 
-// The journal as a page, the newest document first, and as a file, every
-// number range from its first number on.
+// The journal as a page, the newest document first or by a chosen column,
+// and as a file, every number range from its first number on.
 const (
-	journalPageSQL  = journalHeadSQL + journalNewestFirst + journalTailSQL
-	journalRangeSQL = journalHeadSQL + journalByNumberDown + journalTailSQL
-	journalFileSQL  = journalHeadSQL + journalByNumber + journalTailSQL
+	journalPageSQL   = journalHeadSQL + journalNewestFirst + journalTailSQL
+	journalSortedSQL = journalHeadSQL + journalByColumn + journalTailSQL
+	journalRangeSQL  = journalHeadSQL + journalByNumberDown + journalTailSQL
+	journalFileSQL   = journalHeadSQL + journalByNumber + journalTailSQL
 )
 
 type journalDocumentRow struct {
@@ -189,6 +250,11 @@ type journalDocumentRow struct {
 	TotalCents         int64          `json:"total_cents"`
 	ReferenceNumber    string         `json:"reference_number"`
 	ReferenceKind      string         `json:"reference_kind"`
+	Status             string         `json:"status"`
+	OpenCents          int64          `json:"open_cents"`
+	ChildNames         []string       `json:"child_names"`
+	DebtorNumber       string         `json:"debtor_number"`
+	FamilyAnchor       *int64         `json:"family_anchor"`
 }
 
 type journalRangeRow struct {
@@ -239,6 +305,14 @@ func (row journalDocumentRow) document() parentbilling.JournalDocument {
 		Service: row.Service, NumberYear: row.NumberYear,
 		Run:        journalRun(row.RunKind, row.RunID, row.RunName, row.RunMonth, row.RunYear),
 		GrossCents: row.TotalCents,
+		Status:     row.Status, OpenCents: row.OpenCents, ChildNames: row.ChildNames, DebtorNumber: row.DebtorNumber,
+	}
+	if document.ChildNames == nil {
+		document.ChildNames = []string{}
+	}
+	if row.FamilyAnchor != nil {
+		family := ident.ID(*row.FamilyAnchor)
+		document.FamilyID = &family
 	}
 	if row.ReferenceKind != "" {
 		document.Reference = &parentbilling.JournalReference{Kind: row.ReferenceKind, Number: row.ReferenceNumber}
@@ -258,17 +332,22 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 		Documents    []journalDocumentRow `bun:"documents,type:json"`
 		TotalCount   int                  `bun:"total_count"`
 		GrossCents   int64                `bun:"gross_cents"`
+		OpenCents    int64                `bun:"open_cents"`
 		Gaps         []journalRangeRow    `bun:"gaps,type:json"`
 		NumberRanges []journalRangeRow    `bun:"number_ranges,type:json"`
 		Runs         []journalRunRow      `bun:"runs,type:json"`
 	}
 	args := []any{organizationID, filter.From, filter.Until, filter.AnyIssuer, filter.Issuer, filter.Service, filter.AnyYear, filter.Year,
-		filter.DocumentType, filter.RunKind, filter.RunID, filter.Search, 0, 0, accountRef(accountID)}
+		filter.DocumentType, filter.RunKind, filter.RunID, filter.Search, 0, 0, accountRef(accountID),
+		filter.Status, filter.Sort, filter.Descending, filter.ReferenceNumber}
 	query := db.NewRaw(journalFileSQL, args...)
 	if filter.Page > 0 {
 		args[12], args[13] = parentbilling.InvoiceJournalPageSize, (filter.Page-1)*parentbilling.InvoiceJournalPageSize
 		query = db.NewRaw(journalPageSQL, args...)
-		if filter.Service != "" {
+		switch {
+		case filter.Sort != "":
+			query = db.NewRaw(journalSortedSQL, args...)
+		case filter.Service != "":
 			query = db.NewRaw(journalRangeSQL, args...)
 		}
 	}
@@ -277,7 +356,7 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 	}
 	page := parentbilling.InvoiceJournalPage{
 		Documents: make([]parentbilling.JournalDocument, len(rows.Documents)), TotalCount: rows.TotalCount,
-		Totals: parentbilling.JournalTotals{GrossCents: rows.GrossCents},
+		Totals: parentbilling.JournalTotals{GrossCents: rows.GrossCents, OpenCents: rows.OpenCents},
 		Gaps:   make([]parentbilling.JournalNumberGap, len(rows.Gaps)), NumberRanges: make([]parentbilling.JournalNumberRange, len(rows.NumberRanges)),
 		Runs: make([]parentbilling.JournalRun, len(rows.Runs)),
 	}
