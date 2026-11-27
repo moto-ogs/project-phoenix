@@ -1077,7 +1077,12 @@ function HomeActionBar({
       variant="success"
       size="md"
       className="whitespace-nowrap"
-      disabled={stamp.disabled}
+      disabled={stamp.disabled || stamp.checkInBlockedReason !== null}
+      // Wie die Stempeluhr: Während Laden oder Speichern bleibt der Knopf
+      // nativ gesperrt; ein fachlicher Grund steht erst danach.
+      disabledReason={
+        stamp.disabled ? undefined : (stamp.checkInBlockedReason ?? undefined)
+      }
       onClick={stamp.checkIn}
       tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
     >
