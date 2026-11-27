@@ -114,6 +114,9 @@ function rowTexts(region: HTMLElement): string[] {
     .map((row) => row.textContent ?? "");
 }
 
+// Die festen Übersichts-Fixtures liegen am 9. September 2026.
+beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
+
 describe("DayChangesBlock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
