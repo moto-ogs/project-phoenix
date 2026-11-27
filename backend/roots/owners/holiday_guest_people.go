@@ -87,6 +87,29 @@ func (n holidayHostSchoolNames) HolidayHostSchoolNames(ctx context.Context, scho
 	return names, nil
 }
 
+// NewHolidayHostTraeger names the Träger of a school for the extra days the
+// school plans for itself (ADR 0329). In the
+// school's tenant transaction it reads platform.schools, which the school
+// role may read.
+func NewHolidayHostTraeger(schools HolidayHostSchools) enrollmentOwner.HolidayHostTraeger {
+	if schools == nil {
+		panic("holiday host Träger: Organisation & Tenancy is required")
+	}
+	return holidayHostTraeger{schools: schools}
+}
+
+type holidayHostTraeger struct {
+	schools HolidayHostSchools
+}
+
+func (t holidayHostTraeger) HolidayHostTraeger(ctx context.Context, schoolID int64) (int64, error) {
+	school, err := t.schools.FindSchool(ctx, schoolID)
+	if err != nil {
+		return 0, err
+	}
+	return school.OrganizationID.Int64(), nil
+}
+
 // schedulerHolidayGuests binds the Worker's hourly reconciliation to the
 // holiday guests of the school whose tenant transaction the Worker opened,
 // on the root's clock now.

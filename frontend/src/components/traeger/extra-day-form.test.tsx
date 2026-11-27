@@ -90,6 +90,42 @@ describe("ExtraDayForm", () => {
     mockUpdate.mockReset();
   });
 
+  it("plans the day of a school for that school alone, through the school's own routes (ADR 0329)", async () => {
+    const create = vi.fn().mockResolvedValue({ ...stored, status: "draft" });
+    const onSaved = vi.fn();
+    render(
+      <ToastProvider>
+        <ExtraDayForm
+          ownSchool
+          store={{ create, update: vi.fn() }}
+          schools={schools.slice(0, 1)}
+          onSaved={onSaved}
+          onCancel={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    // The school is not asked for a school.
+    expect(screen.getByRole("textbox", { name: "Tag" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "OGS Am Bach" })).toBeNull();
+    type("Name des Zusatztags", "Brückentag");
+    type("Tag", "15.05.2099");
+    type(/Beginn/, "07:30");
+    type(/Ende/, "16:00");
+    type("Anmeldeschluss", "01.05.2099");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    const input = create.mock.calls[0]?.[0] as {
+      kind: string;
+      weeks: { hostSchoolId: string }[];
+    };
+    expect(input.kind).toBe("extra_day");
+    expect(input.weeks.map((week) => week.hostSchoolId)).toEqual(["31"]);
+    expect(mockCreate).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  });
+
   it("creates one day for the chosen schools, included in the monthly fee", async () => {
     mockCreate.mockResolvedValue({ ...stored, status: "draft" });
     const onSaved = renderForm();

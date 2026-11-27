@@ -176,6 +176,7 @@ function leadTopics(
     articles.holidayWeeksTopic(),
     articles.holidayGuestGroupTopic(),
     articles.holidayHomeSchoolChildrenTopic(),
+    articles.schoolExtraCareDayTopic(),
     articles.exportsTopic(),
 
     // --- Einstellungen und Geräte ---

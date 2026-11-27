@@ -164,6 +164,8 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/guardians", moduleRouteBasis},
 	// The hosting school's holiday guests (#4666) and participant lists
 	// (#4665); see docs/reference/modulschalter.md.
+	// The extra care days a school plans for itself (#4817, ADR 0329).
+	{"/api/holiday-extra-days", moduleRouteBasis},
 	{"/api/holiday-guests", moduleRouteBasis},
 	{"/api/holiday-weeks", moduleRouteBasis},
 	{"/api/import", moduleRouteBasis},

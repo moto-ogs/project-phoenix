@@ -3693,6 +3693,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayPeriod"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-extra-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/holiday-guests/",
       "portals": [
         "tenant"
@@ -15665,6 +15690,32 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-extra-days/{id}/publish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/import/class-list-entries/import",
       "portals": [
         "tenant"
@@ -22830,6 +22881,21 @@
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/holiday-extra-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
       }
     },
     {
@@ -67271,6 +67337,13 @@
           "name": "included_in_fee",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "created_by_school_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         },
         {

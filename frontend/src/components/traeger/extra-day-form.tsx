@@ -32,6 +32,7 @@ import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import {
   createHolidayPeriod,
   type HolidayPeriod,
+  type HolidayPeriodInput,
   type TraegerSchool,
   updateHolidayPeriod,
 } from "~/lib/traeger-api";
@@ -76,6 +77,25 @@ const FEE_MODES: readonly {
   },
 ];
 
+/** The same choice at a school: its Träger runs the billing (ADR 0329). */
+const SCHOOL_DAY_PRICE_TEXT =
+  "Eltern buchen den Tag dazu. Den Preis rechnet dein Träger ab, mit Geschwisterrabatt und Befreiung wie in der Ferienbetreuung.";
+
+/** Where the form stores the day: the Träger-Büro's routes or the school's. */
+export interface ExtraDayStore {
+  readonly create: (input: HolidayPeriodInput) => Promise<HolidayPeriod>;
+  readonly update: (
+    id: string,
+    input: HolidayPeriodInput,
+    version: string,
+  ) => Promise<HolidayPeriod>;
+}
+
+const TRAEGER_STORE: ExtraDayStore = {
+  create: createHolidayPeriod,
+  update: updateHolidayPeriod,
+};
+
 /** No day to change: the form creates one and sends no version. */
 const NEW_DAY: DraftSource<HolidayPeriod> = {
   opening: null,
@@ -91,6 +111,8 @@ export function ExtraDayForm({
   onDirtyChange,
   calendar,
   reload,
+  store = TRAEGER_STORE,
+  ownSchool = false,
 }: Readonly<{
   /** The stored day; without it the form creates a new one. */
   period?: HolidayPeriod;
@@ -106,6 +128,13 @@ export function ExtraDayForm({
    * save the form shows it (ADR 0311).
    */
   reload?: () => Promise<HolidayPeriod>;
+  /** The routes that store the day; the Träger-Büro's without it. */
+  store?: ExtraDayStore;
+  /**
+   * The school plans the day for itself (ADR 0329): `schools` is that one
+   * school, it is always chosen and the form asks for no school.
+   */
+  ownSchool?: boolean;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const today = useBerlinToday();
@@ -161,7 +190,10 @@ export function ExtraDayForm({
       follow: !hasInvalidDate,
     },
   );
-  const [blank, setBlank] = useState<ExtraDayDraft>(() => emptyExtraDay(today));
+  const [blank, setBlank] = useState<ExtraDayDraft>(() => ({
+    ...emptyExtraDay(today),
+    schoolIds: ownSchool ? schools.map((school) => school.id) : [],
+  }));
   const [blankEdited, setBlankEdited] = useState(false);
   const draft = (period ? editor.draft : undefined) ?? blank;
   const edited = period ? editor.touched : blankEdited;
@@ -233,7 +265,7 @@ export function ExtraDayForm({
       if (!period) {
         let saved: HolidayPeriod;
         try {
-          saved = await createHolidayPeriod(inputFromExtraDay(draft));
+          saved = await store.create(inputFromExtraDay(draft));
         } catch (err) {
           logger.error("extra_day_save_failed", {
             error: err instanceof Error ? err.message : String(err),
@@ -247,11 +279,7 @@ export function ExtraDayForm({
         return;
       }
       const result = await editor.submit((version, next) =>
-        updateHolidayPeriod(
-          period.id,
-          inputFromExtraDay(next, period),
-          version,
-        ),
+        store.update(period.id, inputFromExtraDay(next, period), version),
       );
       if (result.ok) {
         onSaved(result.saved);
@@ -360,70 +388,72 @@ export function ExtraDayForm({
               </div>
             </div>
 
-            <FormFieldset
-              legend="Schulen"
-              required
-              hint="An jeder gewählten Schule gibt es an diesem Tag Betreuung. Eltern wählen bei der Anmeldung eine davon."
-              error={fieldError("schools")}
-            >
-              <div className="space-y-2">
-                {schools.length > 1 ? (
-                  <ChoiceTile selected={allSelected} className="px-3 py-2.5">
-                    <Checkbox
-                      name="schools"
-                      checked={allSelected}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          schoolIds: event.target.checked
-                            ? schools.map((school) => school.id)
-                            : // A school with bookings stays chosen.
-                              draft.schoolIds.filter((id) =>
-                                bookedSchools.has(id),
-                              ),
-                        })
-                      }
-                    />
-                    <span className="text-sm font-semibold text-gray-900">
-                      Alle Schulen
-                    </span>
-                  </ChoiceTile>
-                ) : null}
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {schools.map((school) => {
-                    const selected = draft.schoolIds.includes(school.id);
-                    const booked = bookedSchools.has(school.id);
-                    return (
-                      <ChoiceTile
-                        key={school.id}
-                        selected={selected}
-                        disabled={booked}
-                        className="px-3 py-2.5"
-                      >
-                        <Checkbox
-                          name={schools.length > 1 ? undefined : "schools"}
-                          checked={selected}
+            {ownSchool ? null : (
+              <FormFieldset
+                legend="Schulen"
+                required
+                hint="An jeder gewählten Schule gibt es an diesem Tag Betreuung. Eltern wählen bei der Anmeldung eine davon."
+                error={fieldError("schools")}
+              >
+                <div className="space-y-2">
+                  {schools.length > 1 ? (
+                    <ChoiceTile selected={allSelected} className="px-3 py-2.5">
+                      <Checkbox
+                        name="schools"
+                        checked={allSelected}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            schoolIds: event.target.checked
+                              ? schools.map((school) => school.id)
+                              : // A school with bookings stays chosen.
+                                draft.schoolIds.filter((id) =>
+                                  bookedSchools.has(id),
+                                ),
+                          })
+                        }
+                      />
+                      <span className="text-sm font-semibold text-gray-900">
+                        Alle Schulen
+                      </span>
+                    </ChoiceTile>
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {schools.map((school) => {
+                      const selected = draft.schoolIds.includes(school.id);
+                      const booked = bookedSchools.has(school.id);
+                      return (
+                        <ChoiceTile
+                          key={school.id}
+                          selected={selected}
                           disabled={booked}
-                          onChange={(event) =>
-                            toggleSchool(school.id, event.target.checked)
-                          }
-                        />
-                        <span className="min-w-0">
-                          <span className="block text-sm wrap-anywhere text-gray-900">
-                            {school.name}
-                          </span>
-                          {booked ? (
-                            <span className="block text-xs font-normal text-gray-600">
-                              Hat schon Anmeldungen und bleibt gewählt.
+                          className="px-3 py-2.5"
+                        >
+                          <Checkbox
+                            name={schools.length > 1 ? undefined : "schools"}
+                            checked={selected}
+                            disabled={booked}
+                            onChange={(event) =>
+                              toggleSchool(school.id, event.target.checked)
+                            }
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm wrap-anywhere text-gray-900">
+                              {school.name}
                             </span>
-                          ) : null}
-                        </span>
-                      </ChoiceTile>
-                    );
-                  })}
+                            {booked ? (
+                              <span className="block text-xs font-normal text-gray-600">
+                                Hat schon Anmeldungen und bleibt gewählt.
+                              </span>
+                            ) : null}
+                          </span>
+                        </ChoiceTile>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            </FormFieldset>
+              </FormFieldset>
+            )}
 
             {noCare.length > 0 ? (
               <Alert
@@ -449,8 +479,10 @@ export function ExtraDayForm({
             <div>
               <SectionLabel as="h3">Betreuungszeit</SectionLabel>
               <p className="text-sm text-gray-600">
-                Von wann bis wann ist die Betreuung an diesem Tag geöffnet? Die
-                Zeit gilt für alle gewählten Schulen.
+                Von wann bis wann ist die Betreuung an diesem Tag geöffnet?
+                {ownSchool
+                  ? null
+                  : " Die Zeit gilt für alle gewählten Schulen."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:max-w-md">
@@ -569,7 +601,9 @@ export function ExtraDayForm({
                     <span className="min-w-0">
                       <span className="block text-gray-900">{mode.label}</span>
                       <span className="block font-normal text-gray-600">
-                        {mode.description}
+                        {ownSchool && mode.value === "day_price"
+                          ? SCHOOL_DAY_PRICE_TEXT
+                          : mode.description}
                       </span>
                     </span>
                   </ChoiceTile>

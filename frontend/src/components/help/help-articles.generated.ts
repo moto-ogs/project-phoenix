@@ -244,6 +244,8 @@ import type { roomsCatalogTopic as authored_roomsCatalogTopic } from "./articles
 
 import type { roomsTopic as authored_roomsTopic } from "./articles/rooms";
 
+import type { schoolExtraCareDayTopic as authored_schoolExtraCareDayTopic } from "./articles/school-extra-care-day";
+
 import type { schoolSearchTopic as authored_schoolSearchTopic } from "./articles/school-search";
 
 import type { schoolTraegerDocumentsTopic as authored_schoolTraegerDocumentsTopic } from "./articles/school-traeger-documents";
@@ -8786,6 +8788,79 @@ export const roomsTopic = function roomsTopic(
   };
 } satisfies typeof authored_roomsTopic;
 
+/**
+ * `/ferienwochen/zusatztage` (#4817, ADR 0329): die OGS legt einen einzelnen
+ * Betreuungstag außerhalb der Ferien für sich selbst an, etwa einen
+ * Brückentag. Anmeldungen, Plätze und Abrechnung bleiben beim Träger.
+ */
+export const schoolExtraCareDayTopic =
+  function schoolExtraCareDayTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.leadExtraCareDay,
+      title: "Zusatztag für deine OGS anlegen",
+      question: "Wie biete ich Betreuung an einem Brückentag an?",
+      summary:
+        "Ein Zusatztag ist ein einzelner Betreuungstag außerhalb der Ferien, zum Beispiel ein Brückentag oder ein beweglicher Ferientag. Du legst ihn für deine OGS an.",
+      group: "auswertung",
+      audience: "lead",
+      icon: "CalendarStar",
+      requirements: [
+        "Du darfst die Schließtage deiner OGS planen. Das darf die Leitung.",
+        "Der Tag ist an deiner OGS kein Feiertag und kein Schließtag.",
+      ],
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Zusatztag anlegen",
+          steps: [
+            "Klappe in der Seitenleiste `Eltern` auf.",
+            "Öffne `Ferienwochen`.",
+            "Wähle oben `Zusatztage`.",
+            "Wähle `Zusatztag anlegen`.",
+            "Trage den `Name des Zusatztags` ein, zum Beispiel Brückentag nach Himmelfahrt.",
+            "Wähle den `Tag`. Möglich ist ein Tag von Montag bis Freitag.",
+            "Trage unter `Betreuungszeit` `Beginn` und `Ende` ein.",
+            "Trage `Anmeldebeginn` und `Anmeldeschluss` ein. Der Anmeldeschluss liegt spätestens am Zusatztag.",
+            "Wähle unter `Beitrag` `Im Monatsbeitrag enthalten` oder `Mit Tagespreis`. Mit Tagespreis trägst du den `Preis pro Tag in Euro` ein.",
+            "Gibt es an dem Tag Mittagessen? Schalte `Mittagessen anbieten` ein.",
+            "Schreibe unter `Hinweise für Eltern`, was Eltern wissen müssen.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Veröffentlichen",
+          steps: [
+            "Öffne den Zusatztag in der Liste `Zusatztage`.",
+            "Wähle oben `Veröffentlichen`.",
+            "Bestätige mit `Veröffentlichen`.",
+            "Unter `Link für Eltern` steht danach der Link zur Anmeldung. Kopiere ihn mit `Link kopieren` und gib ihn an die Eltern weiter.",
+          ],
+        },
+      ],
+      result:
+        "Der Zusatztag ist für die Anmeldung freigegeben. Eltern melden ihr Kind über den Link oder in der Eltern-App an. Dein Träger bestätigt die Anmeldungen. Bestätigte Kinder stehen danach unter `Ferienwochen`.",
+      notes: [
+        "`Im Monatsbeitrag enthalten`: Eltern melden nur an, dass ihr Kind kommt. Sie sehen keinen Preis.",
+        "`Mit Tagespreis`: Eltern buchen den Tag dazu. Den Preis rechnet dein Träger ab.",
+        "Dein Träger sieht den Zusatztag in seinem Portal und kann ihn ändern. Dort werden auch die Plätze begrenzt.",
+        "Ein gespeicherter Zusatztag ist zuerst ein Entwurf. Ein veröffentlichter Zusatztag wird nicht wieder zum Entwurf.",
+      ],
+      differences: [
+        "`Im Monatsbeitrag enthalten` und `Mit Tagespreis` lassen sich nicht wählen? Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen. Er bleibt dann so.",
+        "Ein Zusatztag fehlt in der Liste? Die Liste zeigt nur Zusatztage, die deine OGS selbst angelegt hat. Einen Zusatztag deines Trägers siehst du nach dem Veröffentlichen unter `Ferienwochen`.",
+        "Du siehst oben kein `Zusatztage`? Dir fehlt das Recht, Schließtage zu planen. Frage deine Leitung.",
+      ],
+      troubleshootingDetails: [
+        "Der Zusatztag lässt sich nicht speichern, weil keine Betreuung ist? Der Tag ist ein Feiertag oder ein Schließtag. An einem Feiertag gibt es keinen Zusatztag. Einen Schließtag änderst du zuerst unter `Schließtage`.",
+        "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen.",
+      ],
+      related: [
+        HELP_TOPICS.leadHolidayWeeks,
+        HELP_TOPICS.leadHolidayGuestGroup,
+      ],
+    };
+  } satisfies typeof authored_schoolExtraCareDayTopic;
+
 // Die Suche über die ganze Schul-App (#6954, ADR 0231; Notizen #7012, ADR 0234). Was jemand findet,
 // entscheidet der Server nach den Rechten des Kontos; der Artikel nennt nur,
 // was die Person dann anders sieht.
@@ -14062,6 +14137,7 @@ export const traegerExtraCareDayTopic =
         "Ein gespeicherter Zusatztag ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
         "Ein veröffentlichter Zusatztag wird nicht wieder zum Entwurf.",
         "Die Fragen an die Eltern änderst du im Reiter `Formular`, wie bei einem Ferienzeitraum.",
+        "Auch eine Schule kann einen Zusatztag für sich selbst anlegen und veröffentlichen. Er steht dann in deiner Liste. Auf seiner Seite steht `Von der Schule angelegt`. Du bestätigst die Anmeldungen und rechnest einen Tagespreis ab.",
       ],
       differences: [
         "`Im Monatsbeitrag enthalten` und `Mit Tagespreis` lassen sich nicht wählen? Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen. Er bleibt dann so.",

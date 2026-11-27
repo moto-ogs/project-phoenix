@@ -28,6 +28,7 @@ import {
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
 import { holidayListBack } from "~/components/traeger/holiday-period-format";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
@@ -120,6 +121,9 @@ export default function TraegerHolidayPeriodPage() {
       actions={
         period ? (
           <>
+            {period.createdBySchoolId ? (
+              <StatusBadge label="Von der Schule angelegt" tone="outline" />
+            ) : null}
             <HolidayPeriodStatusBadge period={period} />
             <HolidayPeriodPublishButton
               period={period}

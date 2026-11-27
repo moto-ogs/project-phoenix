@@ -20,6 +20,11 @@ import (
 // in snake_case after what succeeded (group_created, not create_group).
 var coreActions = map[RouteKey]CoreAction{
 	// Period-owned PDFs have no school to count them for (#5199).
+	// The extra days a school plans for itself (#4817, ADR 0329) are the
+	// Träger's holiday periods, whose planning is not captured either.
+	{http.MethodPost, "/api/holiday-extra-days/"}:                                    notCaptured,
+	{http.MethodPut, "/api/holiday-extra-days/{id}"}:                                 notCaptured,
+	{http.MethodPost, "/api/holiday-extra-days/{id}/publish"}:                        notCaptured,
 	{http.MethodPost, "/traeger/holiday-periods/{id}/form/documents"}:                notCaptured,
 	{http.MethodDelete, "/traeger/holiday-periods/{id}/form/documents/{documentId}"}: notCaptured,
 	// The bell of the Träger-Portal (#7146): its read marks count in the

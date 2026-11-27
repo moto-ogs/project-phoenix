@@ -43,7 +43,14 @@ const COLUMNS: DataTableColumn<HolidayPeriod>[] = [
     key: "name",
     header: "Zusatztag",
     render: (day) => (
-      <span className="font-medium text-gray-900">{day.name}</span>
+      <span className="font-medium text-gray-900">
+        {day.name}
+        {day.createdBySchoolId ? (
+          <span className="block text-xs font-normal text-gray-600">
+            Von der Schule angelegt
+          </span>
+        ) : null}
+      </span>
     ),
     sortValue: (day) => day.name,
     stacked: "title",

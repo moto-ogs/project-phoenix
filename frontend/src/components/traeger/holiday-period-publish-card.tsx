@@ -18,6 +18,7 @@ import { parentsPortalUrl } from "~/lib/parent-url";
 import { type HolidayPeriod, publishHolidayPeriod } from "~/lib/traeger-api";
 import { holidayPeriodComplete } from "./holiday-period-model";
 import { QrCodeButton } from "~/components/qr-code/qr-code-button";
+import type { QrBrand } from "~/components/qr-code/qr-brand-logo";
 
 const logger = createLogger({ component: "HolidayPeriodPublish" });
 
@@ -46,10 +47,13 @@ export function HolidayPeriodPublishButton({
   period,
   unsavedChanges,
   onPublished,
+  publish: publishPeriod = publishHolidayPeriod,
 }: Readonly<{
   period: HolidayPeriod;
   unsavedChanges: boolean;
   onPublished: (period: HolidayPeriod) => void;
+  /** The route that publishes; the Träger-Büro's without it (ADR 0329). */
+  publish?: (id: string) => Promise<HolidayPeriod>;
 }>) {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -61,7 +65,7 @@ export function HolidayPeriodPublishButton({
   const publish = async () => {
     setPublishing(true);
     try {
-      onPublished(await publishHolidayPeriod(period.id));
+      onPublished(await publishPeriod(period.id));
       setConfirming(false);
     } catch (err) {
       logger.error("holiday_period_publish_failed", {
@@ -122,9 +126,12 @@ export function HolidayPeriodPublishButton({
 export function HolidayPeriodPublishCard({
   period,
   unsavedChanges,
+  qrBrand = "traeger",
 }: Readonly<{
   period: HolidayPeriod;
   unsavedChanges: boolean;
+  /** The look of the QR code: the Träger's, or the school's own. */
+  qrBrand?: QrBrand;
 }>) {
   if (period.status === "published") {
     return (
@@ -136,7 +143,7 @@ export function HolidayPeriodPublishCard({
             : "Für die Anmeldung freigegeben."
         } Änderungen gelten sofort nach dem Speichern.`}
       >
-        <HolidayRegistrationLink period={period} />
+        <HolidayRegistrationLink period={period} qrBrand={qrBrand} />
       </SectionCard>
     );
   }
@@ -155,7 +162,8 @@ export function HolidayPeriodPublishCard({
 /** Der eine Link des Zeitraums für alle seine Schulen, im Elternportal. */
 function HolidayRegistrationLink({
   period,
-}: Readonly<{ period: HolidayPeriod }>) {
+  qrBrand,
+}: Readonly<{ period: HolidayPeriod; qrBrand: QrBrand }>) {
   const { showMessage } = useApiErrorDisplay();
   if (!period.publicToken) return null;
   const url = parentsPortalUrl(
@@ -187,7 +195,7 @@ function HolidayRegistrationLink({
                 : "QR-Code für die Ferienanmeldung"
             }
             fileName="qr-code-ferienanmeldung"
-            brand="traeger"
+            brand={qrBrand}
           />
         }
       />

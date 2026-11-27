@@ -163,7 +163,10 @@ type HolidayPeriod struct {
 	// IncludedInFee marks an extra day the monthly contribution covers:
 	// parents only register, its time models have no price and nothing is
 	// billed (#4817). A holiday period is never included.
-	IncludedInFee        bool          `json:"included_in_fee"`
+	IncludedInFee bool `json:"included_in_fee"`
+	// CreatedBySchoolID names the school that planned the extra day for
+	// itself (ADR 0329); nil when the Träger-Büro planned it.
+	CreatedBySchoolID    *ident.ID     `json:"created_by_school_id"`
 	RegistrationOpensOn  calendar.Date `json:"registration_opens_on"`
 	RegistrationClosesOn calendar.Date `json:"registration_closes_on"`
 	// Binding states that a registration is binding once submitted.
@@ -238,7 +241,10 @@ type HolidayPeriodInput struct {
 	// which keeps it (#4817).
 	Kind string
 	// IncludedInFee marks an extra day without a price (#4817).
-	IncludedInFee        bool
+	IncludedInFee bool
+	// CreatedBySchoolID is the school that plans the extra day for itself
+	// (ADR 0329). Only SchoolExtraDays sets it, and only a create stores it.
+	CreatedBySchoolID    int64
 	RegistrationOpensOn  calendar.Date
 	RegistrationClosesOn calendar.Date
 	Binding              bool

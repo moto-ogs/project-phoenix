@@ -14466,6 +14466,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "created_by_school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [

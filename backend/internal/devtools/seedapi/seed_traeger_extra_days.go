@@ -18,7 +18,8 @@ import (
 // hosting school register, and the Träger-Büro confirms the first. The
 // second is a bridge day at the hosting school at a price per day and stays
 // a draft. The page „Zusatztage“ then shows both kinds of contribution and
-// the figures of each school.
+// the figures of each school. The hosting school plans a third day for
+// itself (ADR 0329).
 type seedTraegerExtraDaysStep struct{}
 
 func (seedTraegerExtraDaysStep) Name() string { return "Seeding the Träger's extra care days" }
@@ -57,11 +58,43 @@ func (seedTraegerExtraDaysStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("publish the included extra day: %w", err)
 	}
+	if err := seedSchoolExtraDay(rt, today); err != nil {
+		return err
+	}
 	fmt.Printf("  Träger-Büro: extra day at %d school(s) published, a bridge day at a day price drafted\n", len(schools))
 	if skipped, _ := rt.Values[seedHolidayRegistrationsSkippedKey].(bool); skipped {
 		return nil
 	}
 	return seedExtraDayRegistrations(rt, auth, periodID, published)
+}
+
+// seedSchoolExtraDay lets the hosting school plan an extra day for itself
+// and open its registration (ADR 0329): the school's page „Zusatztage“ then
+// lists it, and the Träger-Büro reads it as planned by the school.
+func seedSchoolExtraDay(rt *Runtime, today calendar.Date) error {
+	var raw []byte
+	var err error
+	for shift := 0; ; shift++ {
+		raw, err = rt.Client.PostWithAuth(rt.TenantAuth, "/api/holiday-extra-days/",
+			seedExtraDay("Brückentag der OGS", today, seedExtraDayDate(today, 13+shift), true, 0, rt.Bootstrap.SchoolID))
+		var refused *APIError
+		if shift+1 < seedHolidayPeriodShifts && errors.As(err, &refused) && refused.Code == seedHolidayWeekNoCareDayCode {
+			continue
+		}
+		break
+	}
+	if err != nil {
+		return fmt.Errorf("create the school's own extra day: %w", err)
+	}
+	dayID, err := decodeSeedEntityID(raw)
+	if err != nil {
+		return fmt.Errorf("read the school's own extra day: %w", err)
+	}
+	if _, err := rt.Client.PostWithAuth(rt.TenantAuth, fmt.Sprintf("/api/holiday-extra-days/%d/publish", dayID), map[string]any{}); err != nil {
+		return fmt.Errorf("publish the school's own extra day: %w", err)
+	}
+	fmt.Println("  Schule: an extra day of its own planned and published")
+	return nil
 }
 
 // seedExtraDayRegistrations registers two families of the hosting school for

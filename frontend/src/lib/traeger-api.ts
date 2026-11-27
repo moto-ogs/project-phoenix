@@ -13,7 +13,6 @@ import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerAccountsContract from "./contract/traeger-accounts.generated";
-import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
 import type * as traegerProfileContract from "./contract/traeger-profile.generated";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
@@ -411,6 +410,8 @@ export interface HolidayPeriod extends HolidayPeriodInput {
   readonly allocationModeLocked?: boolean;
   /** Token of the period as the Büro edits it; a save sends it (ADR 0311). */
   readonly version: string;
+  /** The school that planned the extra day for itself (ADR 0329), or null. */
+  readonly createdBySchoolId?: string | null;
 }
 
 function noCareDaysFromBackend(
@@ -424,7 +425,7 @@ function noCareDaysFromBackend(
 }
 
 export function holidayPeriodFromBackend(
-  period: traegerHolidayPeriodsContract.HolidayPeriod,
+  period: sharedContract.HolidayPeriod,
 ): HolidayPeriod {
   return {
     id: period.id,
@@ -452,6 +453,7 @@ export function holidayPeriodFromBackend(
     allocationMode: knownEnum(ALLOCATION_MODE_VALUES, period.allocation_mode),
     allocationModeLocked: period.allocation_mode_locked,
     version: period.version,
+    createdBySchoolId: period.created_by_school_id ?? null,
     weeks: (period.weeks ?? []).map((week) => ({
       id: week.id,
       startsOn: requiredDay(week.starts_on, "holiday_week.starts_on"),
@@ -481,9 +483,9 @@ export function holidayPeriodFromBackend(
   };
 }
 
-function holidayPeriodToBackend(
+export function holidayPeriodToBackend(
   input: HolidayPeriodInput,
-): traegerHolidayPeriodsContract.HolidayPeriodRequest {
+): sharedContract.HolidayPeriodRequest {
   return {
     name: input.name,
     // Left out, the backend keeps the kind of a stored period.
@@ -783,7 +785,7 @@ export async function fetchHolidayPeriods(): Promise<HolidayPeriod[]> {
 }
 
 export function mapHolidayPeriods(
-  wire: traegerHolidayPeriodsContract.HolidayPeriod[],
+  wire: sharedContract.HolidayPeriod[],
 ): HolidayPeriod[] {
   const periods = wire ?? [];
   return periods.map(holidayPeriodFromBackend);

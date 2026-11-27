@@ -71,6 +71,7 @@ export function traegerExtraCareDayTopic(): HelpTopic {
       "Ein gespeicherter Zusatztag ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
       "Ein veröffentlichter Zusatztag wird nicht wieder zum Entwurf.",
       "Die Fragen an die Eltern änderst du im Reiter `Formular`, wie bei einem Ferienzeitraum.",
+      "Auch eine Schule kann einen Zusatztag für sich selbst anlegen und veröffentlichen. Er steht dann in deiner Liste. Auf seiner Seite steht `Von der Schule angelegt`. Du bestätigst die Anmeldungen und rechnest einen Tagespreis ab.",
     ],
     differences: [
       "`Im Monatsbeitrag enthalten` und `Mit Tagespreis` lassen sich nicht wählen? Der Zusatztag ist veröffentlicht. Eltern haben sich auf diesen Beitrag verlassen. Er bleibt dann so.",

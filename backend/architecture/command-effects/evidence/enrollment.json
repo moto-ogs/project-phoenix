@@ -1721,6 +1721,22 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "46cee501662b6b6f6bf60d434b9fe0a0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "f40b4497afd691812b45706a6da2731c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayKnownChildren.KnownHolidayChildren",
       "binding_digest": "ca6a5c753137d7a8d89d0d2bd775110a",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayKnownChildren.KnownHolidayChildren",
