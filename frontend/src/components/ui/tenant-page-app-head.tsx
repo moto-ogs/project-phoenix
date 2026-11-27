@@ -250,6 +250,9 @@ export function AppTenantHead({
                 // Die Zeile scrollt seitlich und schneidet damit oben ab:
                 // Ein negativer Rand am Inhalt allein würde ihn kappen.
                 "has-[[data-app-head-status-tight]]:-mt-2",
+                // Diese Statuszeile scrollt nicht seitlich, sie kürzt selbst:
+                // ohne Abschneiden reicht ihre Trefferfläche über den Titel.
+                "has-[[data-app-head-status-tight]]:overflow-visible",
               )}
             >
               {statusLine}

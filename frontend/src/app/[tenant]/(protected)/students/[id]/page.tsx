@@ -2462,7 +2462,7 @@ function AppStudentHeadStatus({
       className={
         index === 0
           ? "max-w-full min-w-0 truncate"
-          : fact.sep === ","
+          : fact.sep.startsWith(",")
             ? "-ml-1.5"
             : undefined
       }
@@ -2501,12 +2501,17 @@ function AppStudentHeadStatus({
         type="button"
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
-        // Sichtbar 24 px (zweizeilig 48 px) hoch, dicht unter dem Namen; die
-        // Trefferfläche reicht bis an die Reiter, ohne Titelzeile oder
-        // Reiter zu überdecken.
+        // Sichtbar 24 px (zweizeilig 48 px) hoch, dicht unter dem Namen. Die
+        // Trefferfläche reicht 20 px nach oben über den Titeltext (kein
+        // Bedienelement) und bis an die Reiter: so ist sie 44 px hoch, ohne
+        // Zurück-Pfeil links oder „…“ rechts zu überdecken.
         data-app-head-status-tight=""
         className={cn(
-          "relative -mb-1 flex max-w-full min-w-full cursor-pointer gap-2 text-left before:absolute before:inset-x-0 before:top-0 before:-bottom-1.5 before:content-['']",
+          // Nur die Trefferfläche liegt über der Titelzeile (sonst fängt die
+          // Überschrift sie ab); der Knopf selbst bleibt unter „…“, dessen
+          // Trefferfläche in diese Zeile hineinreicht. 3 statt 4 px Überlappung
+          // mit den Reitern: so reicht die Fläche nach unten auf 44 px.
+          "relative -mb-[3px] flex max-w-full min-w-full cursor-pointer gap-2 text-left before:absolute before:-top-5 before:right-12 before:-bottom-2 before:left-9 before:z-10 before:content-['']",
           twoLines ? "h-12 items-start" : "h-6 items-center",
         )}
       >
