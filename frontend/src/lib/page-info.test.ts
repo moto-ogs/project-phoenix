@@ -72,6 +72,7 @@ const FIRST_WEEK_PAGES = [
  */
 const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
   "/home", // Nur beim Anordnen der Startseite erklärt der Knopf das Verschieben.
+  "/mehr", // Nur die App zeigt die Seite; dort ist sie selbst das Menü und trägt kein „…“. Am Desktop leitet sie zur Startseite.
   "/dienstplan", // Der Modulwächter erhält den Hinweis über seine Eigenschaft.
   "/mein-dienstplan", // Der Modulwächter erhält den Hinweis über seine Eigenschaft.
   "/parent-announcements", // Die Erklärung richtet sich nach der gewählten Mitteilungsart.
