@@ -82,9 +82,6 @@ func newTraegerOffice(t *testing.T, db *bun.DB, router *traegerPortalHandler, na
 	t.Helper()
 	password := testpkg.NewTestPassword()
 	organization := traegerOrganization(t, db, name, true)
-	testpkg.OwnTraegerHolidayPeriods(t, db, organization)
-	testpkg.OwnTraegerContributionRules(t, db, organization)
-	testpkg.OwnTraegerClosingDays(t, db, organization)
 	schools := []int64{
 		testpkg.CreateTestSchoolInOrganization(t, db, organization, name+" OGS Nord"),
 		testpkg.CreateTestSchoolInOrganization(t, db, organization, name+" OGS Süd"),

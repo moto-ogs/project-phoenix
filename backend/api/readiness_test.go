@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -42,11 +43,13 @@ func TestReadinessTimesOutWhenPoolIsExhausted(t *testing.T) {
 
 	// Holding the only connection makes PingContext wait for the probe's
 	// deadline rather than a database response. No server is stopped.
-	rec := httptest.NewRecorder()
-	start := time.Now()
-	common.NewReadinessHandler(db.PingContext).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/ready", nil))
-	require.Less(t, time.Since(start), 5*time.Second, "probe must not wait indefinitely for a connection")
-	assertUnavailable(t, rec)
+	synctest.Test(t, func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		start := time.Now()
+		common.NewReadinessHandler(db.PingContext).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/ready", nil))
+		require.Less(t, time.Since(start), 5*time.Second, "probe must not wait indefinitely for a connection")
+		assertUnavailable(t, rec)
+	})
 }
 
 func TestReadinessHonoursRequestCancellation(t *testing.T) {
