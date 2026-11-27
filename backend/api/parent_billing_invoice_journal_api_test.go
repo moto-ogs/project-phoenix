@@ -456,6 +456,7 @@ func TestInvoiceJournalListsJahresbescheideAsFeeNotices(t *testing.T) {
 	assert.Equal(t, "care", notice.Service, "a Jahresbescheid counts in the range of the care")
 	assert.Equal(t, run.Notices[0].Number, notice.Number)
 	assert.NotEmpty(t, notice.RecipientLastName)
+	assert.Equal(t, []string{"Mia"}, notice.ChildNames)
 	assert.Positive(t, notice.GrossCents)
 	// #8138: the state and the open amount follow the families (#4691),
 	// which count invoices only: a Jahresbescheid carries neither.
@@ -467,10 +468,12 @@ func TestInvoiceJournalListsJahresbescheideAsFeeNotices(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_notice_run_events
 		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, run.ID).Scan(context.Background(), &reads))
 	assert.Equal(t, 1, reads, "the read stands in the trail of the run of the Jahresbescheide")
+	assert.Equal(t, []string{notice.Number}, journalNumbers(invoiceJournal(t, f.traeger, f.office.token, url.Values{"search": {"MIA"}})))
 	lines := billingListCSV(t, f.traeger, f.office.token, invoiceJournalPath+"/export?run_kind=care_notice&run_id="+fmt.Sprint(run.ID))
 	require.Len(t, lines, 3)
 	assert.Contains(t, lines[1], ";Gebührenbescheid;")
 	assert.Contains(t, lines[1], ";Jahresbescheide 2030;")
+	assert.Contains(t, lines[1], ";Mia;")
 }
 
 func TestInvoiceJournalQueryBudgetIsFlat(t *testing.T) {

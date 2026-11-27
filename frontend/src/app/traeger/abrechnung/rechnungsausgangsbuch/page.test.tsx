@@ -236,11 +236,8 @@ describe("TraegerInvoiceJournalPage", () => {
       "Es fehlen die Nummern FE-2026-0002 und FE-2026-0003 (zwischen FE-2026-0001 und FE-2026-0004).",
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Nur Nummernkreis Ferienbetreuung 2026 zeigen",
-      }),
-    );
+    const gapActionName = "Nur Nummernkreis Ferienbetreuung 2026 zeigen";
+    fireEvent.click(screen.getByRole("button", { name: gapActionName }));
     await waitFor(() =>
       expect(mockFetchJournal).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -256,10 +253,26 @@ describe("TraegerInvoiceJournalPage", () => {
     // The range in view needs no button to itself.
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", {
-          name: /Nur diesen Nummernkreis zeigen/,
-        }),
+        screen.queryByRole("button", { name: gapActionName }),
       ).not.toBeInTheDocument(),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("table")).getByRole("button", {
+        name: /Offene Forderung/,
+      }),
+    );
+    const rangeFilter = expect.objectContaining({
+      range: { issuerKey: "", service: "holiday", year: 2026 },
+    });
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(rangeFilter, 1, {
+        sort: "open",
+        order: "asc",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: gapActionName }));
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(rangeFilter, 1),
     );
     expect(
       screen.getByText("Lücke im Nummernkreis Ferienbetreuung 2026"),
@@ -412,6 +425,28 @@ describe("TraegerInvoiceJournalPage", () => {
         order: "desc",
       }),
     );
+  });
+
+  it("uses the same server order for the mobile selection and desktop headers", async () => {
+    renderPage();
+    const mobileSort = screen.getByRole("combobox", { name: "Sortieren nach" });
+    fireEvent.click(mobileSort);
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "Offene Forderung: absteigend",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "desc",
+      }),
+    );
+    const table = await screen.findByRole("table");
+    expect(
+      within(table).getByRole("columnheader", { name: /Offene Forderung/ }),
+    ).toHaveAttribute("aria-sort", "descending");
   });
 
   it("asks the server for the invoices in one state", async () => {

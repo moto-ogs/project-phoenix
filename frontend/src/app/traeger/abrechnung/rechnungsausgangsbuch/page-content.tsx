@@ -47,6 +47,7 @@ import { useTraegerListExportItems } from "~/components/traeger/traeger-list-exp
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -93,14 +94,28 @@ const NO_RANGES: InvoiceJournalPage["numberRanges"] = [];
 const NO_RUNS: InvoiceJournalPage["runs"] = [];
 const NO_GAPS: InvoiceJournalPage["gaps"] = [];
 
-/** The columns the database orders by, under their column key. */
-const SORT_OF_COLUMN: Readonly<Record<string, JournalSort>> = {
-  number: "number",
-  issued: "issued",
-  recipient: "recipient",
-  gross: "gross",
-  open: "open",
-};
+const SORT_COLUMNS = [
+  { key: "number", label: "Nummer" },
+  { key: "issued", label: "Ausgestellt" },
+  { key: "recipient", label: "Empfänger" },
+  { key: "gross", label: "Brutto" },
+  { key: "open", label: "Offene Forderung" },
+] as const satisfies readonly { key: JournalSort; label: string }[];
+
+const SORT_OPTIONS = SORT_COLUMNS.flatMap(({ key, label }) => [
+  {
+    key,
+    direction: "asc" as const,
+    value: `${key}:asc`,
+    label: `${label}: aufsteigend`,
+  },
+  {
+    key,
+    direction: "desc" as const,
+    value: `${key}:desc`,
+    label: `${label}: absteigend`,
+  },
+]);
 
 /** Without a chosen column the book keeps its own order. */
 const NO_SORT = { key: "", direction: "asc" } as const;
@@ -710,7 +725,7 @@ export default function TraegerInvoiceJournalPage() {
   );
   // Only a chosen column orders the list; without one the book keeps its
   // own order: the newest first, a number range by number.
-  const sortColumn = SORT_OF_COLUMN[sort.key];
+  const sortColumn = SORT_COLUMNS.find(({ key }) => key === sort.key)?.key;
   const order = useMemo<JournalOrder | null>(
     () => (sortColumn ? { sort: sortColumn, order: sort.direction } : null),
     [sortColumn, sort.direction],
@@ -1036,8 +1051,13 @@ export default function TraegerInvoiceJournalPage() {
     setJumps((count) => count + 1);
     resetAll();
     setNumberRange(next);
+    setSort(NO_SORT);
   };
   const searching = search.trim() !== "";
+  const rangeInNumberOrder =
+    !searching &&
+    activeFilters.length === 1 &&
+    (!sortColumn || sortColumn === "number");
   const filtering = activeFilters.length > 0;
   const filtered = searching || filtering;
   const emptySearch = emptySearchText(
@@ -1073,7 +1093,7 @@ export default function TraegerInvoiceJournalPage() {
   return (
     <TenantPage
       title={billingAreaTitle("rechnungsausgangsbuch")}
-      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Gebührenbescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus. „Offene Forderung“ heißt: Die Rechnung ist ausgestellt und weder storniert noch ganz gutgeschrieben. Ob die Familie bezahlt hat, sieht moto nicht. Jahresbescheide zählen dabei nicht mit. Ein Klick auf den Empfänger öffnet die Familie."
+      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Gebührenbescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht zuerst, solange du nicht anders sortierst oder einen Nummernkreis wählst. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus. „Offene Forderung“ zeigt, was nach Gutschriften vom Rechnungsbetrag übrig bleibt. Stornierte Rechnungen und Jahresbescheide zählen nicht mit. Ob die Familie bezahlt hat, sieht moto nicht. Unterstrichene Empfängernamen öffnen die Familie."
       tabs={billingTabs("rechnungsausgangsbuch")}
       overflowMenu={exportItems}
       search={{
@@ -1091,9 +1111,8 @@ export default function TraegerInvoiceJournalPage() {
       <NumberGaps
         gaps={gaps}
         severalIssuers={severalIssuers}
-        // The jump stays while a search or another filter hides rows of
-        // the range.
-        shownRange={searching || activeFilters.length > 1 ? "" : rangeValue}
+        // Keep the jump unless the whole range is shown in number order.
+        shownRange={rangeInNumberOrder ? rangeValue : ""}
         checkedCount={filtered ? allCount : null}
         onShowRange={showRange}
       />
@@ -1102,6 +1121,32 @@ export default function TraegerInvoiceJournalPage() {
       {first && totalCount > 0 ? (
         <JournalTotals page={first} allCount={allCount} scope={scope} />
       ) : null}
+      <div className="md:hidden">
+        <CustomSelect
+          label="Sortieren nach"
+          className="w-full"
+          value={sortColumn ? `${sortColumn}:${sort.direction}` : ""}
+          options={[
+            {
+              value: "",
+              label: numberRange
+                ? "Standard: Nummer absteigend"
+                : "Standard: neueste zuerst",
+            },
+            ...SORT_OPTIONS,
+          ]}
+          onChange={(value) => {
+            const option = SORT_OPTIONS.find(
+              (option) => option.value === value,
+            );
+            setSort(
+              option
+                ? { key: option.key, direction: option.direction }
+                : NO_SORT,
+            );
+          }}
+        />
+      </div>
       <DataTable
         columns={columns}
         rows={documents}

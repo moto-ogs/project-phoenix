@@ -72,7 +72,7 @@ const journalRowsSQL = `
 		notice.number, notice.number_year, notice.number_sequence, notice.issued_on, 'fee_notice',
 		COALESCE(notice.recipient->>'first_name', ''), COALESCE(notice.recipient->>'last_name', ''), notice.total_cents,
 		COALESCE(amended.number, ''), CASE WHEN notice.amends_notice_id IS NULL THEN '' ELSE 'amends' END,
-		false, '', '', NULL, NULL, '', NULL
+		false, '', '', NULL, NULL, '', notice.child_first_name
 	FROM parent_billing.care_notices AS notice
 	JOIN parent_billing.care_notice_runs AS run ON run.organization_id = notice.organization_id AND run.id = notice.run_id
 	LEFT JOIN parent_billing.care_notices AS amended
