@@ -579,6 +579,7 @@ function DienstplanContent() {
           onSickReport={
             canWriteAbsences ? (member) => setSickModal(member) : undefined
           }
+          canWriteAbsences={canWriteAbsences}
           onOpenPersonWeek={
             canViewHalbjahr
               ? (member) =>

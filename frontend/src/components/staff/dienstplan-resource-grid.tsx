@@ -141,9 +141,10 @@ interface DienstplanResourceGridProps {
     date: string,
     shift: StaffShift | null,
   ) => void;
-  /** Opens the "Krank melden" flow (#1843). Set only when the caller has
-   *  `time_tracking:manage`; the menu item is hidden otherwise. */
+  /** Opens the "Krank melden" flow (#1843). */
   readonly onSickReport?: (staff: StaffScheduleStaff) => void;
+  /** Allows absence-writing actions from the row menu. */
+  readonly canWriteAbsences?: boolean;
   /** Öffnet das Viertelstunden-Wochenraster dieser Person (#3818). */
   readonly onOpenPersonWeek?: (staff: StaffScheduleStaff) => void;
 }
@@ -346,6 +347,7 @@ export function DienstplanResourceGrid({
   reloadShifts,
   onCellClick,
   onSickReport,
+  canWriteAbsences = false,
   onOpenPersonWeek,
 }: DienstplanResourceGridProps) {
   const router = useTenantRouter();
@@ -386,6 +388,15 @@ export function DienstplanResourceGrid({
     shift: StaffShift;
   } | null>(null);
   const refreshAfterMove = useTenantMutateMatching(PLAN_CACHE_KEY_PREFIXES);
+
+  // Schreibdialoge können offen sein, wenn der Nutzerkontext das fehlende
+  // Personalprofil erst nachträglich bestätigt. Dann bleibt das Raster rein
+  // lesbar und schickt keine Änderung mehr ab.
+  useEffect(() => {
+    if (!readOnly) return;
+    setMoveTarget(null);
+    setClosingDayPrompt(null);
+  }, [readOnly]);
 
   const columns: ResourceGridColumn[] = useMemo(
     () =>
@@ -488,7 +499,7 @@ export function DienstplanResourceGrid({
     // "Krank melden" (#1843) survives the reduced path — the row header there is
     // name-only otherwise, but the sick-report flow needs the same audience it
     // had before (Fertig-Kriterium 14). The navigation items are full-path only.
-    if (onSickReport) {
+    if (onSickReport && canWriteAbsences && !readOnly) {
       items.push({
         label: "Krank melden",
         icon: <MotoConceptIcon concept={sickConcept} size={18} />,
@@ -497,13 +508,15 @@ export function DienstplanResourceGrid({
       });
     }
     if (!reducedPath) {
-      items.push({
-        label: "Für heute abwesend melden",
-        icon: <MotoConceptIcon concept={notArrivalConcept} size={18} />,
-        description:
-          "Öffnet den Vertretungsplan, um eine Vertretung einzutragen.",
-        onClick: () => router.push(`/vertretung?d=${absenceEntryDate}`),
-      });
+      if (canWriteAbsences && !readOnly) {
+        items.push({
+          label: "Für heute abwesend melden",
+          icon: <MotoConceptIcon concept={notArrivalConcept} size={18} />,
+          description:
+            "Öffnet den Vertretungsplan, um eine Vertretung einzutragen.",
+          onClick: () => router.push(`/vertretung?d=${absenceEntryDate}`),
+        });
+      }
       items.push({
         label: "Zeiterfassung öffnen",
         icon: <MotoConceptIcon concept={timeTrackingConcept} size={18} />,
@@ -902,7 +915,7 @@ export function DienstplanResourceGrid({
         </div>
       )}
 
-      {moveTarget && (
+      {moveTarget && !readOnly && (
         <ShiftMoveDialog
           isOpen
           shift={moveTarget.shift}
@@ -917,7 +930,7 @@ export function DienstplanResourceGrid({
           reloadShifts={reloadShifts}
         />
       )}
-      {closingDayPrompt && (
+      {closingDayPrompt && !readOnly && (
         <ClosingDayConfirmModal
           dateISO={closingDayPrompt.date}
           reason={closingDayPrompt.reason}
