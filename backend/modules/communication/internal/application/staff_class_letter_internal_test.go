@@ -15,10 +15,10 @@ func TestClassLetterMailIntroNamesTheSender(t *testing.T) {
 	letter := &StaffParentAnnouncement{SenderName: &name, SenderSchoolClass: &class}
 
 	assert.Equal(t,
-		"diese Nachricht kommt von Lena Lehrerin, Klasse 3b, OGS Am Berg. Die folgende Mitteilung ist ein Elternbrief. Den vollständigen Text findest du unten.",
+		"diese Nachricht kommt von Lena Lehrerin, Klasse 3b, OGS Am Berg. Die folgende Mitteilung ist ein Elternbrief. Den vollständigen Text finden Sie unten.",
 		classLetterMailIntro(letter, "OGS Am Berg", letterIntro))
 	assert.Equal(t,
-		"diese Nachricht kommt von Lena Lehrerin, Klasse 3b. Den vollständigen Inhalt findest du im Eltern-Portal.",
+		"diese Nachricht kommt von Lena Lehrerin, Klasse 3b. Den vollständigen Inhalt finden Sie im Eltern-Portal.",
 		classLetterMailIntro(letter, "", ""))
 	assert.Equal(t, letterIntro, classLetterMailIntro(&StaffParentAnnouncement{}, "OGS Am Berg", letterIntro))
 }

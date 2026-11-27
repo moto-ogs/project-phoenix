@@ -52,7 +52,7 @@ export function parentGuardiansTopic(): HelpTopic {
       {
         title: "Die eigene Anrede wählen",
         description:
-          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Karin` oder `Lieber Jonas`, ohne Anrede mit `Guten Tag` und deinem Namen.",
+          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Frau Klein` oder `Lieber Herr Klein`, ohne Anrede mit `Guten Tag` und deinem Namen.",
         steps: [
           "Tippe bei deinem eigenen Namen auf den Stift `Bearbeiten`.",
           "Wähle bei `Anrede` `Frau`, `Herr` oder `Keine Angabe`.",

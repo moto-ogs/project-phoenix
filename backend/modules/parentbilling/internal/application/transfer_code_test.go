@@ -25,7 +25,7 @@ func transferAccount() *parentbilling.LetterheadBankAccount {
 func TestTransferCodeFollowsEPC069(t *testing.T) {
 	t.Parallel()
 
-	code, ok := transferCode(letterAddressee{}, transferAccount(), "", 9250, "FE-2026-0007")
+	code, ok := transferCode(transferAccount(), "", 9250, "FE-2026-0007")
 	require.True(t, ok)
 	assert.Equal(t, "BCD\n002\n1\nSCT\nBYLADEM1001\nGanztag im Quartier e.V.\nDE02120300000000202051\nEUR92.50\n\n\nFE-2026-0007",
 		code.Payload)
@@ -36,7 +36,7 @@ func TestTransferCodeFollowsEPC069(t *testing.T) {
 		{Label: "Verwendungszweck", Value: "FE-2026-0007"},
 	}, code.Facts)
 	assert.Equal(t, "Bezahlen per QR-Code", code.Heading)
-	assert.Equal(t, "Scannt den Code mit eurer Banking-App und überweist.",
+	assert.Equal(t, "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
 		code.Text)
 }
 
@@ -45,7 +45,7 @@ func TestTransferCodeAmountIsTheTotalInCents(t *testing.T) {
 	t.Parallel()
 
 	for cents, want := range map[int64]string{1: "EUR0.01", 5: "EUR0.05", 100: "EUR1.00", 123456: "EUR1234.56", 99999999999: "EUR999999999.99"} {
-		code, ok := transferCode(letterAddressee{}, transferAccount(), "", cents, "R-1")
+		code, ok := transferCode(transferAccount(), "", cents, "R-1")
 		require.True(t, ok, cents)
 		assert.Equal(t, want, strings.Split(code.Payload, "\n")[7], cents)
 	}
@@ -56,19 +56,19 @@ func TestTransferCodeOnlyForAnAmountToTransfer(t *testing.T) {
 	t.Parallel()
 
 	for name, run := range map[string]func() (PaymentCode, bool){
-		"zero":       func() (PaymentCode, bool) { return transferCode(letterAddressee{}, transferAccount(), "", 0, "R-1") },
-		"negative":   func() (PaymentCode, bool) { return transferCode(letterAddressee{}, transferAccount(), "", -500, "R-1") },
-		"no account": func() (PaymentCode, bool) { return transferCode(letterAddressee{}, nil, "", 500, "R-1") },
+		"zero":       func() (PaymentCode, bool) { return transferCode(transferAccount(), "", 0, "R-1") },
+		"negative":   func() (PaymentCode, bool) { return transferCode(transferAccount(), "", -500, "R-1") },
+		"no account": func() (PaymentCode, bool) { return transferCode(nil, "", 500, "R-1") },
 		"no IBAN": func() (PaymentCode, bool) {
-			return transferCode(letterAddressee{}, &parentbilling.LetterheadBankAccount{AccountHolder: "X"}, "", 500, "R-1")
+			return transferCode(&parentbilling.LetterheadBankAccount{AccountHolder: "X"}, "", 500, "R-1")
 		},
 		"too large": func() (PaymentCode, bool) {
-			return transferCode(letterAddressee{}, transferAccount(), "", 100000000000, "R-1")
+			return transferCode(transferAccount(), "", 100000000000, "R-1")
 		},
 		"no name": func() (PaymentCode, bool) {
-			return transferCode(letterAddressee{}, &parentbilling.LetterheadBankAccount{IBAN: "DE02120300000000202051"}, "", 500, "R-1")
+			return transferCode(&parentbilling.LetterheadBankAccount{IBAN: "DE02120300000000202051"}, "", 500, "R-1")
 		},
-		"no number": func() (PaymentCode, bool) { return transferCode(letterAddressee{}, transferAccount(), "", 500, " ") },
+		"no number": func() (PaymentCode, bool) { return transferCode(transferAccount(), "", 500, " ") },
 	} {
 		_, ok := run()
 		assert.False(t, ok, name)
@@ -82,13 +82,13 @@ func TestTransferCodeFallsBackToTheSenderAndKeepsTheLimits(t *testing.T) {
 	t.Parallel()
 
 	account := &parentbilling.LetterheadBankAccount{IBAN: "DE02120300000000202051"}
-	code, ok := transferCode(letterAddressee{}, account, "Förderverein Ganztag", 500, "R-1")
+	code, ok := transferCode(account, "Förderverein Ganztag", 500, "R-1")
 	require.True(t, ok)
 	lines := strings.Split(code.Payload, "\n")
 	assert.Equal(t, "", lines[4], "BIC is optional in version 002")
 	assert.Equal(t, "Förderverein Ganztag", lines[5])
 
-	code, ok = transferCode(letterAddressee{}, account, strings.Repeat("a", 80), 500, strings.Repeat("u", 150))
+	code, ok = transferCode(account, strings.Repeat("a", 80), 500, strings.Repeat("u", 150))
 	require.True(t, ok)
 	lines = strings.Split(code.Payload, "\n")
 	assert.Equal(t, strings.Repeat("a", 70), lines[5])
@@ -101,7 +101,7 @@ func TestTransferCodeKeepsThePayloadWithin331Bytes(t *testing.T) {
 	t.Parallel()
 
 	account := &parentbilling.LetterheadBankAccount{IBAN: "DE02120300000000202051", BIC: "BYLADEM1001"}
-	code, ok := transferCode(letterAddressee{}, account, strings.Repeat("ä", 80), 500, strings.Repeat("ü", 150))
+	code, ok := transferCode(account, strings.Repeat("ä", 80), 500, strings.Repeat("ü", 150))
 	require.True(t, ok)
 	assert.LessOrEqual(t, len(code.Payload), 331)
 	lines := strings.Split(code.Payload, "\n")
@@ -119,7 +119,7 @@ func TestTransferCodeLeavesOutAnUnusableBIC(t *testing.T) {
 
 	for bic, want := range map[string]string{"byladem1001": "BYLADEM1001", "COBADEFF": "COBADEFF", "BYLA DEM1001": "", "BYLADEM10": "", "": ""} {
 		account := &parentbilling.LetterheadBankAccount{AccountHolder: "X", IBAN: "DE02120300000000202051", BIC: bic}
-		code, ok := transferCode(letterAddressee{}, account, "", 500, "R-1")
+		code, ok := transferCode(account, "", 500, "R-1")
 		require.True(t, ok)
 		assert.Equal(t, want, strings.Split(code.Payload, "\n")[4], bic)
 	}
@@ -131,7 +131,7 @@ func TestTransferCodeKeepsTheNameOnOneLine(t *testing.T) {
 	t.Parallel()
 
 	account := &parentbilling.LetterheadBankAccount{AccountHolder: " Förderverein\nGanztag\t e.V. ", IBAN: "DE02120300000000202051"}
-	code, ok := transferCode(letterAddressee{}, account, "", 500, "R-1")
+	code, ok := transferCode(account, "", 500, "R-1")
 	require.True(t, ok)
 	lines := strings.Split(code.Payload, "\n")
 	require.Len(t, lines, 11)

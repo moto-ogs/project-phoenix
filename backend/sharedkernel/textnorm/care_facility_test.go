@@ -15,10 +15,10 @@ func TestCareFacilityNameDeclinesEveryGender(t *testing.T) {
 		term, stored                        string
 		article, nominative, from, yourCare string
 	}{
-		{"Betreuung", CareArticleDie, "die", "die Betreuung", "von der Betreuung", "deine Betreuung"},
-		{"Hort", CareArticleDer, "der", "der Hort", "vom Hort", "dein Hort"},
-		{"Hort am Markt", CareArticleDer, "der", "der Hort am Markt", "vom Hort am Markt", "dein Hort am Markt"},
-		{"Lernhaus", CareArticleDas, "das", "das Lernhaus", "vom Lernhaus", "dein Lernhaus"},
+		{"Betreuung", CareArticleDie, "die", "die Betreuung", "von der Betreuung", "Ihre Betreuung"},
+		{"Hort", CareArticleDer, "der", "der Hort", "vom Hort", "Ihr Hort"},
+		{"Hort am Markt", CareArticleDer, "der", "der Hort am Markt", "vom Hort am Markt", "Ihr Hort am Markt"},
+		{"Lernhaus", CareArticleDas, "das", "das Lernhaus", "vom Lernhaus", "Ihr Lernhaus"},
 	}
 	for _, tc := range cases {
 		name := NewCareFacilityName(tc.term, tc.stored)
@@ -49,7 +49,7 @@ func TestCareArticleKeepsDieWithoutAChoice(t *testing.T) {
 	assert.Equal(t, "OGS", fallback.Term())
 	assert.Equal(t, "die OGS", fallback.Nominative())
 	assert.Equal(t, "von der OGS", fallback.From())
-	assert.Equal(t, "deine OGS", fallback.Your())
+	assert.Equal(t, "Ihre OGS", fallback.Your())
 }
 
 func TestSentenceStart(t *testing.T) {

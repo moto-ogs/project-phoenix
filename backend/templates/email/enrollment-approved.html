@@ -7,7 +7,7 @@
 
     <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
-    <p>wir freuen uns, dir mitteilen zu können, dass die Anmeldung erfolgreich bestätigt wurde.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}}</p>
+    <p>wir freuen uns, Ihnen mitteilen zu können, dass die Anmeldung erfolgreich bestätigt wurde.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}}</p>
 
     {{if .ChildNames}}
     <div class="highlight-box">
@@ -24,20 +24,20 @@
     <p style="margin-top: 16px; font-size: 14px;"><strong>Anmerkung der Schule:</strong> {{.StatusReason}}</p>
     {{end}}
 
-    <p style="margin-top: 16px;">Den vollständigen Stand deiner Anmeldung kannst du weiterhin hier einsehen:</p>
+    <p style="margin-top: 16px;">Den vollständigen Stand Ihrer Anmeldung können Sie weiterhin hier einsehen:</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.StatusURL}}">{{.StatusURL}}</a>
     </div>
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wie geht es weiter?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Du erhältst ggf. in Kürze eine separate E-Mail mit einem Einladungslink, um dich im Eltern-Portal zu registrieren. Dort kannst du alle Informationen rund um die Betreuung deines Kindes einsehen und verwalten.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Sie erhalten ggf. in Kürze eine separate E-Mail mit einem Einladungslink, um sich im Eltern-Portal zu registrieren. Dort können Sie alle Informationen rund um die Betreuung Ihres Kindes einsehen und verwalten.</p>
     </div>
 </div>
 

@@ -93,17 +93,17 @@ func TestMessageEmailCopyDeclinesTheSchoolsOwnCareName(t *testing.T) {
 		return messageEmailCopy("de", "", "Anna", "Nowak", "", "", textnorm.NewCareFacilityName(term, article), deliveryPolicy.ParentDeliveryPolicy{})
 	}
 	cases := []struct{ term, article, subject, intro, standIn string }{
-		{"Betreuung", "die", "Neue Nachricht von der Betreuung", "Die Betreuung ", "Deine Betreuung"},
-		{"Hort", "der", "Neue Nachricht vom Hort", "Der Hort ", "Dein Hort"},
-		{"Lernhaus", "das", "Neue Nachricht vom Lernhaus", "Das Lernhaus ", "Dein Lernhaus"},
-		{"Ganztag", "", "Neue Nachricht von der Ganztag", "Die Ganztag ", "Deine Ganztag"},
-		{"OGS", "der", "Neue Nachricht von der OGS", "Die OGS ", "Deine OGS"},
+		{"Betreuung", "die", "Neue Nachricht von der Betreuung", "Die Betreuung ", "Ihre Betreuung"},
+		{"Hort", "der", "Neue Nachricht vom Hort", "Der Hort ", "Ihr Hort"},
+		{"Lernhaus", "das", "Neue Nachricht vom Lernhaus", "Das Lernhaus ", "Ihr Lernhaus"},
+		{"Ganztag", "", "Neue Nachricht von der Ganztag", "Die Ganztag ", "Ihre Ganztag"},
+		{"OGS", "der", "Neue Nachricht von der OGS", "Die OGS ", "Ihre OGS"},
 	}
 	for _, tc := range cases {
 		copy := german(tc.term, tc.article)
 		assert.Equal(t, tc.subject, copy.Subject)
 		assert.True(t, strings.HasPrefix(copy.Intro, tc.intro), "%q starts with %q", copy.Intro, tc.intro)
-		assert.Contains(t, copy.Intro, "hat dir eine Nachricht geschrieben")
+		assert.Contains(t, copy.Intro, "hat Ihnen eine Nachricht geschrieben")
 		assert.Equal(t, tc.standIn, copy.DefaultSchoolName)
 	}
 
@@ -121,8 +121,8 @@ func TestMessageEmailCopyGreetsWithTheChosenSalutation(t *testing.T) {
 	greeting := func(locale, salutation string) string {
 		return messageEmailCopy(locale, salutation, "Anna", "Nowak", "", "", textnorm.NewCareFacilityName("OGS", ""), deliveryPolicy.ParentDeliveryPolicy{}).Greeting
 	}
-	assert.Equal(t, "Liebe Anna,", greeting("de", "ms"))
-	assert.Equal(t, "Lieber Anna,", greeting("de", "mr"))
+	assert.Equal(t, "Liebe Frau Nowak,", greeting("de", "ms"))
+	assert.Equal(t, "Lieber Herr Nowak,", greeting("de", "mr"))
 	assert.Equal(t, "Guten Tag Anna Nowak,", greeting("de", ""))
 	assert.Equal(t, "Hello Anna Nowak,", greeting("en", "ms"))
 }

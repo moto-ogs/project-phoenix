@@ -199,13 +199,13 @@ func appointmentCopy(kind, schoolName string) (kicker, subjectVerb, intro string
 		return "Termin abgesagt", "Termin abgesagt", "ein Termin wurde abgesagt."
 	case portal.EmailKindAppointmentReminder:
 		if known {
-			return "Terminerinnerung", "Erinnerung", sender + " erinnert dich an einen bevorstehenden Termin."
+			return "Terminerinnerung", "Erinnerung", sender + " erinnert Sie an einen bevorstehenden Termin."
 		}
-		return "Terminerinnerung", "Erinnerung", "wir erinnern dich an einen bevorstehenden Termin."
+		return "Terminerinnerung", "Erinnerung", "wir erinnern Sie an einen bevorstehenden Termin."
 	default:
 		if known {
-			return "Neuer Termin", "Neuer Termin", sender + " hat einen neuen Termin für dich eingetragen."
+			return "Neuer Termin", "Neuer Termin", sender + " hat einen neuen Termin für Sie eingetragen."
 		}
-		return "Neuer Termin", "Neuer Termin", "es gibt einen neuen Termin für dich."
+		return "Neuer Termin", "Neuer Termin", "es gibt einen neuen Termin für Sie."
 	}
 }

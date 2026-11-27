@@ -32,7 +32,7 @@ var careContractNoticeDefinitions = []config.Definition{
 		Label:           "Bestätigung einer Kündigung",
 		Description:     "Diesen Text bekommen Eltern per E-Mail, wenn sie einen Betreuungsvertrag kündigen. Er steht auch in der Eltern-App. Erlaubte Platzhalter: {Kind}, {Module}, {Schule}, {Vertragsende}, {Eingang}, {Träger}.",
 		Type:            config.FieldTextarea,
-		Default:         "wir bestätigen deine Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nDeine Kündigung ist am {Eingang} bei uns eingegangen. Der Vertrag endet mit Ablauf des {Vertragsende}. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}",
+		Default:         "wir bestätigen Ihre Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nIhre Kündigung ist am {Eingang} bei uns eingegangen. Der Vertrag endet mit Ablauf des {Vertragsende}. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}", // sie-anrede-erlaubt (ADR 0328): Standardtext der Mail an Eltern.
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "vertraege",
@@ -45,7 +45,7 @@ var careContractNoticeDefinitions = []config.Definition{
 		Label:           "Bestätigung eines Widerrufs",
 		Description:     "Diesen Text bekommen Eltern per E-Mail, wenn sie einen Betreuungsvertrag widerrufen. Er steht auch in der Eltern-App. Erlaubte Platzhalter: {Kind}, {Module}, {Schule}, {Eingang}, {Träger}.",
 		Type:            config.FieldTextarea,
-		Default:         "wir bestätigen deinen Widerruf des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nDein Widerruf ist am {Eingang} bei uns eingegangen. Der Vertrag ist damit aufgehoben. Hast du schon etwas bezahlt, erstatten wir es dir innerhalb von 14 Tagen.\n\nMit freundlichen Grüßen\n{Träger}",
+		Default:         "wir bestätigen Ihren Widerruf des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nIhr Widerruf ist am {Eingang} bei uns eingegangen. Der Vertrag ist damit aufgehoben. Haben Sie schon etwas bezahlt, erstatten wir es Ihnen innerhalb von 14 Tagen.\n\nMit freundlichen Grüßen\n{Träger}", // sie-anrede-erlaubt (ADR 0328): Standardtext der Mail an Eltern.
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "vertraege",
@@ -58,7 +58,7 @@ var careContractNoticeDefinitions = []config.Definition{
 		Label:           "Bestätigung einer außerordentlichen Kündigung",
 		Description:     "Diesen Text bekommen Eltern per E-Mail, wenn sie einen Betreuungsvertrag außerordentlich kündigen. Das Vertragsende legst du erst nach der Prüfung fest. Erlaubte Platzhalter: {Kind}, {Module}, {Schule}, {Eingang}, {Grund}, {Träger}.",
 		Type:            config.FieldTextarea,
-		Default:         "wir bestätigen den Eingang deiner außerordentlichen Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nDeine Kündigung ist am {Eingang} bei uns eingegangen. Dein Grund: {Grund}\n\nWir prüfen deinen Grund. Danach legen wir fest, wann der Vertrag endet. Das Datum teilen wir dir per E-Mail mit. Du siehst es auch in der Eltern-App. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}",
+		Default:         "wir bestätigen den Eingang Ihrer außerordentlichen Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}).\n\nIhre Kündigung ist am {Eingang} bei uns eingegangen. Ihr Grund: {Grund}\n\nWir prüfen Ihren Grund. Danach legen wir fest, wann der Vertrag endet. Das Datum teilen wir Ihnen per E-Mail mit. Sie sehen es auch in der Eltern-App. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}", // sie-anrede-erlaubt (ADR 0328): Standardtext der Mail an Eltern.
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "vertraege",
@@ -71,7 +71,7 @@ var careContractNoticeDefinitions = []config.Definition{
 		Label:           "Mitteilung: Vertragsende festgelegt",
 		Description:     "Diesen Text bekommen Eltern per E-Mail und in der Eltern-App, wenn du nach einer außerordentlichen Kündigung das Vertragsende festlegst. Erlaubte Platzhalter: {Kind}, {Module}, {Schule}, {Vertragsende}, {Eingang}, {Grund}, {Träger}.",
 		Type:            config.FieldTextarea,
-		Default:         "wir haben deine außerordentliche Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}) geprüft.\n\nDer Vertrag endet mit Ablauf des {Vertragsende}. Das ist der letzte Betreuungstag. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}",
+		Default:         "wir haben Ihre außerordentliche Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}) geprüft.\n\nDer Vertrag endet mit Ablauf des {Vertragsende}. Das ist der letzte Betreuungstag. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}", // sie-anrede-erlaubt (ADR 0328): Standardtext der Mail an Eltern.
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "vertraege",
@@ -84,7 +84,7 @@ var careContractNoticeDefinitions = []config.Definition{
 		Label:           "Mitteilung: Grund nicht anerkannt",
 		Description:     "Diesen Text bekommen Eltern per E-Mail und in der Eltern-App, wenn du den Grund einer außerordentlichen Kündigung nicht anerkennst. Die Kündigung gilt dann als ordentliche Kündigung zum nächsten möglichen Termin. Erlaubte Platzhalter: {Kind}, {Module}, {Schule}, {Vertragsende}, {Eingang}, {Grund}, {Träger}.",
 		Type:            config.FieldTextarea,
-		Default:         "wir haben deine außerordentliche Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}) geprüft. Deine Kündigung ist am {Eingang} bei uns eingegangen.\n\nDeinen Grund erkennen wir nicht an. Deine Kündigung gilt deshalb als ordentliche Kündigung zum nächsten möglichen Termin. Der Vertrag endet mit Ablauf des {Vertragsende}. Das ist der letzte Betreuungstag. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}",
+		Default:         "wir haben Ihre außerordentliche Kündigung des Betreuungsvertrags für {Kind} ({Module}, {Schule}) geprüft. Ihre Kündigung ist am {Eingang} bei uns eingegangen.\n\nIhren Grund erkennen wir nicht an. Ihre Kündigung gilt deshalb als ordentliche Kündigung zum nächsten möglichen Termin. Der Vertrag endet mit Ablauf des {Vertragsende}. Das ist der letzte Betreuungstag. Bis dahin findet die Betreuung wie gebucht statt.\n\nMit freundlichen Grüßen\n{Träger}", // sie-anrede-erlaubt (ADR 0328): Standardtext der Mail an Eltern.
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "vertraege",

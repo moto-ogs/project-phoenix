@@ -3,11 +3,11 @@
 
 <div class="email-body">
     {{template "moto-brand" .}}
-    <h1>Rückfrage zu deinem Antrag</h1>
+    <h1>Rückfrage zu Ihrem Antrag</h1>
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
 
-    <p>deine Leitung hat eine Rückfrage zu deinem Abwesenheitsantrag gestellt:</p>
+    <p>Ihre Leitung hat eine Rückfrage zu Ihrem Abwesenheitsantrag gestellt:</p>
 
     <div class="highlight-box">
         <p><strong>{{.AbsenceTypeLabel}}</strong><br>
@@ -15,7 +15,7 @@
         <p>Rückfrage: {{.DecisionNote}}</p>
     </div>
 
-    <p>Du kannst deine Antwort in der Zeiterfassung ergänzen und den Antrag erneut einreichen.</p>
+    <p>Sie können Ihre Antwort in der Zeiterfassung ergänzen und den Antrag erneut einreichen.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.LinkURL}}">Antrag anpassen</a>

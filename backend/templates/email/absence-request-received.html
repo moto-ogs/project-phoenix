@@ -9,7 +9,7 @@
     <h1>Neuer Abwesenheitsantrag</h1>
     {{end}}
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
 
     {{if .PreviousQuestion}}
     <p><strong>{{.RequesterName}}</strong> hat einen Antrag nach einer Rückfrage erneut eingereicht:</p>
@@ -28,7 +28,7 @@
         {{end}}
     </div>
 
-    <p>Du kannst den Antrag direkt in den eingehenden Anfragen auf der Mitarbeiter-Seite bearbeiten.</p>
+    <p>Sie können den Antrag direkt in den eingehenden Anfragen auf der Mitarbeiter-Seite bearbeiten.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.LinkURL}}">Antrag ansehen</a>

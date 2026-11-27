@@ -186,7 +186,7 @@ func (o qualificationMailOutbox) Enqueue(ctx context.Context, message workforce.
 		From: o.from, To: email.NewEmail(message.ToName, message.ToAddress),
 		Subject: message.Subject, Template: message.Template,
 		Content: map[string]any{
-			"SchoolName": content.SchoolName, "FirstName": content.FirstName, "StaffName": content.StaffName,
+			"SchoolName": content.SchoolName, "FirstName": content.FirstName, "LastName": content.LastName, "StaffName": content.StaffName,
 			"QualificationName": content.QualificationName, "ExpiresOn": content.ExpiresOn,
 			"ExpiryDay": content.ExpiryDay, "Lapsed": content.Lapsed, "Own": content.Own, "LinkURL": content.LinkURL,
 		},

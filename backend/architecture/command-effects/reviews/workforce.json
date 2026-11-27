@@ -5947,7 +5947,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for ADR 0328: the mail content map gained the recipient's LastName for the greeting, and the binding's effect is unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -5958,7 +5958,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for ADR 0328: the mail content map gained the recipient's LastName for the greeting, and the binding's effect is unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"

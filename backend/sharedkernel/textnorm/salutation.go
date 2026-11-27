@@ -16,18 +16,18 @@ func ValidSalutation(value string) bool {
 }
 
 // GermanGreeting is the opening of a German mail, without the closing comma.
-// A chosen form of address picks the gendered word and stays on first-name
-// terms: "Liebe Karin", "Lieber Jonas". Without a choice, or without a first
-// name, the greeting is neutral: "Guten Tag Karin Klein", or "Guten Tag" for
-// a person without a name.
+// Mails say "Sie" (ADR 0328), so a chosen form of address greets the person
+// by title and last name: "Liebe Frau Klein", "Lieber Herr Klein". Without a
+// choice, or without a last name, the greeting is neutral: "Guten Tag Karin
+// Klein", or "Guten Tag" for a person without a name.
 func GermanGreeting(salutation, firstName, lastName string) string {
 	first, last := strings.TrimSpace(firstName), strings.TrimSpace(lastName)
-	if first != "" {
+	if last != "" {
 		switch salutation {
 		case SalutationMs:
-			return "Liebe " + first
+			return "Liebe Frau " + last
 		case SalutationMr:
-			return "Lieber " + first
+			return "Lieber Herr " + last
 		}
 	}
 	return strings.TrimSpace("Guten Tag " + strings.TrimSpace(first+" "+last))

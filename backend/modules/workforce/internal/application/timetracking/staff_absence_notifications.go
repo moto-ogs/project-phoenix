@@ -196,11 +196,11 @@ func (s *staffAbsenceService) notifyAbsenceDecision(ctx context.Context, absence
 	var subject, template, metaType string
 	switch absence.Status {
 	case AbsenceStatusApproved:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", workforce.AbsenceMailRequestApproved
+		subject, template, metaType = "Ihr Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", workforce.AbsenceMailRequestApproved
 	case AbsenceStatusDeclined:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", workforce.AbsenceMailRequestDeclined
+		subject, template, metaType = "Ihr Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", workforce.AbsenceMailRequestDeclined
 	case AbsenceStatusQuestion:
-		subject, template, metaType = "Rückfrage zu deinem Abwesenheitsantrag", "absence-request-question.html", workforce.AbsenceMailRequestQuestion
+		subject, template, metaType = "Rückfrage zu Ihrem Abwesenheitsantrag", "absence-request-question.html", workforce.AbsenceMailRequestQuestion // sie-anrede-erlaubt (ADR 0328): Betreff einer E-Mail.
 	default:
 		return nil
 	}

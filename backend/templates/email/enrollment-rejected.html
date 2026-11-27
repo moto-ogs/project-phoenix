@@ -7,7 +7,7 @@
 
     <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
-    <p>vielen Dank für dein Interesse an unserer Betreuung.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}} Wir bedauern, dir mitteilen zu müssen, dass wir deine Anmeldung leider nicht annehmen können.</p>
+    <p>vielen Dank für Ihr Interesse an unserer Betreuung.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}} Wir bedauern, Ihnen mitteilen zu müssen, dass wir Ihre Anmeldung leider nicht annehmen können.</p>
 
     {{if .ChildNames}}
     <div class="highlight-box">
@@ -24,13 +24,13 @@
     <p style="margin-top: 16px; font-size: 14px;"><strong>Begründung:</strong> {{.StatusReason}}</p>
     {{end}}
 
-    <p style="margin-top: 16px;">Bei Rückfragen kannst du dich gerne direkt an die Schule wenden. Den aktuellen Stand deiner Anmeldung kannst du weiterhin hier einsehen:</p>
+    <p style="margin-top: 16px;">Bei Rückfragen können Sie sich gerne direkt an die Schule wenden. Den aktuellen Stand Ihrer Anmeldung können Sie weiterhin hier einsehen:</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.StatusURL}}">{{.StatusURL}}</a>
     </div>

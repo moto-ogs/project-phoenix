@@ -68,7 +68,7 @@ func draftPreview(record ContractRecord) bool {
 // every page, so a printed preview is never taken for the contract.
 func previewLetter(letter Letter) Letter {
 	letter.Blocks = append([]LetterBlock{{Heading: previewNote, Bold: true,
-		Text: "Dieser Entwurf kann sich noch ändern. Unterschreibt nur den Vertrag, den ihr von uns bekommt."}}, letter.Blocks...)
+		Text: "Dieser Entwurf kann sich noch ändern. Unterschreiben Sie nur den Vertrag, den Sie von uns bekommen."}}, letter.Blocks...)
 	letter.Footer = append([]string{previewNote}, letter.Footer...)
 	return letter
 }
@@ -87,7 +87,7 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 	blocks := letterBlocks(filled.Blocks)
 	blocks = append(blocks,
 		LetterBlock{Heading: "Vertragsangaben", Text: "Das gilt für diesen Vertrag:", Facts: termFacts(version, head)},
-		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist euer Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
+		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist Ihr Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
 	)
 	blocks = append(blocks, conclusionBlocks(record)...)
 	if version.Terms.SpecialTermination {
@@ -97,9 +97,9 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 			".\n\n" + strings.TrimSpace(version.Terms.SpecialTerminationNote)})
 	}
 	if version.Terms.StatuteRequired {
-		text := "Mit diesem Vertrag erkennt ihr die „" + strings.TrimSpace(version.Terms.StatuteTitle) + "“ an."
+		text := "Mit diesem Vertrag erkennen Sie die „" + strings.TrimSpace(version.Terms.StatuteTitle) + "“ an."
 		if url := strings.TrimSpace(version.Terms.StatuteURL); url != "" {
-			text += " Ihr findet sie hier: " + url
+			text += " Sie finden sie hier: " + url
 		}
 		blocks = append(blocks, LetterBlock{Heading: "Satzung", Text: text})
 	}
@@ -137,13 +137,13 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 func conclusionBlocks(record ContractRecord) []LetterBlock {
 	if record.Version.Number > 1 {
 		if record.Version.Status == carecontract.VersionRequested {
-			return []LetterBlock{{Heading: "Neue Fassung", Text: "Bitte unterschreibt diese neue Fassung."}}
+			return []LetterBlock{{Heading: "Neue Fassung", Text: "Bitte unterschreiben Sie diese neue Fassung."}}
 		}
 		return nil
 	}
 	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
 		return []LetterBlock{{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
-			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."}}
+			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Sie müssen ihn nicht unterschreiben."}}
 	}
 	return nil
 }
@@ -361,11 +361,11 @@ func questionText(head carecontract.Letterhead) string {
 	case name == "" && len(ways) == 0:
 		return ""
 	case name == "":
-		return "Bei Fragen erreicht ihr uns unter " + strings.Join(ways, " oder ") + "."
+		return "Bei Fragen erreichen Sie uns unter " + strings.Join(ways, " oder ") + "."
 	case len(ways) == 0:
-		return "Bei Fragen hilft euch " + name + "."
+		return "Bei Fragen hilft Ihnen " + name + "."
 	}
-	return "Bei Fragen erreicht ihr " + name + " unter " + strings.Join(ways, " oder ") + "."
+	return "Bei Fragen erreichen Sie " + name + " unter " + strings.Join(ways, " oder ") + "."
 }
 
 func formatEuro(cents int64) string {

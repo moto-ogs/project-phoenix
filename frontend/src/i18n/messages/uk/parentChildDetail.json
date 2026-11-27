@@ -51,7 +51,7 @@
     "lastName": "Прізвище",
     "salutationLabel": "Звертання",
     "salutationNone": "Не вказано",
-    "salutationHint": "Необов’язково. Зі звертанням листи німецькою починаються, наприклад, так: «Liebe Karin» або «Lieber Jonas».",
+    "salutationHint": "Необов’язково. Зі звертанням листи німецькою починаються, наприклад, так: «Liebe Frau Klein» або «Lieber Herr Klein».",
     "email": "Ел. пошта",
     "street": "Вулиця та номер будинку",
     "postalCode": "Поштовий індекс",

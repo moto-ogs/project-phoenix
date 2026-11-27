@@ -51,7 +51,7 @@
     "lastName": "Last name",
     "salutationLabel": "Form of address",
     "salutationNone": "Not specified",
-    "salutationHint": "Optional. With a form of address, German emails start with “Liebe Karin” or “Lieber Jonas”.",
+    "salutationHint": "Optional. With a form of address, German emails start with “Liebe Frau Klein” or “Lieber Herr Klein”.",
     "email": "Email",
     "street": "Street and house number",
     "postalCode": "Postal code",

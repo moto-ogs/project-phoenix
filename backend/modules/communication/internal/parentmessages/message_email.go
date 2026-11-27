@@ -218,7 +218,7 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 }
 
 // messageEmailCopy picks the mail's wording. Only the German greeting uses
-// the chosen form of address ("Liebe Karin,", "Lieber Jonas,"); without a
+// the chosen form of address ("Liebe Frau Klein,", "Lieber Herr Klein,"); without a
 // choice and in every other language it stays neutral with first and last
 // name.
 func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, childName string, care textnorm.CareFacilityName, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
@@ -390,9 +390,9 @@ func germanMessageEmailCopy(greeting, school, child string, care textnorm.CareFa
 	return parentMessageEmailCopy{
 		Subject: "Neue Nachricht " + care.From(), Kicker: "Neue Nachricht",
 		Greeting: greeting,
-		Intro:    localizedMessageIntro(textnorm.SentenceStart(care.Nominative()), school, "hat dir eine Nachricht geschrieben", "zu", child),
-		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopiere bitte diesen Link:",
-		PreferenceHint: "Du erhältst diese E-Mail, weil du in moto als sorgeberechtigte Person hinterlegt bist. In der App kannst du unter „Benachrichtigungen“ einstellen, worüber wir dich informieren.",
+		Intro:    localizedMessageIntro(textnorm.SentenceStart(care.Nominative()), school, "hat Ihnen eine Nachricht geschrieben", "zu", child),
+		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:",
+		PreferenceHint: "Sie erhalten diese E-Mail, weil Sie in moto als sorgeberechtigte Person hinterlegt sind. In der App können Sie unter „Benachrichtigungen“ einstellen, worüber wir Sie informieren.",
 		FooterText:     localizedEmailFooter("Diese E-Mail wurde im Auftrag von", school, "Diese E-Mail wurde automatisch versendet."),
 		PoweredByLabel: "Unterstützt von", SchoolLogoAlt: "Logo der Schule",
 		DefaultBrandKicker: "Elternportal", DefaultSchoolName: textnorm.SentenceStart(care.Your()),

@@ -61,9 +61,9 @@ func TestCareLetterOfAMensaInvoiceOfItsOwn(t *testing.T) {
 	}
 	content.invoice.TotalCents = 960
 	text := careLetterText(careInvoiceLetter(content))
-	assert.Contains(t, text, "berechnen wir euch die Mensa")
-	assert.Contains(t, text, "Euer Mittagessen")
+	assert.Contains(t, text, "berechnen wir Ihnen die Mensa")
+	assert.Contains(t, text, "Ihr Mittagessen")
 	assert.NotContains(t, text, "Monatsbeitrag")
-	assert.NotContains(t, text, "Eure Betreuung")
+	assert.NotContains(t, text, "Ihre Betreuung")
 	assert.Contains(t, text, "Summe = 9,60 €")
 }
