@@ -79,6 +79,42 @@ type TraegerMembershipQuery interface {
 	ListTraegerMemberships(ctx context.Context, organizationID int64) ([]TraegerMembership, error)
 }
 
+// TraegerSchool is an undeleted school of a Träger with what the
+// Träger-Portal names it by.
+type TraegerSchool struct {
+	ID        int64
+	Name      string
+	Slug      string
+	Subdomain string
+	City      string
+}
+
+// TraegerSchools reads the schools of a Träger with their names in one
+// statement, for a read that needs both the tenant set and the names, such
+// as "Heute anders" (#8146). It joins the caller's transaction.
+type TraegerSchools interface {
+	// ListTraegerSchools returns the undeleted schools of an active,
+	// undeleted Träger, ordered by name and ID: the same tenant set as
+	// ListTraegerSchoolIDs (ADR 0084 section 1). Any other Träger reaches
+	// no school and answers ErrOrganizationNotFound or
+	// ErrOrganizationInactive.
+	ListTraegerSchools(ctx context.Context, organizationID int64) ([]TraegerSchool, error)
+}
+
+// ErrNoTraegerSchools reports a capability without the read of the schools
+// with their names.
+var ErrNoTraegerSchools = errors.New("organization tenancy: the capability reads no schools of a Träger")
+
+// TraegerSchoolsOf is the read of a Träger's schools with their names the
+// capability composed.
+func TraegerSchoolsOf(capability Capability) (TraegerSchools, error) {
+	schools, ok := capability.(TraegerSchools)
+	if !ok {
+		return nil, ErrNoTraegerSchools
+	}
+	return schools, nil
+}
+
 // TraegerMembershipCommand writes Träger memberships.
 type TraegerMembershipCommand interface {
 	// ActivateTraegerMembership creates or reactivates the account's

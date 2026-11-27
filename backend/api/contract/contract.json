@@ -96577,6 +96577,29 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "opening_changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayOpening"
+            }
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -96712,6 +96735,38 @@
           "name": "traeger",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayOpening",
+      "go_type": "traegerview.SchoolDayOpening",
+      "fields": [
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
           }
         },
         {

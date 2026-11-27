@@ -20,7 +20,9 @@ const DebouncedSearchValueContext =
  * silence (#2975). Without a debounce the owning page re-renders per keystroke;
  * with one, only this input does. `value` keeps winning when the owner reports
  * a new term; `resetKey` makes an external reset explicit when that term is
- * already the current controlled value.
+ * already the current controlled value. A `value` that only hands back what
+ * this field reported is no new term: the owner may render it late (slow
+ * device, transition), after more keys were typed, and must not undo them.
  */
 function useDebouncedSearchValue(
   value: string,
@@ -32,9 +34,27 @@ function useDebouncedSearchValue(
   const [draft, setDraft] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeRef = useLatest(onChange);
+  // Terms reported and not yet handed back as `value`, oldest first.
+  const reportedRef = React.useRef<string[]>([]);
+  const appliedResetKeyRef = React.useRef(resetKey);
+
+  const report = React.useCallback(
+    (next: string) => {
+      reportedRef.current.push(next);
+      onChangeRef.current(next);
+    },
+    [onChangeRef],
+  );
   const validate = useLatest(validateDraft);
 
   React.useEffect(() => {
+    const handedBack = reportedRef.current.lastIndexOf(value);
+    if (handedBack >= 0 && appliedResetKeyRef.current === resetKey) {
+      reportedRef.current = reportedRef.current.slice(handedBack + 1);
+      return;
+    }
+    appliedResetKeyRef.current = resetKey;
+    reportedRef.current = [];
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setDraft(value);
   }, [resetKey, value]);
@@ -52,14 +72,14 @@ function useDebouncedSearchValue(
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (validate.current?.(next)) return;
       if (!debounceMs) {
-        onChangeRef.current(next);
+        report(next);
         return;
       }
       timeoutRef.current = setTimeout(() => {
-        onChangeRef.current(next);
+        report(next);
       }, debounceMs);
     },
-    [debounceMs, onChangeRef, validate],
+    [debounceMs, report, validate],
   );
 
   // The clear button is an explicit action, not typing: it reports at once so
@@ -68,9 +88,9 @@ function useDebouncedSearchValue(
     (next: string) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setDraft(next);
-      onChangeRef.current(next);
+      report(next);
     },
-    [onChangeRef],
+    [report],
   );
 
   const shownValue = debounceMs || validateDraft ? draft : value;

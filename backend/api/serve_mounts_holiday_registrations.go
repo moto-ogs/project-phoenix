@@ -60,7 +60,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	}
 	closingDays := mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
 	mountTraegerOpeningChangeRoutes(root, calendarSchools)
-	dayChanges, err := traegerDayChangePorts(closingDays, timetableOwner)
+	dayChanges, err := traegerDayChangePorts(organizations, closingDays, timetableOwner)
 	if err != nil {
 		return err
 	}

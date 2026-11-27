@@ -18,6 +18,10 @@ func (fakeOwnerStore) ListTraegerSchoolIDs(context.Context, int64) ([]int64, dom
 	return nil, domain.OperationStats{}, nil
 }
 
+func (fakeOwnerStore) ListLiveTraegerSchools(context.Context, int64) (domain.TraegerSchoolSet, domain.OperationStats, error) {
+	return domain.TraegerSchoolSet{}, domain.OperationStats{}, nil
+}
+
 func (fakeOwnerStore) ListTraegerMemberships(context.Context, int64) ([]organizationtenancy.TraegerMembership, domain.OperationStats, error) {
 	return nil, domain.OperationStats{}, nil
 }
