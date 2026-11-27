@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Resource serves the Träger projection routes.
@@ -212,9 +213,13 @@ func (rs *Resource) schoolsAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// errDayChangesDateFormat reports a date query parameter that is not
+// YYYY-MM-DD.
+var errDayChangesDateFormat = errors.New("date query parameter must be YYYY-MM-DD")
+
 // schoolsDayChanges answers GET /traeger/schools/day-changes: "Heute anders"
 // of every school of the Träger of the session that has a change today
-// (#7672). It names no person and no reason, so the read is not written to
+// (#7672), or tomorrow with ?date= (#8236). It names no person and no reason, so the read is not written to
 // the access log (ADR 0084 section 7).
 func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
 	principal, err := common.CurrentPrincipal(r.Context())
@@ -222,8 +227,17 @@ func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
 	}
-	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID())
+	var on calendar.Date
+	if raw := r.URL.Query().Get("date"); raw != "" {
+		if on, err = calendar.ParseDate(raw); err != nil {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errDayChangesDateFormat))
+			return
+		}
+	}
+	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID(), on)
 	switch {
+	case errors.Is(err, traegerview.ErrDayOutOfRange):
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	case errors.Is(err, traegerview.ErrTraegerUnavailable):
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 	case err != nil:

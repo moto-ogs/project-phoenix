@@ -2,6 +2,7 @@ package traegerview
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -61,10 +62,15 @@ type SchoolsDayChanges struct {
 
 // DayChangesReport answers "Heute anders" of the Träger-Portal.
 type DayChangesReport interface {
-	// SchoolsDayChanges returns the changes of today of every school of
-	// the Träger that has one.
-	SchoolsDayChanges(ctx context.Context, organizationID int64) (SchoolsDayChanges, error)
+	// SchoolsDayChanges returns the changes on day of every school of the
+	// Träger that has one. The zero day reads today; any other day must be
+	// today or tomorrow in Berlin, else ErrDayOutOfRange (#8236).
+	SchoolsDayChanges(ctx context.Context, organizationID int64, day calendar.Date) (SchoolsDayChanges, error)
 }
+
+// ErrDayOutOfRange reports a day of "Heute anders" other than today or
+// tomorrow (#8236).
+var ErrDayOutOfRange = errors.New("traeger view: day changes read only today and tomorrow")
 
 // DayChangePorts are the owners' reads behind "Heute anders". Schools reads
 // the Träger's schools with their names in one statement at Organisation &

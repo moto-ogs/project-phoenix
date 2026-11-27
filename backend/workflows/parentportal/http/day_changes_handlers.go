@@ -1,6 +1,7 @@
 package parent
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -78,8 +79,14 @@ func childDayChangesEnums() []common.EnumContract {
 	}
 }
 
+// errChildDayDateFormat reports a date query parameter that is not
+// YYYY-MM-DD.
+var errChildDayDateFormat = errors.New("date query parameter must be YYYY-MM-DD")
+
 // getChildDayChanges reads "Heute anders" of a linked child the account may
-// see (parent_portal.access).
+// see (parent_portal.access). Without date it reads today of the child's
+// school; date may name tomorrow for the preview (#8236), any other day is
+// refused after the relationship check.
 func (rs *Resource) getChildDayChanges(w http.ResponseWriter, r *http.Request) {
 	accountID, ok := rs.parentAccountID(w, r)
 	if !ok {
@@ -89,7 +96,20 @@ func (rs *Resource) getChildDayChanges(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	day, err := rs.ParentService.GetChildDayChanges(r.Context(), accountID, studentID)
+	var on calendar.Date
+	if raw := r.URL.Query().Get("date"); raw != "" {
+		parsed, parseErr := calendar.ParseDate(raw)
+		if parseErr != nil {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errChildDayDateFormat))
+			return
+		}
+		on = parsed
+	}
+	day, err := rs.ParentService.GetChildDayChanges(r.Context(), accountID, studentID, on)
+	if errors.Is(err, parentService.ErrDayChangesDayOutOfRange) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return

@@ -2967,6 +2967,9 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/day-changes",
     portals: ["parent"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(ChildDayChangesResponseSchema),
   },
   "GET /parent/me/children/{studentId}/excused-requests": {

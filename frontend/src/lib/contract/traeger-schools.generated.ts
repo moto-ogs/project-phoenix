@@ -791,6 +791,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/day-changes",
     portals: ["org"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(SchoolsDayChangesSchema),
   },
   "GET /traeger/schools/export": {

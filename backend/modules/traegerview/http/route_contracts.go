@@ -23,7 +23,7 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "GET", Pattern: "/alerts", Portals: traegerPortal, Response: traegerview.SchoolsAlerts{}},
 		{Method: "GET", Pattern: "/alerts/export", Portals: traegerPortal, Query: school, File: true},
-		{Method: "GET", Pattern: "/day-changes", Portals: traegerPortal, Response: traegerview.SchoolsDayChanges{}},
+		{Method: "GET", Pattern: "/day-changes", Portals: traegerPortal, Query: []common.QueryParam{{Name: "date", Kind: common.QueryDate}}, Response: traegerview.SchoolsDayChanges{}},
 		{Method: "GET", Pattern: "/occupancy", Portals: traegerPortal, Response: traegerview.Occupancy{}},
 		{Method: "GET", Pattern: "/occupancy/export", Portals: traegerPortal, Query: school, File: true},
 		{Method: "GET", Pattern: "/utilization", Portals: traegerPortal, Query: window, Response: traegerview.Utilization{}},
