@@ -16,6 +16,7 @@ import (
 	"github.com/uptrace/bun"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	apiTest "github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -59,6 +60,10 @@ type traegerOpeningFixture struct {
 // school and another Träger with its own school, behind the Träger routes
 // and the school's own routes.
 func newTraegerOpeningFixture(t *testing.T, db *bun.DB) traegerOpeningFixture {
+	return newTraegerOpeningFixtureWithStaffing(t, db, nil)
+}
+
+func newTraegerOpeningFixtureWithStaffing(t *testing.T, db *bun.DB, staffing calendarAPI.StaffingChangeQueue) traegerOpeningFixture {
 	t.Helper()
 	organization := func(name string) int64 {
 		id := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: name, Slug: fmt.Sprintf("oeffnung-%d", testpkg.UniqueTestTenantID(t))}).ID
@@ -74,12 +79,14 @@ func newTraegerOpeningFixture(t *testing.T, db *bun.DB) traegerOpeningFixture {
 	inner.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(schoolCalendarCompose.NewOpeningChanges()).Router(rootAPI.ProtectedTenantRoutes))
 	f.router = chi.NewRouter()
 	f.router.Mount("/api", inner)
-	f.router.Mount("/traeger/opening-changes", traegerOpeningChangeRoutes(db))
+	f.router.Mount("/traeger/opening-changes", traegerOpeningChangeRoutes(db, staffing))
 	return f
 }
 
-func traegerOpeningChangeRoutes(db *bun.DB) chi.Router {
-	return rootAPI.TraegerOpeningChangeRouter(traegerDirectorySchools{db: db})
+func traegerOpeningChangeRoutes(db *bun.DB, staffing calendarAPI.StaffingChangeQueue) chi.Router {
+	resource := calendarAPI.NewTraegerOpeningChangeResource(schoolCalendarCompose.NewTraegerOpeningChanges(traegerDirectorySchools{db: db}),
+		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage), staffing)
+	return resource.TraegerRouter(rootAPI.ProtectedTraegerRoutes)
 }
 
 func (f traegerOpeningFixture) send(t *testing.T, claims testpkg.Claims, method, path string, body any) *httptest.ResponseRecorder {
@@ -218,6 +225,52 @@ func TestTraegerOpeningChangeReachesOnlyTheNamedSchool(t *testing.T) {
 	assert.False(t, ok, "a deleted change gives the regular session end back")
 }
 
+// A Träger opening change wakes exactly the affected school pages after the
+// write. The serving root makes this callback wait for the transaction's
+// commit, as the Träger closing-day route does.
+func TestTraegerOpeningChangeWakesAffectedSchools(t *testing.T) {
+	t.Parallel()
+	var announced []struct {
+		schoolID int64
+		source   string
+	}
+	staffing := func(_ context.Context, schoolID int64, source string) {
+		announced = append(announced, struct {
+			schoolID int64
+			source   string
+		}{schoolID, source})
+	}
+	f := newTraegerOpeningFixtureWithStaffing(t, testpkg.SetupTestDB(t), staffing)
+	admin := f.office(f.traeger, identityaccess.TraegerRoleAdministration)
+
+	rec := f.send(t, admin, http.MethodPost, traegerOpeningChangesPath, traegerShortDay("Kurz", f.named))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	created := decodeOpeningChangeData[traegerOpeningChangeBody](t, rec)
+	require.Equal(t, []struct {
+		schoolID int64
+		source   string
+	}{{f.named, "opening_changes"}}, announced)
+
+	announced = nil
+	update := traegerShortDay("Kurz", f.unnamed)
+	update["expected_version"] = created.Version
+	rec = f.send(t, admin, http.MethodPut, traegerOpeningChangesPath+created.ID, update)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	updated := decodeOpeningChangeData[traegerOpeningChangeBody](t, rec)
+	require.Equal(t, []struct {
+		schoolID int64
+		source   string
+	}{{f.named, "opening_changes"}, {f.unnamed, "opening_changes"}}, announced, "removed and added schools both refresh")
+
+	announced = nil
+	rec = f.send(t, admin, http.MethodDelete, traegerOpeningChangesPath+updated.ID, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, []struct {
+		schoolID int64
+		source   string
+	}{{f.unnamed, "opening_changes"}}, announced)
+}
+
 // A Träger and a school use independent ID sequences. The school route must
 // reject a visible Träger ID even when it happens to name one of its own rows.
 func TestSchoolCannotWriteOpeningChangeThroughCollidingTraegerID(t *testing.T) {
@@ -258,7 +311,7 @@ func TestTraegerOpeningChangeListQueryBudgetStaysFlat(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	f := newTraegerOpeningFixture(t, db)
 	inner := chi.NewRouter()
-	inner.Mount("/opening-changes", traegerOpeningChangeRoutes(db))
+	inner.Mount("/opening-changes", traegerOpeningChangeRoutes(db, nil))
 	router := testpkg.MountedQueryBudgetRouter("/traeger", inner)
 	admin := f.office(f.traeger, identityaccess.TraegerRoleAdministration)
 	counter := testpkg.CaptureQueriesForContext(t, db)

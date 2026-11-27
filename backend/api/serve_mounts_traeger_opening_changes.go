@@ -13,12 +13,12 @@ import (
 // mountTraegerOpeningChangeRoutes serves the opening changes of a Träger
 // (#8202) at /traeger/opening-changes: reading behind "Übersicht sehen",
 // planning behind "Einstellungen verwalten", like the Träger's closing days.
-func mountTraegerOpeningChangeRoutes(root chi.Router, schools traegercalendar.Schools) {
-	root.Mount("/traeger/opening-changes", newTraegerOpeningChangeRouter(schools))
+func mountTraegerOpeningChangeRoutes(root chi.Router, schools traegercalendar.Schools, staffing schoolCalendarHTTP.StaffingChangeQueue) {
+	root.Mount("/traeger/opening-changes", newTraegerOpeningChangeRouter(schools, staffing))
 }
 
-func newTraegerOpeningChangeRouter(schools traegercalendar.Schools) chi.Router {
+func newTraegerOpeningChangeRouter(schools traegercalendar.Schools, staffing schoolCalendarHTTP.StaffingChangeQueue) chi.Router {
 	resource := schoolCalendarHTTP.NewTraegerOpeningChangeResource(schoolCalendarCompose.NewTraegerOpeningChanges(schools),
-		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
+		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage), staffing)
 	return resource.TraegerRouter(ProtectedTraegerRoutes)
 }

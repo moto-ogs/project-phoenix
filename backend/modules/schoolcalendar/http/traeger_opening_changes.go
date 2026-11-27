@@ -1,6 +1,7 @@
 package staffcalendarhttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -24,15 +25,18 @@ type TraegerOpeningChangeResource struct {
 	changes       traegercalendar.OpeningChanges
 	requireRead   common.Middleware
 	requireManage common.Middleware
+	staffing      StaffingChangeQueue
 }
+
+const openingChangeSource = "opening_changes"
 
 // NewTraegerOpeningChangeResource builds the resource; the root binds the
 // right checks to the rights Identity & Access bundles into the Träger roles.
-func NewTraegerOpeningChangeResource(changes traegercalendar.OpeningChanges, requireRead, requireManage common.Middleware) *TraegerOpeningChangeResource {
+func NewTraegerOpeningChangeResource(changes traegercalendar.OpeningChanges, requireRead, requireManage common.Middleware, staffing StaffingChangeQueue) *TraegerOpeningChangeResource {
 	if changes == nil || requireRead == nil || requireManage == nil {
 		panic("school calendar http: the Träger opening changes and the right checks are required")
 	}
-	return &TraegerOpeningChangeResource{changes: changes, requireRead: requireRead, requireManage: requireManage}
+	return &TraegerOpeningChangeResource{changes: changes, requireRead: requireRead, requireManage: requireManage, staffing: staffing}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/opening-changes.
@@ -108,6 +112,7 @@ func (rs *TraegerOpeningChangeResource) create(w http.ResponseWriter, r *http.Re
 		renderTraegerOpeningChangeError(w, r, err)
 		return
 	}
+	rs.announceOpeningChange(r.Context(), change.AffectedSchoolIDs)
 	common.Respond(w, r, http.StatusCreated, change, "Träger opening change created successfully")
 }
 
@@ -131,6 +136,7 @@ func (rs *TraegerOpeningChangeResource) update(w http.ResponseWriter, r *http.Re
 		renderTraegerOpeningChangeError(w, r, err)
 		return
 	}
+	rs.announceOpeningChange(r.Context(), change.AffectedSchoolIDs)
 	common.Respond(w, r, http.StatusOK, change, "Träger opening change updated successfully")
 }
 
@@ -144,11 +150,26 @@ func (rs *TraegerOpeningChangeResource) delete(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(traegercalendar.ErrOpeningChangeNotFound, common.CodeTraegerOpeningChangeNotFound))
 		return
 	}
-	if err := rs.changes.DeleteOpeningChange(r.Context(), organizationID, id); err != nil {
+	change, err := rs.changes.DeleteOpeningChange(r.Context(), organizationID, id)
+	if err != nil {
 		renderTraegerOpeningChangeError(w, r, err)
 		return
 	}
+	rs.announceOpeningChange(r.Context(), change.AffectedSchoolIDs)
 	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: "deleted"}, "Träger opening change deleted successfully")
+}
+
+// announceOpeningChange wakes exactly the school pages that can display a
+// changed Träger opening time. The Träger request has no school in its
+// context, so the saved operation supplies the affected school IDs. The
+// injected queue waits for the surrounding transaction to commit.
+func (rs *TraegerOpeningChangeResource) announceOpeningChange(ctx context.Context, schoolIDs []int64) {
+	if rs.staffing == nil || len(schoolIDs) == 0 {
+		return
+	}
+	for _, schoolID := range schoolIDs {
+		rs.staffing(ctx, schoolID, openingChangeSource)
+	}
 }
 
 // renderTraegerOpeningChangeError names a refusal. A change written since it

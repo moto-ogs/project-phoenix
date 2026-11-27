@@ -59,7 +59,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
 	closingDays := mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
-	mountTraegerOpeningChangeRoutes(root, calendarSchools)
+	mountTraegerOpeningChangeRoutes(root, calendarSchools, staffing)
 	dayChanges, err := traegerDayChangePorts(organizations, closingDays, timetableOwner)
 	if err != nil {
 		return err

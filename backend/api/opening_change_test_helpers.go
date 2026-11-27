@@ -32,5 +32,5 @@ func OpeningChangeClosingTimes() func(context.Context, calendar.Date) (string, b
 // TraegerOpeningChangeRouter is the router the serving root mounts at
 // /traeger/opening-changes (#8202), over the Träger's schools.
 func TraegerOpeningChangeRouter(schools traegercalendar.Schools) chi.Router {
-	return newTraegerOpeningChangeRouter(schools)
+	return newTraegerOpeningChangeRouter(schools, nil)
 }

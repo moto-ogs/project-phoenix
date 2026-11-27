@@ -82,7 +82,9 @@ func (t *TraegerOpeningChanges) CreateOpeningChange(ctx context.Context, organiz
 	if err != nil {
 		return traegercalendar.OpeningChange{}, traegerOpeningChangeError(err)
 	}
-	return traegerOpeningChange(change), nil
+	result := traegerOpeningChange(change)
+	result.AffectedSchoolIDs = append([]int64(nil), change.SchoolIDs...)
+	return result, nil
 }
 
 // UpdateOpeningChange replaces a change of the Träger in the version it read.
@@ -108,23 +110,35 @@ func (t *TraegerOpeningChanges) UpdateOpeningChange(ctx context.Context, organiz
 	if err := readstate.Check(input.ExpectedVersion, readstate.Of(previous.UpdatedAt)); err != nil {
 		return traegercalendar.OpeningChange{}, err
 	}
-	return storedTraegerOpeningChange(t.store.UpdateTraegerOpeningChange(ctx, organizationID, id, fields))
+	change, err := storedTraegerOpeningChange(t.store.UpdateTraegerOpeningChange(ctx, organizationID, id, fields))
+	if err != nil {
+		return traegercalendar.OpeningChange{}, err
+	}
+	change.AffectedSchoolIDs = affectedSchoolIDs(previous.SchoolIDs, ident.Int64s(change.SchoolIDs))
+	return change, nil
 }
 
 // DeleteOpeningChange removes a change of the Träger under its row lock; the
-// named schools count it no longer from the next read on.
-func (t *TraegerOpeningChanges) DeleteOpeningChange(ctx context.Context, organizationID, id int64) error {
+// named schools count it no longer from the next read on. The returned
+// schools let the route wake their current views after the transaction commits.
+func (t *TraegerOpeningChanges) DeleteOpeningChange(ctx context.Context, organizationID, id int64) (traegercalendar.OpeningChange, error) {
 	if organizationID <= 0 {
-		return errTraegerRequired
+		return traegercalendar.OpeningChange{}, errTraegerRequired
 	}
 	if id <= 0 {
-		return traegercalendar.ErrOpeningChangeNotFound
+		return traegercalendar.OpeningChange{}, traegercalendar.ErrOpeningChangeNotFound
 	}
 	// The lock refuses a change of another Träger before the delete runs.
-	if _, err := t.store.LockTraegerOpeningChange(ctx, organizationID, id); err != nil {
-		return traegerOpeningChangeError(err)
+	previous, err := t.store.LockTraegerOpeningChange(ctx, organizationID, id)
+	if err != nil {
+		return traegercalendar.OpeningChange{}, traegerOpeningChangeError(err)
 	}
-	return traegerOpeningChangeError(t.store.DeleteTraegerOpeningChange(ctx, organizationID, id))
+	if err := traegerOpeningChangeError(t.store.DeleteTraegerOpeningChange(ctx, organizationID, id)); err != nil {
+		return traegercalendar.OpeningChange{}, err
+	}
+	change := traegerOpeningChange(previous)
+	change.AffectedSchoolIDs = append([]int64(nil), previous.SchoolIDs...)
+	return change, nil
 }
 
 // checkedTraegerOpeningChange normalizes input and refuses a school that is

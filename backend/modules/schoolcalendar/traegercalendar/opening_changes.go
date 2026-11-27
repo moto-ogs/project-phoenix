@@ -48,6 +48,10 @@ type OpeningChange struct {
 	SchoolIDs []ident.ID    `json:"school_ids"`
 	// Version is the token a change sends back as expected_version (ADR 0311).
 	Version string `json:"version"`
+	// AffectedSchoolIDs names every school whose opening hours changed through
+	// this write. It includes schools removed from an updated change and is not
+	// part of the HTTP response.
+	AffectedSchoolIDs []int64 `json:"-"`
 }
 
 // OpeningChangeInput is an opening change as the Träger-Büro writes it.
@@ -70,5 +74,7 @@ type OpeningChanges interface {
 	ListOpeningChanges(ctx context.Context, organizationID int64, from, to calendar.Date) ([]OpeningChange, error)
 	CreateOpeningChange(ctx context.Context, organizationID int64, input OpeningChangeInput) (OpeningChange, error)
 	UpdateOpeningChange(ctx context.Context, organizationID, id int64, input OpeningChangeInput) (OpeningChange, error)
-	DeleteOpeningChange(ctx context.Context, organizationID, id int64) error
+	// DeleteOpeningChange removes a change and returns its schools so their
+	// current views can refresh after the surrounding transaction commits.
+	DeleteOpeningChange(ctx context.Context, organizationID, id int64) (OpeningChange, error)
 }
