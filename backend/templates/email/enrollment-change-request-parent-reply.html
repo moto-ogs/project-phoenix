@@ -1,7 +1,5 @@
 {{define "enrollment-change-request-parent-reply.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Antwort auf Änderungsanfrage</h1>
 
@@ -11,14 +9,11 @@
         <p style="margin: 0; font-size: 14px;"><strong>Erziehungsberechtigte/r:</strong> {{.GuardianFirstName}} {{.GuardianLastName}}</p>
     </div>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.AdminURL}}">Antwort prüfen</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.AdminURL}}">{{.AdminURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .AdminURL}}
 
 {{template "footer" .}}
 {{end}}

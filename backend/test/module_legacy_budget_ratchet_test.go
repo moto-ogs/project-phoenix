@@ -185,7 +185,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose/imports": 31,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
-	"modules/delivery/compose":         394,
+	"modules/delivery/compose":         387,
 	"modules/delivery/objects/compose": 12, // ADR 0293
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,

@@ -14,7 +14,6 @@ import (
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/observability"
@@ -68,14 +67,4 @@ func requiredLink(name, raw string, production bool) (string, error) {
 type GroupRoster interface {
 	GroupMembers(ctx context.Context, groupID int64) ([]grouplive.RosterStudent, error)
 	GroupMemberIDs(ctx context.Context, groupIDs []int64) (map[int64][]int64, error)
-}
-
-// WorkforceMail is the tenant mail the absence requests go out through.
-type WorkforceMail struct {
-	Dispatcher interface {
-		Dispatch(context.Context, email.DeliveryRequest)
-	}
-	From        email.Email
-	ReplyTo     email.ReplyToResolver
-	FrontendURL string
 }

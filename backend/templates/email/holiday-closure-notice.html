@@ -1,7 +1,6 @@
 {{define "holiday-closure-notice.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
+    {{template "sender-brand" .}}
     {{if .ContainsPastDays}}
     <h1>Hinweis zu vergangenen Schließtagen</h1>
     {{else if and .Children .ReopenedChildren}}
@@ -68,7 +67,7 @@
     {{end}}
     {{end}}
 
-    <div class="highlight-box" style="margin-top: 24px;">
+    <div class="highlight-box{{if and .Children (not .ContainsPastDays)}} action-notice{{end}}" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Was heißt das für Sie?</strong></p>
         {{if and .Children (not .ContainsPastDays)}}<p style="margin: 8px 0 0 0; font-size: 14px;">Bitte planen Sie für die geschlossenen Tage eine andere Betreuung.</p>{{end}}
         <p style="margin: 8px 0 0 0; font-size: 14px;">Ihre Buchung bleibt. Sie müssen nichts ändern.</p>
@@ -77,8 +76,7 @@
         {{if .KeepsContribution}}<p style="margin: 8px 0 0 0; font-size: 14px;">Der Beitrag bleibt gleich.</p>{{end}}
     </div>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}}</p>
 
 {{template "footer" .}}
 {{end}}

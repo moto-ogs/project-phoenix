@@ -52,7 +52,7 @@ import (
 // Audit trails appending outside a tenant transaction. It returns the
 // single-owner values the test roots hand out.
 func composeTestRoot(db transactionruntime.Database, logger *slog.Logger, cfg owners.ServiceConfig, clocks ...func() time.Time) (
-	env owners.RootEnvironment, mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, pushVAPID deliveryCompose.VAPIDConfig, hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, settings owners.SettingsOwner,
+	env owners.RootEnvironment, mailSender email.Mailer, mailFrom email.Email, pushVAPID deliveryCompose.VAPIDConfig, hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, settings owners.SettingsOwner,
 	persons *peopleCompose.Directory, services owners.PeopleServices, schedules owners.CarePlanSchedules, requests owners.CarePlanRequests,
 	active studentpresence.Presence, reports owners.PresenceReports, lifecycle owners.TimetableLifecycle, planning TimetablePlanning,
 	materialization timetable.MaterializationCapability, provisioning organizationtenancy.OperatorProvisioning,
@@ -63,7 +63,7 @@ func composeTestRoot(db transactionruntime.Database, logger *slog.Logger, cfg ow
 }
 
 func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cfg owners.ServiceConfig, observe owners.RootObservers, clocks ...func() time.Time) (
-	env owners.RootEnvironment, mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, pushVAPID deliveryCompose.VAPIDConfig, hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, settings owners.SettingsOwner,
+	env owners.RootEnvironment, mailSender email.Mailer, mailFrom email.Email, pushVAPID deliveryCompose.VAPIDConfig, hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, settings owners.SettingsOwner,
 	persons *peopleCompose.Directory, services owners.PeopleServices, schedules owners.CarePlanSchedules, requests owners.CarePlanRequests,
 	active studentpresence.Presence, reports owners.PresenceReports, lifecycle owners.TimetableLifecycle, planning TimetablePlanning,
 	materialization timetable.MaterializationCapability, provisioning organizationtenancy.OperatorProvisioning,
@@ -141,7 +141,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) { audit, err = owners.BuildAuditOwner(db, env); return },
 		func() (err error) {
-			mailSender, mailDispatcher, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
+			mailSender, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
 			return
 		},
 		func() (err error) { organizations, err = owners.BuildServeOrganizations(db, env.Now); return },
@@ -220,7 +220,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
 			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, nativeUploads.UploadFiles{}, organizations, persons, membership, settings.Service,
-				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
+				audit, operatorAuditLog, mailSender, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
 				presence.SessionRecords, presence.Presence, workTime, calendar)
 			return
@@ -379,26 +379,26 @@ func NewTestIdentityAccess(db transactionruntime.Database, logger *slog.Logger, 
 // NewTestIdentityAccessWithConfig builds the Identity & Access module of a
 // test root over the given configuration.
 func NewTestIdentityAccessWithConfig(db transactionruntime.Database, logger *slog.Logger, cfg owners.ServiceConfig, clocks ...func() time.Time) (identityaccess.Owner, error) {
-	_, _, _, _, _, _, identity, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, cfg, clocks...)
+	_, _, _, _, _, identity, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, cfg, clocks...)
 	return identity, err
 }
 
 // NewTestActivePresence builds the active service of a test root.
 func NewTestActivePresence(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) (studentpresence.Presence, error) {
-	_, _, _, _, _, _, _, _, _, _, _, _, _, active, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, _, _, _, _, _, _, _, active, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return active, err
 }
 
 // NewTestPresenceCleanup builds the presence cleanup of a test root.
 func NewTestPresenceCleanup(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) (studentpresence.PresenceCleanup, error) {
-	_, _, _, _, _, _, _, _, _, _, _, _, _, _, reports, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, _, _, _, _, _, _, _, _, reports, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return reports.ActiveCleanup, err
 }
 
 // NewTestCarePlanSchedules builds Care Plan's lifecycle and schedules of a
 // test root.
 func NewTestCarePlanSchedules(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) (owners.CarePlanSchedules, error) {
-	_, _, _, _, _, _, _, _, _, _, _, schedules, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, _, _, _, _, _, schedules, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return schedules, err
 }
 
@@ -408,14 +408,14 @@ func NewTestCarePlanSchedules(db transactionruntime.Database, logger *slog.Logge
 func NewTestCareRequests(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) (
 	owners.CarePlanRequests, owners.CarePlanSchedules, owners.PeopleServices, *owners.CallerRows, *peopleCompose.Directory, settingsCompose.BatchSettingsService, error,
 ) {
-	_, _, _, _, _, _, _, caller, settings, persons, services, schedules, requests, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, _, caller, settings, persons, services, schedules, requests, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return requests, schedules, services, caller, persons, settings.Service, err
 }
 
 // NewTestPeopleServices builds the People Directory services of a test root
 // with the Identity & Access module they are composed over.
 func NewTestPeopleServices(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) (owners.PeopleServices, identityaccess.Owner, error) {
-	_, _, _, _, _, _, identity, _, _, _, services, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, identity, _, _, _, services, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return services, identity, err
 }
 
@@ -426,7 +426,7 @@ func NewTestTimetable(db transactionruntime.Database, logger *slog.Logger, clock
 	owners.TimetableLifecycle, TimetablePlanning, timetable.MaterializationCapability, studentpresence.Presence, owners.CarePlanSchedules,
 	carePlanModule.CareOfferingCapability, studentpresence.StatusDays, error,
 ) {
-	_, _, _, _, _, _, _, _, _, _, _, schedules, requests, active, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, statusDays, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, _, _, _, _, _, _, schedules, requests, active, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, statusDays, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return lifecycle, planning, materialization, active, schedules, requests.CareOfferings, statusDays, err
 }
 
@@ -436,7 +436,7 @@ func NewTestTimetableWithHub(db transactionruntime.Database, logger *slog.Logger
 	owners.TimetableLifecycle, TimetablePlanning, timetable.MaterializationCapability, studentpresence.Presence, owners.CarePlanSchedules,
 	carePlanModule.CareOfferingCapability, studentpresence.StatusDays, *realtime.Hub, error,
 ) {
-	_, _, _, _, _, hub, _, _, _, _, _, schedules, requests, active, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, statusDays, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
+	_, _, _, _, hub, _, _, _, _, _, schedules, requests, active, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, statusDays, err := composeTestRoot(db, logger, currentTestServiceConfig(), clocks...)
 	return lifecycle, planning, materialization, active, schedules, requests.CareOfferings, statusDays, hub, err
 }
 

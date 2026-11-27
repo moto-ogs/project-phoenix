@@ -1,7 +1,5 @@
 {{define "operator-email-change-confirmed.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>E-Mail-Adresse wurde geändert</h1>
     <p>Guten Tag,</p>
@@ -12,7 +10,6 @@
     </div>
 
     <p class="security-note">Diese E-Mail wurde automatisch gesendet, weil die E-Mail-Adresse Ihres Kontos geändert wurde.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

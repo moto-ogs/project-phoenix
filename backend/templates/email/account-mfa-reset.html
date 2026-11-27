@@ -1,7 +1,5 @@
 {{define "account-mfa-reset.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>Ihre Zwei-Faktor-Anmeldung wurde zurückgesetzt</h1>
     <p>Hallo,</p>
@@ -15,7 +13,6 @@
     {{else}}
     <p>Melden Sie sich danach bei der Verwaltung Ihrer Schule.</p>
     {{end}}
-</div>
 
 {{template "footer" .}}
 {{end}}

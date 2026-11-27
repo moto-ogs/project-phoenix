@@ -62,13 +62,12 @@ func BuildAuditOwner(db transactionruntime.Database, env RootEnvironment) (Audit
 	return AuditOwner{Persistence: audits.WithRoutedWrites(command), Command: command}, nil
 }
 
-// BuildMailTransport binds the process's realtime hub, builds the mail
-// transport and the web push configuration. An invalid VAPID configuration fails startup.
-func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, email.Email, deliveryCompose.VAPIDConfig, error) {
+// BuildMailTransport builds SMTP and web push configuration.
+func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Email, deliveryCompose.VAPIDConfig, error) {
 	cfg, logger := env.Config, env.Logger
 	provider := email.ProviderConfig(cfg.EmailProvider)
 	if err := provider.Validate(); err != nil {
-		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid email provider configuration: %w", err)
+		return nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid email provider configuration: %w", err)
 	}
 	lettermint, securityFallback := provider.MailSettings()
 	mailer, err := deliveryCompose.NewMailTransport(email.MailerConfig{
@@ -78,7 +77,7 @@ func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, em
 		Lettermint: lettermint, SecurityFallback: securityFallback,
 	})
 	if err != nil {
-		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("initialize email transport: %w", err)
+		return nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("initialize email transport: %w", err)
 	}
 	if deliveryCompose.IsLoggingMailTransport(mailer) {
 		logger.Warn("SMTP mailer not configured; using mock mailer (tokens will not be sent via SMTP)")
@@ -87,11 +86,9 @@ func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, em
 		PublicKey: strings.TrimSpace(cfg.VAPIDPublicKey), PrivateKey: strings.TrimSpace(cfg.VAPIDPrivateKey), Subscriber: strings.TrimSpace(cfg.VAPIDSubscriber),
 	}
 	if err := vapid.Validate(); err != nil {
-		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid VAPID configuration: %w", err)
+		return nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid VAPID configuration: %w", err)
 	}
-	return mailer,
-		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), clockOrReal(env.Now), email.DeliveryObserver(env.Observe.Delivery)),
-		email.NewEmail(deliveryModule.SenderOrDefault(cfg.EmailFromName, cfg.EmailFromAddress)), vapid, nil
+	return mailer, email.NewEmail(deliveryModule.SenderOrDefault(cfg.EmailFromName, cfg.EmailFromAddress)), vapid, nil
 }
 
 // SettingsOwner is the Settings Platform: the tenant settings runtime its

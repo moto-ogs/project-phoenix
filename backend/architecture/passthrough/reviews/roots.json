@@ -5853,12 +5853,12 @@
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",

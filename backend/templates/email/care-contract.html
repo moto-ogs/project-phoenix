@@ -1,7 +1,6 @@
 {{define "care-contract.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Betreuungsvertrag</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -20,17 +19,18 @@
         {{if .SigningURL}}<p style="margin: 8px 0 0 0; font-size: 14px;">Stimmt alles? Dann unterschreiben Sie den Vertrag online.</p>{{end}}
     </div>
 {{if .SigningURL}}
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.SigningURL}}">Vertrag unterschreiben</a>
     </div>
     {{end}}
 
-    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie den Vertrag aus und geben Sie ihn beim Träger ab.</p>
+    <div class="highlight-box">
+        <p>Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie den Vertrag aus und geben Sie ihn beim Träger ab.</p>
+    </div>
 {{end}}
     <p>Haben Sie die moto Eltern-App? Dann finden Sie den Vertrag auch dort unter „Dokumente“{{if .SigningURL}} und können ihn dort unterschreiben{{end}}.</p>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Vertrag.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}} Die Kontaktdaten stehen im Vertrag.</p>
 
 {{template "footer" .}}
 {{end}}
