@@ -159,5 +159,5 @@ func NoticeRoomClosures(db transactionruntime.Database, closures facilitiesModul
 	if err != nil || notices == nil {
 		return closures, err
 	}
-	return facilitiesCompose.NewNoticedClosures(closures, notices, today), nil
+	return facilitiesCompose.NewNoticedClosures(closures, notices, today)
 }

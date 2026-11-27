@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/domain"
+	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 var errClosureNotice = errors.New("write notice")
@@ -30,28 +33,14 @@ func (*closureNoticeTransaction) AcquireLock(context.Context, string) error { re
 
 type closureNoticeTransactionKey struct{}
 
-type closureNoticeClosures struct {
-	closedInTransaction bool
+type closureNoticeStore struct {
+	closureLockStore
+	insertedInTransaction bool
 }
 
-func (c *closureNoticeClosures) CloseRoom(ctx context.Context, _ facilities.CloseRoom) (facilities.RoomClosure, error) {
-	c.closedInTransaction, _ = ctx.Value(closureNoticeTransactionKey{}).(bool)
-	day := calendar.NewDate(2026, 11, 26)
-	return facilities.RoomClosure{ID: 7, RoomID: 8, RoomName: "Werkraum", StartDate: day, EndDate: day, Reason: "Wasserschaden"}, nil
-}
-
-func (*closureNoticeClosures) ReopenRoom(context.Context, int64, int64) error { return nil }
-
-func (*closureNoticeClosures) ListRoomClosures(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, error) {
-	return nil, nil
-}
-
-func (*closureNoticeClosures) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) {
-	return false, nil
-}
-
-func (*closureNoticeClosures) RoomClosureRanges(context.Context, []int64, calendar.Date, calendar.Date) ([]facilities.RoomClosure, error) {
-	return nil, nil
+func (s *closureNoticeStore) InsertClosure(ctx context.Context, input facilities.CloseRoom) (facilities.RoomClosure, domain.OperationStats, error) {
+	s.insertedInTransaction, _ = ctx.Value(closureNoticeTransactionKey{}).(bool)
+	return facilities.RoomClosure{ID: 7, RoomID: input.RoomID, StartDate: input.StartDate, EndDate: input.EndDate, Reason: input.Reason}, domain.OperationStats{}, nil
 }
 
 type rejectedClosureNotice struct {
@@ -67,14 +56,17 @@ func TestNoticedClosuresRollsBackClosureWhenNoticeFails(t *testing.T) {
 	t.Parallel()
 
 	transaction := &closureNoticeTransaction{}
-	closures := &closureNoticeClosures{}
+	store := &closureNoticeStore{}
 	notices := &rejectedClosureNotice{}
-	service := NewNoticedClosures(closures, notices, transaction, func() calendar.Date { return calendar.NewDate(2026, 11, 26) })
+	today := calendar.NewDate(2026, 11, 26)
+	closures := NewClosures(NewRooms(store, transaction, func(ports.Observation) {}), store, func() calendar.Date { return today })
+	service, err := NewNoticedClosures(closures, notices, func() calendar.Date { return today })
+	require.NoError(t, err)
 
-	_, err := service.CloseRoom(context.Background(), facilities.CloseRoom{RoomID: 8})
+	_, err = service.CloseRoom(testpkg.TenantContext(47), facilities.CloseRoom{RoomID: 8, StartDate: today, EndDate: today, Reason: "Wasserschaden"})
 
 	require.ErrorIs(t, err, errClosureNotice)
-	assert.True(t, closures.closedInTransaction, "the closure write belongs to the outer transaction")
+	assert.True(t, store.insertedInTransaction, "the closure write belongs to the outer transaction")
 	assert.True(t, notices.calledInTransaction, "the durable notification belongs to the closure transaction")
 	assert.Zero(t, transaction.commits, "a rejected notification rolls back the closure transaction")
 }
