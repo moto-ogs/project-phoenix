@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   today: "2026-09-09",
   selectedDate: "2026-09-09",
   overview: undefined as DayChangesOverview | undefined,
+  overviewByDate: undefined as Record<string, DayChangesOverview> | undefined,
   classes: undefined as
     | {
         school_day: boolean;
@@ -52,8 +53,9 @@ vi.mock("~/lib/swr", () => ({
       requestedChangeKeys(key);
       // Die Übersicht trägt den Tag ihres Schlüssels.
       const date = key.slice("school-day-changes-".length);
+      const overview = state.overviewByDate?.[date] ?? state.overview;
       return {
-        data: state.overview && { ...state.overview, date },
+        data: overview && { ...overview, date },
         error: undefined,
         mutate: reloadChanges,
       };
@@ -100,6 +102,7 @@ describe("SchoolDayChangesBlock", () => {
     requestedChangeKeys.mockReset();
     state.today = "2026-09-09";
     state.selectedDate = "2026-09-09";
+    state.overviewByDate = undefined;
     state.permissions = ["class_day:read"];
     state.classes = {
       school_day: true,
@@ -292,9 +295,11 @@ describe("SchoolDayChangesBlock", () => {
       classes: [{ school_class: "3a", changes: 0 }],
     };
 
-    const { container } = renderBlock();
+    renderBlock();
 
-    expect(container.firstChild).toBeNull();
+    // Anker: Der Umschalter bleibt für eigene Änderungen von morgen sichtbar.
+    expect(screen.getByRole("button", { name: "Morgen" })).toBeVisible();
+    expect(screen.queryByText("Heute läuft alles wie geplant.")).toBeNull();
   });
 
   it("gibt bei einem Teilausfall nie Entwarnung", () => {
@@ -395,6 +400,7 @@ describe("SchoolDayChangesBlock: Vorschau auf morgen (#7657)", () => {
     requestedChangeKeys.mockReset();
     state.today = "2026-09-09";
     state.selectedDate = "2026-09-09";
+    state.overviewByDate = undefined;
     state.permissions = ["class_day:read", "calendar:school"];
     state.classes = { school_day: true, classes: [] };
     state.overview = {
@@ -435,5 +441,35 @@ describe("SchoolDayChangesBlock: Vorschau auf morgen (#7657)", () => {
     renderBlock();
     fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
     expect(screen.getByText("Morgen läuft alles wie geplant.")).toBeVisible();
+  });
+
+  it("zeigt ohne Schulkalender die Änderungen der eigenen Klassen von morgen", async () => {
+    const { nextDayISO } = await import("~/components/home/day-switch");
+    const tomorrow = nextDayISO(state.today);
+    state.permissions = ["class_day:read"];
+    state.overviewByDate = {
+      [state.today]: { date: state.today, failedSources: [], entries: [] },
+      [tomorrow]: {
+        date: tomorrow,
+        failedSources: [],
+        entries: [
+          change({
+            kind: "class_dismissal_changed",
+            section: "you",
+            schoolClass: { name: "3a", time: "11:30", children: 0 },
+            link: { target: "school_class", staffId: null },
+          }),
+        ],
+      },
+    };
+    renderBlock();
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      screen.getByText(
+        "Bei Klasse 3a endet der Unterricht morgen um 11:30 Uhr.",
+      ),
+    ).toBeVisible();
   });
 });

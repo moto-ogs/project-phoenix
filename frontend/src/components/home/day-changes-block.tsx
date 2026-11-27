@@ -87,20 +87,22 @@ export function DayChangesBlock() {
   const [day, setDay] = useState<DayChangesDay>("today");
   const today = useBerlinToday();
   const tomorrow = nextDayISO(today);
-  const date = day === "tomorrow" ? tomorrow : undefined;
+  const shown = day === "tomorrow" ? tomorrow : today;
+  const date = day === "tomorrow" ? shown : undefined;
   const {
     data: anyDay,
     error,
     isLoading,
     mutate,
   } = useSWRAuth<DayChangesOverview>(
-    homeKeys.dayChanges(accountId, date),
+    // Der heutige Schlüssel trägt den Berliner Kalendertag: nach Mitternacht
+    // darf nie die gestrige, undatierte Antwort im Cache stehen bleiben.
+    homeKeys.dayChanges(accountId, shown),
     () => fetchDayChanges(date),
     // Abgleich beim Fokus des Fensters (#7659), zusätzlich zu den
     // SSE-Ereignissen und dem Abgleich nach erneuter Verbindung.
     { revalidateOnFocus: true },
   );
-  const shown = day === "tomorrow" ? tomorrow : today;
   const data = isOverviewOfDay(anyDay, shown) ? anyDay : undefined;
   const loadError = useSwrLoadError(error, "die Übersicht „Heute anders“", () =>
     mutate(),

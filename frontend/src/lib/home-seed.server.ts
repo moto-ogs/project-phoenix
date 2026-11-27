@@ -249,7 +249,7 @@ export async function loadHomeSeed(slug: string) {
   const keys = new Set(placements.map(({ key }) => key));
   if (keys.has("section.day_changes")) {
     entries.push({
-      key: homeKeys.dayChanges(session.user.id),
+      key: homeKeys.dayChanges(session.user.id, today),
       value: seedRead("homeDayChanges", async (signal) =>
         mapDayChanges(
           (

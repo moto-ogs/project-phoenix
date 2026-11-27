@@ -14,11 +14,22 @@ import { setTestClock } from "~/test/clock";
 const useSWRAuth = vi.hoisted(() => vi.fn());
 const trackEvent = vi.hoisted(() => vi.fn());
 const phone = vi.hoisted(() => ({ value: false }));
+const berlinDay = vi.hoisted(() => ({ value: "2026-09-09" }));
+const roles = vi.hoisted(() => ({ value: [] as string[] }));
+const permissions = vi.hoisted(() => ({ value: [] as string[] }));
 const acknowledgeStaffNotice = vi.hoisted(() => vi.fn());
 const invalidate = vi.hoisted(() => vi.fn());
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { id: "account-a" } } }),
+  useSession: () => ({
+    data: {
+      user: {
+        id: "account-a",
+        roles: roles.value,
+        permissions: permissions.value,
+      },
+    },
+  }),
 }));
 vi.mock("~/lib/swr", () => ({
   useSWRAuth,
@@ -39,6 +50,9 @@ vi.mock("~/lib/tenant-path", () => ({
 vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/hooks/use-media-query")>()),
   useMediaQuery: () => phone.value,
+}));
+vi.mock("~/lib/hooks/use-berlin-today", () => ({
+  useBerlinToday: () => berlinDay.value,
 }));
 
 import { DayChangesBlock } from "./day-changes-block";
@@ -115,19 +129,24 @@ function rowTexts(region: HTMLElement): string[] {
 }
 
 // Die festen Übersichts-Fixtures liegen am 9. September 2026.
-beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
+beforeEach(() => {
+  setTestClock("2026-09-09T12:00:00+02:00");
+  berlinDay.value = "2026-09-09";
+});
 
 describe("DayChangesBlock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     phone.value = false;
+    roles.value = [];
+    permissions.value = [];
   });
 
   it("liest die Übersicht je Konto", () => {
     serve({});
     render(<DayChangesBlock />);
     expect(useSWRAuth).toHaveBeenCalledWith(
-      "home-day-changes:account-a",
+      "home-day-changes:account-a:2026-09-09",
       expect.any(Function),
       { revalidateOnFocus: true },
     );
@@ -1290,6 +1309,7 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
     const { nextDayISO } = await import("~/components/home/day-switch");
     today = berlinTodayISO();
     tomorrow = nextDayISO(today);
+    berlinDay.value = today;
   });
 
   it("liest morgen über den Umschalter mit eigenem Schlüssel und Sätzen für morgen", () => {
@@ -1328,7 +1348,7 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Heute" }));
     expect(useSWRAuth).toHaveBeenLastCalledWith(
-      "home-day-changes:account-a",
+      `home-day-changes:account-a:${today}`,
       expect.any(Function),
       { revalidateOnFocus: true },
     );
@@ -1354,6 +1374,26 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
     expect(screen.getByTestId("day-changes-skeleton")).toBeVisible();
     expect(screen.queryByText(/Ben Kollege/)).toBeNull();
     expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();
+  });
+
+  it("liest nach Mitternacht unter einem neuen Schlüssel", () => {
+    serve({ date: "2026-09-09" });
+    const { rerender } = render(<DayChangesBlock />);
+    expect(useSWRAuth).toHaveBeenLastCalledWith(
+      "home-day-changes:account-a:2026-09-09",
+      expect.any(Function),
+      { revalidateOnFocus: true },
+    );
+
+    setTestClock("2026-09-10T00:30:00+02:00");
+    berlinDay.value = "2026-09-10";
+    rerender(<DayChangesBlock />);
+
+    expect(useSWRAuth).toHaveBeenLastCalledWith(
+      "home-day-changes:account-a:2026-09-10",
+      expect.any(Function),
+      { revalidateOnFocus: true },
+    );
   });
 
   it("verlinkt Kinder morgen nicht in die undatierte Kindakte", () => {
@@ -1420,6 +1460,46 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
         name: "Leo Kind ist morgen krank gemeldet.",
       }),
     ).toBeNull();
+  });
+
+  it("verlinkt Termine morgen im angezeigten Tagesplan", () => {
+    servePerDay({
+      entries: [
+        change({
+          kind: "activity_cancelled",
+          section: "you",
+          activity: { id: "chor", title: "Chor" },
+          link: { target: "day_plan", staffId: null, day: tomorrow },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      screen.getByRole("link", { name: "„Chor“ fällt morgen aus." }),
+    ).toHaveAttribute("href", `/schule/tagesplan?d=${tomorrow}`);
+  });
+
+  it("verlinkt Termine morgen im Betreuungsplan der Leitung", () => {
+    roles.value = ["admin"];
+    permissions.value = ["admin:*"];
+    servePerDay({
+      entries: [
+        change({
+          kind: "activity_cancelled",
+          section: "you",
+          activity: { id: "theater", title: "Theater" },
+          link: { target: "day_plan", staffId: null, day: tomorrow },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      screen.getByRole("link", { name: "„Theater“ fällt morgen aus." }),
+    ).toHaveAttribute("href", `/schule/betreuungsplan?d=${tomorrow}`);
   });
 
   it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {

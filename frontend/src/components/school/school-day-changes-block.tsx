@@ -187,9 +187,9 @@ export function SchoolDayChangesBlock({
     failed.length === 0 &&
     !classesFailed;
   // Ohne Schulkalender bleiben Schließtage absichtlich unsichtbar. Deshalb
-  // wäre eine Entwarnung über den ganzen Tag hier falsch.
+  // wäre eine Entwarnung über den ganzen Tag hier falsch. Der Umschalter
+  // bleibt trotzdem sichtbar: In den eigenen Klassen kann morgen etwas sein.
   const canReassure = hasPermission(session, "calendar:school");
-  if (!canReassure && overview && !loading && noVisibleChanges) return null;
 
   return (
     <SectionCard

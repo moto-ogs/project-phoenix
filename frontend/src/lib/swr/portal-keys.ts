@@ -369,8 +369,8 @@ export const homeKeys = {
   ownGroup: (accountId: string) => `home-own-group:${accountId}`,
   /**
    * „Heute anders“ (#7659): the day's changes as the account may see them.
-   * `dayChanges("")` is the prefix the SSE flush matches. `date` is the
-   * preview on tomorrow (#7657); without it the key is today's.
+   * `dayChanges("")` is the prefix the SSE flush matches. `date` is always
+   * the displayed Berlin day, so a mounted card gets a fresh key at midnight.
    */
   dayChanges: (accountId: string, date?: string) =>
     date

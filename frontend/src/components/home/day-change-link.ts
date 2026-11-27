@@ -11,6 +11,12 @@ import type { DayChangeLink } from "~/lib/day-changes";
 import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
+function dayPlanHrefOnDay(href: string, day: string): string {
+  const url = new URL(href, "https://moto.invalid");
+  url.searchParams.set("d", day);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 /**
  * Wohin ein Eintrag von „Heute anders“ führt, mit Schulpräfix: für jede Zeile
  * der Karte derselbe Weg. Der Tagesplan heißt je Rolle anders (#7662): die
@@ -29,7 +35,12 @@ export function useDayChangeHref(): (
       if (day === "tomorrow" && link?.target === "student") return null;
       const path = dayChangeLinkHref(link);
       if (path === null) return null;
-      return link?.target === "day_plan" ? dayPlanHref : tenantPath(path);
+      if (link?.target === "day_plan") {
+        return day === "tomorrow" && link.day
+          ? dayPlanHrefOnDay(dayPlanHref, link.day)
+          : dayPlanHref;
+      }
+      return tenantPath(path);
     },
     [dayPlanHref, tenantPath],
   );
