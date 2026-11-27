@@ -145,3 +145,14 @@ test('Blacksmith backend test and lint jobs restore only the module directory fr
     assert.equal(section(restore, 'with'), config, name);
   }
 });
+
+test('backend lint cache stays warm across frontend CI edits, not across tool or config changes', () => {
+  const reader = steps(job(read('lint.yml'), 'backend-lint'));
+  const writer = steps(job(warmSource, 'warm-lint'));
+  const inputs = section(step(reader, 'Compute backend lint cache key'), 'env');
+  assert.equal(inputs, section(step(writer, 'Compute backend lint cache key'), 'env'));
+  const prefix = field(inputs, 'LINT_CACHE_PREFIX', 10);
+  assert.ok(prefix.includes('env.GOLANGCI_LINT_VERSION'));
+  assert.ok(prefix.includes("hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml')"));
+  assert.ok(!inputs.includes('.github/workflows/'));
+});

@@ -26,8 +26,6 @@ on:
       - 'scripts/backend-test-matrix.sh'
       - 'scripts/go-cache-sweep.sh'
       - '.github/workflows/backend-build-cache.yml'
-      # Part of the lint cache key below.
-      - '.github/workflows/lint.yml'
 
 permissions: {}
 
@@ -301,6 +299,7 @@ jobs:
       contents: read
     env:
       GOFLAGS: ""
+      GOLANGCI_LINT_VERSION: v2.14.0
       GOLANGCI_LINT_CACHE: /home/runner/.cache/golangci-lint
     steps:
       - name: Checkout code
@@ -325,8 +324,8 @@ jobs:
       - name: Compute backend lint cache key
         id: lint-cache-key
         env:
-          LINT_CACHE_PREFIX: backend-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum', '.github/workflows/lint.yml') }}-
-          LINT_SOURCE_HASH: ${{ hashFiles('backend/**/*.go', 'backend/.golangci.yml') }}
+          LINT_CACHE_PREFIX: backend-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ env.GOLANGCI_LINT_VERSION }}-${{ hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml') }}-
+          LINT_SOURCE_HASH: ${{ hashFiles('backend/**/*.go') }}
         run: |
           echo "prefix=$LINT_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
           echo "key=$LINT_CACHE_PREFIX$LINT_SOURCE_HASH" >> "$GITHUB_OUTPUT"
@@ -356,7 +355,7 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         continue-on-error: true
         with:
-          version: v2.14.0
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --timeout 10m ./...
           working-directory: backend
           skip-cache: true

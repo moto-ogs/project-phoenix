@@ -283,7 +283,7 @@ test("frontend changes build; validator-only inputs run quality without either a
   for (const [changedFilter, quality, builds] of [
     ["workflow-lint", true, true],
     ["frontend", true, true],
-    ["frontend-catalog-inputs", true, false],
+    ["frontend-quality-only", true, false],
     ["quality-scripts", true, false],
     ["unrelated-docs", false, false],
   ]) {

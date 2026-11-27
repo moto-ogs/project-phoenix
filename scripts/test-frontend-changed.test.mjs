@@ -374,7 +374,7 @@ test("CI shards full DOM runs using the shared classifier and excludes documenta
   assert.match(workflow, /full-frontend-dom:.*needs\.detect-changes\.outputs\.full-frontend-dom == 'true'/);
   assert.match(workflow, /node scripts\/test-frontend-changed\.mjs --mode-files/);
   assert.match(workflow, /frontend:\n\s+- 'frontend\/\*\*'\n\s+- '!frontend\/\*\*\/\*\.md'/);
-  assert.match(workflow, /run-frontend-lint:.*frontend-catalog-inputs/);
+  assert.match(workflow, /run-frontend-lint:.*frontend-quality-only/);
   assert.match(workflow, /run-frontend:.*workflow-lint/);
   const testWorkflow = readFileSync(new URL("../.github/workflows/test.yml", import.meta.url), "utf8");
   assert.match(testWorkflow, /inputs.full-frontend-suite \|\| inputs.full-frontend-dom.*'\["node","dom-1","dom-2"\]'/);
@@ -647,5 +647,5 @@ test("--moved-clock runs only the moved-clock pass, for full CI suites", (t) => 
 
 test("the frontend job runs the moved-clock pass after a full suite", () => {
   const workflow = readFileSync(new URL("../.github/workflows/test.yml", import.meta.url), "utf8");
-  assert.match(workflow, /pnpm vitest run --disableConsoleIntercept "\$\{test_args\[@\]\}"\n\s+if \[ -n "\$BASE_REF" \]; then\n\s+node \.\.\/scripts\/test-frontend-changed\.mjs --moved-clock "origin\/\$BASE_REF" --disableConsoleIntercept "\$\{test_args\[@\]\}"/);
+  assert.match(workflow, /pnpm vitest run --disableConsoleIntercept "\$\{test_args\[@\]\}"\n\s+if \[ -n "\$BASE_REVISION" \]; then\n\s+node \.\.\/scripts\/test-frontend-changed\.mjs --moved-clock "\$BASE_REVISION" --disableConsoleIntercept "\$\{test_args\[@\]\}"/);
 });

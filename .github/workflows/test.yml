@@ -585,7 +585,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          # A PR checkout is the tested merge. Its first parent is the exact
+          # base used by both Vitest and the moved-clock pass, including stacks.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
           filter: blob:none
 
       - name: Enable corepack
@@ -640,7 +642,7 @@ jobs:
           PROJECT: ${{ matrix.project }}
           CHANGED_SCOPE: ${{ inputs.changed-scope }}
           FULL_SUITE: ${{ inputs.full-frontend-suite || startsWith(matrix.project, 'dom-') }}
-          BASE_REF: ${{ inputs.base_ref }}
+          BASE_REVISION: ${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}
         run: |
           test_args=(--project app-dom --project school-date-dom)
           if [ "$PROJECT" = node ]; then
@@ -652,15 +654,15 @@ jobs:
           case "$PROJECT" in
             dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2") ;;
           esac
-          if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REF" ]; then
-            node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+          if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REVISION" ]; then
+            node ../scripts/test-frontend-changed.mjs "$BASE_REVISION" --disableConsoleIntercept "${test_args[@]}"
           else
             # Full suites already include every guard, with normal sharding.
             # Changed tests then run again on the moved clock, as the
             # selection runner does itself (MOVED_CLOCK there, #7337).
             pnpm vitest run --disableConsoleIntercept "${test_args[@]}"
-            if [ -n "$BASE_REF" ]; then
-              node ../scripts/test-frontend-changed.mjs --moved-clock "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+            if [ -n "$BASE_REVISION" ]; then
+              node ../scripts/test-frontend-changed.mjs --moved-clock "$BASE_REVISION" --disableConsoleIntercept "${test_args[@]}"
             fi
           fi
 

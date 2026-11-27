@@ -28,6 +28,16 @@ on:
     paths:
       - ".github/workflows/perf-nightly.yml"
       - "frontend/scripts/perf/**"
+      # Bundle budgets run in Lint. Navigation/revisit uses a separate
+      # Playwright config, not either trace/render config executed below.
+      - "!frontend/scripts/perf/bundle-*"
+      - "!frontend/scripts/perf/analyze.mjs"
+      - "!frontend/scripts/perf/navigation.perf.ts"
+      - "!frontend/scripts/perf/navigation-probe.ts"
+      - "!frontend/scripts/perf/revisit.ts"
+      - "!frontend/scripts/perf/revisit-*.ts"
+      - "!frontend/scripts/perf/*.test.ts"
+      - "!frontend/scripts/perf/*.node-test.mjs"
       - "frontend/playwright.perf.config.ts"
       - "frontend/playwright.perf-dev.config.ts"
       - "frontend/scripts/secure-chrome.ts"

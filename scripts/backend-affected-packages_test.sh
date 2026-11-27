@@ -170,7 +170,7 @@ select_lint_packages() {
   working_directory=${3:-$fixture}
   (
     cd "$working_directory"
-    BASE_REF=base EVENT_NAME="$event_name" FULL_BACKEND="$full_backend" \
+    BASE_REVISION=refs/remotes/origin/base EVENT_NAME="$event_name" FULL_BACKEND="$full_backend" \
       "$repo_root/scripts/backend-lint-packages.sh"
   )
 }
@@ -485,57 +485,64 @@ for path in 'scripts/backend-source-ratchets.mjs' 'backend/test/*_test.go'; do
   assert_workflow_filter script-tests "$path" present
   # Do not buy the release-restore or extra toolchain-ratchet jobs for these.
   assert_workflow_filter tooling "$path" absent
-  assert_workflow_filter restore-suite "$path" absent
+  assert_workflow_filter daily-restore "$path" absent
+  assert_workflow_filter release-restore "$path" absent
   assert_workflow_filter hooks "$path" absent
 done
-# The restore suite takes about five minutes (#6962). Pull requests start it
-# only through the restore-suite filter; pushes and release pull requests
-# always start it.
-assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-suite == 'true'"
+# A change must run exactly the drills that read it. Protected runs always do both.
+for filter in daily-restore release-restore; do
+  workflow_filter_matches "$filter" .github/workflows/main.yml ||
+    { echo "workflow changes must run the $filter drill" >&2; exit 1; }
+  for admission in run-ci-scripts run-script-fixtures; do
+    assert_workflow_output_contains "$admission" "steps.filter.outputs.$filter == 'true'"
+  done
+  for fragment in "steps.filter.outputs.$filter == 'true'" "github.event_name == 'push'" "steps.scope.outputs.release == 'true'"; do
+    assert_workflow_output_contains "$filter-changed" "$fragment"
+  done
+  for path in scripts/posthog-dashboards.mjs scripts/daily-backup-alerts.integration.test.mjs monitoring/grafana/provisioning/alerting/daily-backup.yml docs/operations/daily-backup.md; do
+    if workflow_filter_matches "$filter" "$path"; then
+      echo "$path must not start the $filter database restore drill" >&2; exit 1
+    fi
+  done
+done
+if workflow_filter_matches daily-restore scripts/restore-db.sh ||
+   workflow_filter_matches release-restore scripts/daily_backup.py; then
+  echo 'a change to one restore must not start the other drill' >&2; exit 1
+fi
 assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-alerts == 'true'"
 for fragment in "steps.filter.outputs.restore-alerts == 'true'" "github.event_name == 'push'" "steps.scope.outputs.release == 'true'"; do
   assert_workflow_output_contains run-restore-alerts "$fragment"
 done
-for path in scripts/daily-backup-alerts.integration.test.mjs monitoring/grafana/provisioning/alerting/daily-backup.yml docs/operations/daily-backup.md; do
-  if workflow_filter_matches restore-suite "$path"; then
-    echo "an alert-only change must not start database restore drills: $path" >&2; exit 1
-  fi
-done
-for fragment in "steps.filter.outputs.restore-suite == 'true'" "github.event_name == 'push'" \
-  "steps.scope.outputs.release == 'true'"; do
-  assert_workflow_output_contains restore-changed "$fragment"
-done
-restore_rows=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '"restore"' || true)
-if [ -z "$restore_rows" ] ||
-   grep -vqF "needs.detect-changes.outputs.restore-changed == 'true' &&" <<<"$restore_rows"; then
-  echo 'only restore-changed may add the restore suite to the matrix' >&2
-  exit 1
-fi
-# Both sets of tests are admitted before removing any duplicate matrix work.
-suite_rows=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '["unit"' || true)
-while IFS= read -r row; do
-  for pair in '"restore" "release-restore"' '"ratchets" "selection"'; do
-    read -r first second <<<"$pair"
-    has_first=0; has_second=0
-    grep -qF "$first" <<<"$row" && has_first=1
-    grep -qF "$second" <<<"$row" && has_second=1
-    [ "$has_first" = "$has_second" ] ||
-      { echo "suites $first and $second must start together: $row" >&2; exit 1; }
-  done
-done <<<"$suite_rows"
-[ "$(grep -c . <<<"$suite_rows")" = 4 ] || { echo 'expected four suite rows in the ci-scripts matrix' >&2; exit 1; }
-# Toolchain-only changes still need their own Go ratchets; selection is never covered by go test.
-matrix_exclude=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '        exclude:')
-grep -Fq "full-backend-suite == 'true' && '[{\"suite\":\"ratchets\"}]' || '[]'" <<<"$matrix_exclude" ||
-  { echo 'only the full backend suite may replace the dedicated ratchets job' >&2; exit 1; }
-if workflow_filter_matches restore-suite scripts/posthog-dashboards.mjs; then
-  echo 'a PostHog dashboard change must not start the restore suite' >&2
-  exit 1
-fi
-for path in .github/workflows/main.yml scripts/daily-backup.sh scripts/release-backup.sh; do
-  workflow_filter_matches restore-suite "$path" ||
-    { echo "a change to $path must start the restore suite" >&2; exit 1; }
-done
+# Evaluate the actual matrix for all path selections, with and without a full
+# backend suite. Full backend tests cover ratchets, not the selection self-tests.
+node --input-type=module - "$repo_root/.github/workflows/main.yml" <<'NODE'
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+const workflow = readFileSync(process.argv[2], 'utf8');
+const suite = workflow.match(/^        suite: >-\n\s+\$\{\{ ([\s\S]*?) \}\}/m)[1];
+const exclude = workflow.match(/^        exclude: \$\{\{ (.+) \}\}/m)[1];
+function evaluate(expression, outputs) {
+  return runInNewContext(expression.replace(/needs\.detect-changes\.outputs\.([\w-]+)/g, 'outputs["$1"]'), {
+    outputs, fromJSON: JSON.parse,
+    format: (pattern, ...args) => pattern.replace(/\{(\d+)\}/g, (_, index) => args[index]),
+  });
+}
+for (const daily of [false, true]) for (const release of [false, true]) {
+  for (const toolchain of [false, true]) for (const full of [false, true]) {
+    const outputs = { 'daily-restore-changed': String(daily), 'release-restore-changed': String(release),
+      'toolchain-changed': String(toolchain), 'full-backend-suite': String(full) };
+    const omitted = evaluate(exclude, outputs).map(row => row.suite);
+    const actual = evaluate(suite, outputs).filter(name => !omitted.includes(name));
+    const expected = ['unit'];
+    if (daily) expected.push('restore');
+    if (release) expected.push('release-restore');
+    if (toolchain && !full) expected.push('ratchets');
+    if (toolchain) expected.push('selection');
+    assert.deepEqual(actual, expected, JSON.stringify(outputs));
+  }
+}
+NODE
 # Inventory: every file the restore steps name, and every file those files
 # reach by relative path, import or script directory, is in the filter.
 assert_restore_inputs() {
@@ -572,7 +579,8 @@ assert_restore_inputs() {
     )
   done
 }
-assert_restore_inputs restore-suite 'if: matrix[.]suite == .(release-)?restore.$'
+assert_restore_inputs daily-restore 'if: matrix[.]suite == .restore.$'
+assert_restore_inputs release-restore 'if: matrix[.]suite == .release-restore.$'
 assert_restore_inputs restore-alerts 'needs[.]detect-changes[.]outputs[.]run-restore-alerts'
 
 for filter in backend-tests backend-lint backend-architecture; do
