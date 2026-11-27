@@ -21,7 +21,7 @@ import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-pre
 import { createLogger } from "~/lib/logger";
 import {
   completeSchoolSetup,
-  setSchoolSetupDismissed,
+  dismissSchoolSetup,
   setSchoolSetupStepSkipped,
   type SchoolSetupState,
   type SchoolSetupStepKey,
@@ -378,7 +378,7 @@ function SchoolSetupWizardForAdmin({
         onClose={() => setConfirmDismiss(false)}
         onConfirm={() =>
           void run(
-            () => setSchoolSetupDismissed(true),
+            dismissSchoolSetup,
             () => {
               closedByPerson();
               setConfirmDismiss(false);

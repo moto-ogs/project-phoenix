@@ -17,6 +17,7 @@ vi.mock("./session-cache", async () => ({
 import {
   normalizeEarlyCheckoutTolerance,
   resolveTenant,
+  listAllTenants,
   listAvailableTenants,
   switchTenant,
   performTenantSwitch,
@@ -721,8 +722,7 @@ describe("tenant-api", () => {
         }),
       );
 
-      const { listAllTenants } = await import("./tenant-api");
-      const result = await listAllTenants(1);
+      const result = await listAllTenants();
 
       expect(global.fetch).toHaveBeenCalledWith("/api/auth/tenants", {
         method: "GET",
@@ -742,28 +742,35 @@ describe("tenant-api", () => {
       });
     });
 
+    async function exhaustRetries() {
+      vi.useFakeTimers();
+      const pending = listAllTenants();
+      await vi.runAllTimersAsync();
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      return pending;
+    }
+
     it("returns error status after exhausting retries on server error", async () => {
-      vi.mocked(global.fetch).mockResolvedValue(
-        new Response("Server Error", { status: 500 }),
+      vi.mocked(global.fetch).mockImplementation(
+        async () => new Response("Server Error", { status: 500 }),
       );
 
-      const { listAllTenants } = await import("./tenant-api");
-      const result = await listAllTenants(1);
+      const result = await exhaustRetries();
 
       expect(result).toEqual({ tenants: [], status: "error" });
     });
 
     // #7806: an answer without `data` breaks the contract; it is no empty list.
     it("reports an answer without data as an error, not as no schools", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
+      vi.mocked(global.fetch).mockImplementation(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
       );
 
-      const { listAllTenants } = await import("./tenant-api");
-      const result = await listAllTenants(1);
+      const result = await exhaustRetries();
 
       expect(result).toEqual({ tenants: [], status: "error" });
     });
@@ -771,8 +778,7 @@ describe("tenant-api", () => {
     it("returns error status after exhausting retries on network error", async () => {
       vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
 
-      const { listAllTenants } = await import("./tenant-api");
-      const result = await listAllTenants(1);
+      const result = await exhaustRetries();
 
       expect(result).toEqual({ tenants: [], status: "error" });
     });
@@ -798,10 +804,9 @@ describe("tenant-api", () => {
           }),
         );
 
-      const { listAllTenants } = await import("./tenant-api");
       // The backoff before the second attempt is a timer: skip its wait.
       vi.useFakeTimers();
-      const pending = listAllTenants(2);
+      const pending = listAllTenants();
       await vi.runAllTimersAsync();
       const result = await pending;
 

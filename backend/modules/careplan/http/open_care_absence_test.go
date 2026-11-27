@@ -130,7 +130,10 @@ func TestAbsenceWriter_ParentExcusedRequestDecidable(t *testing.T) {
 	require.NoError(t, testpkg.WithTenantTx(t, adminTenantCtx(chain.TenantID), tc.db, chain.TenantID,
 		func(txCtx context.Context, _ bun.Tx) error {
 			var err error
-			pending, err = tc.resource.ExcusedRequestService.CreateRequest(txCtx, chain.StudentID, chain.AccountID, []excusedrequests.Date{excusedrequests.Date(day)}, "Familienfeier")
+			pending, err = tc.resource.ExcusedRequestService.Submit(txCtx, excusedrequests.SubmitInput{
+				StudentID: chain.StudentID, GuardianAccountID: chain.AccountID,
+				Dates: []excusedrequests.Date{excusedrequests.Date(day)}, Note: "Familienfeier", AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+			})
 			return err
 		}))
 	require.NotNil(t, pending)

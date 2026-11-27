@@ -298,5 +298,5 @@ type ClassListConversionDeps struct {
 	Marks      ClassListMarkTransfer
 	Persons    PersonDirectory
 	Students   StudentDirectory
-	Audit      AuditCommand
+	Audit      AuditBatchCommand
 }

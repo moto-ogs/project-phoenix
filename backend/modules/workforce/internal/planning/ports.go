@@ -34,7 +34,6 @@ type shiftSeriesOperations interface {
 	FindOverlappingSeriesInLineage(context.Context, int64, int64, string) (workforce.StaffShiftSeries, error)
 }
 type seriesExceptionOperations interface {
-	RecordSeriesException(context.Context, workforce.StaffShiftSeriesException) error
 	SeriesExceptionDates(context.Context, int64) ([]string, error)
 	RepointSeriesExceptions(context.Context, int64, int64, string) (int64, error)
 }
@@ -53,6 +52,7 @@ type shiftTypeOperations interface {
 // Records is the narrow native planning facet bound by the owner composition.
 // Planning consumes it directly without a generic row-repository adapter.
 type Records interface {
+	RecordSeriesException(context.Context, workforce.StaffShiftSeriesException) error
 	StaffShiftSource
 	staffShiftOperations
 	shiftSeriesOperations

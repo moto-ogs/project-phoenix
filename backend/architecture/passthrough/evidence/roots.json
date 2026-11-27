@@ -1542,7 +1542,7 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (r studentDataRequestRepository) FindByID(ctx context.Context, raw any) (*careplan.StudentDataChangeRequest, error) {\n\tid, err := owners.LegacyScheduleID(raw)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tvalue, err := r.capability.FindStudentDataRequest(ctx, id, false)\n\tif errors.Is(err, careplan.ErrStudentDataRequestNotFound) {\n\t\treturn nil, owners.RetainedNotFound(\"find by id\")\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026value, nil\n}",
+      "evidence": "func (r studentDataRequestRepository) FindByID(ctx context.Context, id int64) (*careplan.StudentDataChangeRequest, error) {\n\tvalue, err := r.capability.FindStudentDataRequest(ctx, id, false)\n\tif errors.Is(err, careplan.ErrStudentDataRequestNotFound) {\n\t\treturn nil, owners.RetainedNotFound(\"find by id\")\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026value, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/studentDataRequestRepository.FindByID",
       "owner": "roots"
@@ -2742,97 +2742,6 @@
       "evidence": "func (s EnrollmentCollectionSettings) LockClassCollectionPair(ctx context.Context) error {\n\treturn s.Settings.LockClassCollectionPair(ctx)\n}",
       "form": "forward-debt",
       "id": "roots/owners/EnrollmentCollectionSettings.LockClassCollectionPair",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) Create(ctx context.Context, row *absencerecords.ExcusedAbsenceRequest) error {\n\tif row == nil {\n\t\treturn errors.New(\"ExcusedAbsenceRequest cannot be nil or zero value\")\n\t}\n\tcreated, err := r.Capability.CreateExcusedAbsenceRequest(ctx, excusedRequestToPublic(row))\n\tif err != nil {\n\t\treturn err\n\t}\n\t*row = *excusedRequestFromPublic(created)\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Create",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) Decide(ctx context.Context, id int64, status string, reason *string, reviewedBy *int64, applied bool) error {\n\treturn mapExcusedRequestError(r.Capability.DecideExcusedAbsenceRequest(ctx, careplan.ExcusedAbsenceDecision{ID: id, Status: status, Reason: reason, ReviewedBy: reviewedBy, Applied: applied}))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Decide",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) FindByID(ctx context.Context, raw any) (*absencerecords.ExcusedAbsenceRequest, error) {\n\tid, err := LegacyScheduleID(raw)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tvalue, err := r.Capability.FindExcusedAbsenceRequest(ctx, id, false)\n\tif errors.Is(err, careplan.ErrExcusedRequestNotFound) {\n\t\treturn nil, absencerecords.ErrExcusedRequestNotFound\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn excusedRequestFromPublic(value), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) FindByIDForUpdate(ctx context.Context, id int64) (*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalue, err := r.Capability.FindExcusedAbsenceRequest(ctx, id, true)\n\tif err != nil {\n\t\treturn nil, mapExcusedRequestError(err)\n\t}\n\treturn excusedRequestFromPublic(value), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByIDForUpdate",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) FindPendingByIDForUpdate(ctx context.Context, id int64) (*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalue, err := r.Capability.FindPendingExcusedAbsenceRequest(ctx, id)\n\tif err != nil {\n\t\treturn nil, mapExcusedRequestError(err)\n\t}\n\treturn excusedRequestFromPublic(value), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindPendingByIDForUpdate",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) ListDecidedForTenant(ctx context.Context, filters peoplePorts.RequestQueueFilters) ([]*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalues, err := r.Capability.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{Statuses: careplan.DecidedExcusedRequestStatuses(), Queue: publicQueueFilter(filters)})\n\treturn excusedRequestsToLegacy(values), err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListDecidedForTenant",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) ListPendingForStudent(ctx context.Context, studentID int64) ([]*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalues, err := r.Capability.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{StudentID: studentID, Statuses: careplan.PendingExcusedRequestStatuses()})\n\treturn excusedRequestsToLegacy(values), err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) ListPendingForTenant(ctx context.Context, filters peoplePorts.RequestQueueFilters) ([]*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalues, err := r.Capability.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{Statuses: careplan.PendingExcusedRequestStatuses(), Queue: publicQueueFilter(filters)})\n\treturn excusedRequestsToLegacy(values), err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForTenant",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) ListRecentForStudent(ctx context.Context, studentID int64, since time.Time) ([]*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalues, err := r.Capability.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{StudentID: studentID, RecentSince: since})\n\treturn excusedRequestsToLegacy(values), err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListRecentForStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) ListWithOptions(ctx context.Context, options *peoplePorts.QueryOptions) ([]*absencerecords.ExcusedAbsenceRequest, error) {\n\tvalues, err := r.Capability.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{Options: legacyScheduleQueryOptions(options)})\n\treturn excusedRequestsToLegacy(values), err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListWithOptions",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) LockStudentRequests(ctx context.Context, studentID int64) error {\n\treturn r.Capability.LockExcusedAbsenceRequests(ctx, studentID)\n}",
-      "form": "forward-debt",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.LockStudentRequests",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) Redecide(ctx context.Context, id int64, status string, reason *string, reviewedBy int64, applied bool) error {\n\treturn mapExcusedRequestError(r.Capability.RedecideExcusedAbsenceRequest(ctx, careplan.ExcusedAbsenceDecision{ID: id, Status: status, Reason: reason, ReviewedBy: \u0026reviewedBy, Applied: applied}))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Redecide",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r ExcusedAbsenceRequestRepository) UpdatePending(ctx context.Context, id int64, dates []absencerecords.Date, note, status string) error {\n\tpublicDates := make([]careplan.Date, len(dates))\n\tfor i := range dates {\n\t\tpublicDates[i] = careplan.Date(dates[i])\n\t}\n\treturn mapExcusedRequestError(r.Capability.UpdatePendingExcusedAbsenceRequest(ctx, id, publicDates, note, status))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.UpdatePending",
       "owner": "roots"
     },
     {
@@ -6232,7 +6141,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (l holidayParentAccountLinks) HolidayParentAccountLink(email string, organizationID int64) (enrollmentOwner.HolidayParentAccountLink, error) {\n\tif l.setups == nil || l.parentsURL == \"\" {\n\t\treturn enrollmentOwner.HolidayParentAccountLink{}, errors.New(\"holiday registration: the setup link of a parent account is not configured\")\n\t}\n\ttoken, err := l.setups.IssueHolidayParentSetupToken(email, organizationID)\n\tif err != nil {\n\t\treturn enrollmentOwner.HolidayParentAccountLink{}, err\n\t}\n\treturn enrollmentOwner.HolidayParentAccountLink{SetupURL: l.parentsURL + \"/ferienkonto/\" + url.PathEscape(token), LoginURL: l.parentsURL + \"/login\"}, nil\n}",
+      "evidence": "func (l holidayParentAccountLinks) HolidayParentAccountLink(email string, organizationID int64) (enrollmentOwner.HolidayParentAccountLink, error) {\n\tif l.setups == nil || l.parentsURL == \"\" {\n\t\treturn enrollmentOwner.HolidayParentAccountLink{}, errors.New(\"holiday registration: the setup link of a parent account is not configured\")\n\t}\n\ttoken, err := l.setups.IssueHolidayParentSetupToken(email, organizationID)\n\tif err != nil {\n\t\treturn enrollmentOwner.HolidayParentAccountLink{}, err\n\t}\n\treturn enrollmentOwner.HolidayParentAccountLink{SetupURL: l.parentsURL + \"/ferienkonto/\" + url.PathEscape(token)}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/holidayParentAccountLinks.HolidayParentAccountLink",
       "owner": "roots"
@@ -6687,9 +6596,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (r parentExcusedRequestReads) FindByID(ctx context.Context, id any) (*absencerecords.ExcusedAbsenceRequest, error) {\n\trow, err := r.source.FindByID(ctx, id)\n\tif errors.Is(err, absencerecords.ErrExcusedRequestNotFound) {\n\t\treturn nil, parentportal.ErrRequestSharingNotFound\n\t}\n\treturn row, err\n}",
+      "evidence": "func (r parentExcusedRequestReads) FindIdentity(ctx context.Context, id int64) (int64, int64, error) {\n\trow, err := r.source.FindExcusedAbsenceRequest(ctx, id, false)\n\tif errors.Is(err, careplan.ErrExcusedRequestNotFound) {\n\t\treturn 0, 0, parentportal.ErrRequestSharingNotFound\n\t}\n\treturn row.SubmittedBy, row.StudentID, err\n}",
       "form": "unclassified-evidence",
-      "id": "roots/owners/parentExcusedRequestReads.FindByID",
+      "id": "roots/owners/parentExcusedRequestReads.FindIdentity",
       "owner": "roots"
     },
     {

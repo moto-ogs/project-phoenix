@@ -195,15 +195,6 @@ func (s *staffShiftService) lockCancellationStaff(ctx context.Context, existing 
 	return lockedStaffIDs, nil
 }
 
-// WithStaffShiftStaffRowLocks binds the batch lock on the School Membership
-// staff rows (ascending, in the caller's transaction) a cancellation takes
-// before its first write (#7683). Unit tests without a database bind none.
-func WithStaffShiftStaffRowLocks(lock func(ctx context.Context, staffIDs []int64) error) StaffShiftOption {
-	return func(s *staffShiftService) {
-		s.lockStaffRows = lock
-	}
-}
-
 // lockCancellationStaffRows takes the School Membership staff rows of
 // everybody this cancellation writes, ascending in one batch, before its
 // first write.
@@ -218,7 +209,7 @@ func WithStaffShiftStaffRowLocks(lock func(ctx context.Context, staffIDs []int64
 // cover staff is validated first, so an unknown person stays the invalid
 // input the cover's create reports.
 func (s *staffShiftService) lockCancellationStaffRows(ctx context.Context, origin *workforce.ShiftRecord, replacements []ShiftReplacementInput) error {
-	if s.lockStaffRows == nil || origin.Date.Before(s.today()) {
+	if origin.Date.Before(s.Today()) {
 		return nil
 	}
 	staffIDs := []int64{origin.StaffID}
@@ -232,7 +223,7 @@ func (s *staffShiftService) lockCancellationStaffRows(ctx context.Context, origi
 		}
 		staffIDs = append(staffIDs, r.StaffID)
 	}
-	if err := s.lockStaffRows(ctx, staffIDs); err != nil {
+	if err := s.LockStaffRows(ctx, staffIDs); err != nil {
 		return fmt.Errorf("lock staff rows of the cancellation: %w", err)
 	}
 	return nil

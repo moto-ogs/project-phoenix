@@ -142,53 +142,13 @@ func applyStudentScheduleConditions(query *bun.SelectQuery, conditions []carepla
 		switch condition.Operator {
 		case "=":
 			query = query.Where("? = ?", field, condition.Value)
-		case ">":
-			query = query.Where("? > ?", field, condition.Value)
 		case ">=":
 			query = query.Where("? >= ?", field, condition.Value)
-		case "<":
-			query = query.Where("? < ?", field, condition.Value)
 		case "<=":
 			query = query.Where("? <= ?", field, condition.Value)
-		case "LIKE":
-			query = query.Where("? LIKE ?", field, condition.Value)
-		case "ILIKE":
-			query = query.Where("? ILIKE ?", field, condition.Value)
-		case "TRIM_EQUALS":
-			query = query.Where("LOWER(TRIM(?)) = LOWER(TRIM(?))", field, condition.Value)
 		case "IS NULL":
 			query = query.Where("? IS NULL", field)
-		case "IS NOT NULL":
-			query = query.Where("? IS NOT NULL", field)
-		case "IN", "NOT IN", "TRIM_IN", "FIRST_NUMBER_IN":
-			query = applyStudentScheduleCollectionCondition(query, field, condition)
 		}
-	}
-	return query
-}
-
-func applyStudentScheduleCollectionCondition(query *bun.SelectQuery, field bun.Ident, condition careplan.StudentScheduleQueryCondition) *bun.SelectQuery {
-	values, ok := condition.Value.([]interface{})
-	if !ok {
-		return query
-	}
-	switch condition.Operator {
-	case "IN":
-		return query.Where("? IN (?)", field, bun.List(values))
-	case "NOT IN":
-		return query.Where("? NOT IN (?)", field, bun.List(values))
-	case "FIRST_NUMBER_IN":
-		return query.Where("substring(? from '[0-9]+') IN (?)", field, bun.List(values))
-	case "TRIM_IN":
-		if len(values) == 0 {
-			return query
-		}
-		return query.WhereGroup(" AND ", func(group *bun.SelectQuery) *bun.SelectQuery {
-			for _, value := range values {
-				group = group.WhereOr("LOWER(TRIM(?)) = LOWER(TRIM(?))", field, value)
-			}
-			return group
-		})
 	}
 	return query
 }

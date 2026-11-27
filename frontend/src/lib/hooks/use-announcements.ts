@@ -62,17 +62,10 @@ export function useAnnouncements() {
     };
   }, [pathname, mutate]);
 
-  const dismiss = async (id: string) => {
-    // Just send to backend - don't mutate local state
-    // The modal manages its own queue and will refresh after closing
-    await markDismissed(id);
-  };
-
   return {
     announcements: data ?? [],
-    unreadCount: data?.length ?? 0,
     isLoading,
-    dismiss,
+    dismiss: markDismissed,
     markSeen,
     refresh: () => mutate(),
   };

@@ -62,10 +62,6 @@ type seriesMockExceptionRepo struct {
 	repointFn   func(ctx context.Context, fromID, toID int64, from calendar.Date) (int64, error)
 }
 
-func (m *seriesMockExceptionRepo) Create(context.Context, *StaffShiftSeriesException) error {
-	return nil
-}
-
 func (m *seriesMockExceptionRepo) FindDatesBySeriesID(ctx context.Context, seriesID int64) ([]calendar.Date, error) {
 	if m.findDatesFn != nil {
 		return m.findDatesFn(ctx, seriesID)
@@ -154,6 +150,7 @@ func (r seriesFakePeriodRepo) FindSeriesPeriod(context.Context, int64) (SeriesPe
 }
 
 type seriesServiceMocks struct {
+	nonWorkingDays    SeriesNonWorkingDayReader
 	series            *seriesMockRepo
 	exceptions        *seriesMockExceptionRepo
 	shifts            *seriesShiftMockRepo
@@ -188,10 +185,8 @@ func newSeriesServiceForTest(m seriesServiceMocks) StaffShiftSeriesService {
 			WeekCycleLength: 1,
 		}
 	}
-	// nil db skips the advisory lock (same convention as the single-shift
-	// unit tests).
-	return NewStaffShiftSeriesService(m.series, m.exceptions, m.shifts, m.staff, m.period, nil, nil, nil, m.occurrenceUpdater,
-		WithStaffShiftSeriesToday(func() calendar.Date { return calendar.Date(seriesTestToday) }))
+	return NewStaffShiftSeriesService(m.series, m.exceptions, m.shifts, m.staff, m.period, &stubShiftTypeService{}, unlockedShiftFixture, nil, m.occurrenceUpdater,
+		SeriesSchedule{Absences: m.shifts, Today: func() calendar.Date { return seriesTestToday }, NonWorkingDays: m.nonWorkingDays})
 }
 
 func unitSeries(t *testing.T) *StaffShiftSeries {
@@ -1059,9 +1054,6 @@ func (m *seriesMockRepo) FindOverlappingSeriesInLineage(ctx context.Context, roo
 		return workforce.StaffShiftSeries{}, err
 	}
 	return seriesRowToCapability(row), err
-}
-func (m *seriesMockExceptionRepo) RecordSeriesException(ctx context.Context, v workforce.StaffShiftSeriesException) error {
-	return m.Create(ctx, &StaffShiftSeriesException{ID: v.ID, SeriesID: v.SeriesID, TenantID: v.TenantID, Date: calendar.Date(v.Date), CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt})
 }
 func (m *seriesMockExceptionRepo) SeriesExceptionDates(ctx context.Context, id int64) ([]string, error) {
 	dates, err := m.FindDatesBySeriesID(ctx, id)

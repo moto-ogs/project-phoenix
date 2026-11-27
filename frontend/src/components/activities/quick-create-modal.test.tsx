@@ -145,7 +145,6 @@ describe("QuickCreateActivityModal", () => {
       loadError: null,
       handleInputChange: vi.fn(),
       validateForm: vi.fn(() => null),
-      loadCategories: vi.fn(),
     });
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
@@ -345,7 +344,6 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => null),
-        loadCategories: vi.fn(),
       });
 
       render(<QuickCreateActivityModal isOpen={true} onClose={mockOnClose} />);
@@ -381,7 +379,6 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => null),
-        loadCategories: vi.fn(),
       });
 
       // Make fetch hang to test loading state
@@ -438,7 +435,6 @@ describe("QuickCreateActivityModal", () => {
           message: "Bitte wähle eine Kategorie.",
           field: "category_id" as const,
         })),
-        loadCategories: vi.fn(),
       });
 
       render(<QuickCreateActivityModal isOpen={true} onClose={mockOnClose} />);
@@ -482,7 +478,6 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => null),
-        loadCategories: vi.fn(),
       });
 
       // Mock fetch to return error
@@ -530,7 +525,6 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => null),
-        loadCategories: vi.fn(),
       });
 
       // Make fetch hang
@@ -593,7 +587,6 @@ describe("QuickCreateActivityModal", () => {
           message: "Bitte gib einen Namen für die Aktivität ein.",
           field: "name" as const,
         })),
-        loadCategories: vi.fn(),
       });
 
       render(<QuickCreateActivityModal isOpen={true} onClose={mockOnClose} />);

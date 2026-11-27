@@ -32,6 +32,7 @@ import (
 // (ADR 0049, #4013).
 type auditCommand interface {
 	auditRecords.Command
+	AppendAll(context.Context, []any) error
 	retentionAuditLedgers
 	retentionDeletionLog
 	DeleteExpiredOperatorAuditLog(context.Context) (int, error)

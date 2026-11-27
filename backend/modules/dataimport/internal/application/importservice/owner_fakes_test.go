@@ -202,13 +202,17 @@ type fakeAudit struct {
 	err    error
 }
 
-func (f *fakeAudit) Append(_ context.Context, event any) error {
+func (f *fakeAudit) Append(ctx context.Context, event any) error {
+	return f.AppendAll(ctx, []any{event})
+}
+
+func (f *fakeAudit) AppendAll(_ context.Context, events []any) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.err != nil {
 		return f.err
 	}
-	f.events = append(f.events, event)
+	f.events = append(f.events, events...)
 	return nil
 }
 

@@ -21,7 +21,6 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -252,7 +251,7 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 		Dates:         []calendar.Date{today.AddDays(3)},
 		Note:          "Arzttermin",
 		AbsenceStatus: "excused",
-		Status:        absencerecords.ExcusedRequestStatusPending,
+		Status:        careplan.ExcusedRequestStatusPending,
 	}
 	request.TenantID = testpkg.Tenant(t)
 	_, err := db.NewInsert().
@@ -314,7 +313,7 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 	})
 
 	t.Run("the open request survives until the exit takes effect", func(t *testing.T) {
-		assert.Equal(t, absencerecords.ExcusedRequestStatusPending,
+		assert.Equal(t, careplan.ExcusedRequestStatusPending,
 			reloadRequestStatus(t, db, request.ID),
 			"a request about a day the child is still in care stays decidable")
 	})
@@ -325,7 +324,7 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("the open request is closed with its own outcome", func(t *testing.T) {
-		assert.Equal(t, absencerecords.ExcusedRequestStatusCareEnded,
+		assert.Equal(t, careplan.ExcusedRequestStatusCareEnded,
 			reloadRequestStatus(t, db, request.ID),
 			"neither approved nor rejected — the care simply ended")
 	})

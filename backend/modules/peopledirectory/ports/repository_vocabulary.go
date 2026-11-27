@@ -4,7 +4,6 @@ import (
 	"errors"
 	"slices"
 	"strings"
-	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -256,30 +255,6 @@ func (qo *QueryOptions) WithPagination(page, pageSize int) *QueryOptions {
 		qo.Pagination.PageSize = defaultPageSize
 	}
 	return qo
-}
-
-// RequestQueueFilters narrows one change-request queue in SQL: which
-// children, where to resume, and how many rows (#2432). The zero value is the
-// whole queue from the top.
-type RequestQueueFilters struct {
-	// UrgentOnly selects the open queue's urgency phase. Nil leaves urgency
-	// unrestricted; true/false select exactly one phase.
-	UrgentOnly *bool
-	UrgentDate string
-	// StudentIDs limits the queue to a set of children. Empty means no
-	// restriction; it composes with StudentID.
-	StudentIDs []int64
-	// StudentID limits the queue to one child (#2437). Zero means every child.
-	StudentID int64
-	// Search matches the child's name case-insensitively as a substring of
-	// "first last".
-	Search string
-	// BeforeInstant and BeforeID are the keyset position of the last row the
-	// caller consumed. A zero instant returns the first page.
-	BeforeInstant time.Time
-	BeforeID      int64
-	// Limit caps the page. Zero or less means unbounded.
-	Limit int
 }
 
 // ErrRepositoryNotFound is the persistence-neutral not-found sentinel of the

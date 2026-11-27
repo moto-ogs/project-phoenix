@@ -1962,71 +1962,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Create",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Decide",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindByIDForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.FindPendingByIDForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListDecidedForTenant",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListPendingForTenant",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListRecentForStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.ListWithOptions",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.LockStudentRequests",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.Redecide",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ExcusedAbsenceRequestRepository.UpdatePending",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/ExternalCaregiverRecordMembershipRepository.Create",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -4453,7 +4388,7 @@
     {
       "decision": "0216",
       "id": "roots/owners/holidayParentAccountLinks.HolidayParentAccountLink",
-      "reason": "ADR 0216: Consumer-port adapter of Enrollment's setup link of a parent account; it signs the link through Identity \u0026 Access, which reads nothing and so runs in the registration's Träger transaction or when Delivery sends the acceptance mail, and translates the token into the page of the parents portal and its sign-in."
+      "reason": "ADR 0216: Binds Identity \u0026 Access's setup token for the Träger to the parent portal setup page. Missing configuration and token issuance failures are returned to the caller."
     },
     {
       "decision": "0116",
@@ -4777,8 +4712,8 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/parentExcusedRequestReads.FindByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "id": "roots/owners/parentExcusedRequestReads.FindIdentity",
+      "reason": "Projects the submitter and child IDs for parent sharing and translates Care Plan's tenant-scoped not-found sentinel into the workflow contract."
     },
     {
       "decision": "0090",

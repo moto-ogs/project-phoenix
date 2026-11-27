@@ -93,7 +93,7 @@ func TestPickupChangePills_NameRequestedDayAndTime(t *testing.T) {
 	seedWeekdayPickup(t, f, ctx, date, 15, 30)
 	pickup := time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC)
 
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
 	require.NoError(t, err)
 
 	created := events.last(t)
@@ -123,7 +123,7 @@ func TestPickupChangePills_NameRequestedDayAndTime(t *testing.T) {
 
 	// A second request for another day is rejected: the pill names THAT day
 	// and keeps the staff reason.
-	second, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date.AddDays(1), pickup, "Oma holt ab")
+	second, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date.AddDays(1), pickup, "Oma holt ab")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, second.ID),
 		RequestID: second.ID, Approve: false, Reason: "passt nicht", ReviewedBy: f.staffAccount,
@@ -159,13 +159,13 @@ func TestGetForReview_OpensDecidedAndPendingPickupRequests(t *testing.T) {
 	seedWeekdayPickup(t, f, ctx, date, 15, 30)
 	pickup := time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC)
 
-	decidedReq, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
+	decidedReq, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, decidedReq.ID),
 		RequestID: decidedReq.ID, Approve: false, Reason: "passt nicht", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
-	pendingReq, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date.AddDays(1), pickup, "Oma holt ab")
+	pendingReq, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date.AddDays(1), pickup, "Oma holt ab")
 	require.NoError(t, err)
 
 	// The live plan moves on AFTER the decision; the detail must not follow it.
@@ -210,7 +210,7 @@ func TestGetForReview_RefusesUnauthorizedAndForeignReaders(t *testing.T) {
 	f, _ := newPickupPillFixture(t)
 	ctx := f.staffCtx(f.staffAccount)
 	date := calendar.NewDate(2026, 9, 15)
-	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
+	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 
 	// users:update without a staff record (the guardian's own account) is

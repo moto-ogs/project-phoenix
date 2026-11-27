@@ -31,7 +31,7 @@ export function useStaffNoticesPending() {
     !!accountId &&
     mode === "teacher" &&
     hasPermission(session, "users:read");
-  const { data, isLoading, mutate } = useSWRAuth<StaffNotice[]>(
+  const { data } = useSWRAuth<StaffNotice[]>(
     enabled ? staffNoticeKeys.today(accountId) : null,
     fetchTodaysNotices,
     {
@@ -44,9 +44,5 @@ export function useStaffNoticesPending() {
   );
   return {
     unreadCount: enabled && data ? countPendingAcknowledgements(data) : 0,
-    isLoading: enabled && isLoading,
-    refresh: async () => {
-      await mutate();
-    },
   };
 }

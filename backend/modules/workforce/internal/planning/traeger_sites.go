@@ -33,10 +33,10 @@ type traegerSites struct {
 // service's working-time check.
 func NewTraegerSites(shifts StaffShiftService, planning workforce.StaffShiftPlanning) workforce.TraegerShiftSites {
 	service, ok := shifts.(*staffShiftService)
-	if !ok || service.guard == nil || planning == nil {
+	if !ok || service.Guard == nil || planning == nil {
 		panic("workforce traeger sites: the shift service with its working-time check and the planning are required")
 	}
-	guard := service.guard
+	guard := service.Guard
 	return traegerSites{TraegerSiteReads: guard.reads, shifts: service, holidays: guard.holidays, settings: guard.settings, planning: planning}
 }
 
@@ -63,7 +63,7 @@ func (t traegerSites) SiteWeek(ctx context.Context, query workforce.TraegerSiteW
 	// Absences only matter where the contract can suggest a shift: a week
 	// with Soll at the school that reaches today or later.
 	var absent []workforce.TraegerSiteAbsentDay
-	if len(soll) > 0 && !query.SollTo.Before(t.shifts.todayDate()) {
+	if len(soll) > 0 && !query.SollTo.Before(t.shifts.Today()) {
 		if absent, err = t.absentDays(ctx, query.StaffIDs, query.SollFrom, query.SollTo); err != nil {
 			return workforce.TraegerSiteWeek{}, err
 		}
@@ -75,11 +75,10 @@ func (t traegerSites) SiteWeek(ctx context.Context, query workforce.TraegerSiteW
 // by the rule a created shift takes its absence state from (#6302): a shift
 // planned on such a day is cancelled at once.
 func (t traegerSites) absentDays(ctx context.Context, staffIDs []int64, from, to calendar.Date) ([]workforce.TraegerSiteAbsentDay, error) {
-	reader := t.shifts.sickReports
-	if reader == nil || len(staffIDs) == 0 || from == "" {
+	if len(staffIDs) == 0 || from == "" {
 		return nil, nil
 	}
-	absences, err := reader.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
+	absences, err := t.shifts.Absences.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		StaffIDs: staffIDs, Statuses: workforce.PlanEffectiveAbsenceStatuses(), OverlapFrom: from.String(), OverlapTo: to.String(),
 	})
 	if err != nil {

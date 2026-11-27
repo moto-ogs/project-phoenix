@@ -42,7 +42,6 @@ type ExcusedAbsenceRequestFilter struct {
 	Statuses    []string
 	RecentSince time.Time
 	Queue       *RequestQueueFilter
-	Options     *StudentScheduleQueryOptions
 }
 
 type ExcusedAbsenceDecision struct {

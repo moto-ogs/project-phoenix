@@ -9,7 +9,6 @@ import (
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
-	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
@@ -55,9 +54,6 @@ type imports struct {
 func classListImportConversion(converter importModels.ClassListConverter, settings interface {
 	ResolveBool(context.Context, string) (bool, error)
 }, lock settingsModule.ClassListConversionLock) func(context.Context, int64) error {
-	if converter == nil {
-		return nil
-	}
 	return func(ctx context.Context, accountID int64) error {
 		// Held to the batch's commit: a switch turned on meanwhile either
 		// waited for this batch's entries or is read here.
@@ -68,8 +64,7 @@ func classListImportConversion(converter importModels.ClassListConverter, settin
 		if err != nil || !kept {
 			return err
 		}
-		_, err = converter.ConvertClassListEntries(ctx, &accountID)
-		return err
+		return converter.ConvertClassListEntries(ctx, accountID)
 	}
 }
 
@@ -82,7 +77,7 @@ func classListImportConversion(converter importModels.ClassListConverter, settin
 
 // newImportRuntime is the transaction runner, audit trail, observation sink
 // and clock every import service of one root shares.
-func newImportRuntime(audit auditModels.Command, observe func(importModels.ImportObservation), now func() time.Time) importPorts.ImportRuntime {
+func newImportRuntime(audit importPorts.AuditCommand, observe func(importModels.ImportObservation), now func() time.Time) importPorts.ImportRuntime {
 	return importPorts.ImportRuntime{
 		Transactions: dataImportCompose.NewTransactions(), Audit: audit, Observe: observe, Now: now,
 		Fingerprint: securityruntime.Fingerprint, BoundStatements: tenant.WithStatementTimeout,
@@ -336,14 +331,14 @@ func newClassListConversion(
 // not bound with that error, so switching the school on fails visibly.
 type unboundClassListConversion struct{ err error }
 
-func (u unboundClassListConversion) ConvertClassListEntries(context.Context, *int64) (importModels.ClassListConversion, error) {
-	return importModels.ClassListConversion{}, u.err
+func (u unboundClassListConversion) ConvertClassListEntries(context.Context, int64) error {
+	return u.err
 }
 
 // composeClassListConversion is newClassListConversion over an import
 // runtime of the caller's, so a suite composes the same conversion.
 func composeClassListConversion(
-	runtime importPorts.ImportRuntime, audit auditModels.Command, identity importIdentity, groups schoolstructure.GroupListing,
+	runtime importPorts.ImportRuntime, audit importPorts.AuditCommand, identity importIdentity, groups schoolstructure.GroupListing,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence studentpresence.Capability,
 	membership schoolmembership.Capability,
 ) (importModels.ClassListConverter, error) {

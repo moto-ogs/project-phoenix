@@ -132,12 +132,10 @@ export function completeSchoolSetup(): Promise<SchoolSetupState> {
   );
 }
 
-export function setSchoolSetupDismissed(
-  dismissed: boolean,
-): Promise<SchoolSetupState> {
+export function dismissSchoolSetup(): Promise<SchoolSetupState> {
   return readState(
     bffJson("tenant", "PUT /api/school-setup/dismissal", {
-      body: { dismissed },
+      body: { dismissed: true },
     }),
     "dismiss_school_setup_failed",
   );

@@ -14,34 +14,14 @@ import (
 // with the report's stamp, and a sick person cannot cover a gap. Past days
 // stay history, as the cascade leaves them.
 
-// WithStaffShiftSickReports binds the sick reports a created or moved shift
-// takes its day's state from. Without it (unit tests) nobody is sick.
-func WithStaffShiftSickReports(reader SickReportReader) StaffShiftOption {
-	return func(s *staffShiftService) { s.sickReports = reader }
-}
-
-// WithStaffShiftToday overrides the calendar-day clock the sick-state guard
-// compares against; the service requires it.
-func WithStaffShiftToday(today func() calendar.Date) StaffShiftOption {
-	return func(s *staffShiftService) {
-		if today != nil {
-			s.today = today
-		}
-	}
-}
-
-func (s *staffShiftService) todayDate() calendar.Date {
-	return s.today()
-}
-
 // sickAbsenceOn names the absence that makes day a full absence day of the
 // staff member, the zero stamp when there is none or the day is past. The
 // caller holds the staff member's shift lock.
 func (s *staffShiftService) sickAbsenceOn(ctx context.Context, staffID int64, day calendar.Date) (absenceStamp, error) {
-	if s.sickReports == nil || day.Before(s.todayDate()) {
+	if day.Before(s.Today()) {
 		return absenceStamp{}, nil
 	}
-	days, err := sickDaysIn(ctx, s.sickReports, staffID, day, day)
+	days, err := sickDaysIn(ctx, s.Absences, staffID, day, day)
 	if err != nil {
 		return absenceStamp{}, err
 	}

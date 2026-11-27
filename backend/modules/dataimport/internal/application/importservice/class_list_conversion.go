@@ -33,30 +33,23 @@ func NewClassListConversion(deps ports.ClassListConversionDeps, students *Studen
 }
 
 // ConvertClassListEntries converts every class-list entry of the school in
-// context and reports how many became new children and how many joined an
-// existing one. changedBy is the account the trail names; it is required.
-func (c *ClassListConversion) ConvertClassListEntries(ctx context.Context, changedBy *int64) (importModels.ClassListConversion, error) {
-	if changedBy == nil || *changedBy <= 0 {
-		return importModels.ClassListConversion{}, errors.New("convert class list: the acting account is required for the trail")
+// context. changedBy is the account the trail names; it is required.
+func (c *ClassListConversion) ConvertClassListEntries(ctx context.Context, changedBy int64) error {
+	if changedBy <= 0 {
+		return errors.New("convert class list: the acting account is required for the trail")
 	}
 	entries, err := c.deps.Membership.ListClassListEntries(ctx, ports.ClassListEntryFilter{})
 	if err != nil || len(entries) == 0 {
-		return importModels.ClassListConversion{}, err
+		return err
 	}
 	targets, err := c.existingChildren(ctx, entries)
 	if err != nil {
-		return importModels.ClassListConversion{}, err
+		return err
 	}
-	result := importModels.ClassListConversion{Joined: countTargets(targets)}
-	if created, err := c.createChildren(ctx, entries, targets); err != nil {
-		return importModels.ClassListConversion{}, err
-	} else {
-		result.Created = created
+	if err := c.createChildren(ctx, entries, targets); err != nil {
+		return err
 	}
-	if err := c.finish(ctx, entries, targets, changedBy); err != nil {
-		return importModels.ClassListConversion{}, err
-	}
-	return result, nil
+	return c.finish(ctx, entries, targets, changedBy)
 }
 
 // existingChildren finds, per entry, the not graduated child of its class
@@ -97,7 +90,7 @@ func careEndedBefore(student ports.Student, today timezone.Date) bool {
 // createChildren creates a child without an OGS place for every entry
 // without a target and fills in its new ID. The entries carry unique names
 // per class, so the new children are found again by name and class.
-func (c *ClassListConversion) createChildren(ctx context.Context, entries []ports.ClassListEntry, targets []int64) (int, error) {
+func (c *ClassListConversion) createChildren(ctx context.Context, entries []ports.ClassListEntry, targets []int64) error {
 	var rows []importModels.StudentImportRow
 	for i, entry := range entries {
 		if targets[i] == 0 {
@@ -107,35 +100,34 @@ func (c *ClassListConversion) createChildren(ctx context.Context, entries []port
 		}
 	}
 	if len(rows) == 0 {
-		return 0, nil
+		return nil
 	}
 	unbounded := func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 	if err := c.students.CreateChunk(ctx, rows, unbounded); err != nil {
-		return 0, fmt.Errorf("convert class list: create children: %w", err)
+		return fmt.Errorf("convert class list: create children: %w", err)
 	}
 	created, err := c.existingChildren(ctx, entries)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	for i := range targets {
 		if targets[i] != 0 {
 			continue
 		}
 		if created[i] == 0 {
-			return 0, fmt.Errorf("convert class list: entry %d has no child after the creation", entries[i].ID)
+			return fmt.Errorf("convert class list: entry %d has no child after the creation", entries[i].ID)
 		}
 		targets[i] = created[i]
 	}
-	return len(rows), nil
+	return nil
 }
 
 // finish moves the morning marks, deletes the entries and appends one
 // "assigned" trail row per entry naming its child.
-func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassListEntry, targets []int64, changedBy *int64) error {
+func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassListEntry, targets []int64, changedBy int64) error {
 	moves := make([]ports.ClassListEntryMarkMove, len(entries))
 	joins := make([]ports.ClassListEntryJoin, len(entries))
 	events := make([]any, len(entries))
-	actor := *changedBy
 	for i, entry := range entries {
 		matched := targets[i]
 		moves[i] = ports.ClassListEntryMarkMove{ClassListEntryID: entry.ID, StudentID: matched}
@@ -143,7 +135,7 @@ func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassL
 		events[i] = &auditModels.ClassListEntryChange{
 			EntryID: entry.ID, Action: auditModels.ClassListEntryActionAssigned,
 			OldValue: classListEntryDisplay(entry.FirstName, entry.LastName, entry.SchoolClass), NewValue: "",
-			MatchedStudentID: &matched, ChangedBy: actor,
+			MatchedStudentID: &matched, ChangedBy: changedBy,
 		}
 	}
 	if err := c.deps.Marks.TransferClassListEntryMarks(ctx, moves); err != nil {
@@ -152,15 +144,7 @@ func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassL
 	if err := c.deps.Removal.RemoveClassListEntries(ctx, joins); err != nil {
 		return fmt.Errorf("convert class list: remove entries: %w", err)
 	}
-	if batch, ok := c.deps.Audit.(ports.AuditBatchCommand); ok {
-		return batch.AppendAll(ctx, events)
-	}
-	for _, event := range events {
-		if err := c.deps.Audit.Append(ctx, event); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.deps.Audit.AppendAll(ctx, events)
 }
 
 func lowestStudentID(students []ports.Student) int64 {
@@ -172,16 +156,6 @@ func lowestStudentID(students []ports.Student) int64 {
 		return 0
 	}
 	return slices.Min(ids)
-}
-
-func countTargets(targets []int64) int {
-	count := 0
-	for _, target := range targets {
-		if target != 0 {
-			count++
-		}
-	}
-	return count
 }
 
 // classListEntryDisplay is the trail's text of an entry: "Vorname Nachname

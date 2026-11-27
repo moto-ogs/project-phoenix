@@ -118,9 +118,8 @@ func mustNewSuiteCarePlan(db transactionruntime.Database, capability timetable.C
 // reach them through RepositoryTestFactory.
 type CarePlanSuiteRepositories struct {
 	carePlanCompose.ParentPortalRepositories
-	StudentStatusDay      *owners.StudentStatusDayRepository
-	ExcusedAbsenceRequest *owners.ExcusedAbsenceRequestRepository
-	carePlan              careplan.Capability
+	StudentStatusDay *owners.StudentStatusDayRepository
+	carePlan         careplan.Capability
 }
 
 // CarePlan is the Care Plan owner the schedule, request and withdrawal
@@ -147,7 +146,6 @@ func NewCarePlanSuiteRepositories(db transactionruntime.Database) *CarePlanSuite
 	return &CarePlanSuiteRepositories{
 		ParentPortalRepositories: owners.ComposeParentPortalReads(db, students, owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(time.Now)),
 		StudentStatusDay:         owners.NewStudentStatusDayRepository(carePlan),
-		ExcusedAbsenceRequest:    owners.NewExcusedAbsenceRequestRepository(carePlan),
 		carePlan:                 carePlan,
 	}
 }

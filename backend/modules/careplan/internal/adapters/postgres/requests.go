@@ -267,12 +267,6 @@ func applyExcusedRequestOptions(directory StudentDirectory, query *bun.SelectQue
 		}
 		return applyRequestQueueFilters(directory, query, "excused_absence_request", "updated_at", filter.Queue)
 	}
-	if filter.Options != nil {
-		query = applyStudentScheduleOptions(query, filter.Options, "excused_absence_request")
-		if len(filter.Options.Sorting) > 0 {
-			return query
-		}
-	}
 	return query.OrderExpr(`"excused_absence_request".created_at DESC`).OrderExpr(`"excused_absence_request".id DESC`)
 }
 

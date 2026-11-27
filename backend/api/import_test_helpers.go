@@ -11,8 +11,6 @@ import (
 
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
-	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
-
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	importPorts "github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
@@ -85,7 +83,7 @@ func NewImportTestRuntime(db transactionruntime.Database, options ImportTestOpti
 	return importTestRuntime(command, observations, options), observations, nil
 }
 
-func importTestRuntime(command auditModels.Command, observations *[]importModels.ImportObservation, options ImportTestOptions) importPorts.ImportRuntime {
+func importTestRuntime(command importPorts.AuditCommand, observations *[]importModels.ImportObservation, options ImportTestOptions) importPorts.ImportRuntime {
 	clock := options.Clock
 	if clock == nil {
 		clock = time.Now

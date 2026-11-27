@@ -707,8 +707,8 @@ export interface ApplyDeviationsResponse {
 
 /**
  * #2284 Sammel-Vertretung: one person's day-wide absence — optionally covered
- * by one substitute — applied to several selected days in ONE atomic save via
- * POST /substitutions/bulk. `substituteStaffId` undefined marks the person
+ * by one substitute — applied to several selected days in one atomic
+ * whole_days assignment. `substituteStaffId` undefined marks the person
  * absent without assigning cover. `dates` are "YYYY-MM-DD" strings.
  */
 export interface BulkSubstitutionInput {

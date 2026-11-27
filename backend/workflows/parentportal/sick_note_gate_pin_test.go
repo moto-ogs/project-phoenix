@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -62,7 +64,7 @@ func TestSickNoteGatedCreatesRequest(t *testing.T) {
 	require.NotNil(t, res.PendingRequest, "the gate turns the sick note into a request")
 	assert.Empty(t, res.StatusDays, "nothing is written before the OGS decides")
 	assert.Equal(t, absencerecords.StudentStatusDaySick, res.PendingRequest.AbsenceStatus)
-	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, res.PendingRequest.Status)
+	assert.Equal(t, excusedrequests.StatusPending, res.PendingRequest.Status)
 	assert.Equal(t, chain.AccountID, res.PendingRequest.SubmittedBy)
 
 	var days int

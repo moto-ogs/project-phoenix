@@ -321,23 +321,19 @@ func guardianRetentionSteps(guardians guardianRetention, settings settingsModule
 // first nightly run after the last care day or the graduation, without a
 // further period. It runs after the deletion of whole children, writes one
 // deletion-log entry per ended child itself and one log line per candidate.
-func studentPhotoCareEndStep(photos peopleModule.StudentPhotoCareEndRetention, audit auditModels.Command, logger *slog.Logger) schedulerPorts.RetentionStep {
+func studentPhotoCareEndStep(photos peopleModule.StudentPhotoCareEndRetention, audit interface {
+	AppendAll(context.Context, []any) error
+}, logger *slog.Logger) schedulerPorts.RetentionStep {
 	return schedulerPorts.RetentionStep{
 		Kind:         auditModels.DeletionTypeStudentPhotoRetention,
 		LogsSubjects: true,
 		Run: func(ctx context.Context) (schedulerPorts.RetentionOutcome, error) {
 			result, err := photos.EndStudentPhotosAfterCare(ctx, calendar.TodayDate(), func(ctx context.Context, ended []peopleModule.StudentPhotoCareEnd) error {
-				batch, ok := audit.(interface {
-					AppendAll(context.Context, []any) error
-				})
-				if !ok {
-					return errors.New("student photo retention requires batch audit append")
-				}
 				events := make([]any, 0, len(ended))
 				for _, child := range ended {
 					events = append(events, auditModels.NewStudentPhotoRetentionDeletion(child.TenantID, child.StudentID, child.LastCareDay, child.Graduated, child.PhotoRemoved, child.ConsentEnded))
 				}
-				return batch.AppendAll(ctx, events)
+				return audit.AppendAll(ctx, events)
 			})
 			for _, child := range result.Children {
 				outcome := child.Outcome

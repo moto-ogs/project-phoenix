@@ -116,14 +116,13 @@ export function setStaffOnboardingStepState(
  * „Abschließen“ beendet, nicht vorher über „Ausblenden“. Das liest nur die
  * Nutzungsanalyse der Schule (#7553); gespeichert wird beides gleich.
  */
-export function setStaffOnboardingDismissed(
-  dismissed: boolean,
+export function dismissStaffOnboarding(
   options: { completed?: boolean } = {},
 ): Promise<StaffOnboardingState> {
   return readState(
     bffJson("tenant", "PUT /api/staff-onboarding/dismissal", {
       query: { outcome: options.completed ? "completed" : undefined },
-      body: { dismissed },
+      body: { dismissed: true },
     }),
     "dismiss_staff_onboarding_failed",
   );

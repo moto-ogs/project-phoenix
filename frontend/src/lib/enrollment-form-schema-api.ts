@@ -424,24 +424,12 @@ export type PublicLegalTexts = Omit<
  */
 export async function fetchPublicLegalTexts(
   tenantSlug: string,
-  phaseId?: string,
-  options: { lateInviteToken?: string } = {},
 ): Promise<PublicLegalTexts> {
-  const query = { late_invite: options.lateInviteToken?.trim() || undefined };
-  const errorMessage = "Rechtstexte konnten nicht geladen werden";
-  // The phase is a path segment, as the backend serves it (#2352).
   return publicLegalTextsFromContract(
-    phaseId
-      ? await bffJson(
-          "public",
-          "GET /api/enrollment/legal/{tenantSlug}/{phaseId}",
-          { params: { tenantSlug, phaseId }, query, errorMessage },
-        )
-      : await bffJson("public", "GET /api/enrollment/legal/{tenantSlug}", {
-          params: { tenantSlug },
-          query,
-          errorMessage,
-        }),
+    await bffJson("public", "GET /api/enrollment/legal/{tenantSlug}", {
+      params: { tenantSlug },
+      errorMessage: "Rechtstexte konnten nicht geladen werden",
+    }),
   );
 }
 

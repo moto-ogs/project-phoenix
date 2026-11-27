@@ -10,19 +10,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// SickReportReader lists a staff member's absences the shift writes take the
-// absence state of a day from (#6302): the series materializer and the single
-// create and move. Since #6847 every absence type in force counts, not only a
-// sick report. The Workforce capability serves it.
+// SickReportReader lists the staff absences a shift write checks while it holds
+// the staff lock. A full day of any effective absence type cancels the shift.
 type SickReportReader interface {
-	ListStaffAbsences(ctx context.Context, filter workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
-}
-
-// WithStaffShiftSeriesSickReports binds the absences a materialized
-// occurrence takes the cascade's state from. Without it (unit tests) nobody
-// is absent.
-func WithStaffShiftSeriesSickReports(reader SickReportReader) StaffShiftSeriesOption {
-	return func(s *staffShiftSeriesService) { s.sickReports = reader }
+	ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
 }
 
 // absenceStamp names the absence behind one full absence day: its id and its
@@ -36,12 +27,8 @@ type absenceStamp struct {
 // returns the absence behind each full absence day. It takes no lock of its
 // own: every caller reads under the per-staff shift lock it already holds,
 // the lock the sick cascade takes before it reads the shifts (#6302 adds no
-// lock and no lock order; the remaining races are #6232's). Without a reader
-// nobody is absent.
+// lock and no lock order; the remaining races are #6232's).
 func sickDaysIn(ctx context.Context, reports SickReportReader, staffID int64, from, to calendar.Date) (map[calendar.Date]absenceStamp, error) {
-	if reports == nil {
-		return nil, nil
-	}
 	absences, err := reports.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		StaffID:     staffID,
 		Statuses:    workforce.PlanEffectiveAbsenceStatuses(),

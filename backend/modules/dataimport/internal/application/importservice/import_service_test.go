@@ -38,10 +38,11 @@ type mockImportConfig struct {
 // supplies, so the recorded state lives in the test rather than in a
 // field-assigning double.
 type mockAuditCommand struct {
+	fakeAudit
 	appendFn func(context.Context, any) error
 }
 
-func (m mockAuditCommand) Append(ctx context.Context, event any) error {
+func (m *mockAuditCommand) Append(ctx context.Context, event any) error {
 	return m.appendFn(ctx, event)
 }
 
@@ -105,7 +106,7 @@ func TestImportService_RecordAuditInTransaction(t *testing.T) {
 
 	var appendedCtx context.Context
 	var created *auditModels.DataImport
-	audit := mockAuditCommand{appendFn: func(ctx context.Context, event any) error {
+	audit := &mockAuditCommand{appendFn: func(ctx context.Context, event any) error {
 		appendedCtx = ctx
 		created, _ = event.(*auditModels.DataImport)
 		return nil

@@ -126,8 +126,10 @@ func TestApproveExcusedRequestReplacesConfirmedPartialAbsence(t *testing.T) {
 	require.NoError(t, testpkg.WithTenantTx(t, adminTenantCtx(chain.TenantID), tc.db, chain.TenantID,
 		func(txCtx context.Context, _ bun.Tx) error {
 			var err error
-			pending, err = tc.resource.ExcusedRequestService.CreateRequestForStatus(txCtx, chain.StudentID, chain.AccountID,
-				[]excusedrequests.Date{excusedrequests.Date(replaceDay)}, "Fieber", "sick")
+			pending, err = tc.resource.ExcusedRequestService.Submit(txCtx, excusedrequests.SubmitInput{
+				StudentID: chain.StudentID, GuardianAccountID: chain.AccountID,
+				Dates: []excusedrequests.Date{excusedrequests.Date(replaceDay)}, Note: "Fieber", AbsenceStatus: "sick", NoteRequired: true,
+			})
 			return err
 		}))
 	claims := testutil.AdminTestClaims(int(account.ID))

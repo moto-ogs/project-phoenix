@@ -2,7 +2,6 @@ package planning
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -214,7 +213,7 @@ func (s *staffShiftService) validateMove(ctx context.Context, existing, moved *w
 	if moved.StaffID == existing.StaffID {
 		before = []*workforce.ShiftRecord{existing}
 	}
-	return s.guard.check(ctx, moved.StaffID, before, []*workforce.ShiftRecord{moved}, moved.WorkingTime)
+	return s.Guard.check(ctx, moved.StaffID, before, []*workforce.ShiftRecord{moved}, moved.WorkingTime)
 }
 
 // applyMoveSeriesRules consumes a vacated series occurrence and sets the moved
@@ -223,9 +222,6 @@ func (s *staffShiftService) applyMoveSeriesRules(ctx context.Context, existing, 
 	vacatesSeriesOccurrence := existing.SeriesID != nil &&
 		(existing.StaffID != moved.StaffID || seriesOccurrenceDate(existing) != moved.Date)
 	if vacatesSeriesOccurrence {
-		if s.exceptionRepo == nil {
-			return errors.New("series exception repository is required for shift move")
-		}
 		if err := s.recordSeriesException(ctx, existing, seriesOccurrenceDate(existing)); err != nil {
 			return fmt.Errorf("record original series occurrence for shift move: %w", err)
 		}
@@ -248,17 +244,11 @@ func (s *staffShiftService) applyMoveSeriesRules(ctx context.Context, existing, 
 }
 
 // logShiftMovedEvent appends the shift_moved Änderungsprotokoll row (#1884)
-// inside the caller's tenant tx (workforce.ShiftMovedEvent). Fail closed when the
-// audit is wired: an audit failure aborts the move. The audit is optional
-// only for unit tests constructed without audit wiring — production always
-// sets it.
+// inside the caller's tenant transaction. An audit failure aborts the move.
 func (s *staffShiftService) logShiftMovedEvent(ctx context.Context, existing, moved *workforce.ShiftRecord, input MoveShiftInput, override *planOverride) error {
 	actorAccountID := input.ActorAccountID
-	if err := s.guard.record(ctx, override, moved, actorAccountID, input.ActorStaffID); err != nil {
+	if err := s.Guard.record(ctx, override, moved, actorAccountID, input.ActorStaffID); err != nil {
 		return err
-	}
-	if s.shiftMoveAudit == nil {
-		return nil
 	}
 	event := workforce.ShiftMovedEvent{
 		OccurrenceDate: moved.Date,
@@ -365,15 +355,8 @@ func (s *staffShiftService) recordSeriesException(ctx context.Context, shift *wo
 	// The exception takes the occurrence's author: its staff member, or the
 	// mark of the Träger-Büro for an occurrence of a series it planned
 	// (#7818).
-	exception := &StaffShiftSeriesException{
-		SeriesID:         *shift.SeriesID,
-		Date:             date,
-		CreatedBy:        shift.CreatedBy,
-		PlannedByTraeger: shift.CreatedBy <= 0 && shift.PlannedByTraeger,
-	}
-	exception.TenantID = shift.TenantID
-	return shiftWriteError("create staff shift series exception", s.exceptionRepo.RecordSeriesException(ctx, workforce.StaffShiftSeriesException{
-		ID: exception.ID, TenantID: exception.TenantID, SeriesID: exception.SeriesID, Date: exception.Date.String(),
-		CreatedBy: exception.CreatedBy, PlannedByTraeger: exception.PlannedByTraeger, CreatedAt: exception.CreatedAt,
+	return shiftWriteError("create staff shift series exception", s.Exceptions.RecordSeriesException(ctx, workforce.StaffShiftSeriesException{
+		TenantID: shift.TenantID, SeriesID: *shift.SeriesID, Date: date.String(),
+		CreatedBy: shift.CreatedBy, PlannedByTraeger: shift.CreatedBy <= 0 && shift.PlannedByTraeger,
 	}))
 }

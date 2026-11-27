@@ -269,7 +269,14 @@ func TestApplyStudentPhotoConsentGrantsOnlyWhileTheFeatureIsOn(t *testing.T) {
 	_, err := module.ApplyStudentPhotoConsent(ctx, withoutConsent, &grant)
 	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabled, "no new consent while photos are off")
 
-	kept, err := module.ApplyStudentPhotoConsent(ctx, withConsent, &grant)
+	photo := "/uploads/student-photos/unchanged.jpg"
+	existing := withConsent
+	existing.PhotoPath = &photo
+	kept, err := module.ApplyStudentPhotoConsent(ctx, existing, nil)
+	require.NoError(t, err)
+	assert.Equal(t, existing, kept, "omitting consent preserves the photo and its consent")
+
+	kept, err = module.ApplyStudentPhotoConsent(ctx, withConsent, &grant)
 	require.NoError(t, err, "a repeated grant is no new consent")
 	assert.Equal(t, &givenAt, kept.PhotoConsentGivenAt)
 

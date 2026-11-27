@@ -5,7 +5,7 @@ import { ApiError } from "./api-error";
 // fetch so the tests can stand in for the BFF route.
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
-  bulkCreateStudentStatusDays,
+  createClassTripStatusDays,
   createStudentStatusDays,
   deleteStudentStatusDay,
   fetchStatusDayOverview,
@@ -205,9 +205,8 @@ describe("student-status-days-api", () => {
       }),
     );
 
-    const result = await bulkCreateStudentStatusDays(
+    const result = await createClassTripStatusDays(
       ["42", "43"],
-      "class_trip",
       "2026-05-26",
       "2026-05-28",
       "Museum",
@@ -235,12 +234,7 @@ describe("student-status-days-api", () => {
       }),
     );
 
-    await bulkCreateStudentStatusDays(
-      ["42"],
-      "class_trip",
-      "2026-05-26",
-      "2026-05-26",
-    );
+    await createClassTripStatusDays(["42"], "2026-05-26", "2026-05-26");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/students/status-days/bulk", {
       method: "POST",
@@ -258,12 +252,7 @@ describe("student-status-days-api", () => {
     );
 
     await expect(
-      bulkCreateStudentStatusDays(
-        ["42"],
-        "class_trip",
-        "2026-05-26",
-        "2026-05-26",
-      ),
+      createClassTripStatusDays(["42"], "2026-05-26", "2026-05-26"),
     ).rejects.toThrow("Klassenfahrt konnte nicht gespeichert werden");
   });
 
@@ -279,9 +268,8 @@ describe("student-status-days-api", () => {
       ),
     );
 
-    const error = await bulkCreateStudentStatusDays(
+    const error = await createClassTripStatusDays(
       ["42", "43"],
-      "class_trip",
       "2026-05-26",
       "2026-05-28",
     ).catch((caught: unknown) => caught);

@@ -359,15 +359,12 @@ describe("enrollment-admin-api", () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: [request] }));
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: request }));
 
-    await expect(
-      listAdminEnrollmentChangeRequests({
-        requestId: "request/1",
-        status: "needs_parent_response",
-      }),
-    ).resolves.toEqual([request]);
+    await expect(listAdminEnrollmentChangeRequests()).resolves.toEqual([
+      request,
+    ]);
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
-      "/api/enrollment/admin/change-requests?request_id=request%2F1&status=needs_parent_response",
+      "/api/enrollment/admin/change-requests",
       expect.objectContaining({ method: "GET" }),
     );
 

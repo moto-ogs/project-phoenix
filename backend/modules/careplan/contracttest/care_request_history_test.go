@@ -97,7 +97,7 @@ func TestListHistory_IncludesPickupChangeWithPayloadSummary(t *testing.T) {
 	date := calendar.NewDate(2026, 8, 24).AddDays(1)
 	pickupTime := time.Date(0, 1, 1, 15, 30, 0, 0, time.UTC)
 
-	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.chain.AccountID), f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, pickupTime, "Heute später")
+	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.chain.AccountID), f.db, f.createPickupChange, f.chain.StudentID, f.chain.AccountID, date, pickupTime, "Heute später")
 	require.NoError(t, err)
 	_, err = testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "Nicht möglich", ReviewedBy: f.staffAccount,

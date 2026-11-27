@@ -48,7 +48,6 @@ func (p StudentPhoto) StoredPhoto() string {
 // against the row's current state.
 type PhotoConsentTransition struct {
 	GrantedNow       bool
-	WithdrawnNow     bool
 	RemovedPhotoPath string
 }
 
@@ -56,16 +55,12 @@ type PhotoConsentTransition struct {
 // must be written. Re-stamping an already-granted row is a no-op so idempotent
 // PUTs preserve the original consent timestamp.
 func ApplyPhotoConsent(
-	requestedConsent *bool,
+	wantConsent bool,
 	current StudentPhoto,
 	now time.Time,
 	actorAccountID int64,
 ) (StudentPhoto, PhotoConsentTransition) {
-	if requestedConsent == nil {
-		return current, PhotoConsentTransition{}
-	}
 	hadConsent := current.PhotoConsentGivenAt != nil
-	wantConsent := *requestedConsent
 
 	switch {
 	case !hadConsent && wantConsent:
@@ -78,7 +73,7 @@ func ApplyPhotoConsent(
 		current.PhotoPath = nil
 		current.PhotoConsentGivenAt = nil
 		current.PhotoConsentGivenBy = nil
-		return current, PhotoConsentTransition{WithdrawnNow: true, RemovedPhotoPath: removed}
+		return current, PhotoConsentTransition{RemovedPhotoPath: removed}
 	default:
 		return current, PhotoConsentTransition{}
 	}

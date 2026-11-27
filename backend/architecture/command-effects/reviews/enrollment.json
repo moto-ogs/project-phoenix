@@ -1813,7 +1813,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayAcceptanceAccounts.HolidayParentSetupURL",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken. ADR 0216 point 11: the acceptance mail offers an address without a parent account the setup link; the signature reads and writes nothing and the link is stored nowhere.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken. ADR 0216 point 11: the acceptance mail offers an address without a parent account the setup link; the signature reads and writes nothing and the link is stored nowhere. Only the signed setup URL leaves this binding; the mail renderer constructs its login URL separately.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",
       "target_owner": "identity-access"
@@ -2363,7 +2363,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParentAccountLinks.HolidayParentAccountLink",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken. ADR 0216: the offer of a parent account signs the setup link of the registration's address and Träger; the signature reads and writes nothing, so it runs in the registration's Träger transaction, and the link is stored nowhere.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken. ADR 0216: the offer of a parent account signs the setup link of the registration's address and Träger; the signature reads and writes nothing, so it runs in the registration's Träger transaction, and the link is stored nowhere. Only the signed setup URL leaves this binding; the mail renderer constructs its login URL separately.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",
       "target_owner": "identity-access"

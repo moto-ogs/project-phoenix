@@ -117,12 +117,7 @@ vi.mock("~/lib/hooks/use-change-request-access", () => ({
 // Tagesinformationen-Badge (#2180): der echte Hook würde /api/staff-notices/today
 // laden; hier zählt nur, dass die Seitenleiste ihn einbindet.
 vi.mock("~/lib/hooks/use-staff-notices-pending", () => ({
-  useStaffNoticesPending: () => ({
-    unreadCount: 0,
-    isLoading: false,
-    refresh: vi.fn(),
-  }),
-  STAFF_NOTICES_REFRESH_EVENT: "staff-notices-refresh",
+  useStaffNoticesPending: () => ({ unreadCount: 0 }),
 }));
 
 vi.mock("~/lib/hooks/use-messages-unread", () => ({

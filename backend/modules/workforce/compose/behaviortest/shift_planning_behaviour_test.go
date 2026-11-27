@@ -95,7 +95,8 @@ func planningDependencies(t *testing.T, ctx context.Context, db *bun.DB, capabil
 	staff := staffByID[staffID]
 	require.NotNil(t, staff)
 	return compose.ShiftPlanningDependencies{
-		Workforce: capability, Staff: planningStaffDirectory{Staff: staff},
+		ShiftMoveAudit: owners.NewShiftMoveAudit(api.NewTimetableDeviationAudit(testpkg.NewDatabase(t, db)).DeviationEvent),
+		Workforce:      capability, Staff: planningStaffDirectory{Staff: staff},
 		CalendarPeriods: calendarOwner, Instances: planningTimetable{},
 		InstanceStaff: planningInstanceStaff{}, Rooms: owners.NewTimetableRoomNames(ownersRooms), ActivityGroups: planningGroups{},
 		DB: db, LockStaffAssignments: api.ShiftPlanningTestStaffRowLock(testpkg.NewDatabase(t, db)), Today: calendar.TodayDate,
@@ -111,6 +112,7 @@ func TestNewShiftPlanningRequiresTheOwnersItComposesOver(t *testing.T) {
 	complete := planningDependencies(t, testpkg.Ctx(t), db, capability, staff.ID)
 
 	for name, strip := range map[string]func(*compose.ShiftPlanningDependencies){
+		"shift move audit": func(d *compose.ShiftPlanningDependencies) { d.ShiftMoveAudit = nil },
 		"workforce":        func(d *compose.ShiftPlanningDependencies) { d.Workforce = nil },
 		"staff":            func(d *compose.ShiftPlanningDependencies) { d.Staff = nil },
 		"calendar periods": func(d *compose.ShiftPlanningDependencies) { d.CalendarPeriods = nil },

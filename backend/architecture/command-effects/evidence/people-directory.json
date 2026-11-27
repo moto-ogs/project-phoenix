@@ -10713,14 +10713,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ApplyStudentPhotoConsent",
-      "binding_digest": "c3620e119505023dca142a0731317c89",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentPhotoLifecycle.ApplyStudentPhotoConsent",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ClearStudentPhoto",
       "binding_digest": "5cc6ed4c84056953c8cff47eed7ebc16",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentPhotoLifecycle.ClearStudentPhoto",

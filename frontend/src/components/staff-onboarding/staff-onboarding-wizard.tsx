@@ -32,7 +32,7 @@ import { createLogger } from "~/lib/logger";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import {
-  setStaffOnboardingDismissed,
+  dismissStaffOnboarding,
   setStaffOnboardingStepState,
   type StaffOnboardingState,
   type StaffOnboardingStepKey,
@@ -390,9 +390,7 @@ function StaffOnboardingForPerson() {
         finishTooltip="Blendet die Checkliste sofort für dich aus."
         onFinish={() => {
           answerSelfOpened(null);
-          void run(() =>
-            setStaffOnboardingDismissed(true, { completed: true }),
-          );
+          void run(() => dismissStaffOnboarding({ completed: true }));
         }}
         finished={
           <>
@@ -425,7 +423,7 @@ function StaffOnboardingForPerson() {
         onConfirm={() => {
           answerSelfOpened(null);
           void run(
-            () => setStaffOnboardingDismissed(true),
+            dismissStaffOnboarding,
             () => setConfirmDismiss(false),
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.

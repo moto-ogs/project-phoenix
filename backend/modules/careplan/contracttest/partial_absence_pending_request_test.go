@@ -9,8 +9,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -32,15 +32,15 @@ func TestPartialAbsenceCreate_RefusesPendingFullDayRequest(t *testing.T) {
 	day := calendar.NewDate(2026, 8, 24).AddDays(5)
 	ctx := testpkg.TenantContext(chain.TenantID)
 
-	req := &absencerecords.ExcusedAbsenceRequest{
+	_, err = repos.CarePlan().CreateExcusedAbsenceRequest(ctx, careplan.ExcusedAbsenceRequest{
+		TenantID:    chain.TenantID,
 		StudentID:   chain.StudentID,
 		SubmittedBy: chain.AccountID,
-		Dates:       []calendar.Date{day},
+		Dates:       []careplan.Date{careplan.Date(day)},
 		Note:        "Familienfeier",
-		Status:      absencerecords.ExcusedRequestStatusPending,
-	}
-	req.TenantID = chain.TenantID
-	require.NoError(t, repos.ExcusedAbsenceRequest.Create(ctx, req))
+		Status:      excusedrequests.StatusPending,
+	})
+	require.NoError(t, err)
 
 	_, err = svc.CreatePartialAbsence(ctx, careplan.PartialAbsenceInput{
 		StudentID: chain.StudentID,

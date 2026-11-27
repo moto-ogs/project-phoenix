@@ -6,7 +6,7 @@
 
 import {
   ApiError,
-  enrichApiError,
+  apiErrorFromBody,
   isProblemRecord,
   problemDetail,
 } from "./api-error";
@@ -60,9 +60,8 @@ export class CompanionPlanConflictError extends ApiError {
   readonly conflicts: CompanionExtensionConfirmation[];
 
   constructor(body: unknown) {
-    super(problemDetail(body)?.trim() ?? "companion plan conflict", 409);
-    // Keep the original error's code and details.
-    enrichApiError(this, body, 409);
+    const message = problemDetail(body)?.trim() ?? "companion plan conflict";
+    super(message, 409, apiErrorFromBody(message, 409, body));
     this.name = "CompanionPlanConflictError";
     this.conflicts = conflictExtensions(body);
   }
