@@ -31,32 +31,11 @@ function Shell({ children }: { children: ReactNode }) {
 
 describe("ProfileContext", () => {
   const mockProfile: Profile = {
-    id: "1",
     firstName: "John",
     lastName: "Doe",
     email: "john.doe@example.com",
-    username: "johndoe",
     avatar: "/api/me/profile/avatar/avatar.jpg",
-    bio: "Test bio",
-    rfidCard: "12345678",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-    lastLogin: "2024-01-01T00:00:00Z",
     version: "p1",
-    settings: {
-      theme: "light",
-      language: "en",
-      notifications: {
-        email: true,
-        push: false,
-        activities: true,
-        roomChanges: false,
-      },
-      privacy: {
-        showEmail: true,
-        showProfile: true,
-      },
-    },
   };
 
   const mockSession = mockSessionData({
@@ -84,19 +63,6 @@ describe("ProfileContext", () => {
   });
 
   describe("ProfileProvider", () => {
-    it("should provide initial loading state", () => {
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <Shell>
-          <ProfileProvider>{children}</ProfileProvider>
-        </Shell>
-      );
-
-      const { result } = renderHook(() => useProfile(), { wrapper });
-
-      expect(result.current.isLoading).toBe(true);
-      expect(result.current.profile).toBe(null);
-    });
-
     it("should fetch profile on mount when session exists", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
         <Shell>
@@ -107,7 +73,7 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
@@ -125,7 +91,6 @@ describe("ProfileContext", () => {
 
       const { result } = renderHook(() => useProfile(), { wrapper });
 
-      expect(result.current.isLoading).toBe(false);
       expect(result.current.profile).toEqual(mockProfile);
       await act(async () => {
         await Promise.resolve();
@@ -148,8 +113,8 @@ describe("ProfileContext", () => {
 
       const { result } = renderHook(() => useProfile(), { wrapper });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+      await act(async () => {
+        await Promise.resolve();
       });
 
       expect(profileApi.fetchProfile).not.toHaveBeenCalled();
@@ -172,15 +137,13 @@ describe("ProfileContext", () => {
 
       const { result } = renderHook(() => useProfile(), { wrapper });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.profile).toBe(null);
       // fetchProfile reports the cause itself; this is only a breadcrumb.
-      expect(consoleWarnSpy).toHaveBeenCalledWith("failed to load profile", {
-        error: expect.any(String),
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith("failed to load profile", {
+          error: expect.any(String),
+        });
       });
+      expect(result.current.profile).toBe(null);
 
       consoleWarnSpy.mockRestore();
     });
@@ -194,7 +157,7 @@ describe("ProfileContext", () => {
         </Shell>
       );
 
-      const { result } = renderHook(() => useProfile(), { wrapper });
+      const { result, rerender } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
         expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
@@ -213,9 +176,9 @@ describe("ProfileContext", () => {
         update: vi.fn(),
       });
 
-      // This test verifies the provider doesn't crash and maintains state
+      rerender();
+      expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
       expect(result.current.profile).toEqual(mockProfile);
-      expect(result.current.isLoading).toBe(false);
     });
 
     it("should clear profile when session is removed", async () => {
@@ -242,7 +205,6 @@ describe("ProfileContext", () => {
 
       await waitFor(() => {
         expect(result.current.profile).toBe(null);
-        expect(result.current.isLoading).toBe(false);
       });
     });
   });
@@ -258,7 +220,7 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       vi.clearAllMocks();
@@ -288,7 +250,7 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       vi.clearAllMocks();
@@ -323,7 +285,7 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       vi.clearAllMocks();
@@ -349,68 +311,6 @@ describe("ProfileContext", () => {
       expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
     });
 
-    it("should show loading state for non-silent refresh", async () => {
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <Shell>
-          <ProfileProvider>{children}</ProfileProvider>
-        </Shell>
-      );
-
-      const { result } = renderHook(() => useProfile(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      vi.useFakeTimers();
-      vi.advanceTimersByTime(6000);
-
-      // Trigger non-silent refresh
-      act(() => {
-        void result.current.refreshProfile(false);
-      });
-
-      releaseFakeTimers();
-
-      // Should show loading state
-      expect(result.current.isLoading).toBe(true);
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-    });
-
-    it("should not show loading state for silent refresh", async () => {
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <Shell>
-          <ProfileProvider>{children}</ProfileProvider>
-        </Shell>
-      );
-
-      const { result } = renderHook(() => useProfile(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      vi.useFakeTimers();
-      vi.advanceTimersByTime(6000);
-
-      // Trigger silent refresh
-      act(() => {
-        void result.current.refreshProfile(true);
-      });
-
-      releaseFakeTimers();
-
-      // Should NOT show loading state
-      expect(result.current.isLoading).toBe(false);
-
-      await waitFor(() => {
-        expect(profileApi.fetchProfile).toHaveBeenCalled();
-      });
-    });
-
     it("should prevent concurrent refreshes", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
         <Shell>
@@ -421,7 +321,7 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       vi.clearAllMocks();
@@ -478,15 +378,16 @@ describe("ProfileContext", () => {
 
       act(() => {
         result.current.updateProfileData({
+          ...mockProfile,
           firstName: "Jane",
-          bio: "Updated bio",
+          version: "p2",
         });
       });
 
       expect(result.current.profile).toEqual({
         ...mockProfile,
         firstName: "Jane",
-        bio: "Updated bio",
+        version: "p2",
       });
     });
 
@@ -505,39 +406,15 @@ describe("ProfileContext", () => {
 
       const { result } = renderHook(() => useProfile(), { wrapper });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+      await act(async () => {
+        await Promise.resolve();
       });
 
       act(() => {
-        result.current.updateProfileData({ firstName: "Jane" });
+        result.current.updateProfileData({ ...mockProfile, firstName: "Jane" });
       });
 
       expect(result.current.profile).toBe(null);
-    });
-
-    it("should preserve unchanged fields when updating", async () => {
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <Shell>
-          <ProfileProvider>{children}</ProfileProvider>
-        </Shell>
-      );
-
-      const { result } = renderHook(() => useProfile(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.profile).toEqual(mockProfile);
-      });
-
-      const originalSettings = result.current.profile?.settings;
-
-      act(() => {
-        result.current.updateProfileData({ firstName: "Jane" });
-      });
-
-      expect(result.current.profile?.settings).toEqual(originalSettings);
-      expect(result.current.profile?.email).toBe(mockProfile.email);
-      expect(result.current.profile?.id).toBe(mockProfile.id);
     });
   });
 
@@ -565,7 +442,7 @@ describe("ProfileContext", () => {
       vi.mocked(profileApi.fetchProfile).mockResolvedValue(mockProfile);
 
       await act(async () => {
-        await result.current.refreshProfile(true);
+        await result.current.refreshProfile();
       });
 
       releaseFakeTimers();
@@ -599,7 +476,7 @@ describe("ProfileContext", () => {
       vi.mocked(profileApi.fetchProfile).mockResolvedValue(updatedProfile);
 
       await act(async () => {
-        await result.current.refreshProfile(true);
+        await result.current.refreshProfile();
       });
 
       releaseFakeTimers();
@@ -610,8 +487,8 @@ describe("ProfileContext", () => {
     });
   });
 
-  describe("tenant change debounce reset", () => {
-    it("should reset debounce when tenantId changes, allowing immediate refresh", async () => {
+  describe("profile scope changes", () => {
+    it("loads a new profile after switching schools", async () => {
       const sessionWithTenant = {
         ...mockSession,
         user: { ...mockSession.user, tenantId: "1" },
@@ -633,7 +510,7 @@ describe("ProfileContext", () => {
 
       // Wait for initial load
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       // First refresh happened on mount
@@ -663,7 +540,7 @@ describe("ProfileContext", () => {
       });
     });
 
-    it("should not reset debounce when tenantId is undefined", async () => {
+    it("loads the new session when tenantId becomes undefined", async () => {
       const sessionWithTenant = {
         ...mockSession,
         user: { ...mockSession.user, tenantId: "1" },
@@ -684,7 +561,7 @@ describe("ProfileContext", () => {
       const { result, rerender } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       vi.clearAllMocks();
@@ -711,7 +588,7 @@ describe("ProfileContext", () => {
       expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
     });
 
-    it("should reset debounce on re-login to same tenant after logout", async () => {
+    it("loads a profile on re-login to the same school", async () => {
       const sessionWithTenant = {
         ...mockSession,
         user: { ...mockSession.user, tenantId: "1" },
@@ -732,7 +609,7 @@ describe("ProfileContext", () => {
       const { result, rerender } = renderHook(() => useProfile(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.profile).toEqual(mockProfile);
       });
 
       // Initial fetch
@@ -766,8 +643,7 @@ describe("ProfileContext", () => {
 
       rerender();
 
-      // Debounce should have been reset (prevTenantIdRef tracked undefined),
-      // so the identity change triggers a fresh fetch
+      // The changed session scope loads a fresh profile.
       await waitFor(() => {
         expect(profileApi.fetchProfile).toHaveBeenCalled();
       });
@@ -827,7 +703,6 @@ describe("ProfileContext", () => {
       const { result } = renderHook(() => useProfile(), { wrapper });
 
       expect(result.current).toHaveProperty("profile");
-      expect(result.current).toHaveProperty("isLoading");
       expect(result.current).toHaveProperty("refreshProfile");
       expect(result.current).toHaveProperty("updateProfileData");
 

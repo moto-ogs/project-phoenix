@@ -20,11 +20,9 @@ import (
 // Platform's Träger account ledger and the invitation mail into the outbox.
 
 // TraegerAccountWiring is the configuration the Träger invitation is composed
-// with. Dispatcher may be nil: the link is then not mailed, like the other
-// identity links. Outbox enqueues into Delivery's outbox in the caller's
-// transaction; its worker sends the mail after the commit.
+// with. Outbox persists the link mail in the caller's transaction. Without a
+// delivery runtime, the link is not mailed.
 type TraegerAccountWiring struct {
-	Dispatcher  email.Dispatcher
 	DefaultFrom email.Email
 	Outbox      OutboxEnqueuer
 	// FrontendURL serves the logo the mail embeds; TraegerURL is the
@@ -46,7 +44,7 @@ func TraegerAccountDependencies(wiring *TraegerAccountWiring) *identityBindingPo
 	}
 	return &identityBindingPorts.TraegerAccountDependencies{
 		Delivery: traegerInvitationDelivery{
-			dispatcher: wiring.Dispatcher, outbox: wiring.Outbox, from: wiring.DefaultFrom,
+			outbox: wiring.Outbox, from: wiring.DefaultFrom,
 			frontendURL: wiring.FrontendURL, traegerURL: wiring.TraegerURL, backoff: wiring.Backoff,
 		},
 		Passwords: passwordPolicy{},
@@ -57,16 +55,15 @@ func TraegerAccountDependencies(wiring *TraegerAccountWiring) *identityBindingPo
 
 // traegerAccountDependencies is the serving roots' wiring: the outbox of
 // Delivery, the Träger-Portal link base and the invitation lifetime.
-func traegerAccountDependencies(dispatcher email.Dispatcher, from email.Email, delivery *deliveryCompose.Runtime, links ServiceLinks, logger *slog.Logger) *identityBindingPorts.TraegerAccountDependencies {
+func traegerAccountDependencies(from email.Email, delivery *deliveryCompose.Runtime, links ServiceLinks, logger *slog.Logger) *identityBindingPorts.TraegerAccountDependencies {
 	return TraegerAccountDependencies(&TraegerAccountWiring{
-		Dispatcher: dispatcher, DefaultFrom: from, Outbox: OutboxEnqueuer{Runtime: delivery},
+		DefaultFrom: from, Outbox: OutboxEnqueuer{Runtime: delivery},
 		FrontendURL: links.FrontendURL, TraegerURL: links.TraegerURL,
 		Expiry: links.InvitationTokenExpiry, Logger: logger,
 	})
 }
 
 type traegerInvitationDelivery struct {
-	dispatcher  email.Dispatcher
 	outbox      OutboxEnqueuer
 	from        email.Email
 	frontendURL string
@@ -76,7 +73,7 @@ type traegerInvitationDelivery struct {
 
 // DispatchTraegerInvitation queues the invitation mail with the invitation.
 func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context, invitation identityaccess.TraegerInvitation, traegerName string, expiry time.Duration) error {
-	if d.dispatcher == nil {
+	if d.outbox.Runtime == nil {
 		return nil
 	}
 	message := *identityMessage(d.from, email.NewEmail("", invitation.Email),
@@ -90,7 +87,7 @@ func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context
 // DispatchTraegerAccountChange queues the notice to the person whose roles
 // changed or who was removed, with the change (#5474).
 func (d traegerInvitationDelivery) DispatchTraegerAccountChange(ctx context.Context, notice identityaccess.TraegerAccountChangeNotice) error {
-	if d.dispatcher == nil {
+	if d.outbox.Runtime == nil {
 		return nil
 	}
 	message := *identityMessage(d.from, email.NewEmail("", notice.TargetEmail),

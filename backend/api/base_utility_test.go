@@ -300,7 +300,7 @@ func setupCaregiverCompositionModule(t *testing.T, graph *goldenRuntime) *caregi
 	t.Helper()
 	sessionAuth, err := newSessionTokenAuth()
 	require.NoError(t, err)
-	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
+	_, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	auth := newAccountResource(graph.db, nil, nil, services.CaregiverCapability, settings.Service)
 	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, authRateLimiters{}, devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil,
@@ -338,7 +338,7 @@ func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router
 	// enabled. The golden graph's router remains unchanged.
 	sessionAuth, err := newSessionTokenAuth()
 	require.NoError(t, err)
-	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
+	_, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, buildAuthRateLimiters(nil, "5", demoLoopbackExempt(), customMiddleware.NewRateLimiter),
 		devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil, settings.Service, hub, active, settingsWrites, nil, provisioning,
@@ -830,7 +830,7 @@ type settingsCallbackRoute struct {
 func checkTimetableConflictWiring(t *testing.T, graph *goldenRuntime) {
 	t.Parallel()
 
-	_, _, _, _, _, _, _, _, settings, _, services, schedules, requests, _, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
+	_, _, _, _, _, _, _, settings, _, services, schedules, requests, _, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	timetable := newTimetableResource(nil, nil, nil, nil, materialization, lifecycle, planning, nil, services.Users, schedules, nil, settings.Service,
 		requests.CareOfferings, ClassDayViews{}, nil, nil, nil, nil, nil, slog.Default(), time.Now)

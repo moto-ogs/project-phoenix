@@ -23,7 +23,7 @@ type WorkerDependencies struct {
 	TenantRuntimeObserver func(entryPoint, outcome string)
 	UnitOfWorkObserver    func(entryPoint, kind, result string, duration time.Duration, retries int)
 	Tracer                WorkerTracer
-	Settings              SettingsResolver
+	Settings              Settings
 	Active                SessionMaintenance
 	// ClosingTimes moves the session end to the closing time of a changed
 	// opening day (#8157); nil keeps operations.session_end_time every day.

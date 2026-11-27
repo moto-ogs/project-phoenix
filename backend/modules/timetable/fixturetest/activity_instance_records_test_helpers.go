@@ -16,8 +16,6 @@ type InstanceFixtureCommands interface {
 	CreateTemplateBackedIfAbsent(arg0 context.Context, arg1 *ActivityInstance) (bool, error)
 	Delete(arg0 context.Context, arg1 int64) error
 
-	DeletePlannedNonSpontaneousInWindow(arg0 context.Context, arg1 calendar.Date, arg2 *calendar.Date, arg3 *int64, arg4 bool) (int64, error)
-
 	MarkCompleted(arg0 context.Context, arg1 int64, arg2 time.Time) error
 
 	PropagateListKindToFutureInstances(arg0 context.Context, arg1 int64, arg2 *string, arg3 *string, arg4 calendar.Date) (int64, error)
@@ -82,11 +80,6 @@ func (adapter fromActivityInstanceRecords) Delete(arg0 context.Context, arg1 int
 
 func (adapter fromActivityInstanceRecords) DeleteOlderThan(arg0 context.Context, arg1 string, arg2 calendar.Date) (int64, error) {
 	result0, result1 := adapter.value.DeleteOlderThan(arg0, arg1, arg2)
-	return result0, result1
-}
-
-func (adapter fromActivityInstanceRecords) DeletePlannedNonSpontaneousInWindow(arg0 context.Context, arg1 calendar.Date, arg2 *calendar.Date, arg3 *int64, arg4 bool) (int64, error) {
-	result0, result1 := adapter.value.DeletePlannedNonSpontaneousInWindow(arg0, arg1, arg2, arg3, arg4)
 	return result0, result1
 }
 

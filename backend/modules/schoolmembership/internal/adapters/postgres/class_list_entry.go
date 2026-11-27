@@ -32,16 +32,13 @@ type classListEntryRow struct {
 	CreatedBy     *int64    `bun:"created_by"`
 }
 
-func (s *Store) FindClassListEntry(ctx context.Context, id int64, lock string) (schoolmembership.ClassListEntry, bool, domain.OperationStats, error) {
+func (s *Store) FindClassListEntry(ctx context.Context, id int64) (schoolmembership.ClassListEntry, bool, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return schoolmembership.ClassListEntry{}, false, domain.OperationStats{}, err
 	}
 	row := &classListEntryRow{}
-	query := withTenant(classListEntrySelect(db, row).Where(`"class_list_entry".id = ?`, id), "class_list_entry", scope)
-	if lock != "" {
-		query = query.For(lock)
-	}
+	query := withTenant(classListEntrySelect(db, row).Where(`"class_list_entry".id = ?`, id), "class_list_entry", scope).For("UPDATE")
 	found, stats, err := scanOne(ctx, query, "find class list entry")
 	if err != nil || !found {
 		return schoolmembership.ClassListEntry{}, found, stats, err

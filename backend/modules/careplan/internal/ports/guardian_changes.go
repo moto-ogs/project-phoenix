@@ -17,15 +17,11 @@ type GuardianAbsenceRecords interface {
 
 // GuardianPickupRecords is the owner persistence of the guardian pickup leg.
 type GuardianPickupRecords interface {
-	ListPickupExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupException, error)
-	CreatePickupException(context.Context, careplan.PickupException) (careplan.PickupException, error)
-	UpdatePickupException(context.Context, careplan.PickupException) error
 	DeletePickupException(context.Context, int64) error
 }
 
 // GuardianPickupExcusal couples the guardian pickup leg with the derived
 // block excusal. A nil value skips the coupling.
 type GuardianPickupExcusal interface {
-	Sync(context.Context, int64) (bool, error)
 	ReleaseBeforeDelete(context.Context, *careplan.PickupException) error
 }

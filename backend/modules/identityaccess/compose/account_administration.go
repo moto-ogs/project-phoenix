@@ -33,7 +33,6 @@ func newAccountAdministration(
 		Verifier:  sessions.Passwords,
 		Passwords: deps.Passwords,
 		Runtime:   runtime,
-		Logger:    deps.Logger,
 	})
 }
 

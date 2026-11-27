@@ -172,20 +172,11 @@ describe("GuardianList", () => {
     expect(screen.getAllByText("Primär").length).toBeGreaterThan(0);
   });
 
-  it("shows relationship type when showRelationship is true", () => {
-    render(<GuardianList guardians={mockGuardians} showRelationship={true} />);
+  it("shows the relationship to the child", () => {
+    render(<GuardianList guardians={mockGuardians} />);
 
     expect(screen.getByText("Mutter")).toBeInTheDocument();
     expect(screen.getByText("Vater")).toBeInTheDocument();
-  });
-
-  it("hides relationship type when showRelationship is false", () => {
-    render(<GuardianList guardians={mockGuardians} showRelationship={false} />);
-
-    // Anker: die Karten der beiden Personen sind gerendert.
-    expect(screen.getAllByText("Anna Müller").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Mutter")).not.toBeInTheDocument();
-    expect(screen.queryByText("Vater")).not.toBeInTheDocument();
   });
 
   it("displays contact information", () => {
@@ -204,7 +195,7 @@ describe("GuardianList", () => {
   });
 
   it("shows emergency contact indicator", () => {
-    render(<GuardianList guardians={mockGuardians} showRelationship={true} />);
+    render(<GuardianList guardians={mockGuardians} />);
 
     expect(screen.getByText("Notfallkontakt")).toBeInTheDocument();
   });

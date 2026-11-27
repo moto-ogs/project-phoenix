@@ -68,11 +68,11 @@ func (o OutboxEnqueuer) EnqueueMailIntent(ctx context.Context, mail DurableMail)
 	if o.Runtime == nil || o.Runtime.Module == nil {
 		return deliveryContract.Enqueued{}, errors.New("transactional mail: delivery is not configured")
 	}
-	policy := email.WithInteractiveRetry(email.DeliveryRequest{}, mail.Backoff)
+	attempts, backoff := email.InteractiveRetry(mail.Backoff)
 	if mail.MaxAttempts == 0 {
-		mail.MaxAttempts = policy.MaxAttempts
+		mail.MaxAttempts = attempts
 	}
-	mail.Backoff = policy.BackoffPolicy
+	mail.Backoff = backoff
 	payload, err := json.Marshal(transactionalMailPayload{
 		MaxAttempts: mail.MaxAttempts, Backoff: mail.Backoff,
 		Message: mail.Message, Type: mail.Type, ReferenceID: mail.ReferenceID,
@@ -182,7 +182,7 @@ func (r TransactionalMailRenderer) RecordDelivery(ctx context.Context, intent *d
 	if err != nil {
 		return err
 	}
-	result := email.DeliveryResult{Attempt: intent.Attempts + 1, MaxAttempt: payload.MaxAttempts, SentAt: time.Now(), Err: sendErr, Final: transactionalSendFinal(intent.Attempts+1, payload.MaxAttempts, sendErr)}
+	result := email.DeliveryResult{Attempt: intent.Attempts + 1, SentAt: time.Now(), Err: sendErr, Final: transactionalSendFinal(intent.Attempts+1, payload.MaxAttempts, sendErr)}
 	result.Status = email.DeliveryStatusSent
 	if sendErr != nil {
 		result.Status = email.DeliveryStatusFailed

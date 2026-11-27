@@ -72,11 +72,8 @@ var errRollback = errors.New("roll the report back")
 func (f *classArrivalBatchFixture) staffArrival(t *testing.T, ctx context.Context, studentID int64) {
 	t.Helper()
 	clock := time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC)
-	require.NoError(t, testpkg.TenantCommand0(t, ctx, f.db, func(txCtx context.Context) error {
-		return f.service.CreateStudentArrivalException(txCtx, &careplan.ArrivalException{
-			StudentID: studentID, ExceptionDate: careplan.Date(f.date), ExpectedArrival: &clock, CreatedBy: f.staffID, Source: careplan.ExceptionSourceStaff,
-		})
-	}))
+	_, err := f.service.CreateOrReclaimException(ctx, studentID, f.date, &clock, nil, f.staffID, nil)
+	require.NoError(t, err)
 }
 
 // A refusal stops the report where single commands would have stopped it:

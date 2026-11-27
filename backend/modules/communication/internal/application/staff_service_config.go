@@ -14,15 +14,14 @@ type ServiceConfig struct {
 	Settings   Settings
 	Outbox     OutboxEnqueuer
 	PushOutbox PushOutboxCanceller
-	Notifier   NotificationSender
+	Notifier   communication.NotificationSender
 	// Series sends the language variants of one push with one device read
 	// (#5869). Its NotifyDurably provides the outbox receipt of a claimed
-	// scheduled reminder; publication keeps the fire-and-forget Notify. A
-	// Series without Notify sends each variant through Notifier.
+	// scheduled reminder; publication keeps the fire-and-forget Notify.
 	Series communication.NotificationSeries
 	// Preferences gates the push by the guardian's own consent. Optional; when
 	// absent no guardian is notified at all, which is the safe direction.
-	Preferences NotificationPreferences
+	Preferences communication.NotificationPreferences
 	// Deliveries records who an Elternbrief was addressed to and what happened
 	// to their mail. Optional: without it the letter still publishes and mails
 	// still go out, only the staff matrix stays empty.

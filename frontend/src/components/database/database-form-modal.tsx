@@ -6,18 +6,16 @@ import {
   DatabaseForm,
   type DatabaseFormErrorPath,
 } from "~/components/database/database-form";
-import { configToFormSection, type EntityConfig } from "@/lib/database/types";
-
-type DatabaseFormModalConfig<T> = Pick<EntityConfig<T>, "form" | "labels">;
+import {
+  configToFormSection,
+  type EntityFormConfig,
+} from "@/lib/database/types";
 
 interface DatabaseFormModalProps<T> {
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly mode: "create" | "edit";
-  readonly config: DatabaseFormModalConfig<T>;
+  readonly config: EntityFormConfig<T>;
   readonly onSubmit: (data: Partial<T>) => Promise<void>;
-  readonly initialData?: Partial<T>;
-  readonly isLoading?: boolean;
   /** Nachgeladene Felder dürfen einen offenen Entwurf nicht ersetzen. */
   readonly preserveDraftOnSectionsChange?: boolean;
   /** Shared API error path and its `{object}`, see `DatabaseForm`. */
@@ -28,11 +26,8 @@ interface DatabaseFormModalProps<T> {
 export function DatabaseFormModal<T>({
   isOpen,
   onClose,
-  mode,
   config,
   onSubmit,
-  initialData,
-  isLoading,
   preserveDraftOnSectionsChange,
   errorPath,
   errorObject,
@@ -45,32 +40,18 @@ export function DatabaseFormModal<T>({
     [config.form.sections],
   );
 
-  // Modal renders nothing while closed; bail out before the title check so a
-  // missing label only fails when the modal is actually opened, not at mount.
   if (!isOpen) return null;
 
-  const title =
-    mode === "create"
-      ? config.labels.createModalTitle
-      : config.labels.editModalTitle;
-  if (!title) {
-    // defineEntityConfig erases literal types, so a missing label can't be
-    // excluded statically; fail loudly instead of rendering empty copy.
-    throw new Error(`Entity config is missing the ${mode} modal title label`);
-  }
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={onClose} title={config.createTitle}>
       <DatabaseForm<Partial<T>>
         // Modal rendert seinen Titel als h3.
         sectionLevel={4}
         sections={sections}
-        initialData={initialData ?? config.form.defaultValues}
+        initialData={config.form.defaultValues}
         onSubmit={onSubmit}
         onCancel={onClose}
-        isLoading={isLoading}
-        submitLabel={mode === "create" ? "Erstellen" : "Speichern"}
-        stickyActions
+        submitLabel="Erstellen"
         preserveDraftOnSectionsChange={preserveDraftOnSectionsChange}
         errorPath={errorPath}
         errorObject={errorObject}

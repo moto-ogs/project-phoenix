@@ -106,7 +106,8 @@ Gerenderte Reihenfolge, fest, nicht verhandelbar:
    Kindakte). Ein Seitentest, der die Suchzeile ersetzt, mockt
    `~/components/ui/tenant-page-search-row`: der Mock bekommt genau die
    Such-Props der Seite. Eine Suche außerhalb der Kopfkarte (Bedienband,
-   Karte) nimmt `SearchBar` aus `ui/page-header/SearchBar`.
+   Karte) rendert `SharedSearchBar` in einem eigenen `SearchBarDraftProvider`.
+   Beide kommen aus `ui/page-header/SearchBar`.
    Ein Filter mit Mehrfachauswahl (`type: "buttons"`, `multiSelect`) rendert
    als Chip-Reihe, ein Einfachfilter als `SegmentedControl`: eine
    Filterreihe darf nie aussehen wie eine zweite Reiterleiste.

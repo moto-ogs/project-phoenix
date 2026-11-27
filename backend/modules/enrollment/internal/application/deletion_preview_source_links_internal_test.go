@@ -57,9 +57,9 @@ type sourceEnrollmentCall struct {
 	childID   *int64
 }
 
-func sourceLinkPreview(counts func(context.Context, int64, *int64) (int, error)) *DeletionPreview {
+func testDeletionPreview(queries DeletionQueries, counts func(context.Context, int64, *int64) (int, error)) *DeletionPreview {
 	return NewDeletionPreview(DeletionPreviewDependencies{
-		Enrollment:             sourceLinkDeletionQueries{},
+		Enrollment:             queries,
 		Guardians:              emptyGuardianDirectory{},
 		CountAuditAdjustments:  func(context.Context, int64, *int64) (int, error) { return 0, nil },
 		CountBookings:          func(context.Context, []int64) (int, error) { return 0, nil },
@@ -75,7 +75,7 @@ func TestDeletionPreviewCountsTimetableSourceLinks(t *testing.T) {
 	t.Parallel()
 
 	var calls []sourceEnrollmentCall
-	preview := sourceLinkPreview(func(_ context.Context, requestID int64, childID *int64) (int, error) {
+	preview := testDeletionPreview(sourceLinkDeletionQueries{}, func(_ context.Context, requestID int64, childID *int64) (int, error) {
 		calls = append(calls, sourceEnrollmentCall{requestID: requestID, childID: childID})
 		if childID == nil {
 			return 3, nil
@@ -102,7 +102,7 @@ func TestDeletionPreviewCountsTimetableSourceLinks(t *testing.T) {
 func TestDeletionPreviewRequiresTheSourceEnrollmentCount(t *testing.T) {
 	t.Parallel()
 
-	preview := sourceLinkPreview(nil)
+	preview := testDeletionPreview(sourceLinkDeletionQueries{}, nil)
 
 	_, err := preview.PreviewRequest(context.Background(), 5)
 	require.ErrorContains(t, err, "source enrollment count capability is required")

@@ -93,7 +93,6 @@ func composeServeRoot(
 		tokens           owners.TokenAdapter
 		audit            owners.AuditOwner
 		mailSender       email.Mailer
-		mailDispatcher   email.Dispatcher
 		mailFrom         email.Email
 		pushVAPID        deliveryCompose.VAPIDConfig
 		organizations    organizationtenancy.Capability
@@ -197,7 +196,7 @@ func composeServeRoot(
 		func() (err error) { tokens, err = newLegacyTokenAdapter(env.Now); return },
 		func() (err error) { audit, err = owners.BuildAuditOwner(db, env); return },
 		func() (err error) {
-			mailSender, mailDispatcher, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
+			mailSender, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
 			return
 		},
 		func() (err error) { organizations, err = owners.BuildServeOrganizations(db, env.Now); return },
@@ -286,7 +285,7 @@ func composeServeRoot(
 		func() (err error) {
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
-			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service, audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest, structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable), presence.SessionRecords, presence.Presence, workTime, calendar)
+			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service, audit, operatorAuditLog, mailSender, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest, structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable), presence.SessionRecords, presence.Presence, workTime, calendar)
 			return
 		},
 		func() (err error) {
@@ -490,7 +489,7 @@ func composeServeRoot(
 			guardianProfiles = peopleCompose.NewGuardianProfileLoader(people.GuardianProfiles, db.Pool(), env.Logger.With("service", "guardian-profile-loader"))
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
 				settings.Service, env.Logger.With("service", "birthdays"), env.Now)
-			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now, settings.Service)
+			dataImports = newServeImports(audit, identity, groups, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now, settings.Service)
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
 		},

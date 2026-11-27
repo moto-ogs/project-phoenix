@@ -90,8 +90,6 @@ func TestAccountManagementOwnTenantAllowed(t *testing.T) {
 
 	require.NoError(t, e.tc.resource.Sessions.DeactivateAccount(e.schoolCtx(), account.ID))
 	assert.False(t, readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID).Active)
-	require.NoError(t, e.tc.resource.Sessions.ActivateAccount(e.schoolCtx(), account.ID))
-	assert.True(t, readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID).Active)
 }
 
 func assertAccountActionStatus(t *testing.T, e *accountIsolationEnv, claims testutil.Claims, method, path string, body any, status int) {
@@ -185,7 +183,6 @@ func TestAccountManagementPlatformScopeRemainsGlobal(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, foreignID, got.ID)
 	require.NoError(t, e.tc.resource.Sessions.DeactivateAccount(ctx, foreignID))
-	require.NoError(t, e.tc.resource.Sessions.ActivateAccount(ctx, foreignID))
 }
 
 // Organization scope must not detach a command from an existing school unit.

@@ -338,9 +338,7 @@ function RoomDetailPageContent() {
     async (data: Partial<Room>, version: string | undefined) => {
       if (!room) throw new Error("room is not loaded");
       try {
-        const payload = roomsConfig.form.transformBeforeSubmit
-          ? roomsConfig.form.transformBeforeSubmit(data)
-          : data;
+        const payload = roomsConfig.form.transformBeforeSubmit(data);
         // The save carries the version the form was filled from.
         const saved = await service.update(room.id, {
           ...payload,

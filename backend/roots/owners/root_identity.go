@@ -39,7 +39,7 @@ func BuildIdentityAccess(
 	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, tokens TokenAdapter, uploads nativeUploads.UploadFiles,
 	organizations organizationtenancy.Capability, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	settings settingsCompose.BatchSettingsService, audit AuditOwner, operatorAuditLog OperatorAuditEntries,
-	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox IdentityMailOutbox,
+	mailSender email.Mailer, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox IdentityMailOutbox,
 	people PeopleRows, guardianEnrollments guardianEnrollmentClaims,
 	groups EducationGroupRows, staffGroups schoolstructure.StaffGroupQuery, activityGroups timetablePorts.CallerActivityGroups,
 	sessions presenceCompose.SessionRecords, presence studentpresence.Owner,
@@ -60,7 +60,7 @@ func BuildIdentityAccess(
 		return nil, nil, err
 	}
 	invitationDeps := InvitationDependencies(&InvitationWiring{
-		Dispatcher: mailDispatcher, DefaultFrom: mailFrom, Durable: durable, StaffURL: links.FrontendURL, SchoolURL: links.SchoolURL,
+		DefaultFrom: mailFrom, Durable: durable, StaffURL: links.FrontendURL, SchoolURL: links.SchoolURL,
 		MailIdentity: mailIdentity, Expiry: links.InvitationTokenExpiry, Settings: settings, Outbox: outbox, WelcomeDelay: identityaccess.StaffWelcomeDelay, Outcomes: deliveryRuntime.EmailOutcomes,
 	}, tokens.SessionTokens, authLogger)
 	invitationDeps.EmploymentReset, err = BuildInvitationEmploymentReset(db, env, workTime, persons, membership, people, audit, settings, calendar)
@@ -108,7 +108,7 @@ func BuildIdentityAccess(
 		return nil, nil, err
 	}
 	demo, err := DemoDependencies(
-		demoAccessWiringFor(strings.ToLower(cfg.AppEnv), mailDispatcher, mailFrom, links.FrontendURL, viper.GetInt("demo_max_active_schools"), tokens, authLogger, durable),
+		demoAccessWiringFor(strings.ToLower(cfg.AppEnv), mailFrom, links.FrontendURL, viper.GetInt("demo_max_active_schools"), tokens, authLogger, durable),
 		organizationtenancy.StandingDemoSchool(viper.GetBool("demo_standing_school")), organizations)
 	if err != nil {
 		return nil, nil, err
@@ -120,13 +120,13 @@ func BuildIdentityAccess(
 		DB:                     db.Pool(), Observe: requiredIdentityAccessObservation(env.Observe.IdentityAccess), TenantRuntime: unit, Now: env.Now,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo,
 		Resets: PasswordResetDependencies(&PasswordResetWiring{
-			Dispatcher: mailDispatcher, DefaultFrom: mailFrom, Durable: durable,
+			DefaultFrom: mailFrom, Durable: durable,
 			StaffURL: links.FrontendURL, ParentsURL: links.ParentsURL, SchoolURL: links.SchoolURL, CatererURL: links.CatererURL, TraegerURL: links.TraegerURL,
 			Expiry: links.PasswordResetTokenExpiry, RateLimitEnabled: cfg.RateLimitEnabled,
 		}, authLogger, cfg.JWTSecret),
-		Invitations: invitationDeps, Traeger: traegerAccountDependencies(mailDispatcher, mailFrom, deliveryRuntime, links, authLogger),
+		Invitations: invitationDeps, Traeger: traegerAccountDependencies(mailFrom, deliveryRuntime, links, authLogger),
 		OperatorProvisioning: operatorProvisioningDependencies(&operatorLinkWiring{
-			dispatcher: mailDispatcher, defaultFrom: mailFrom, durable: durable,
+			defaultFrom: mailFrom, durable: durable,
 			frontendURL: links.FrontendURL, operatorFrontendURL: operatorFrontendURL,
 			invitationExpiry: links.InvitationTokenExpiry, emailChangeExpiry: emailChangeExpiry(links.PasswordResetTokenExpiry, env.Logger),
 			logger: platformLogger,

@@ -99,7 +99,7 @@ func storeError(op string, err error) error {
 	return fmt.Errorf("school structure postgres: %s: %w", op, err)
 }
 
-func (s *Store) FindTransition(ctx context.Context, tenantID, id int64, lock string) (schoolstructure.Transition, bool, domain.OperationStats, error) {
+func (s *Store) FindTransition(ctx context.Context, tenantID, id int64) (schoolstructure.Transition, bool, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return schoolstructure.Transition{}, false, domain.OperationStats{}, err
@@ -107,12 +107,8 @@ func (s *Store) FindTransition(ctx context.Context, tenantID, id int64, lock str
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	row := transitionRow{}
-	query := db.NewSelect().Model(&row).ModelTableExpr(transitionsTable).
-		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id)
-	if lock == "update" {
-		query = query.For("UPDATE")
-	}
-	err = query.Scan(ctx)
+	err = db.NewSelect().Model(&row).ModelTableExpr(transitionsTable).
+		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {
 		return schoolstructure.Transition{}, false, stats, nil

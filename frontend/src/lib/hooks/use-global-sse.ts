@@ -316,7 +316,7 @@ function currentStudentDetailId(): string | null {
  * - Only connects when authenticated (session has token)
  * - Exposes connection status for debugging/UI
  *
- * @returns SSE connection state (status, isConnected, error, reconnectAttempts)
+ * @returns The current SSE connection state.
  */
 export function useGlobalSSE(): SSEHookState {
   const { data: session, status: sessionStatus } = useSession();

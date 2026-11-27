@@ -135,6 +135,9 @@ describe("InviteAdminModal", () => {
     expect(screen.getByLabelText("Position")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Position"));
     expect(
+      screen.getByRole("listbox", { name: "Position" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("option", { name: "Pädagogische Fachkraft" }),
     ).toBeInTheDocument();
     expect(

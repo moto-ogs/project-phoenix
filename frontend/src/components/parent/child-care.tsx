@@ -1454,8 +1454,6 @@ export function PickupTimeModal({
           return childFirstName
             ? t("pickup.alreadyHome", { name: childFirstName })
             : t("pickup.alreadyHomeGeneric");
-        case "students.care_exception_raced":
-          return t("pickup.errorRaced");
         case "care.care_exception_past_date":
           return t("pickup.errorPastDate");
         case "care.care_exception_too_far":

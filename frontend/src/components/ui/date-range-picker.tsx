@@ -60,12 +60,6 @@ interface DateRangePickerProps {
   /** Between the arrows of a framed group: frame and radius come from the group,
    * the trigger brings only content and height. */
   readonly embedded?: boolean;
-  /**
-   * What the range is for („Zeitraum“ by default). The trigger shows only the
-   * dates; this name follows them as hidden text (#7112). A translated
-   * surface passes its own word.
-   */
-  readonly fieldLabel?: string;
 }
 
 // Beside a second month the grid cannot follow the panel's width, so from `sm`
@@ -129,7 +123,6 @@ export function DateRangePicker({
   toMax,
   triggerClassName,
   embedded = false,
-  fieldLabel,
 }: DateRangePickerProps) {
   const kitDefault = useKitDefault();
   const [isOpen, setIsOpen] = useState(false);
@@ -174,7 +167,8 @@ export function DateRangePicker({
     onCovered: closeCovered,
   });
 
-  const resolvedFieldLabel = fieldLabel ?? kitDefault("Zeitraum");
+  // The trigger shows the dates; the field name follows as hidden text (#7112).
+  const resolvedFieldLabel = kitDefault("Zeitraum");
   const handleChange = (range: DateRange | undefined) => {
     onChange(range);
     // Close only when both bounds are picked (or when a preset fires).

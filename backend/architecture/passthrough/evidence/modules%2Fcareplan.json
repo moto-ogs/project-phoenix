@@ -590,13 +590,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) DeleteArrivalNotesByStudent(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"delete_arrival_notes_by_student\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.DeleteArrivalNotesByStudent(ctx, id)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/careplan/internal/application/Service.DeleteArrivalNotesByStudent",
-      "owner": "modules/careplan"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) DeleteArrivalSchedule(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"delete_arrival_schedule\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.DeleteArrivalSchedule(ctx, id)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.DeleteArrivalSchedule",
@@ -656,13 +649,6 @@
       "evidence": "func (s *Service) DeletePickupNote(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"delete_pickup_note\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.DeletePickupNote(ctx, id)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.DeletePickupNote",
-      "owner": "modules/careplan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) DeletePickupNotesByStudent(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"delete_pickup_notes_by_student\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.DeletePickupNotesByStudent(ctx, id)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/careplan/internal/application/Service.DeletePickupNotesByStudent",
       "owner": "modules/careplan"
     },
     {
@@ -1188,13 +1174,6 @@
       "evidence": "func (s arrivalBaselineSource) StudentClasses(ctx context.Context, ids []int64) (map[int64]string, error) {\n\trows, err := s.deps.StudentClasses(ctx, ids)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"project arrival baselines: load students: %w\", err)\n\t}\n\tout := make(map[int64]string, len(rows))\n\tfor id, class := range rows {\n\t\tif key := strings.ToLower(strings.TrimSpace(class)); key != \"\" {\n\t\t\tout[id] = key\n\t\t}\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/arrivalBaselineSource.StudentClasses",
-      "owner": "modules/careplan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *arrivalScheduleService) DeleteAllStudentArrivalSchedules(ctx context.Context, studentID int64) error {\n\treturn s.tx.WithinTenant(ctx, func(txCtx context.Context) error {\n\t\tif err := s.lockArrivalStudent(txCtx, studentID); err != nil {\n\t\t\treturn err\n\t\t}\n\t\treturn s.deleteAllSchedules(txCtx, studentID)\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/careplan/internal/application/arrivalScheduleService.DeleteAllStudentArrivalSchedules",
       "owner": "modules/careplan"
     },
     {

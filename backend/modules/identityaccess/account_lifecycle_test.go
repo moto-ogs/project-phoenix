@@ -102,8 +102,6 @@ func TestIsLehrkraftRole(t *testing.T) {
 	require.True(t, identityaccess.IsLehrkraftRole(copied))
 	require.False(t, identityaccess.RoleNeedsCaregiverProfile(copied), "a Lehrkraft copy never gets a caregiver profile")
 	require.True(t, identityaccess.RoleNeedsStaffRecord(copied))
-	require.True(t, identityaccess.AccountClaims{Roles: []identityaccess.AccountRole{{Name: "klassenleitung", SchoolPortal: true}}}.IsSchoolPortalOnly())
-	require.False(t, identityaccess.AccountClaims{Roles: []identityaccess.AccountRole{{Name: "klassenleitung", SchoolPortal: true}, {Name: "user", IsSystem: true}}}.IsSchoolPortalOnly())
 
 	require.True(t, identityaccess.IsLehrkraftRole(systemRole("lehrkraft")))
 	require.True(t, identityaccess.IsLehrkraftRole(systemRole(" Lehrkraft ")))

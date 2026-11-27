@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -30,6 +31,12 @@ func setupArrivalScheduleService(t *testing.T, db *bun.DB, clocks ...func() time
 	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), clocks...)
 	require.NoError(t, err, "Failed to create service factory")
 	return serviceFactorySchedules.Arrivals
+}
+
+func createArrivalExceptionFixture(t *testing.T, ctx context.Context, db *bun.DB, row *careplan.ArrivalException) error {
+	t.Helper()
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
+	return api.CreateParentArrivalExceptionFixture(ctx, owner, row)
 }
 
 func createArrivalServiceTestStaffID(t *testing.T, db *bun.DB) int64 {
@@ -80,7 +87,7 @@ func TestArrivalScheduleService_GetStudentArrivalSchedules(t *testing.T) {
 	})
 }
 
-func TestArrivalScheduleService_GetStudentArrivalScheduleForWeekday(t *testing.T) {
+func TestArrivalScheduleService_ReadsSchedulesForWeekday(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -100,20 +107,13 @@ func TestArrivalScheduleService_GetStudentArrivalScheduleForWeekday(t *testing.T
 		err := testpkg.TenantCommand1(t, ctx, db, service.UpsertStudentArrivalSchedule, sched)
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentArrivalScheduleForWeekday, student.ID, timetable.WeekdayTuesday)
+		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetWeeklySchedulesByStudentIDsAndWeekday, []int64{student.ID}, timetable.WeekdayTuesday)
 
 		require.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, timetable.WeekdayTuesday, result.Weekday)
+		require.Len(t, result, 1)
+		assert.Equal(t, timetable.WeekdayTuesday, result[0].Weekday)
 	})
 
-	t.Run("returns error for invalid weekday", func(t *testing.T) {
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentArrivalScheduleForWeekday, int64(1), 10)
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "invalid weekday")
-	})
 }
 
 func TestArrivalScheduleService_UpsertStudentArrivalSchedule(t *testing.T) {
@@ -158,9 +158,10 @@ func TestArrivalScheduleService_UpsertStudentArrivalSchedule(t *testing.T) {
 
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentArrivalScheduleForWeekday, student.ID, timetable.WeekdayMonday)
+		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetWeeklySchedulesByStudentIDsAndWeekday, []int64{student.ID}, timetable.WeekdayMonday)
 		require.NoError(t, err)
-		assert.Equal(t, 8, result.ExpectedArrival.Hour())
+		require.Len(t, result, 1)
+		assert.Equal(t, 8, result[0].ExpectedArrival.Hour())
 	})
 
 	t.Run("fails validation for invalid schedule", func(t *testing.T) {
@@ -383,7 +384,7 @@ func TestArrivalScheduleService_DeleteStudentArrivalSchedule(t *testing.T) {
 	})
 }
 
-func TestArrivalScheduleService_DeleteAllStudentArrivalSchedules(t *testing.T) {
+func TestArrivalScheduleService_ClearsPlanWithEmptyWeek(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -405,7 +406,7 @@ func TestArrivalScheduleService_DeleteAllStudentArrivalSchedules(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		err := testpkg.TenantCommand1(t, ctx, db, service.DeleteAllStudentArrivalSchedules, student.ID)
+		err := testpkg.TenantCommand2(t, ctx, db, service.UpsertBulkStudentArrivalSchedules, student.ID, nil)
 
 		require.NoError(t, err)
 
@@ -419,70 +420,7 @@ func TestArrivalScheduleService_DeleteAllStudentArrivalSchedules(t *testing.T) {
 // Exception Operations Tests
 // =============================================================================
 
-func TestArrivalScheduleService_CreateStudentArrivalException(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupArrivalScheduleService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("creates exception successfully", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
-
-		exception := &careplan.ArrivalException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(calendar.NewDate(2024, 3, 15)),
-			Reason:        testpkg.StrPtr("Doctor appointment"),
-			CreatedBy:     createArrivalServiceTestStaffID(t, db),
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
-
-		require.NoError(t, err)
-		assert.Greater(t, exception.ID, int64(0))
-	})
-
-	t.Run("returns error when exception already exists for date", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
-
-		exceptionDate := calendar.NewDate(2024, 3, 20)
-		exception1 := &careplan.ArrivalException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(exceptionDate),
-			Reason:        testpkg.StrPtr("First exception"),
-			CreatedBy:     createArrivalServiceTestStaffID(t, db),
-		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception1)
-		require.NoError(t, err)
-
-		exception2 := &careplan.ArrivalException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(exceptionDate),
-			Reason:        testpkg.StrPtr("Second exception"),
-			CreatedBy:     createArrivalServiceTestStaffID(t, db),
-		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception2)
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exception already exists for this date")
-	})
-
-	t.Run("fails validation for invalid exception", func(t *testing.T) {
-		exception := &careplan.ArrivalException{
-			StudentID:     0,
-			ExceptionDate: careplan.Date(calendar.NewDate(2024, 3, 15)),
-			Reason:        testpkg.StrPtr("Test"),
-			CreatedBy:     createArrivalServiceTestStaffID(t, db),
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
-
-		require.Error(t, err)
-	})
-}
-
-func TestArrivalScheduleService_GetStudentArrivalExceptions(t *testing.T) {
+func TestArrivalScheduleService_DataIncludesExceptions(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -501,63 +439,19 @@ func TestArrivalScheduleService_GetStudentArrivalExceptions(t *testing.T) {
 				Reason:        testpkg.StrPtr("Exception"),
 				CreatedBy:     createArrivalServiceTestStaffID(t, db),
 			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+			err := createArrivalExceptionFixture(t, ctx, db, exception)
 			require.NoError(t, err)
 		}
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 
 		require.NoError(t, err)
+		results := data.Exceptions
 		assert.Len(t, results, 5)
 	})
 }
 
-func TestArrivalScheduleService_GetUpcomingStudentArrivalExceptions(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupArrivalScheduleService(t, db, decisionTestClock)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns only upcoming exceptions", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
-
-		baseDate := decisionTestToday
-
-		for i := -5; i < 0; i++ {
-			exception := &careplan.ArrivalException{
-				StudentID:     student.ID,
-				ExceptionDate: careplan.Date(baseDate.AddDays(i)),
-				Reason:        testpkg.StrPtr("Past"),
-				CreatedBy:     createArrivalServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
-			require.NoError(t, err)
-		}
-
-		for i := 1; i <= 3; i++ {
-			exception := &careplan.ArrivalException{
-				StudentID:     student.ID,
-				ExceptionDate: careplan.Date(baseDate.AddDays(i)),
-				Reason:        testpkg.StrPtr("Future"),
-				CreatedBy:     createArrivalServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
-			require.NoError(t, err)
-		}
-
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetUpcomingStudentArrivalExceptions, student.ID)
-
-		require.NoError(t, err)
-		assert.Len(t, results, 3)
-		for _, result := range results {
-			assert.Equal(t, "Future", *result.Reason)
-		}
-	})
-}
-
-func TestArrivalScheduleService_UpdateStudentArrivalException(t *testing.T) {
+func TestArrivalScheduleService_UpdatesExceptionReason(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -574,17 +468,18 @@ func TestArrivalScheduleService_UpdateStudentArrivalException(t *testing.T) {
 			Reason:        testpkg.StrPtr("Original reason"),
 			CreatedBy:     createArrivalServiceTestStaffID(t, db),
 		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err := createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		exception.Reason = testpkg.StrPtr("Updated reason")
 
-		err = testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentArrivalException, exception)
+		_, err = service.UpdateException(ctx, exception.ID, student.ID, calendar.Date(exception.ExceptionDate), exception.Reason, nil, false, nil)
 
 		require.NoError(t, err)
 
-		exceptions, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 		require.NoError(t, err)
+		exceptions := data.Exceptions
 		assert.Len(t, exceptions, 1)
 		assert.Equal(t, "Updated reason", *exceptions[0].Reason)
 	})
@@ -609,7 +504,7 @@ func TestArrivalScheduleService_UpdateExceptionPreservesOmittedArrivalTime(t *te
 		Reason:          testpkg.StrPtr("Original reason"),
 		CreatedBy:       staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception))
+	require.NoError(t, createArrivalExceptionFixture(t, ctx, db, exception))
 
 	updatedReason := "Updated reason"
 	updated, err := service.UpdateException(
@@ -651,7 +546,7 @@ func TestArrivalScheduleService_UpdateExceptionClearsArrivalTime(t *testing.T) {
 		Reason:          testpkg.StrPtr("Original reason"),
 		CreatedBy:       staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception))
+	require.NoError(t, createArrivalExceptionFixture(t, ctx, db, exception))
 	clearReason := ""
 
 	updated, err := service.UpdateException(
@@ -686,15 +581,16 @@ func TestArrivalScheduleService_DeleteStudentArrivalException(t *testing.T) {
 			Reason:        testpkg.StrPtr("Test"),
 			CreatedBy:     createArrivalServiceTestStaffID(t, db),
 		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err := createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		err = testpkg.TenantCommand2(t, ctx, db, service.DeleteStudentArrivalException, exception.ID, exception.StudentID)
 
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 		require.NoError(t, err)
+		results := data.Exceptions
 		assert.Empty(t, results)
 	})
 }
@@ -786,7 +682,7 @@ func TestArrivalScheduleService_GetStudentArrivalNoteByID(t *testing.T) {
 	})
 }
 
-func TestArrivalScheduleService_GetStudentArrivalNotes(t *testing.T) {
+func TestArrivalScheduleService_DataIncludesNotes(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -809,21 +705,22 @@ func TestArrivalScheduleService_GetStudentArrivalNotes(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 
 		require.NoError(t, err)
-		assert.Len(t, results, 3)
+		assert.Len(t, data.Notes, 3)
 	})
 
 	t.Run("returns empty slice when no notes", func(t *testing.T) {
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, int64(99999999))
+		student := testpkg.CreateTestStudent(t, db, "No", "Notes", "1a")
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 
 		require.NoError(t, err)
-		assert.Empty(t, results)
+		assert.Empty(t, data.Notes)
 	})
 }
 
-func TestArrivalScheduleService_GetStudentArrivalNotesForDate(t *testing.T) {
+func TestArrivalScheduleService_EffectiveTimesIncludeNotesForDate(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -859,10 +756,13 @@ func TestArrivalScheduleService_GetStudentArrivalNotesForDate(t *testing.T) {
 		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalNote, note)
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentArrivalNotesForDate, student.ID, targetDate)
+		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectiveArrivalTimesForDate, []int64{student.ID}, targetDate)
 
 		require.NoError(t, err)
-		assert.Len(t, results, 2)
+		require.Contains(t, results, student.ID)
+		notes := results[student.ID].DayNotes
+		require.Len(t, notes, 2)
+		assert.ElementsMatch(t, []string{"Note 0", "Note 1"}, []string{notes[0].Content, notes[1].Content})
 	})
 }
 
@@ -900,10 +800,10 @@ func TestArrivalScheduleService_UpdateStudentArrivalNote(t *testing.T) {
 		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, &stale, read)
 		require.ErrorIs(t, err, readstate.ErrChanged)
 
-		notes, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 		require.NoError(t, err)
-		assert.Len(t, notes, 1)
-		assert.Equal(t, "Updated content", notes[0].Content)
+		require.Len(t, data.Notes, 1)
+		assert.Equal(t, "Updated content", data.Notes[0].Content)
 	})
 
 	t.Run("fails validation on invalid note", func(t *testing.T) {
@@ -944,42 +844,9 @@ func TestArrivalScheduleService_DeleteStudentArrivalNote(t *testing.T) {
 
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalData, student.ID)
 		require.NoError(t, err)
-		assert.Empty(t, results)
-	})
-}
-
-func TestArrivalScheduleService_DeleteAllStudentArrivalNotes(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupArrivalScheduleService(t, db, decisionTestClock)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("deletes all notes for student", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
-
-		baseDate := decisionTestToday
-		for i := 1; i <= 5; i++ {
-			note := &careplan.ArrivalNote{
-				StudentID: student.ID,
-				NoteDate:  careplan.Date(baseDate.AddDays(i)),
-				Content:   "Note",
-				CreatedBy: createArrivalServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalNote, note)
-			require.NoError(t, err)
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.DeleteAllStudentArrivalNotes, student.ID)
-
-		require.NoError(t, err)
-
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
-		require.NoError(t, err)
-		assert.Empty(t, results)
+		assert.Empty(t, data.Notes)
 	})
 }
 
@@ -1013,7 +880,7 @@ func TestArrivalScheduleService_GetStudentArrivalData(t *testing.T) {
 			Reason:        testpkg.StrPtr("Future exception"),
 			CreatedBy:     createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err = createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		note := &careplan.ArrivalNote{
@@ -1034,13 +901,21 @@ func TestArrivalScheduleService_GetStudentArrivalData(t *testing.T) {
 	})
 }
 
-func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
+func TestArrivalScheduleService_ResolvesEffectiveTime(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
 
 	service := setupArrivalScheduleService(t, db)
 	ctx := testpkg.Ctx(t)
+
+	read := func(t *testing.T, studentID int64, date calendar.Date) *careplan.EffectiveArrivalTime {
+		t.Helper()
+		rows, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectiveArrivalTimesForDate, []int64{studentID}, date)
+		require.NoError(t, err)
+		require.NotNil(t, rows[studentID])
+		return rows[studentID]
+	}
 
 	t.Run("returns exception when present", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
@@ -1067,12 +942,10 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 			Reason:          testpkg.StrPtr("Late arrival"),
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err = createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.True(t, result.IsException)
 		assert.NotNil(t, result.ArrivalTime)
 		assert.Equal(t, 9, result.ArrivalTime.Hour())
@@ -1096,9 +969,7 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 		// January 9, 2024 is a Tuesday, noon UTC stays Tuesday in Berlin
 		testDate := calendar.NewDate(2024, 1, 9)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.False(t, result.IsException)
 		assert.NotNil(t, result.ArrivalTime)
 		assert.Equal(t, 8, result.ArrivalTime.Hour())
@@ -1111,9 +982,7 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 		// January 13, 2024 is a Saturday, noon UTC stays Saturday in Berlin
 		testDate := calendar.NewDate(2024, 1, 13)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.Nil(t, result.ArrivalTime)
 	})
 
@@ -1123,9 +992,7 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 		// January 10, 2024 is a Wednesday
 		testDate := calendar.NewDate(2024, 1, 10)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.Nil(t, result.ArrivalTime)
 		assert.False(t, result.IsException)
 	})
@@ -1147,9 +1014,7 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 		// January 12, 2024 is a Friday
 		testDate := calendar.NewDate(2024, 1, 12)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.False(t, result.IsException)
 		assert.NotNil(t, result.ArrivalTime)
 		assert.Equal(t, "Walks with sibling", result.Notes)
@@ -1179,12 +1044,10 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 			Reason:          &blankReason,
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err = createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.True(t, result.IsException)
 		assert.Equal(t, "Wait at the side entrance", result.Notes)
 	})
@@ -1195,9 +1058,7 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 		// January 14, 2024 is a Sunday
 		testDate := calendar.NewDate(2024, 1, 14)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.Nil(t, result.ArrivalTime)
 	})
 
@@ -1214,12 +1075,10 @@ func TestArrivalScheduleService_GetEffectiveArrivalTimeForDate(t *testing.T) {
 			Reason:          testpkg.StrPtr("Sick"),
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err := createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectiveArrivalTimeForDate, student.ID, testDate)
-
-		require.NoError(t, err)
+		result := read(t, student.ID, testDate)
 		assert.True(t, result.IsException)
 		assert.Nil(t, result.ArrivalTime)
 		assert.Equal(t, "Sick", result.Notes)
@@ -1259,7 +1118,7 @@ func TestArrivalScheduleService_GetBulkEffectiveArrivalTimesForDate(t *testing.T
 			Reason:          testpkg.StrPtr("Doctor appointment"),
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception2)
+		err = createArrivalExceptionFixture(t, ctx, db, exception2)
 		require.NoError(t, err)
 
 		exception3 := &careplan.ArrivalException{
@@ -1269,7 +1128,7 @@ func TestArrivalScheduleService_GetBulkEffectiveArrivalTimesForDate(t *testing.T
 			Reason:          testpkg.StrPtr("Sick"),
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception3)
+		err = createArrivalExceptionFixture(t, ctx, db, exception3)
 		require.NoError(t, err)
 
 		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectiveArrivalTimesForDate, []int64{student1.ID, student2.ID, student3.ID}, testDate)
@@ -1364,7 +1223,7 @@ func TestArrivalScheduleService_GetBulkEffectiveArrivalTimesForDate(t *testing.T
 			Reason:          &blankReason,
 			CreatedBy:       createArrivalServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalException, exception)
+		err = createArrivalExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectiveArrivalTimesForDate, []int64{student.ID}, testDate)

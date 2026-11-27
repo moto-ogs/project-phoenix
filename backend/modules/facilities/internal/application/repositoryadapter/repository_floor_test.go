@@ -18,13 +18,13 @@ func (s *floorFilterCapabilityStub) ListRooms(_ context.Context, filter faciliti
 	return nil, nil
 }
 
-func TestRepositoryPreservesFloorListFilter(t *testing.T) {
+func TestRecordsPreserveFloorListFilter(t *testing.T) {
 	t.Parallel()
 
 	owner := &floorFilterCapabilityStub{}
-	repository := New(owner)
+	records := NewRecords(owner)
 
-	_, err := repository.List(context.Background(), map[string]any{"floor": 0})
+	_, err := records.List(context.Background(), map[string]any{"floor": 0})
 
 	require.NoError(t, err)
 	require.NotNil(t, owner.filter.Floor)

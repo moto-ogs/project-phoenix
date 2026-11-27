@@ -25,30 +25,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "binding_digest": "898708533b442531816204abf4738cdf",
       "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",

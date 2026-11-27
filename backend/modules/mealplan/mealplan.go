@@ -195,14 +195,11 @@ type Day struct {
 // account that saves them; it never hears about its own change (#7145).
 // ExpectedVersion is the Day.Version its saver read: a day stored
 // differently since is refused with readstate.ErrChanged, and so is a save
-// without one. ExpectedDishes is the day as read by the deprecated
-// PUT /api/meal-plan/{date}, which sends the dishes instead of their
-// version; it stands for their version until that route is removed.
+// without one.
 type ReplaceDay struct {
 	Date            Date
 	Dishes          []Dish
 	ExpectedVersion string
-	ExpectedDishes  *[]Dish
 	AccountID       int64
 }
 

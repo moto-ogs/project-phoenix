@@ -42,13 +42,6 @@ func (m *Service) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, re
 	return m.store.SettledRequestsBefore(ctx, withdrawnCutoff, rejectedCutoff, today)
 }
 
-func (m *Service) DeleteRequest(ctx context.Context, id int64) error {
-	if err := m.transactions.RequireTransaction(ctx); err != nil {
-		return err
-	}
-	return m.store.DeleteRequest(ctx, id)
-}
-
 func (m *Service) HasSchemaRequests(ctx context.Context, id int64) (bool, error) {
 	if err := m.transactions.RequireTransaction(ctx); err != nil {
 		return false, err

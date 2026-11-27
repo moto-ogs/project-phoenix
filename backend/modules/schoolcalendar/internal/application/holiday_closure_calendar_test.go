@@ -23,13 +23,17 @@ func (r *closureCalendarReads) HolidayClosureCalendars(context.Context, int64, [
 }
 
 type closureCalendarHolidays struct {
-	calendarDaysEngine
-	calls int
+	holidays []schoolcalendar.Holiday
+	calls    int
 }
 
-func (h *closureCalendarHolidays) ListHolidays(ctx context.Context, region, from, to string) ([]schoolcalendar.Holiday, error) {
+func (*closureCalendarHolidays) ValidHolidayRegion(region string) bool {
+	return ValidHolidayRegion(region)
+}
+
+func (h *closureCalendarHolidays) ListHolidays(context.Context, string, string, string) ([]schoolcalendar.Holiday, error) {
 	h.calls++
-	return h.calendarDaysEngine.ListHolidays(ctx, region, from, to)
+	return h.holidays, nil
 }
 
 func TestHolidayClosureCalendarOwnsRevisionAndRegionGuards(t *testing.T) {
@@ -81,7 +85,7 @@ func TestHolidayClosureCalendarMergesSourcesWithinTheRequestedDates(t *testing.T
 		}},
 		other: {SchoolID: other, FederalState: "DE-NW"},
 	}}
-	holidays := &closureCalendarHolidays{calendarDaysEngine: calendarDaysEngine{holidays: []schoolcalendar.Holiday{{Date: from.String(), Name: "Holiday"}}}}
+	holidays := &closureCalendarHolidays{holidays: []schoolcalendar.Holiday{{Date: from.String(), Name: "Holiday"}}}
 	result, err := NewHolidayClosureCalendar(reads, holidays).HolidayClosureNoCareDays(t.Context(), organization, []int64{school, other}, from, to, map[int64]int64{school: 4})
 	require.NoError(t, err)
 	require.Len(t, result[school], 2)

@@ -37,8 +37,3 @@ export function useErrorCareTermValues(): CareTermValues {
   const tenantCare = useContext(TenantCareFacilityTermContext);
   return scope?.care ?? tenantCare ?? DEFAULT_CARE;
 }
-
-/** The bare term for an error text; see `useErrorCareTermValues`. */
-export function useErrorCareFacilityTerm(): string {
-  return useErrorCareTermValues().careTerm;
-}

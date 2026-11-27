@@ -1,11 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import {
+  STAFF_NAV_GROUPS,
+  type StaffNavGroupKey,
+} from "~/lib/staff-navigation";
 import { useSidebarGroups } from "../use-sidebar-groups";
 
 const STORAGE_KEY = "sidebar-open-groups";
 // Die Voreinstellung kommt seit #6670 je Rolle von außen; die Fälle unten
 // prüfen das Verhalten des Hooks mit einer festen Voreinstellung.
 const DEFAULT = ["tagesbetrieb"] as const;
+
+function expectOpenGroups(
+  { isGroupOpen }: ReturnType<typeof useSidebarGroups>,
+  expected: readonly StaffNavGroupKey[],
+) {
+  const open = STAFF_NAV_GROUPS.map(({ key }) => key).filter(isGroupOpen);
+  expect(open.sort()).toEqual([...expected].sort());
+}
 
 describe("useSidebarGroups", () => {
   beforeEach(() => {
@@ -16,7 +28,7 @@ describe("useSidebarGroups", () => {
     const { result } = renderHook(() =>
       useSidebarGroups("/dashboard", null, DEFAULT),
     );
-    expect(result.current.openGroups).toEqual(["tagesbetrieb"]);
+    expectOpenGroups(result.current, ["tagesbetrieb"]);
     expect(result.current.isGroupOpen("tagesbetrieb")).toBe(true);
     expect(result.current.isGroupOpen("eltern")).toBe(false);
   });
@@ -25,7 +37,7 @@ describe("useSidebarGroups", () => {
     const { result } = renderHook(() =>
       useSidebarGroups("/dienstplan", null, DEFAULT),
     );
-    expect(result.current.openGroups).toEqual(["tagesbetrieb", "planung"]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "planung"]);
   });
 
   it("opens the group of the originating page on a student detail page", () => {
@@ -59,7 +71,7 @@ describe("useSidebarGroups", () => {
     const { result } = renderHook(() =>
       useSidebarGroups("/dashboard", null, DEFAULT),
     );
-    expect(result.current.openGroups).toEqual(["team", "verwaltung"]);
+    expectOpenGroups(result.current, ["team", "verwaltung"]);
   });
 
   it("keeps the current page's group open even when the stored state closed it", () => {
@@ -67,7 +79,7 @@ describe("useSidebarGroups", () => {
     const { result } = renderHook(() =>
       useSidebarGroups("/messages", null, DEFAULT),
     );
-    expect(result.current.openGroups).toEqual(["team", "eltern"]);
+    expectOpenGroups(result.current, ["team", "eltern"]);
   });
 
   it("never overwrites the stored state with the default on mount", () => {
@@ -86,7 +98,7 @@ describe("useSidebarGroups", () => {
     const second = renderHook(() =>
       useSidebarGroups("/dashboard", null, DEFAULT),
     );
-    expect(second.result.current.openGroups).toEqual(["team"]);
+    expectOpenGroups(second.result.current, ["team"]);
   });
 
   it("ignores unknown or malformed stored values", () => {
@@ -94,13 +106,13 @@ describe("useSidebarGroups", () => {
     const { result } = renderHook(() =>
       useSidebarGroups("/dashboard", null, DEFAULT),
     );
-    expect(result.current.openGroups).toEqual([]);
+    expectOpenGroups(result.current, []);
 
     localStorage.setItem(STORAGE_KEY, "not json");
     const second = renderHook(() =>
       useSidebarGroups("/dashboard", null, DEFAULT),
     );
-    expect(second.result.current.openGroups).toEqual(["tagesbetrieb"]);
+    expectOpenGroups(second.result.current, ["tagesbetrieb"]);
   });
 
   it("opens the group of a newly visited page without closing the others", () => {
@@ -111,18 +123,10 @@ describe("useSidebarGroups", () => {
     act(() => result.current.toggleGroup("eltern"));
 
     rerender({ pathname: "/time-tracking" });
-    expect(result.current.openGroups).toEqual([
-      "tagesbetrieb",
-      "eltern",
-      "team",
-    ]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "eltern", "team"]);
 
     rerender({ pathname: "/dashboard" });
-    expect(result.current.openGroups).toEqual([
-      "tagesbetrieb",
-      "eltern",
-      "team",
-    ]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "eltern", "team"]);
   });
 
   it("follows a changed default until the person toggles a group (#6670)", () => {
@@ -138,19 +142,15 @@ describe("useSidebarGroups", () => {
         },
       },
     );
-    expect(result.current.openGroups).toEqual(["tagesbetrieb", "team"]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "team"]);
 
     rerender({ defaults: ["tagesbetrieb", "planung"] });
-    expect(result.current.openGroups).toEqual(["tagesbetrieb", "planung"]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "planung"]);
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     act(() => result.current.toggleGroup("eltern"));
     rerender({ defaults: ["tagesbetrieb", "team"] });
-    expect(result.current.openGroups).toEqual([
-      "tagesbetrieb",
-      "planung",
-      "eltern",
-    ]);
+    expectOpenGroups(result.current, ["tagesbetrieb", "planung", "eltern"]);
   });
 
   // Seitenleiste und Mehr-Menü (#7048) hängen beide ein und teilen einen
@@ -168,7 +168,7 @@ describe("useSidebarGroups", () => {
     expect(moreMenu.result.current.isGroupOpen("planung")).toBe(true);
 
     act(() => moreMenu.result.current.toggleGroup("tagesbetrieb"));
-    expect(sidebar.result.current.openGroups).toEqual(["planung"]);
+    expectOpenGroups(sidebar.result.current, ["planung"]);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]")).toEqual([
       "planung",
     ]);

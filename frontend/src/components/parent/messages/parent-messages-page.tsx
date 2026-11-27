@@ -238,7 +238,6 @@ export function ParentMessagesPage() {
         <SharedParentFeaturesProvider linkedChildren={children}>
           <OgsConversation
             studentId={children[0]!.student_id}
-            showChild
             tourAnchor="messages"
             headingLevel={2}
           />

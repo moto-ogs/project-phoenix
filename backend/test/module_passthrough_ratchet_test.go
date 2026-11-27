@@ -234,7 +234,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/appointments": 21,
 	"modules/auditlog":     1,
-	"modules/careplan":     157,
+	"modules/careplan":     154,
 	"modules/classday":     14,
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.
@@ -249,7 +249,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// ADR 0116: the weeks the hosting school sees.
 	"modules/enrollment":     25,
 	"modules/exporttransfer": 1,
-	"modules/facilities":     13,
+	"modules/facilities":     11,
 	"modules/feedback":       1, // #2352: dead entry erase removed (-1)
 	"modules/filestorage":    6,
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
@@ -272,11 +272,11 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    11,
-	"modules/peopledirectory":  192, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
+	"modules/peopledirectory":  190, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3); test-only directory read wrappers removed (-2)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
-	"modules/schoolcalendar":   13,
+	"modules/schoolcalendar":   9,
 	"modules/schoolmembership": 14,
 	"modules/schoolsetup":      1,
 	"modules/schoolstructure":  41, // Lowered by #7956: the retained test group update reads the version itself (-1)
@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 96, // #7808: dead cross-tenant list removed (-1)
+	"modules/studentpresence": 94, // Removed unused per-student visit and count façades.
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	// Lowered by #2353: the single-schedule read left with its route (-1).

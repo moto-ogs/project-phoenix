@@ -11,7 +11,7 @@ import { VertretungContentSkeleton } from "~/components/timetable/vertretung-ske
 
 export default function VertretungPage() {
   return (
-    <Suspense fallback={<VertretungContentSkeleton withBar />}>
+    <Suspense fallback={<VertretungContentSkeleton />}>
       <VertretungView />
     </Suspense>
   );

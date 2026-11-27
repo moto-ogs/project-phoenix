@@ -201,11 +201,6 @@ interface InstanceDetailModalProps {
     body: AttendancePatchBody,
   ) => Promise<void>;
   /**
-   * When true, edit + spontaneous-create UI surfaces are visible but
-   * disabled with a tooltip. Default true until backend PUT/POST land.
-   */
-  editDeferred?: boolean;
-  /**
    * Blendet das Detail-Modal aus, solange ein anderes Overlay (z.B. der
    * Termin-Editor) offen ist: beide portalen auf denselben festen z-index,
    * und das Kit-Modal lauscht dokumentweit auf Escape — gestapelt würde es
@@ -634,7 +629,6 @@ export function InstanceDetailModal({
   staffNames = EMPTY_STAFF_NAMES,
   studentNames = EMPTY_STUDENT_NAMES,
   onAttendancePatch,
-  editDeferred = true,
   suspended = false,
   onOpenPool,
   canManageStaffPool = false,
@@ -927,7 +921,7 @@ export function InstanceDetailModal({
               Vertretung eintragen
             </ButtonLink>
           )}
-        {instance.status === "planned" && !editDeferred && onEdit && (
+        {instance.status === "planned" && onEdit && (
           <Button
             variant="outline"
             size="md"
@@ -1088,12 +1082,6 @@ export function InstanceDetailModal({
           </>
         )}
       </div>
-      {editDeferred && (
-        <div className="flex items-center justify-end gap-2 text-xs text-gray-500">
-          <Pencil className="h-3.5 w-3.5" />
-          <span>Bearbeiten kommt im nächsten Update</span>
-        </div>
-      )}
     </div>
   );
 

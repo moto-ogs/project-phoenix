@@ -87,7 +87,7 @@ function ProfileContent() {
     async (options: { sessionName?: string } = {}) => {
       setIsSaving(true);
       try {
-        await refreshProfile(true);
+        await refreshProfile();
         if ("sessionName" in options) {
           await updateSession({ name: options.sessionName });
         }

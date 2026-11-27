@@ -27,8 +27,8 @@ const portalClasses = { traeger: ["permission"] };
 // Placeholders `presentError` fills in itself: the object of the failed
 // action and the school's care term (`enrollment.care_facility_term`) with
 // its declined German forms (`{careAcc}`, `{careNomCap}`, …, #8136). The
-// exact names are `CARE_TERM_PLACEHOLDERS`; `care-term-placeholders.test.ts`
-// fails on a name the frontend does not fill.
+// tests in `care-facility-term-value.test.ts` check these names against the
+// values the frontend supplies.
 const FRONTEND_PARAMETERS = ["object"];
 const CARE_TERM_PARAMETER = /^care[A-Z][A-Za-z]*$/;
 const failures = [];

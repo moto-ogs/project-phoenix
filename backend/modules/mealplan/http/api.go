@@ -84,11 +84,8 @@ func (rs *Resource) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
-		protected.With(rs.runtime.Permission(AccessRead), withTx).Get("/", rs.getWeek)
 		protected.With(rs.runtime.Permission(AccessRead), withTx).Get("/days", rs.getDays)
 		protected.With(rs.runtime.Permission(AccessWrite), rs.menuChanged(), withTx).Put("/days/{date}", rs.saveDay)
-		protected.With(rs.runtime.Permission(AccessWrite), rs.menuChanged(), withTx).Put("/{date}", rs.setDay)
-		protected.With(rs.runtime.Permission(AccessWrite), rs.menuChanged(), withTx).Delete("/{date}", rs.deleteDay)
 		protected.With(rs.runtime.Permission(AccessDailyParticipants), withTx).Get("/participants", rs.getParticipants)
 		protected.With(rs.runtime.Permission(AccessParticipants), withTx).Get("/participants/export", rs.exportParticipants)
 		protected.With(rs.runtime.Permission(AccessParticipants), withTx).Get("/participants/week", rs.getWeeklyParticipants)
@@ -102,15 +99,6 @@ func (rs *Resource) Router() chi.Router {
 		rs.cancellationRoutes(protected, withTx)
 	})
 	return router
-}
-
-type MealPlanWeekEntryResponse struct {
-	Date     string  `json:"date"`
-	Position int     `json:"position"`
-	Dish     string  `json:"dish"`
-	Note     *string `json:"note,omitempty"`
-	// Allergens are the codes of the main allergens; empty when unmarked.
-	Allergens []string `json:"allergens"`
 }
 
 type DailyParticipantResponse struct {
@@ -183,42 +171,6 @@ func (request *SaveDayRequest) Bind(*http.Request) error {
 	return nil
 }
 
-// SetDayRequest is the body of the deprecated PUT /{date}: Expected is the
-// day as the saver read it and stands for its version; without it the save
-// is refused.
-type SetDayRequest struct {
-	Dishes   *[]DishRequest `json:"dishes"`
-	Expected *[]DishRequest `json:"expected"`
-}
-
-func (request *SetDayRequest) Bind(*http.Request) error {
-	if request.Dishes == nil {
-		return errors.New("dishes is required (use an empty array to clear the day)")
-	}
-	return nil
-}
-
-func (rs *Resource) getWeek(w http.ResponseWriter, r *http.Request) {
-	weekStart := r.URL.Query().Get("week_start")
-	parsed, err := mealplanModule.ParseDate(weekStart)
-	if err != nil {
-		rs.runtime.InvalidRequest(w, r, errors.New("week_start must be in YYYY-MM-DD format"))
-		return
-	}
-	entries, err := rs.module.Week(r.Context(), parsed)
-	if err != nil {
-		rs.runtime.ModuleFailure(w, r, err, "failed to load meal plan")
-		return
-	}
-	responses := make([]MealPlanWeekEntryResponse, 0, len(entries))
-	for _, entry := range entries {
-		responses = append(responses, MealPlanWeekEntryResponse{
-			Date: string(entry.Date), Position: entry.Position, Dish: entry.Dish, Note: entry.Note, Allergens: entry.AllergenCodes(),
-		})
-	}
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Meal plan retrieved successfully")
-}
-
 // getDays reads Monday to Friday of a week, each day with its version.
 func (rs *Resource) getDays(w http.ResponseWriter, r *http.Request) {
 	weekStart, err := mealplanModule.ParseDate(r.URL.Query().Get("week_start"))
@@ -281,29 +233,6 @@ func (rs *Resource) dayParam(w http.ResponseWriter, r *http.Request) (mealplanMo
 	return date, true
 }
 
-// setDay is the deprecated save with the day as read instead of its version.
-func (rs *Resource) setDay(w http.ResponseWriter, r *http.Request) {
-	date, ok := rs.dayParam(w, r)
-	if !ok {
-		return
-	}
-	request := &SetDayRequest{}
-	if err := render.Bind(r, request); err != nil {
-		rs.runtime.InvalidRequest(w, r, err)
-		return
-	}
-	command := mealplanModule.ReplaceDay{Date: date, Dishes: moduleDishes(*request.Dishes), AccountID: rs.runtime.CurrentAccountID(r.Context())}
-	if request.Expected != nil {
-		expected := moduleDishes(*request.Expected)
-		command.ExpectedDishes = &expected
-	}
-	if _, err := rs.module.ReplaceDay(r.Context(), command); err != nil {
-		rs.runtime.ModuleFailure(w, r, err, "failed to save meal")
-		return
-	}
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Meal plan day saved successfully")
-}
-
 func moduleDishes(requests []DishRequest) []mealplanModule.Dish {
 	dishes := make([]mealplanModule.Dish, 0, len(requests))
 	for _, dish := range requests {
@@ -314,21 +243,6 @@ func moduleDishes(requests []DishRequest) []mealplanModule.Dish {
 		dishes = append(dishes, mealplanModule.Dish{Dish: dish.Dish, Note: dish.Note, Allergens: allergens})
 	}
 	return dishes
-}
-
-// deleteDay is the deprecated clear of a day; it clears only against the
-// version given as expected_version.
-func (rs *Resource) deleteDay(w http.ResponseWriter, r *http.Request) {
-	date, ok := rs.dayParam(w, r)
-	if !ok {
-		return
-	}
-	command := mealplanModule.ReplaceDay{Date: date, ExpectedVersion: r.URL.Query().Get("expected_version"), AccountID: rs.runtime.CurrentAccountID(r.Context())}
-	if _, err := rs.module.ReplaceDay(r.Context(), command); err != nil {
-		rs.runtime.ModuleFailure(w, r, err, "failed to delete meal")
-		return
-	}
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Meal deleted successfully")
 }
 
 func (rs *Resource) getParticipants(w http.ResponseWriter, r *http.Request) {

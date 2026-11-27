@@ -31,36 +31,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: identity-access reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "classification": "platform",
@@ -176,39 +146,6 @@
       "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/identityaccess.Owner.VerifyAccessSession. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountAdministration.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountAdministration.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountAdministration.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
     },
     {
@@ -2784,39 +2721,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountSessionMaintenance.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountSessionMaintenance.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountSessionMaintenance.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateAvatar",
       "classification": "platform",
       "effect": "scope",
@@ -3740,9 +3644,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoAccessLink",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoAccessLink",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoAccessLink",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -3753,22 +3679,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoAccessLink",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoLead",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -3776,7 +3712,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoLead",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -3787,22 +3734,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoLead",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -5928,39 +5874,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/identityaccess/internal/application.engine.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess/internal/application.engine.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess/internal/application.engine.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AdminDisableMFA",
       "classification": "platform",
       "effect": "scope",
@@ -6932,9 +6845,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -6945,10 +6880,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -6960,18 +6906,6 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Reached through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -9995,17 +9929,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoadAccountClaims",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoadAccountClaims",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess/internal/application.engine.LoadAccountClaims. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginOperatorWithMFAGate",
       "classification": "platform",
       "effect": "scope",
@@ -11709,39 +11632,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RotateStaffCalendarFeedToken",
       "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/identityaccess/internal/application.engine.RotateStaffCalendarFeedToken. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/identityaccess/internal/application.engine.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -15934,9 +15824,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -15947,22 +15859,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -15970,7 +15892,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -15981,22 +15914,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -16004,7 +15947,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -16015,22 +15969,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorInvitation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -16038,7 +16002,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorInvitation",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -16049,22 +16024,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorInvitation",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -16182,39 +16156,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.AccountsHoldingRole",
       "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.AccountsHoldingRole. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ActivateAccount",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ActivateAccount",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.ActivateAccount. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
@@ -18565,39 +18506,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ScheduleAccountWideRevoke",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ScheduleAccountWideRevoke",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/identityaccess.Owner.ScheduleAccountWideRevoke. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.StartTraegerSchoolSession",
       "classification": "platform",
       "effect": "scope",
@@ -20859,9 +20767,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -20872,10 +20802,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -20887,18 +20828,6 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Reached through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -22932,9 +22861,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -22945,22 +22896,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -25674,7 +25624,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.AccountSecurityNotice.NotifyMFAResetByAdmin",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -25685,7 +25635,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.AccountSecurityNotice.NotifyMFAResetByAdmin",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -25999,7 +25949,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererMFAResetNotice.NotifyCatererMFAReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26010,7 +25960,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererMFAResetNotice.NotifyCatererMFAReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26579,7 +26529,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Worker.DeliverEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Worker.DeliverEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Worker.DeliverEmail",
       "target_owner": "delivery-platform"
@@ -26601,7 +26551,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26612,7 +26562,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26623,7 +26573,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (scope): identity-access reaches modules/transactionruntime/compose.Database.UnitOfWork (transaction-runtime) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (scope): identity-access reaches modules/transactionruntime/compose.Database.UnitOfWork (transaction-runtime) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose.Database.UnitOfWork",
       "target_owner": "transaction-runtime"
@@ -26657,7 +26607,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26668,7 +26618,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26712,7 +26662,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26723,7 +26673,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26768,7 +26718,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26779,7 +26729,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27114,9 +27064,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27127,22 +27099,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -27150,7 +27132,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27161,22 +27154,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -27184,7 +27187,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27195,22 +27209,32 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
@@ -27218,7 +27242,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27229,22 +27264,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.tenancyDirectory.ListOrganizationNames",
@@ -27320,9 +27354,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordResetDelivery.DispatchPasswordReset",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordResetDelivery.DispatchPasswordReset",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordResetDelivery.DispatchPasswordReset",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27333,22 +27389,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordResetDelivery.DispatchPasswordReset",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordVerifier.VerifyPassword",
@@ -27915,9 +27970,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.DispatchSchoolInvitation",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.DispatchSchoolInvitation",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.DispatchSchoolInvitation",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27928,22 +28005,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.DispatchSchoolInvitation",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.enqueue. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "identity-access",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.InvitationMailStates",
@@ -27991,7 +28067,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
       "target_owner": "delivery-platform"
@@ -28001,7 +28077,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -28011,7 +28087,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
@@ -28021,7 +28097,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -28031,7 +28107,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx",
       "target_owner": "settings-platform"
@@ -28677,7 +28753,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -28688,7 +28764,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -28699,7 +28775,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -28710,7 +28786,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"

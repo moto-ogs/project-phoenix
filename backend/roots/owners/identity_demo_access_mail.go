@@ -20,7 +20,6 @@ var demoContact = email.NewEmail(identityaccess.DemoContactName, identityaccess.
 type DemoAccessWiring struct {
 	CRMEnabled  bool
 	CRMToken    string
-	Dispatcher  email.Dispatcher
 	Durable     DurableMailOutbox
 	DefaultFrom email.Email
 	FrontendURL string
@@ -38,26 +37,25 @@ type DemoAccessWiring struct {
 }
 
 // demoAccessWiringFor composes the demo access for APP_ENV=demo only.
-func demoAccessWiringFor(appEnv string, dispatcher email.Dispatcher, defaultFrom email.Email, frontendURL string, maxActiveSchools int, tokens TokenAdapter, logger *slog.Logger, durable DurableMailOutbox) *DemoAccessWiring {
+func demoAccessWiringFor(appEnv string, defaultFrom email.Email, frontendURL string, maxActiveSchools int, tokens TokenAdapter, logger *slog.Logger, durable DurableMailOutbox) *DemoAccessWiring {
 	if !email.IsDemoEnvironment(appEnv) {
 		return nil
 	}
 	token := strings.TrimSpace(viper.GetString("hubspot_demo_token"))
 	return &DemoAccessWiring{
 		CRMEnabled: token != "", CRMToken: token,
-		Durable: durable, Dispatcher: dispatcher, DefaultFrom: defaultFrom, FrontendURL: frontendURL, MaxActiveSchools: maxActiveSchools, Logger: logger,
+		Durable: durable, DefaultFrom: defaultFrom, FrontendURL: frontendURL, MaxActiveSchools: maxActiveSchools, Logger: logger,
 		OperatorWithoutSecondFactor: identityaccess.DemoOperatorWithoutSecondFactor,
 		NewToken:                    tokens.NewCapabilityToken, Fingerprint: tokens.CapabilityFingerprint,
 	}
 }
 
 type demoAccessMail struct {
-	dispatcher email.Dispatcher
-	durable    DurableMailOutbox
-	from       email.Email
-	origin     string
-	backoff    []time.Duration
-	logger     *slog.Logger
+	durable DurableMailOutbox
+	from    email.Email
+	origin  string
+	backoff []time.Duration
+	logger  *slog.Logger
 }
 
 func newDemoAccessMail(wiring *DemoAccessWiring) demoAccessMail {
@@ -67,7 +65,7 @@ func newDemoAccessMail(wiring *DemoAccessWiring) demoAccessMail {
 	}
 	backoff := wiring.Backoff
 	return demoAccessMail{
-		dispatcher: wiring.Dispatcher, durable: wiring.Durable, from: wiring.DefaultFrom, backoff: backoff, logger: logger,
+		durable: wiring.Durable, from: wiring.DefaultFrom, backoff: backoff, logger: logger,
 		origin: wiring.FrontendURL,
 	}
 }
@@ -85,7 +83,7 @@ func (m demoAccessMail) SendDemoLead(ctx context.Context, access identityaccess.
 }
 
 func (m demoAccessMail) dispatch(ctx context.Context, kind string, accessID int64, message email.Message, expiry time.Time) error {
-	if m.dispatcher == nil {
+	if m.durable == nil {
 		return nil
 	}
 	return enqueueDurableMail(ctx, m.durable, DurableMail{

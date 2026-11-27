@@ -4,8 +4,6 @@ import {
   mapGuardianWithRelationshipResponse,
   mapStudentGuardianLinkToBackend,
   mapPhoneNumberResponse,
-  mapPhoneNumberCreateToBackend,
-  mapPhoneNumberUpdateToBackend,
   getGuardianFullName,
   getRelationshipTypeLabel,
   getLanguageLabel,
@@ -15,8 +13,6 @@ import {
   PHONE_TYPE_LABELS,
   type StudentGuardianLinkRequest,
   type Guardian,
-  type PhoneNumberCreateRequest,
-  type PhoneNumberUpdateRequest,
 } from "./guardian-helpers";
 import type {
   GuardianResponse,
@@ -632,80 +628,6 @@ describe("guardian-helpers", () => {
       const result = mapPhoneNumberResponse(backendData);
 
       expect(result.label).toBeUndefined();
-    });
-  });
-
-  describe("mapPhoneNumberCreateToBackend", () => {
-    it("maps all fields to backend format", () => {
-      const request: PhoneNumberCreateRequest = {
-        phoneNumber: "+49 170 1234567",
-        phoneType: "mobile",
-        label: "Privat",
-        isPrimary: true,
-      };
-
-      const result = mapPhoneNumberCreateToBackend(request);
-
-      expect(result).toEqual({
-        phone_number: "+49 170 1234567",
-        phone_type: "mobile",
-        label: "Privat",
-        is_primary: true,
-      });
-    });
-
-    it("handles minimal required fields", () => {
-      const request: PhoneNumberCreateRequest = {
-        phoneNumber: "030-123456",
-        phoneType: "home",
-      };
-
-      const result = mapPhoneNumberCreateToBackend(request);
-
-      expect(result.phone_number).toBe("030-123456");
-      expect(result.phone_type).toBe("home");
-      expect(result.label).toBeUndefined();
-      expect(result.is_primary).toBeUndefined();
-    });
-  });
-
-  describe("mapPhoneNumberUpdateToBackend", () => {
-    it("maps all fields to backend format", () => {
-      const request: PhoneNumberUpdateRequest = {
-        phoneNumber: "+49 30 9876543",
-        phoneType: "work",
-        label: "Dienstlich",
-      };
-
-      const result = mapPhoneNumberUpdateToBackend(request);
-
-      expect(result).toEqual({
-        phone_number: "+49 30 9876543",
-        phone_type: "work",
-        label: "Dienstlich",
-      });
-    });
-
-    it("only includes defined fields", () => {
-      const request: PhoneNumberUpdateRequest = {
-        phoneNumber: "030-999999",
-      };
-
-      const result = mapPhoneNumberUpdateToBackend(request);
-
-      expect(result).toEqual({
-        phone_number: "030-999999",
-      });
-      expect(result.phone_type).toBeUndefined();
-      expect(result.label).toBeUndefined();
-    });
-
-    it("returns empty object when no fields provided", () => {
-      const request: PhoneNumberUpdateRequest = {};
-
-      const result = mapPhoneNumberUpdateToBackend(request);
-
-      expect(result).toEqual({});
     });
   });
 });

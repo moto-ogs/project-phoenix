@@ -167,6 +167,19 @@ func (f *fakeNotifier) Notify(_ context.Context, event communication.Notificatio
 	return f.err
 }
 
+func (f *fakeNotifier) notifyBatch(ctx context.Context, events []communication.NotificationEvent) (int, error) {
+	for i, event := range events {
+		if err := f.Notify(ctx, event); err != nil {
+			return i, err
+		}
+	}
+	return len(events), nil
+}
+
+func (f *fakeNotifier) series() communication.NotificationSeries {
+	return communication.NotificationSeries{Notify: f.notifyBatch}
+}
+
 func (f *fakeNotifier) NotifyDurably(_ context.Context, event communication.NotificationEvent) (int, error) {
 	f.events = append(f.events, event)
 	if f.err != nil {
@@ -210,11 +223,12 @@ func (f *fakePushOutbox) CancelPendingByRelatedEntity(_ context.Context, related
 }
 
 func newTestService(repo *fakeAnnouncementRepo, outbox *fakeOutbox) StaffService {
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   &fakeNotifier{},
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     outbox,
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
@@ -322,10 +336,11 @@ func TestUnpublish_CancelsPendingReminderPushes(t *testing.T) {
 	published.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{announcement: published}
 	pushOutbox := &fakePushOutbox{}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:  staffTestClock,
 		Repo: repo, Settings: &fakeSettings{enabled: true}, Outbox: &fakeOutbox{},
-		PushOutbox: pushOutbox, Notifier: &fakeNotifier{}, Logger: slog.Default(),
+		PushOutbox: pushOutbox, Notifier: notifier, Series: notifier.series(), Logger: slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
 	if _, err := svc.Unpublish(context.Background(), published.ID); err != nil {
@@ -345,10 +360,11 @@ func TestDelete_CancelsPendingDeliveries(t *testing.T) {
 	repo := &fakeAnnouncementRepo{announcement: published}
 	outbox := &fakeOutbox{}
 	pushOutbox := &fakePushOutbox{}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:  staffTestClock,
 		Repo: repo, Settings: &fakeSettings{enabled: true}, Outbox: outbox,
-		PushOutbox: pushOutbox, Notifier: &fakeNotifier{}, Logger: slog.Default(), Attachments: &stubPurger{},
+		PushOutbox: pushOutbox, Notifier: notifier, Series: notifier.series(), Logger: slog.Default(), Attachments: &stubPurger{},
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
 	if err := svc.Delete(context.Background(), published.ID); err != nil {
@@ -380,10 +396,10 @@ func TestRemindUnanswered_KeepsNoEmailGuardianForPush(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   notifier,
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     &fakeOutbox{},
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
@@ -419,10 +435,10 @@ func TestRemindUnanswered_DoesNotPushWhenEmailQueueingFails(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   notifier,
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     &fakeOutbox{enqueueErr: errors.New("outbox unavailable")},
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
@@ -487,10 +503,10 @@ func TestPublish_NotifiesTargetedGuardiansWithoutAnnouncementContent(t *testing.
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   notifier,
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
@@ -558,7 +574,7 @@ func TestPublish_GroupsGuardianPushesByPortalLocale(t *testing.T) {
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:  staffTestClock,
-		Repo: repo, Settings: &fakeSettings{enabled: true}, Notifier: notifier,
+		Repo: repo, Settings: &fakeSettings{enabled: true}, Notifier: notifier, Series: notifier.series(),
 		ParentsURL: "https://parents.example.test", Logger: slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
@@ -601,10 +617,10 @@ func TestPublish_PollNotifiesAllTargetedGuardians(t *testing.T) {
 	notifier := &fakeNotifier{}
 	outbox := &fakeOutbox{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   notifier,
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     outbox,
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
@@ -634,11 +650,12 @@ func TestPublish_EnqueuesBrandingLogos(t *testing.T) {
 		},
 	}
 	outbox := &fakeOutbox{}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true, logoURL: "/uploads/login-images/2_abc.jpg"},
-		Notifier:   &fakeNotifier{},
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true, logoURL: "/uploads/login-images/2_abc.jpg"},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     outbox,
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),
@@ -842,11 +859,12 @@ func TestPublish_EmailEnqueueFailureIsFatal(t *testing.T) {
 			{Email: "a@example.test", FirstName: "Anna", LastName: "A"},
 		},
 	}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   &fakeSettings{enabled: true},
-		Notifier:   &fakeNotifier{},
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     failingOutbox{},
 		ParentsURL: "https://parents.example.test",
 		Logger:     slog.Default(),

@@ -96,11 +96,6 @@ interface ConfirmDeleteModalProps {
   readonly onConfirm: () => Promise<void> | void;
   readonly onClose: () => void;
   readonly loading: boolean;
-  /**
-   * Locks every way to close the dialog without a running operation; the
-   * one name for this lock in every kit dialog (#6575). `loading` locks it too.
-   */
-  readonly isDismissDisabled?: boolean;
   /** A plain string or the error from `useApiFormError`, which brings retry
    *  and the request ID to copy for a server error (#2513). */
   readonly error: FormErrorInput;
@@ -138,7 +133,6 @@ export function ConfirmDeleteModal({
   onConfirm,
   onClose,
   loading,
-  isDismissDisabled = false,
   error,
   confirmLabel = "Endgültig löschen",
   confirmTooltip,
@@ -256,7 +250,7 @@ export function ConfirmDeleteModal({
       onClose={close}
       title={title}
       footer={footer}
-      isDismissDisabled={isDismissDisabled || loading}
+      isDismissDisabled={loading}
       isBackdropDismissDisabled
       closeLabel={closeLabel}
       closeTooltip={closeTooltip}

@@ -67,7 +67,7 @@ func (s *Scheduler) observeTenantRuntime(outcome string) {
 // Active tenant IDs share the same minute snapshot as settings-aware jobs so
 // concurrent polling goroutines do not repeat the platform.schools query.
 func (s *Scheduler) forEachTenant(ctx context.Context, opName string, fn func(ctx context.Context) error) error {
-	if s.tenantRuntime == nil || (s.minuteSnapshotLoader == nil && s.schoolRepo == nil) {
+	if s.tenantRuntime == nil || s.schoolRepo == nil {
 		err := fmt.Errorf("tenant runtime is not configured for %s: %w", opName, errTenantRuntimeRequired)
 		recordJobCommandFailure(ctx, err)
 		s.observeTenantRuntime("missing_tenant")
@@ -90,7 +90,7 @@ func (s *Scheduler) forEachTenant(ctx context.Context, opName string, fn func(ct
 // data still exists, including inactive and soft-deleted schools. The same
 // directory supplies the nightly retention that produces these intents.
 func (s *Scheduler) forEachTenantIncludingInactive(ctx context.Context, opName string, fn func(ctx context.Context) error) error {
-	if s.tenantRuntime == nil || (s.allTenantIDsLoader == nil && s.schoolRepo == nil) {
+	if s.tenantRuntime == nil || s.schoolRepo == nil {
 		err := fmt.Errorf("tenant runtime is not configured for %s: %w", opName, errTenantRuntimeRequired)
 		recordJobCommandFailure(ctx, err)
 		s.observeTenantRuntime("missing_tenant")
@@ -99,24 +99,14 @@ func (s *Scheduler) forEachTenantIncludingInactive(ctx context.Context, opName s
 
 	ctx = s.withUnitOfWork(ctx)
 	var tenantIDs []int64
-	if s.allTenantIDsLoader != nil {
-		var err error
-		tenantIDs, err = s.allTenantIDsLoader(ctx)
-		if err != nil {
-			recordJobCommandFailure(ctx, err)
-			s.observeTenantRuntime("transaction_failure")
-			return fmt.Errorf("load tenants for %s: %w", opName, err)
-		}
-	} else {
-		if err := s.tenantRuntime.WithinAdmin(ctx, func(txCtx context.Context) error {
-			var listErr error
-			tenantIDs, listErr = s.schoolRepo.ListCleanupTenantIDs(txCtx)
-			return listErr
-		}); err != nil {
-			recordJobCommandFailure(ctx, err)
-			s.observeTenantRuntime("transaction_failure")
-			return fmt.Errorf("load tenants for %s: %w", opName, err)
-		}
+	if err := s.tenantRuntime.WithinAdmin(ctx, func(txCtx context.Context) error {
+		var listErr error
+		tenantIDs, listErr = s.schoolRepo.ListCleanupTenantIDs(txCtx)
+		return listErr
+	}); err != nil {
+		recordJobCommandFailure(ctx, err)
+		s.observeTenantRuntime("transaction_failure")
+		return fmt.Errorf("load tenants for %s: %w", opName, err)
 	}
 	result := s.runTenantBatches(ctx, tenantIDs, opName, adaptTenantCommand(func(txCtx context.Context, _ int64) error {
 		return fn(txCtx)
@@ -148,13 +138,6 @@ func (s *Scheduler) forEachTenantSettingsSnapshot(ctx context.Context, opName st
 
 	minuteSnapshot, err := load(ctx)
 	if err != nil {
-		// Older unit-test fakes implement only the narrow per-key resolver.
-		// Production SettingsService always implements the batch loader.
-		if errors.Is(err, errSchedulerSettingsBatchUnsupported) && minuteSnapshot != nil {
-			return s.forEachKnownTenant(ctx, minuteSnapshot.tenantIDs, opName, func(txCtx context.Context, tenantID int64) error {
-				return s.runIfModuleBooked(txCtx, opName, tenantID, func() error { return fn(txCtx, tenantID) })
-			})
-		}
 		recordJobCommandFailure(ctx, err)
 		s.observeTenantRuntime("transaction_failure")
 		s.getLogger().Error("scheduler settings snapshot unavailable",
@@ -164,13 +147,12 @@ func (s *Scheduler) forEachTenantSettingsSnapshot(ctx context.Context, opName st
 		return nil
 	}
 
-	source, _ := s.settings.(ports.SettingsSnapshotSource)
 	return s.forEachKnownTenant(ctx, minuteSnapshot.tenantIDs, opName, func(txCtx context.Context, tenantID int64) error {
 		snapshot := minuteSnapshot.settings[tenantID]
-		if snapshot == nil || source == nil {
+		if snapshot == nil {
 			return fmt.Errorf("settings snapshot missing for tenant %d", tenantID)
 		}
-		boundCtx, err := source.BindSettingsSnapshot(txCtx, snapshot)
+		boundCtx, err := s.settings.BindSettingsSnapshot(txCtx, snapshot)
 		if err != nil {
 			return fmt.Errorf("bind settings snapshot for tenant %d: %w", tenantID, err)
 		}

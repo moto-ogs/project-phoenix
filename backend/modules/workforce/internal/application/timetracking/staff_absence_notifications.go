@@ -179,7 +179,7 @@ func (s *staffAbsenceService) enqueueAbsenceRequested(ctx context.Context, absen
 				LinkURL:          linkURL,
 				LogoURL:          s.logoURL(),
 			},
-		}, approver.Email); err != nil {
+		}); err != nil {
 			return err
 		}
 	}
@@ -233,7 +233,7 @@ func (s *staffAbsenceService) notifyAbsenceDecision(ctx context.Context, absence
 			LinkURL:          linkURL,
 			LogoURL:          s.logoURL(),
 		},
-	}, requester.Email)
+	})
 }
 
 func (s *staffAbsenceService) absenceEmailLink(ctx context.Context, absence *StaffAbsence, targetPath string) (string, bool) {
@@ -308,8 +308,8 @@ func (s *staffAbsenceService) logoURL() string {
 	return fmt.Sprintf("%s/images/moto-logo-mit-schriftzug.png", s.emailDeps.FrontendURL)
 }
 
-func (s *staffAbsenceService) dispatchAbsenceEmail(ctx context.Context, metaType string, absence *StaffAbsence, message AbsenceEmailMessage, recipient string) error {
-	message.Type, message.ReferenceID, message.Recipient = metaType, absence.ID, recipient
+func (s *staffAbsenceService) dispatchAbsenceEmail(ctx context.Context, metaType string, absence *StaffAbsence, message AbsenceEmailMessage) error {
+	message.Type, message.ReferenceID = metaType, absence.ID
 	message.TenantID = tenant.FromContext(ctx)
 	return s.emailDeps.Dispatcher.Enqueue(ctx, message)
 }

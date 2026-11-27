@@ -1,6 +1,6 @@
 // Group Entity Configuration
 
-import { defineEntityConfig } from "@/lib/database/types";
+import type { EntityConfig, EntityFormConfig } from "@/lib/database/types";
 import type { Group } from "@/lib/group-helpers";
 import { mapGroupResponse } from "@/lib/group-helpers";
 import { bffJson } from "~/lib/bff-fetch";
@@ -38,28 +38,13 @@ export function toGroupUpdateRequest(
   };
 }
 
-export const groupsConfig = defineEntityConfig<Group>({
+export const groupsConfig = {
   name: {
     singular: "Gruppe",
     plural: "Gruppen",
   },
 
-  concept: groupsConcept,
-
-  backUrl: "/database",
-
   api: {
-    list: async () => {
-      const page = await bffJson("tenant", "GET /api/groups/");
-      return {
-        data: page.data.map(mapGroupResponse),
-        pagination: page.pagination,
-      };
-    },
-    get: async (id) =>
-      mapGroupResponse(
-        await bffJson("tenant", "GET /api/groups/{id}", { params: { id } }),
-      ),
     create: async (data) =>
       mapGroupResponse(
         await bffJson("tenant", "POST /api/groups/", {
@@ -149,118 +134,11 @@ export const groupsConfig = defineEntityConfig<Group>({
       },
     ],
 
-    defaultValues: {},
-
     transformBeforeSubmit: (data) => ({
       ...data,
       room_id: data.room_id ?? undefined,
     }),
   },
 
-  detail: {
-    header: {
-      title: (group: Group) => group.name,
-      subtitle: (group: Group) => group.room_name ?? "Kein Raum zugewiesen",
-      avatar: {
-        text: (group: Group) => group.name?.[0] ?? "G",
-        size: "lg",
-      },
-    },
-
-    sections: [
-      {
-        title: "Gruppendetails",
-        items: [
-          {
-            label: "Gruppenname",
-            value: (group: Group) => group.name,
-          },
-          {
-            label: "Gruppenraum",
-            value: (group: Group) =>
-              group.room_name ?? "Kein Gruppenraum zugewiesen",
-          },
-          {
-            label: "Gruppenleitung",
-            value: (group: Group) => {
-              if (!group.supervisors || group.supervisors.length === 0) {
-                return "Keine Gruppenleitung zugewiesen";
-              }
-              // Return supervisor names as a formatted string
-              return group.supervisors
-                .map((supervisor) => supervisor.name)
-                .join(", ");
-            },
-          },
-          {
-            label: "Anzahl Kinder",
-            value: (group: Group) => group.student_count?.toString() ?? "0",
-          },
-          {
-            label: "IDs",
-            value: (group: Group) => (
-              <div className="flex flex-col text-xs text-gray-600">
-                <span>Gruppe: {group.id}</span>
-                {group.room_id && <span>Raum: {group.room_id}</span>}
-                {group.supervisors && group.supervisors.length > 0 && (
-                  <span>
-                    Gruppenleitung:{" "}
-                    {group.supervisors.map((s) => s.id).join(", ")}
-                  </span>
-                )}
-              </div>
-            ),
-          },
-        ],
-      },
-    ],
-  },
-
-  list: {
-    title: "Gruppe auswählen",
-    description: "Verwalte Gruppen und deren Zuordnungen",
-    searchPlaceholder: "Gruppe suchen…",
-
-    // Frontend search configuration (loads all data at once)
-    searchStrategy: "frontend",
-    searchableFields: ["name", "room_name"],
-    minSearchLength: 0, // Start searching immediately
-
-    filters: [
-      {
-        id: "room_id",
-        label: "Raum",
-        type: "select",
-        options: "dynamic", // Will extract from data
-      },
-    ],
-
-    item: {
-      title: (group: Group) => group.name,
-      subtitle: (group: Group) => {
-        const supervisorCount = group.supervisors?.length ?? 0;
-        if (supervisorCount === 0) return "Keine Gruppenleitung";
-        const suffix = supervisorCount === 1 ? "" : "en";
-        return `${supervisorCount} Gruppenleitung${suffix}`;
-      },
-      description: (group: Group) => {
-        const parts = [];
-        if (group.room_name) parts.push(`Raum: ${group.room_name}`);
-        if (group.student_count !== undefined)
-          parts.push(`${group.student_count} Kinder`);
-        return parts.join(" • ");
-      },
-      avatar: {
-        text: (group: Group) => group.name?.[0] ?? "G",
-      },
-    },
-  },
-
-  labels: {
-    createButton: "Neue Gruppe erstellen",
-    createModalTitle: "Neue Gruppe",
-    detailModalTitle: "Gruppendetails",
-    deleteConfirmation:
-      "Bist du sicher, dass du diese Gruppe löschen möchtest?",
-  },
-});
+  createTitle: "Neue Gruppe",
+} satisfies EntityConfig<Group> & EntityFormConfig<Group>;

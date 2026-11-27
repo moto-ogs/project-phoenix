@@ -2393,46 +2393,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday; modules/peopledirectory/internal/application/capability_student_directory.go:163. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudents",
       "classification": "query",
       "effect": "query",
@@ -3718,46 +3678,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRoster; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListStudentRosterByGroup; modules/peopledirectory/internal/application/capability_student_directory.go:199. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRosterByGroup; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRosterByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRosterByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
       "target_owner": "people-directory"
     },
     {
@@ -17386,16 +17306,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.PrefetchStudentDisplaySettings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.DisplaySettings.PrefetchStudentDisplaySettings",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/settings.DisplaySettings.PrefetchStudentDisplaySettings (settings-platform) through modules/settings.DisplaySettings.PrefetchStudentDisplaySettings. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.PrefetchStudentDisplaySettings",
-      "target_owner": "settings-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.StudentPhotosEnabled",
       "classification": "query",
       "effect": "query",
@@ -19539,49 +19449,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentProfileCommands.SetStudentLiveStatus",
       "target_owner": "care-plan"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
     },
     {
       "adr": "0098",

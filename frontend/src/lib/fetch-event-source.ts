@@ -143,7 +143,7 @@ export class FetchEventSource extends EventTarget {
       throw new Error("Event stream ended");
     } catch {
       // Cancellation is cleanup, not a connection failure; a stall is one.
-      // useSSE owns the visible backoff/error state for transport failures.
+      // useSSE owns the connection status and backoff for transport failures.
       if (!signal.aborted || this.stalled) {
         const event = new Event("error");
         this.dispatchEvent(event);

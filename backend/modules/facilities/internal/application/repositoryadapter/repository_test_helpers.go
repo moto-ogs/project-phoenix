@@ -9,6 +9,21 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 )
 
+type roomCommand = facilities.Command
+
+// Repository adds room writes for fixtures that still arrange retained rows.
+type Repository struct {
+	*Records
+	roomCommand
+}
+
+func New(rooms facilities.Capability) *Repository {
+	if rooms == nil {
+		panic("room repository adapter: Facilities capability is required")
+	}
+	return &Repository{Records: NewRecords(rooms), roomCommand: rooms}
+}
+
 func (r *Repository) Create(ctx context.Context, room *facilities.Room) error {
 	if room == nil {
 		return errors.New("room cannot be nil")

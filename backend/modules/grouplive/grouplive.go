@@ -41,7 +41,6 @@ type AtSchoolCounter interface {
 // ExcusedRequests is optional: without it no pending note is attached.
 // TeacherHints is optional: without it no hint of the Lehrkraft is attached.
 // Handovers is optional: without it no child carries a handover absence.
-// Collate is optional: without it the groups keep the directory order.
 type Dependencies struct {
 	Access          Access
 	Groups          GroupDirectory
@@ -57,9 +56,6 @@ type Dependencies struct {
 	// HolidayGroups keeps a Feriengruppe out of the group lists before its
 	// week (ADR 0120, Nachtrag 2026-11-11); nil keeps every group.
 	HolidayGroups HolidayGroups
-	// Collate orders two group names in German dictionary order (DIN 5007-1),
-	// the order the group selection and the response rely on.
-	Collate func(a, b string) int
 }
 
 type service struct{ deps Dependencies }

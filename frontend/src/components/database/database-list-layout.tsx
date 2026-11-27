@@ -8,9 +8,6 @@ import { useFillHeight } from "./use-fill-height";
 
 interface DatabaseListLayoutProps {
   children: ReactNode;
-  className?: string;
-  /** Luft unter der Liste, damit sie nicht am Bildschirmrand klebt. */
-  bottomOffset?: number;
 }
 
 /**
@@ -22,13 +19,9 @@ interface DatabaseListLayoutProps {
  * Dieselbe Karte und dieselbe Höhe wie das Master-Detail-Layout ohne
  * Auswahl, damit ein Register beim Wechsel der Bauart nicht springt.
  */
-export function DatabaseListLayout({
-  children,
-  className,
-  bottomOffset = 32,
-}: DatabaseListLayoutProps) {
+export function DatabaseListLayout({ children }: DatabaseListLayoutProps) {
   const isMobile = useMediaQuery(BELOW_MD);
-  const { ref, height } = useFillHeight<HTMLDivElement>(bottomOffset);
+  const { ref, height } = useFillHeight<HTMLDivElement>();
 
   // Am Computer setzt `useFillHeight` die Höhe und die Liste scrollt in der
   // Karte; `moto-scroll-surface` nimmt sie aus der Wachstumsregel, sonst
@@ -39,7 +32,7 @@ export function DatabaseListLayout({
     <div
       ref={ref}
       style={isMobile ? undefined : { height }}
-      className={cn("flex w-full flex-col", className)}
+      className="flex w-full flex-col"
       data-testid="database-list-layout"
     >
       <SectionCard

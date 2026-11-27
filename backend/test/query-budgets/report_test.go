@@ -64,13 +64,14 @@ func TestQueryFeedbackOptIn(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "report.jsonl")
 	queries := []string{"SELECT 1", "SELECT 2"}
-	budget := queryBudget{max: 2, exact: true}
+	observed := Measurement{Statements: queries, Route: []string{"GET /api/students/"}, HTTPRequest: true}
+	budget := queryBudget{max: 2, exact: true, route: []string{"GET /api/pupils/"}}
 	var recorder feedbackRecorder
-	emitQueryFeedback(&recorder, "fixture", queries, budget, func(string) string { return "" })
+	emitQueryFeedback(&recorder, "fixture", observed, budget, func(string) string { return "" })
 	if len(recorder.logs) != 0 || len(recorder.errors) != 0 {
 		t.Fatalf("feedback without environment must be silent: %+v", recorder)
 	}
-	emitQueryFeedback(&recorder, "fixture", queries, budget, func(key string) string {
+	emitQueryFeedback(&recorder, "fixture", observed, budget, func(key string) string {
 		if key == "PHX_QUERY_DUMP" {
 			return "1"
 		}
@@ -93,12 +94,15 @@ func TestQueryFeedbackOptIn(t *testing.T) {
 	if report.Scenario != "fixture" || report.Test != recorder.Name() || report.Actual != 2 || report.Max != 2 || !report.Exact || report.DuplicateStatements["select ?"] != 2 {
 		t.Fatalf("unexpected report: %+v", report)
 	}
+	if !reflect.DeepEqual(report.Route, observed.Route) {
+		t.Fatalf("reported route = %q, want measured route %q", report.Route, observed.Route)
+	}
 }
 
 func TestQueryFeedbackWriteFailureFailsAssertion(t *testing.T) {
 	t.Parallel()
 	var recorder feedbackRecorder
-	emitQueryFeedback(&recorder, "fixture", nil, queryBudget{}, func(key string) string {
+	emitQueryFeedback(&recorder, "fixture", Measurement{}, queryBudget{}, func(key string) string {
 		if key == "PHX_QUERY_DUMP" {
 			return "true"
 		}
@@ -119,7 +123,7 @@ func TestQueryFeedbackPreservesLongStatementTailsOnlyWhenOptedIn(t *testing.T) {
 	for _, dump := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "report.jsonl")
 		var recorder feedbackRecorder
-		emitQueryFeedback(&recorder, "long-statements", queries, queryBudget{max: 2, exact: true}, func(key string) string {
+		emitQueryFeedback(&recorder, "long-statements", Measurement{Statements: queries}, queryBudget{max: 2, exact: true}, func(key string) string {
 			if key == "PHX_QUERY_BUDGET_REPORT" {
 				return path
 			}

@@ -418,7 +418,6 @@ export function CaregiverCapabilityModal({
     >
       {step === "resolve" && state ? (
         <CaregiverBlockerResolutionPanel
-          active
           state={state}
           onConfirmationVisibilityChange={setBlockerConfirmationOpen}
         />

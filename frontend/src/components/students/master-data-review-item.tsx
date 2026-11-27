@@ -2,10 +2,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 
-import {
-  RequestReviewCard,
-  ReviewDiffPanel,
-} from "~/components/students/request-review-card";
+import { RequestReviewCard } from "~/components/students/request-review-card";
+import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { formatDate } from "~/lib/date-helpers";
 import { CONTACT_METHODS, LANGUAGE_PREFERENCES } from "~/lib/guardian-helpers";
 import { createLogger } from "~/lib/logger";
@@ -111,7 +109,6 @@ export function formatValue(
 export function MasterDataReviewItem({
   row,
   onDecided,
-  grouped = false,
   expectedVersion,
   onStale,
   decisionDisabledReason,
@@ -119,7 +116,6 @@ export function MasterDataReviewItem({
 }: Readonly<{
   row: StaffMasterDataChange;
   onDecided: (notice: string) => void;
-  grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
@@ -178,7 +174,6 @@ export function MasterDataReviewItem({
     <RequestReviewCard
       type="master_data"
       childName={`${row.first_name} ${row.last_name}`}
-      grouped={grouped}
       summary={fieldLabel(row.field_key)}
       submittedAt={row.created_at}
       reason={reason}
@@ -188,7 +183,6 @@ export function MasterDataReviewItem({
       }}
       // Ablehnen braucht immer einen Grund; die Pflicht beim Freigeben setzt
       // die Karte selbst als „Begründung (Pflicht)“ (#5024).
-      reasonPlaceholder="Begründung (Pflicht bei Ablehnung)"
       reasonError={
         reasonError
           ? "Für eine Ablehnung ist eine Begründung erforderlich."

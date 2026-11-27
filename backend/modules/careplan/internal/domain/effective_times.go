@@ -40,13 +40,6 @@ type EffectiveNoteFields struct {
 	Content   string
 }
 
-type ExceptionCollisionPolicy uint8
-
-const (
-	ExceptionCollisionReject ExceptionCollisionPolicy = iota
-	ExceptionCollisionUpdate
-)
-
 type EffectiveTimeData[S, E, N any] struct {
 	Schedules  []S
 	Exceptions []E

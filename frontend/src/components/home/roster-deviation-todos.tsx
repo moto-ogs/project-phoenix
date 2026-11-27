@@ -18,24 +18,18 @@ import { timetableService } from "~/lib/timetable-api";
  * Zeitraum oder die Prüfung nicht gelesen werden, fehlt nur dieser Hinweis;
  * der Betreuungsplan zeigt ihn weiter an den Regelterminen.
  */
-export function RosterDeviationTodos({
-  enabled,
-}: Readonly<{
-  /** Recht am Betreuungsplan und Betreuungsplan eingeschaltet. */
-  enabled: boolean;
-}>) {
+export function RosterDeviationTodos() {
   const tenantPath = useTenantAwarePath();
-  const { data: periods } = useSWRAuth(
-    enabled ? databaseKeys.calendarPeriods() : null,
-    () => calendarPeriodService.list(),
+  const { data: periods } = useSWRAuth(databaseKeys.calendarPeriods(), () =>
+    calendarPeriodService.list(),
   );
   const period = periods ? findPeriodForDate(periods, berlinTodayISO()) : null;
   const { data: count = 0 } = useSWRAuth(
-    enabled && period ? tenantDailyKeys.rosterDeviationCount(period.id) : null,
+    period ? tenantDailyKeys.rosterDeviationCount(period.id) : null,
     async () =>
       (await timetableService.getRosterDeviations(period?.id ?? "")).length,
   );
-  if (!enabled || count === 0) return null;
+  if (count === 0) return null;
   return (
     <Alert
       type="warning"

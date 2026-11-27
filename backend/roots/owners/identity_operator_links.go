@@ -13,10 +13,9 @@ import (
 )
 
 // operatorLinkWiring is the configuration the operator link deliveries are
-// composed with. dispatcher may be nil: the link is then not mailed, as
+// composed with. the durable outbox may be nil: the link is then not mailed, as
 // before.
 type operatorLinkWiring struct {
-	dispatcher  email.Dispatcher
 	durable     DurableMailOutbox
 	defaultFrom email.Email
 	// frontendURL is the host of the staff frontend, which serves the
@@ -47,7 +46,7 @@ func operatorProvisioningDependencies(
 	return &identityaccessCompose.OperatorProvisioningDependencies{
 		DeliveryFor: func(tokens identityaccess.OperatorLinkDeliveryRecorder) identityaccessCompose.OperatorLinkDelivery {
 			return operatorLinkDelivery{
-				dispatcher: wiring.dispatcher, durable: wiring.durable, from: wiring.defaultFrom,
+				durable: wiring.durable, from: wiring.defaultFrom,
 				frontendURL: wiring.frontendURL, operatorURL: wiring.operatorFrontendURL,
 				backoff: backoff, tokens: tokens, logger: logger,
 			}
@@ -77,7 +76,6 @@ type operatorLinkRecords interface {
 // change messages, and records the outcome of the two that carry a link
 // back through the module once the send settles.
 type operatorLinkDelivery struct {
-	dispatcher  email.Dispatcher
 	durable     DurableMailOutbox
 	from        email.Email
 	frontendURL string
@@ -88,7 +86,7 @@ type operatorLinkDelivery struct {
 }
 
 func (d operatorLinkDelivery) DispatchOperatorInvitation(ctx context.Context, invitation identityaccess.OperatorInvitation, inviterName string, expiry time.Duration) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	message := *identityMessage(d.from, email.NewEmail("", invitation.Email), identityaccess.OperatorInvitationMail(invitation, inviterName, d.frontendURL, d.operatorURL, expiry))
@@ -99,7 +97,7 @@ func (d operatorLinkDelivery) DispatchOperatorInvitation(ctx context.Context, in
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeVerification(ctx context.Context, change identityaccess.OperatorEmailChange, expiry time.Duration) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	message := *identityMessage(d.from, email.NewEmail("", change.NewEmail), identityaccess.OperatorEmailChangeVerificationMail(change, d.frontendURL, expiry))
@@ -110,7 +108,7 @@ func (d operatorLinkDelivery) DispatchOperatorEmailChangeVerification(ctx contex
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeRequested(ctx context.Context, operator identityaccess.Operator, maskedNewEmail string) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	return enqueueDurableMail(ctx, d.durable, DurableMail{
@@ -120,7 +118,7 @@ func (d operatorLinkDelivery) DispatchOperatorEmailChangeRequested(ctx context.C
 }
 
 func (d operatorLinkDelivery) DispatchOperatorEmailChangeConfirmed(ctx context.Context, oldEmail, displayName string) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	return enqueueDurableMail(ctx, d.durable, DurableMail{

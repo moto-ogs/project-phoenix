@@ -24,16 +24,6 @@ func invalidTransition(reason string) error {
 }
 
 func (s *Service) FindTransition(ctx context.Context, id int64) (schoolstructure.Transition, error) {
-	return s.findTransition(ctx, id, "")
-}
-
-// LockTransitionForMutation reads the transition with its mappings and holds
-// the row FOR UPDATE for the caller's transaction.
-func (s *Service) LockTransitionForMutation(ctx context.Context, id int64) (schoolstructure.Transition, error) {
-	return s.findTransition(ctx, id, "update")
-}
-
-func (s *Service) findTransition(ctx context.Context, id int64, lock string) (schoolstructure.Transition, error) {
 	if id <= 0 {
 		return schoolstructure.Transition{}, invalidTransition("transition ID is required")
 	}
@@ -46,7 +36,7 @@ func (s *Service) findTransition(ctx context.Context, id int64, lock string) (sc
 		if tenantID.Int64() <= 0 {
 			return errTenantRequired
 		}
-		transition, found, queryStats, findErr := s.store.FindTransition(ctx, tenantID.Int64(), id, lock)
+		transition, found, queryStats, findErr := s.store.FindTransition(ctx, tenantID.Int64(), id)
 		stats.Add(queryStats)
 		if findErr != nil {
 			return findErr
@@ -152,7 +142,7 @@ func (s *Service) UpdateTransition(ctx context.Context, update schoolstructure.T
 // findDraftTransition reads the transition an update edits; only a draft may
 // be edited.
 func (s *Service) findDraftTransition(ctx context.Context, tenantID, id int64, stats *domain.OperationStats) (schoolstructure.Transition, error) {
-	current, found, queryStats, err := s.store.FindTransition(ctx, tenantID, id, "")
+	current, found, queryStats, err := s.store.FindTransition(ctx, tenantID, id)
 	stats.Add(queryStats)
 	if err != nil {
 		return schoolstructure.Transition{}, err
@@ -240,7 +230,7 @@ func (s *Service) DeleteTransition(ctx context.Context, id int64) error {
 		}
 		// Only a draft may be deleted: the delete cascades the history and
 		// ledgers a revert needs. Tell a missing row apart from a protected one.
-		_, found, queryStats, findErr := s.store.FindTransition(ctx, tenantID.Int64(), id, "")
+		_, found, queryStats, findErr := s.store.FindTransition(ctx, tenantID.Int64(), id)
 		stats.Add(queryStats)
 		if findErr != nil {
 			return findErr

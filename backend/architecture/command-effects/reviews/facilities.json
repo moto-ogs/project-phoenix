@@ -1429,26 +1429,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID; modules/studentpresence/internal/application/presence/visit_reads.go:73. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CreateActiveGroup",
       "classification": "leaf",
@@ -1667,26 +1647,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID; modules/studentpresence/internal/application/presence/visit_reads.go:11. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.FindVisitsByStudentID; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ForceStartActivitySessionWithSupervisors",
       "classification": "leaf",
@@ -1886,26 +1846,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.GetStudentCurrentVisit; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisit",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom; modules/studentpresence/internal/application/presence/visit_reads.go:32. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom; modules/studentpresence.Presence (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
       "target_owner": "student-presence"
     },
     {

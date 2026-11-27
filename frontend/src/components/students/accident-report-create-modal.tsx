@@ -33,16 +33,13 @@ export function AccidentReportCreateModal({
   correctsReportId,
   initialDraft,
   onCreated,
-  openCreated = false,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
   correctsReportId?: string;
   initialDraft?: AccidentReportDraft;
-  onCreated: (reportId: string) => void;
-  /** Opens the page of the new report after saving. */
-  openCreated?: boolean;
+  onCreated: () => void;
 }>) {
   const router = useTenantRouter();
   const [draft, setDraft] = useState<AccidentReportDraft>(
@@ -80,10 +77,8 @@ export function AccidentReportCreateModal({
         // Eine späte Antwort ändert keinen inzwischen neuen Dialog (#6533).
         if (!op.isCurrent()) return;
         setDraft(emptyAccidentReportDraft());
-        onCreated(id);
-        if (openCreated) {
-          router.push(accidentReportPath(studentId, id));
-        }
+        onCreated();
+        router.push(accidentReportPath(studentId, id));
       } catch (err) {
         logger.error("accident_report_create_failed", {
           student_id: studentId,

@@ -61,7 +61,6 @@ export function CompanionPicker({
   allowedDays,
   excludeStudentId,
   onExtensionConfirmed,
-  disabled = false,
 }: Readonly<{
   value: StudentCompanion[];
   onChange: (next: StudentCompanion[]) => void;
@@ -75,7 +74,6 @@ export function CompanionPicker({
    * along: the backend only widens what the confirmation actually covers.
    */
   onExtensionConfirmed?: (confirmation: CompanionExtensionConfirmation) => void;
-  disabled?: boolean;
 }>) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -278,18 +276,16 @@ export function CompanionPicker({
             <span className="truncate text-sm font-medium text-gray-900">
               {companionDisplayName(companion)}
             </span>
-            {!disabled && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`${companionDisplayName(companion)} entfernen`}
-                tooltip="Nimmt das Kind aus der Liste, es gilt erst nach dem Speichern."
-                onClick={() => removeCompanion(companion.companion_student_id)}
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`${companionDisplayName(companion)} entfernen`}
+              tooltip="Nimmt das Kind aus der Liste, es gilt erst nach dem Speichern."
+              onClick={() => removeCompanion(companion.companion_student_id)}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </Button>
           </div>
           {/* Only the days the plan above allows are offered, so the two can
               never contradict each other. */}
@@ -304,7 +300,6 @@ export function CompanionPicker({
             onToggle={(day) =>
               toggleWeekday(companion.companion_student_id, day)
             }
-            disabled={disabled}
           />
         </InsetPanel>
       ))}
@@ -353,7 +348,7 @@ export function CompanionPicker({
         />
       ) : null}
 
-      {!disabled && pickerOpen && !pending ? (
+      {pickerOpen && !pending ? (
         <InsetPanel tone="white">
           <div className="relative mb-2">
             <Search
@@ -418,7 +413,7 @@ export function CompanionPicker({
         </InsetPanel>
       ) : null}
 
-      {!disabled && !pickerOpen && !pending ? (
+      {!pickerOpen && !pending ? (
         <Button
           type="button"
           variant="outline"

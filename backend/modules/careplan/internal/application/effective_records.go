@@ -51,11 +51,6 @@ func NewExceptionRecords[T any, P validated[T]](funcs RecordFuncs[T]) ExceptionR
 	return ExceptionRecords[T, P]{NewEffectiveRecords[T, P](funcs)}
 }
 
-// NewNoteRecords binds the note record port to funcs.
-func NewNoteRecords[T any, P validated[T]](funcs RecordFuncs[T]) NoteRecords[T, P] {
-	return NoteRecords[T, P]{NewEffectiveRecords[T, P](funcs)}
-}
-
 // Unlocked lifts a finder without a row-lock variant into the find shape.
 func Unlocked[T any](find func(context.Context, int64) (T, error)) func(context.Context, int64, bool) (T, error) {
 	return func(ctx context.Context, id int64, _ bool) (T, error) { return find(ctx, id) }
@@ -105,21 +100,11 @@ func (r EffectiveRecords[T, P]) FindByStudentIDsAndWeekday(ctx context.Context, 
 	}
 	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Weekday: weekday})
 }
-func (r EffectiveRecords[T, P]) FindByStudentIDAndWeekday(ctx context.Context, id int64, weekday int) (*T, error) {
-	rows, err := r.FindByStudentIDsAndWeekday(ctx, []int64{id}, weekday)
-	if err != nil || len(rows) == 0 {
-		return nil, err
-	}
-	return rows[0], nil
-}
 func (r EffectiveRecords[T, P]) FindByStudentIDsAndDate(ctx context.Context, ids []int64, date calendar.Date) ([]*T, error) {
 	if len(ids) == 0 {
 		return []*T{}, nil
 	}
 	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: careplan.Date(date)})
-}
-func (r EffectiveRecords[T, P]) FindUpcomingByStudentID(ctx context.Context, id int64, from calendar.Date) ([]*T, error) {
-	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, UpcomingFrom: careplan.Date(from)})
 }
 func (r EffectiveRecords[T, P]) Create(ctx context.Context, row *T) error {
 	if err := P(row).Validate(); err != nil {
@@ -166,11 +151,4 @@ func (r ExceptionRecords[T, P]) FindByStudentIDAndDate(ctx context.Context, id i
 		return nil, err
 	}
 	return rows[0], nil
-}
-
-// NoteRecords may hold several notes per student and day.
-type NoteRecords[T any, P validated[T]] struct{ EffectiveRecords[T, P] }
-
-func (r NoteRecords[T, P]) FindByStudentIDAndDate(ctx context.Context, id int64, date calendar.Date) ([]*T, error) {
-	return r.FindByStudentIDsAndDate(ctx, []int64{id}, date)
 }

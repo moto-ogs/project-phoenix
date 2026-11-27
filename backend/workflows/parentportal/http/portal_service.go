@@ -149,14 +149,6 @@ type PortalService interface {
 	// submitting guardian.
 	EditExcusedRequest(ctx context.Context, accountID, studentID, requestID int64, dates []timezone.Date, note, expectedVersion string) (*parentService.ExcusedAbsenceRequestSnapshot, error)
 
-	// EditPickupChangeRequest rewrites the caller's own pending one-day
-	// pickup change (#2267).
-	EditPickupChangeRequest(ctx context.Context, accountID, studentID, requestID int64, date timezone.Date, pickupTime time.Time, departureMode, reason, expectedVersion string) (*parentService.PickupChangeRequest, error)
-
-	// EditCareScheduleRequest rewrites the caller's own pending weekly-plan
-	// request (#2267).
-	EditCareScheduleRequest(ctx context.Context, accountID, studentID, requestID int64, payload map[string]any, expectedVersion string) (*parentService.ChildCareSchedule, error)
-
 	// EditMasterDataRequest rewrites the proposed value of the caller's own
 	// pending Stammdaten request (#2267). Target and field stay fixed.
 	EditMasterDataRequest(ctx context.Context, accountID, studentID, requestID int64, newValue json.RawMessage, expectedVersion string) (*parentService.StudentDataChangeRequest, error)
@@ -195,11 +187,6 @@ type PortalService interface {
 	SetMealParticipationWeek(ctx context.Context, accountID, studentID int64, date timezone.Date, participating bool) (parentService.MealWeekChange, error)
 	ClearMealParticipationDay(ctx context.Context, accountID, studentID int64, date timezone.Date) error
 
-	// SubmitCareExceptionWithReason requires a
-	// concrete pickup time and stores the parent's explanation with it. Arrival
-	// exceptions remain under staff control.
-	SubmitCareExceptionWithReason(ctx context.Context, accountID, studentID int64, date timezone.Date, pickupTime *time.Time, reason string) (*parentService.CareException, error)
-	SubmitPickupChangeRequest(ctx context.Context, accountID, studentID int64, date timezone.Date, pickupTime time.Time, departureMode, reason string, recipientGuardianProfileIDs []int64) (*parentService.PickupChangeRequest, error)
 	ListPickupChangeRequests(ctx context.Context, accountID, studentID int64) ([]parentService.PickupChangeRequest, error)
 	// SubmitPickupChange and EditPickupChange carry the one-day collector and
 	// the signature a collector or walking home alone needs (#4780).
@@ -340,11 +327,6 @@ type PortalService interface {
 	// (arrival/pickup times + departure modes per weekday) with any pending
 	// change request — the Stammdaten read view. Authorization only.
 	GetChildCareSchedule(ctx context.Context, accountID, studentID int64) (*parentService.ChildCareSchedule, error)
-
-	// CreateCareScheduleRequest stores a pending care-schedule change request
-	// for staff review on the Änderungsanfragen page. Requires
-	// parent_portal.request.submit; gated by operations.parent_notes_enabled.
-	CreateCareScheduleRequest(ctx context.Context, accountID, studentID int64, payload map[string]any) (*parentService.ChildCareSchedule, error)
 
 	// GetChildOfferingCatalog returns the offerings the guardian may pick from
 	// for a change request, prefilled with the current booking. Requires

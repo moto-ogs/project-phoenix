@@ -9,7 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
-	supervisiondashboardCompose "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	calendarpkg "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -222,7 +221,7 @@ func TestSupervisionRunningSessionsResolveRelationsAndRooms(t *testing.T) {
 			return []int64{12}, nil
 		},
 	}
-	s := supervisionSessions{active: active, groups: roomSessions, collate: supervisiondashboardCompose.CompareRoomNames}
+	s := supervisionSessions{active: active, groups: roomSessions}
 
 	records, err := s.Running(ctx)
 	require.NoError(t, err)
@@ -268,7 +267,7 @@ func TestSupervisionSupervisedSessionsAndUnclaimed(t *testing.T) {
 			}, nil
 		},
 	}
-	s := supervisionSessions{active: active, userContext: userContext, collate: supervisiondashboardCompose.CompareRoomNames}
+	s := supervisionSessions{active: active, userContext: userContext}
 
 	records, err := s.Supervised(ctx)
 	require.NoError(t, err)

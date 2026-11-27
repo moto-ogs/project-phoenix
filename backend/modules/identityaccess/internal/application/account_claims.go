@@ -6,8 +6,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 )
 
-// LoadAccountClaims assembles the tenant-scoped claims material of an
-// account on the caller's transaction: the retained admin staff-view preview
+// loadAccountClaims assembles the tenant-scoped claims material of an
+// account on the caller's transaction: the admin staff-view preview
 // (#2893) mints its read-only token from it after taking its own locks. A
 // missing or soft-deleted school is ErrTenantNotFound; a query failure
 // propagates.

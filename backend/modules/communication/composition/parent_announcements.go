@@ -25,7 +25,7 @@ type ParentAnnouncementConfig struct {
 	PushOutbox   ParentAnnouncementPushOutbox
 	Notifier     func(context.Context, communication.NotificationEvent) error
 	Series       communication.NotificationSeries
-	Preferences  deliveryPorts.NotificationPreferences
+	Preferences  communication.NotificationPreferences
 	Deliveries   deliveryPorts.ParentAnnouncementDeliveryRecorder
 	Fingerprints deliveryPorts.Fingerprints
 	Signatures   communication.DeclarationSignatureReader

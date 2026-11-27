@@ -137,14 +137,6 @@ type GuardianAbsenceReport struct {
 	Note              *string
 	ReportedAt        time.Time
 }
-type GuardianPickupChange struct {
-	TenantID          int64
-	StudentID         int64
-	GuardianAccountID int64
-	Date              calendar.Date
-	PickupTime        *time.Time
-	Reason            *string
-}
 type NoteData struct {
 	ID      int64  `json:"id"`
 	Content string `json:"content"`

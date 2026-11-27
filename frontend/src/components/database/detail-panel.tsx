@@ -1,14 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "~/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export interface DetailTab {
   id: string;
   label: string;
   content: ReactNode;
-  disabled?: boolean;
 }
 
 interface DetailPanelProps {
@@ -16,7 +14,6 @@ interface DetailPanelProps {
   tabs: DetailTab[];
   activeTab: string;
   onTabChange: (id: string) => void;
-  className?: string;
 }
 
 export function DetailPanel({
@@ -24,10 +21,9 @@ export function DetailPanel({
   tabs,
   activeTab,
   onTabChange,
-  className,
 }: DetailPanelProps) {
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className="flex h-full flex-col">
       <div className="border-b border-gray-200">{header}</div>
       <Tabs
         value={activeTab}
@@ -40,7 +36,7 @@ export function DetailPanel({
             className="w-max justify-start border-b-0 px-6 pt-4"
           >
             {tabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} disabled={tab.disabled}>
+              <TabsTrigger key={tab.id} value={tab.id}>
                 {tab.label}
               </TabsTrigger>
             ))}

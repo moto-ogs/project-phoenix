@@ -43,19 +43,17 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   // `binding.method(…)`: every builder of a portal's handlers runs in the
   // portal's response wrapper (makePortalHandlers).
   "~/lib/route-wrapper.server": [
-    "createGetHandler",
-    "createPutHandler",
-    "createDeleteHandler",
     "catalogProxy",
     "catalogProxyUnder",
     "tenant.route",
     "tenant.get",
     "tenant.post",
+    "tenant.put",
+    "tenant.del",
   ],
   "~/lib/operator/route-wrapper.server": [
-    "createOperatorPostHandler",
-    "createOperatorPutHandler",
-    "createOperatorDeleteHandler",
+    "operator.put",
+    "operator.del",
     "catalogProxy",
     "catalogProxyUnder",
   ],

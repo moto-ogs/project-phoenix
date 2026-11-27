@@ -30,11 +30,3 @@ export function catererPath(path: string): string {
   }
   return path.startsWith("/caterer") ? path : `/caterer${path}`;
 }
-
-/** Absolute URL of a caterer page, for NextAuth's callbackUrl. */
-export function catererAbsoluteUrl(path: string): string {
-  if (typeof window === "undefined") {
-    throw new Error("catererAbsoluteUrl() is client-only.");
-  }
-  return `${window.location.origin}${catererPath(path)}`;
-}

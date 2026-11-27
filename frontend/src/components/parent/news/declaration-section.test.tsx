@@ -28,11 +28,11 @@ import {
   isOpenDeclaration,
 } from "./declaration-section";
 import { catalogText } from "~/test/error-catalog-text";
-import { CareFacilityTermScope } from "~/lib/care-facility-term";
 import {
-  ParentCareTermScope,
-  useParentCareTerms,
-} from "~/lib/parent-care-term";
+  CareFacilityTermScope,
+  useCareTermValues,
+} from "~/lib/care-facility-term";
+import { ParentCareTermScope } from "~/lib/parent-care-term";
 import * as parentApi from "~/lib/parent-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
@@ -561,7 +561,7 @@ describe("Einverständnis in the detail view", () => {
       new ApiError("closed", 409, { code: "care.declaration_closed" }),
     );
     function Terms() {
-      return <p>Konto: {useParentCareTerms().account}</p>;
+      return <p>Konto: {useCareTermValues().careTerm}</p>;
     }
 
     render(

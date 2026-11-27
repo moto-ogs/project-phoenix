@@ -366,7 +366,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	t.Parallel()
 	f := newOperatorProvisioningRoutes(t)
-	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, fleet, _, _, _, _, err := composeTestRoot(testpkg.NewDatabase(t, f.db), slog.Default(), currentTestServiceConfig())
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, fleet, _, _, _, _, err := composeTestRoot(testpkg.NewDatabase(t, f.db), slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, f.db))
 	require.NoError(t, err)

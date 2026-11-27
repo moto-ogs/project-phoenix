@@ -19,7 +19,6 @@ import { createCrudService } from "./service-factory";
 import type { EntityConfig } from "./types";
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
-import { childrenConcept } from "~/lib/concepts/children";
 
 interface TestEntity {
   id: string;
@@ -37,10 +36,8 @@ const entity = (room: { id: string; name: string }): TestEntity => ({
   name: room.name,
 });
 
-const config: EntityConfig<TestEntity> = {
+const config = {
   name: { singular: "Raum", plural: "Räume" },
-  concept: childrenConcept,
-  labels: {},
   api: {
     list: async () => {
       const page = await bffJson("tenant", "GET /api/rooms/", {
@@ -72,15 +69,7 @@ const config: EntityConfig<TestEntity> = {
         body: { expected_fingerprint: "vorschau" },
       }),
   },
-  form: { sections: [] },
-  detail: { sections: [] },
-  list: {
-    title: "Räume",
-    description: "",
-    searchPlaceholder: "",
-    item: { title: () => "Raum" },
-  },
-};
+} satisfies EntityConfig<TestEntity>;
 
 const pagination = {
   current_page: 2,
@@ -155,39 +144,18 @@ describe("getOne", () => {
 });
 
 describe("create", () => {
-  it("sends the mapped body after beforeCreate and calls afterCreate", async () => {
+  it("posts the mapped body and returns the created entity", async () => {
     fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
-    const afterCreate = vi.fn(() => Promise.resolve());
-    const service = createCrudService({
-      ...config,
-      hooks: {
-        beforeCreate: (data) => Promise.resolve({ ...data, name: "Neu" }),
-        afterCreate,
-      },
+    const service = createCrudService(config);
+
+    await expect(service.create({ name: "Neu" })).resolves.toEqual({
+      id: "1",
+      name: "Neu",
     });
-
-    await service.create({ name: "x" });
-
     expect(call().init).toMatchObject({
       method: "POST",
       body: JSON.stringify({ name: "Neu" }),
     });
-    expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "Neu" });
-  });
-
-  it("hands the result of a custom create call to afterCreate", async () => {
-    const create = vi.fn().mockResolvedValue({ id: "1", name: "c" });
-    const afterCreate = vi.fn(() => Promise.resolve());
-    const service = createCrudService({
-      ...config,
-      api: { ...config.api, create },
-      hooks: { afterCreate },
-    });
-
-    await service.create({ name: "c" });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "c" });
   });
 
   it("throws the ApiError with code, details and request ID", async () => {
@@ -215,18 +183,11 @@ describe("create", () => {
 });
 
 describe("update", () => {
-  it("puts the body to the entity's route after beforeUpdate", async () => {
+  it("puts the body to the entity's route and returns the saved record", async () => {
     fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
-    const afterUpdate = vi.fn(() => Promise.resolve());
-    const service = createCrudService({
-      ...config,
-      hooks: {
-        beforeUpdate: (_id, data) => Promise.resolve({ ...data, name: "Neu" }),
-        afterUpdate,
-      },
-    });
+    const service = createCrudService(config);
 
-    await expect(service.update("1", { name: "x" })).resolves.toEqual({
+    await expect(service.update("1", { name: "Neu" })).resolves.toEqual({
       id: "1",
       name: "Neu",
     });
@@ -235,7 +196,6 @@ describe("update", () => {
       method: "PUT",
       body: JSON.stringify({ name: "Neu" }),
     });
-    expect(afterUpdate).toHaveBeenCalled();
   });
 
   it("passes the loaded record to a custom update without a request", async () => {
@@ -269,31 +229,16 @@ describe("update", () => {
 });
 
 describe("remove", () => {
-  it("deletes through the entity's route and calls the hooks", async () => {
+  it("deletes through the entity's route", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    const afterDelete = vi.fn(() => Promise.resolve());
-    const service = createCrudService({
-      ...config,
-      hooks: { beforeDelete: () => Promise.resolve(true), afterDelete },
-    });
+    const service = createCrudService(config);
 
-    await expect(service.remove("3")).resolves.toBe(true);
+    await service.remove("3");
     expect(call().url).toBe("/api/rooms/3");
     expect(call().init).toMatchObject({ method: "DELETE" });
-    expect(afterDelete).toHaveBeenCalledWith("3");
   });
 
-  it("resolves false when beforeDelete cancels", async () => {
-    const service = createCrudService({
-      ...config,
-      hooks: { beforeDelete: () => Promise.resolve(false) },
-    });
-
-    await expect(service.remove("3")).resolves.toBe(false);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("throws the refusal and skips afterDelete", async () => {
+  it("throws the refusal without losing the error metadata", async () => {
     fetchMock.mockResolvedValueOnce(
       refusal(409, {
         detail: "group has students",
@@ -301,8 +246,7 @@ describe("remove", () => {
         instance: "req-delete",
       }),
     );
-    const afterDelete = vi.fn(() => Promise.resolve());
-    const service = createCrudService({ ...config, hooks: { afterDelete } });
+    const service = createCrudService(config);
 
     const caught = await service.remove("1").catch((error: unknown) => error);
 
@@ -311,7 +255,6 @@ describe("remove", () => {
       code: "general.business_rejection",
       requestId: "req-delete",
     });
-    expect(afterDelete).not.toHaveBeenCalled();
   });
 
   it("refuses an operation the entity has no route for", async () => {

@@ -37,7 +37,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_NilSnapshot(t *testing.T
 
 	var snapshot *studentpresence.StudentLocationSnapshot = nil
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -51,7 +51,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_EmptySnapshot(t *testing
 		Groups:      make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -70,7 +70,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_NotCheckedIn(t *testing.
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -91,7 +91,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedOut(t *testing.T)
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -112,7 +112,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedOut_NoFullAccess(
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, false)
+	location := snapshot.ResolveStudentLocationWithTime(123, false).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -133,7 +133,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_NoFullAccess(t
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, false)
+	location := snapshot.ResolveStudentLocationWithTime(123, false).Location
 
 	assert.Equal(t, "Anwesend", location)
 }
@@ -154,7 +154,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_NoVisit(t *tes
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -177,7 +177,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_NilVisit(t *te
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -205,7 +205,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_VisitNoGroupID
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -233,7 +233,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_GroupNotFound(
 		Groups: make(map[int64]*studentpresence.SessionDetail), // Group 456 not in map
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -263,7 +263,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_NilGroup(t *te
 		},
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -299,7 +299,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_GroupNoRoom(t 
 		},
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -337,7 +337,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_GroupEmptyRoom
 		},
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Unterwegs", location)
 }
@@ -376,7 +376,7 @@ func TestStudentLocationSnapshot_ResolveStudentLocation_CheckedIn_WithRoom(t *te
 		},
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Anwesend - Room 101", location)
 }
@@ -669,7 +669,7 @@ func TestStudentLocationSnapshot_NilAttendanceInMap(t *testing.T) {
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	assert.Equal(t, "Abwesend", location)
 }
@@ -688,7 +688,7 @@ func TestStudentLocationSnapshot_UnknownStatus(t *testing.T) {
 		Groups: make(map[int64]*studentpresence.SessionDetail),
 	}
 
-	location := snapshot.ResolveStudentLocation(123, true)
+	location := snapshot.ResolveStudentLocationWithTime(123, true).Location
 
 	// Unknown status should return "Abwesend"
 	assert.Equal(t, "Abwesend", location)

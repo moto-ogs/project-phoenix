@@ -211,9 +211,6 @@ type TransitionCommand interface {
 	// gate shared with the timetable materializer. It requires a tenant
 	// transaction; the lock releases at COMMIT/ROLLBACK.
 	LockTransitions(context.Context) error
-	// LockTransitionForMutation reads the transition with its mappings and
-	// holds the row FOR UPDATE for the caller's transaction.
-	LockTransitionForMutation(context.Context, int64) (Transition, error)
 	// LockLatestAppliedTransition returns the most recently applied
 	// transition FOR UPDATE; found is false when none is applied.
 	LockLatestAppliedTransition(context.Context) (Transition, bool, error)

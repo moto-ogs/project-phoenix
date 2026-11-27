@@ -14,7 +14,7 @@ import type { StackAccess } from "./access";
 import { captureShots } from "./capture";
 import { assertConcurrency, mapConcurrent } from "./concurrency";
 import { DEVICES, type DeviceId } from "./devices";
-import { BEZEL_DIR, frameMockup, webpVariants } from "./frame";
+import { frameMockup, webpVariants } from "./frame";
 import { referenceInstant } from "./reference-time";
 import type { Shot } from "./shot-list";
 
@@ -64,8 +64,6 @@ export interface PipelineOptions {
   /** Release-Version; lokal ein frei gewählter Name. */
   readonly version: string;
   readonly now?: Date;
-  readonly bezelDir?: string;
-  readonly loadTimeoutMs?: number;
   readonly captureConcurrency?: number;
   readonly frameConcurrency?: number;
   readonly log?: (message: string) => void;
@@ -256,9 +254,6 @@ export async function runPipeline(options: PipelineOptions): Promise<Manifest> {
     shots: options.shots,
     concurrency: captureConcurrency,
     now,
-    ...(options.loadTimeoutMs === undefined
-      ? {}
-      : { loadTimeoutMs: options.loadTimeoutMs }),
     log,
   });
 
@@ -268,11 +263,7 @@ export async function runPipeline(options: PipelineOptions): Promise<Manifest> {
   const frameStarted = performance.now();
   const prepared = await mapConcurrent(raws, frameConcurrency, async (raw) => {
     log(`Rahme ${raw.shotId} auf ${raw.device}`);
-    const mockup = await frameMockup(
-      raw.png,
-      DEVICES[raw.device],
-      options.bezelDir ?? BEZEL_DIR,
-    );
+    const mockup = await frameMockup(raw.png, DEVICES[raw.device]);
     return {
       shotId: raw.shotId,
       files: [

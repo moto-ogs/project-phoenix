@@ -1186,18 +1186,8 @@
       "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
     },
     {
-      "from": "modules/emergencysnapshot/legacy",
-      "to": "modules/emergencysnapshot/internal/adapters/nameorder",
-      "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
-    },
-    {
       "from": "modules/filestorage/documents",
       "to": "modules/filestorage/internal/adapters/documents",
-      "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
-    },
-    {
-      "from": "modules/grouplive/legacy",
-      "to": "modules/grouplive/internal/adapters/nameorder",
       "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
     },
     {
@@ -1258,11 +1248,6 @@
     {
       "from": "modules/studentdirectoryview",
       "to": "modules/studentdirectoryview/internal/adapters/postgres",
-      "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
-    },
-    {
-      "from": "modules/supervisiondashboard/legacy",
-      "to": "modules/supervisiondashboard/internal/adapters/nameorder",
       "issue": "https://github.com/moto-ogs/project-phoenix/issues/4086"
     },
     {

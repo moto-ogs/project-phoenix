@@ -86,31 +86,6 @@ export function latestKeyDate(
   return thisYear <= today ? thisYear : keyDateInYear(year - 1, month, day);
 }
 
-export interface KeyDatePreset {
-  readonly label: string;
-  readonly date: string;
-}
-
-/** Schnellwahl im Kalender: der letzte und der vorletzte Stichtag, dazu heute. */
-export function keyDatePresets(
-  today: string,
-  month: number = STANDARD_KEY_DATE.month,
-  day: number = STANDARD_KEY_DATE.day,
-): KeyDatePreset[] {
-  const latest = latestKeyDate(today, month, day);
-  const year = parseISODate(latest).getFullYear();
-  const before = keyDateInYear(year - 1, month, day);
-  const short = (date: string) => {
-    const value = parseISODate(date);
-    return `${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()}`;
-  };
-  return [
-    { label: `Stichtag ${short(latest)}`, date: latest },
-    { label: `Stichtag ${short(before)}`, date: before },
-    { label: "Heute", date: today },
-  ];
-}
-
 /** `15.10.` für den Stichtag einer Vorlage. */
 function formatDayMonth(month: number, day: number): string {
   return `${pad(day)}.${pad(month)}.`;

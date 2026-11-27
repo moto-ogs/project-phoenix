@@ -51,7 +51,6 @@ export function useChangeRequestsPending(): UseUnreadCountResult {
       fetcher: fetchPendingChangeRequestCount,
       eventNames: ["messages-unread-refresh", CHANGE_REQUESTS_REFRESH_EVENT],
       eventDebounceMs: 500,
-      refetchOnFocus: true,
     },
   );
 }

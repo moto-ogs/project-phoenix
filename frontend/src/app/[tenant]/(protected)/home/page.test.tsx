@@ -110,11 +110,11 @@ vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => {
 // Eigene Tests in roster-deviation-todos.test.tsx; hier stünde sonst jede
 // SWR-Abfrage der Seite unter derselben Attrappe.
 vi.mock("~/components/home/roster-deviation-todos", () => ({
-  RosterDeviationTodos: () => null,
+  RosterDeviationTodos: () => <div data-testid="roster-deviation-todos" />,
 }));
 // Eigene Tests in booking-leftover-todos.test.tsx, aus demselben Grund.
 vi.mock("~/components/home/booking-leftover-todos", () => ({
-  BookingLeftoverTodos: () => null,
+  BookingLeftoverTodos: () => <div data-testid="booking-leftover-todos" />,
 }));
 vi.mock("~/components/home/day-changes-block", () => ({
   DayChangesBlock: () => <div data-testid="day-changes-block" />,
@@ -251,6 +251,7 @@ import {
 import { useSWRAuth } from "~/lib/swr/hooks";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { useTimetableEnabled } from "~/lib/tenant-context";
 
 const analytics = {
   studentsPresent: 150,
@@ -305,6 +306,7 @@ describe("Startseite", () => {
     vi.mocked(isAdmin).mockReturnValue(true);
     vi.mocked(hasEffectiveAdminScope).mockReturnValue(true);
     vi.mocked(isCaregiver).mockReturnValue(false);
+    vi.mocked(useTimetableEnabled).mockReturnValue(true);
     vi.mocked(useSWRAuth).mockReturnValue(mockSWR(analytics));
   });
 
@@ -368,10 +370,33 @@ describe("Startseite", () => {
     await waitFor(() =>
       expect(screen.getByTestId("home-now")).toBeInTheDocument(),
     );
+    expect(screen.getByTestId("roster-deviation-todos")).toBeInTheDocument();
+    expect(screen.getByTestId("booking-leftover-todos")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Anpassen" }));
 
     expect(screen.queryByTestId("home-now")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("roster-deviation-todos"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("booking-leftover-todos"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lädt keine Planungsaufgaben bei ausgeschaltetem Betreuungsplan", async () => {
+    vi.mocked(useTimetableEnabled).mockReturnValue(false);
+
+    render(<HomePage />);
+
+    // Anker: Die Startseite ist geladen, nur die Planungsaufgaben fehlen.
+    expect(await screen.findByTestId("home-now")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("roster-deviation-todos"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("booking-leftover-todos"),
+    ).not.toBeInTheDocument();
   });
 
   // „Anpassen" ist auf allen Breiten ein Symbolknopf (#4346): kein
@@ -434,6 +459,12 @@ describe("Startseite", () => {
     // Ohne Rechte auf die Betriebszahlen bleiben die Kennzahlen weg; die
     // Bausteine mit eigener Quelle stehen da, sobald ihr Recht reicht.
     expect(screen.queryByText("Kinder anwesend")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("roster-deviation-todos"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("booking-leftover-todos"),
+    ).not.toBeInTheDocument();
   });
 
   it("zeigt die Skelettfläche, solange die Sitzung lädt", () => {

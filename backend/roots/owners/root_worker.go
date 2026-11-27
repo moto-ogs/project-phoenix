@@ -237,7 +237,6 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		tokens           TokenAdapter
 		audit            AuditOwner
 		mailSender       email.Mailer
-		mailDispatcher   email.Dispatcher
 		mailFrom         email.Email
 		pushVAPID        deliveryCompose.VAPIDConfig
 		organizations    organizationtenancy.Capability
@@ -322,7 +321,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { tokens, err = tokensFor(); return },
 		func() (err error) { audit, err = BuildAuditOwner(db, env); return },
 		func() (err error) {
-			mailSender, mailDispatcher, mailFrom, pushVAPID, err = BuildMailTransport(env)
+			mailSender, mailFrom, pushVAPID, err = BuildMailTransport(env)
 			return
 		},
 		func() (err error) { organizations, err = BuildServeOrganizations(db, env.Now); return },
@@ -405,7 +404,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			mailIdentity = TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
 			identity, caller, err = BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service,
-				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
+				audit, operatorAuditLog, mailSender, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
 				presence.SessionRecords, presence.Presence, workTime, calendar)
 			return

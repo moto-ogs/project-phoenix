@@ -64,13 +64,12 @@ func TestLateInviteOwnerConsumptionRollsBackAndRejectsReuse(t *testing.T) {
 
 		_, err := testpkg.TenantQuery1(t, foreignCtx, db, owner.LateInviteByUsedRequestID, request.ID)
 		require.ErrorIs(t, err, enrollment.ErrLateInviteNotFound)
-		deleted, err := testpkg.TenantQuery1(t, foreignCtx, db, owner.DeleteLateInvitesByUsedRequestID, request.ID)
-		require.NoError(t, err)
-		require.Zero(t, deleted)
+		require.NoError(t, testpkg.TenantCommand1(t, foreignCtx, db, owner.DeleteRequestTree, request.ID))
 	})
-	deleted, err := testpkg.TenantQuery1(t, ctx, db, owner.DeleteLateInvitesByUsedRequestID, request.ID)
+	stillLinked, err := testpkg.TenantQuery1(t, ctx, db, owner.LateInviteByUsedRequestID, request.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, 1, deleted)
+	require.Equal(t, invite.ID, stillLinked.ID, "foreign deletion must not remove the invite")
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, owner.DeleteRequestTree, request.ID))
 	_, err = testpkg.TenantQuery1(t, ctx, db, owner.LateInviteByUsedRequestID, request.ID)
 	require.ErrorIs(t, err, enrollment.ErrLateInviteNotFound)
 }

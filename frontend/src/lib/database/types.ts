@@ -1,7 +1,6 @@
 // Database Entity Configuration Types
 
 import type { Pagination } from "~/lib/contract/runtime";
-import type { ReactNode } from "react";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
 // Field types supported by the database forms
@@ -25,13 +24,11 @@ interface FieldConfig {
   required?: boolean;
   placeholder?: string;
   helperText?: string;
-  description?: string;
   validation?: (value: unknown) => string | null;
   // For select/multiselect fields - supports both sync and async options
   options?:
     | Array<{ value: string; label: string }>
     | (() => Promise<Array<{ value: string; label: string }>>);
-  loadOptions?: () => Promise<Array<{ value: string; label: string }>>;
   /** Cache name of the response an `options` function reads (DatabaseForm). */
   optionsResource?: string;
   // For custom fields
@@ -124,29 +121,14 @@ export interface SectionConfig {
   concept?: MotoConcept;
 }
 
-// Detail view item configuration
-interface DetailItem<T = Record<string, unknown>> {
-  label: string;
-  value: (entity: T) => ReactNode;
-  colSpan?: 1 | 2;
-}
-
-// Detail view section configuration
-interface DetailSection<T = Record<string, unknown>> {
-  title: string;
-  items: DetailItem<T>[];
-  columns?: 1 | 2;
-}
-
 /**
  * The calls of an entity (#7806). Each calls `bffJson` with its registered
  * route and maps the generated answer, so the compiler checks path
- * parameters, query, body and answer against the contract; the factory adds
- * only hooks and logging. An operation without a call is not offered.
+ * parameters, query, body and answer against the contract.
  */
 export interface EntityApi<T> {
   /** Every record; a paginated route also answers its page. */
-  list: () => Promise<T[] | PaginatedResponse<T>>;
+  list?: () => Promise<T[] | PaginatedResponse<T>>;
   get?: (id: string) => Promise<T>;
   create?: (data: Partial<T>) => Promise<T>;
   /**
@@ -157,143 +139,21 @@ export interface EntityApi<T> {
   delete?: (id: string) => Promise<unknown>;
 }
 
-// List item configuration
-interface ListItemConfig<T = Record<string, unknown>> {
-  title: (entity: T) => string;
-  subtitle?: (entity: T) => string;
-  description?: (entity: T) => string;
-  avatar?: {
-    text: (entity: T) => string;
-  };
-}
-
-// Filter configuration
-interface FilterConfig {
-  id: string;
-  label: string;
-  type: "select" | "text" | "date";
-  options?:
-    | Array<{ value: string; label: string }>
-    | "dynamic"
-    | (() => Promise<Array<{ value: string; label: string }>>);
-  loadOptions?: () => Promise<Array<{ value: string; label: string }>>;
-  placeholder?: string;
-}
-
-// Entity configuration
-export interface EntityConfig<T = Record<string, unknown>> {
-  // Basic info
+export interface EntityConfig<T> {
   name: {
     singular: string;
     plural: string;
   };
-
-  // Concept driving the entity's icon/tone across the database area (see
-  // MOTO_CONCEPTS). Replaces the former hand-rolled per-entity theme object.
-  concept: MotoConcept;
-
-  // Navigation
-  backUrl?: string;
-
-  // The registered routes of the entity, called with their generated types
   api: EntityApi<T>;
-
-  // Form configuration
-  form: {
-    sections: SectionConfig[];
-    // Transform form data before submission
-    transformBeforeSubmit?: (data: Partial<T>) => Partial<T>;
-    // Initial data for new entities
-    defaultValues?: Partial<T>;
-    // Form validation
-    validation?: (
-      data: Record<string, unknown>,
-    ) => Record<string, string> | null;
-  };
-
-  // Detail view configuration
-  detail: {
-    header?: {
-      title: (entity: T) => string;
-      subtitle?: (entity: T) => string;
-      avatar?: {
-        text: (entity: T) => string;
-        size?: "sm" | "md" | "lg";
-      };
-    };
-    sections: DetailSection<T>[];
-    actions?: {
-      edit?: boolean;
-      delete?: boolean;
-      custom?: Array<{
-        label: string;
-        onClick: (entity: T) => void | Promise<void>;
-        color?: string;
-      }>;
-    };
-  };
-
-  // List configuration
-  list: {
-    title: string;
-    description: string;
-    searchPlaceholder: string;
-    filters?: FilterConfig[];
-    item: ListItemConfig<T>;
-    // Enable/disable features
-    features?: {
-      create?: boolean;
-      search?: boolean;
-      pagination?: boolean;
-      filters?: boolean;
-    };
-    // Search configuration
-    searchStrategy?: "frontend" | "backend"; // Default: 'frontend'
-    searchableFields?: string[]; // Fields to search in frontend mode
-    minSearchLength?: number; // Minimum characters before searching (default: 0)
-    // Optional info section to display before the list
-    infoSection?: {
-      title: string;
-      content: string;
-      icon?: ReactNode;
-    };
-  };
-
-  // Custom hooks for business logic
-  hooks?: {
-    beforeCreate?: (data: Partial<T>) => Promise<Partial<T>>;
-    afterCreate?: (entity: T) => Promise<void>;
-    beforeUpdate?: (id: string, data: Partial<T>) => Promise<Partial<T>>;
-    afterUpdate?: (entity: T | null) => Promise<void>;
-    beforeDelete?: (id: string) => Promise<boolean>;
-    afterDelete?: (id: string) => Promise<void>;
-  };
-
-  // Labels and messages. The modal titles are optional because not every
-  // entity renders DatabaseFormModal; the modal itself fails loudly when the
-  // title for its mode is missing.
-  labels: {
-    createButton?: string;
-    createModalTitle?: string;
-    editModalTitle?: string;
-    detailModalTitle?: string;
-    deleteConfirmation?: string;
-    emptyState?: string;
-    empty?: {
-      title?: string;
-      description?: string;
-    };
-  };
-
-  // Optional callback after successful creation
-  onCreateSuccess?: (result: T) => unknown;
 }
 
-// Type helper for creating entity configs with proper typing
-export function defineEntityConfig<T>(
-  config: EntityConfig<T>,
-): EntityConfig<T> {
-  return config;
+export interface EntityFormConfig<T> {
+  createTitle: string;
+  form: {
+    sections: SectionConfig[];
+    transformBeforeSubmit?: (data: Partial<T>) => Partial<T>;
+    defaultValues?: Partial<T>;
+  };
 }
 
 // Utility to convert SectionConfig to FormSection
@@ -340,10 +200,6 @@ export interface CrudService<T> {
    * to null when the route answers without the record.
    */
   update(id: string, data: Partial<T>, current?: T): Promise<T | null>;
-  /**
-   * Throws an `ApiError` with code, field errors and request ID instead of
-   * returning a sentence. Resolves `false` when the `beforeDelete` hook
-   * cancelled the deletion.
-   */
-  remove(id: string): Promise<boolean>;
+  /** Throws the route's `ApiError` on refusal. */
+  remove(id: string): Promise<void>;
 }

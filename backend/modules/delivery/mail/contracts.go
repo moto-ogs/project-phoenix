@@ -112,8 +112,6 @@ func NewEmail(name, address string) Email {
 type DeliveryStatus string
 
 const (
-	// DeliveryStatusPending indicates the message is awaiting another attempt.
-	DeliveryStatusPending DeliveryStatus = "pending"
 	// DeliveryStatusSent indicates the message was delivered successfully.
 	DeliveryStatusSent DeliveryStatus = "sent"
 	// DeliveryStatusFailed indicates the message failed to send.
@@ -126,56 +124,30 @@ type DeliveryMetadata struct {
 	Type string
 	// ReferenceID is a database identifier associated with the email (e.g., invitation token ID).
 	ReferenceID int64
-	// Token optionally stores the public token value for diagnostics.
-	Token string
 	// Recipient holds the destination email address for logging.
 	Recipient string
 }
 
 // DeliveryResult captures the outcome of an email attempt.
 type DeliveryResult struct {
-	Metadata   DeliveryMetadata
-	Attempt    int
-	MaxAttempt int
-	Status     DeliveryStatus
-	Err        error
-	SentAt     time.Time
-	Final      bool
-}
-
-// DeliveryCallback receives delivery results from the dispatcher.
-type DeliveryCallback func(ctx context.Context, result DeliveryResult)
-
-// DeliveryRequest defines a new email to be dispatched.
-type DeliveryRequest struct {
-	Message       Message
-	Metadata      DeliveryMetadata
-	Callback      DeliveryCallback
-	MaxAttempts   int
-	BackoffPolicy []time.Duration
+	Attempt int
+	Status  DeliveryStatus
+	Err     error
+	SentAt  time.Time
+	Final   bool
 }
 
 // ErrDeliveryUnavailable reports a missing synchronous transport.
 var ErrDeliveryUnavailable = errors.New("email delivery is unavailable")
 
-// DeliveryObserver records one completed synchronous Delivery call. Type and
-// Template are stable labels; neither contains a recipient or message body.
-type DeliveryObserver func(transport, template, caller string, duration time.Duration, err error)
-
-// interactiveBackoff spaces the retries of a mail a person is waiting for.
-var interactiveBackoff = []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}
-
-// WithInteractiveRetry gives a mail a person is waiting for, such as an
-// invitation, a sign-in code or a password reset, its retry policy: three
-// attempts, one, five and fifteen seconds apart. A non-nil backoff replaces
-// the spacing, which tests use.
-func WithInteractiveRetry(request DeliveryRequest, backoff []time.Duration) DeliveryRequest {
+// InteractiveRetry sets the retry policy for mail a person is waiting for,
+// such as an invitation, a sign-in code or a password reset. Passing backoff
+// overrides the default spacing of one, five and fifteen seconds.
+func InteractiveRetry(backoff []time.Duration) (attempts int, spacing []time.Duration) {
 	if backoff == nil {
-		backoff = append([]time.Duration(nil), interactiveBackoff...)
+		backoff = []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}
 	}
-	request.MaxAttempts = 3
-	request.BackoffPolicy = backoff
-	return request
+	return 3, backoff
 }
 
 type MailerConfig struct {
@@ -264,11 +236,4 @@ var ErrNotDeliveredInDemo = errors.New("email is not delivered in the demo envir
 // them exists without the others.
 func IsDemoEnvironment(appEnv string) bool {
 	return strings.EqualFold(strings.TrimSpace(appEnv), "demo")
-}
-
-// Dispatcher is the native mail delivery capability used by composition roots.
-// Implementations preserve synchronous acceptance and asynchronous callbacks.
-type Dispatcher interface {
-	Dispatch(context.Context, DeliveryRequest)
-	Deliver(context.Context, DeliveryRequest) error
 }

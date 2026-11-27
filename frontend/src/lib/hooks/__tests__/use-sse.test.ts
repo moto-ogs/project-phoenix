@@ -1,6 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { releaseFakeTimers } from "~/test/clock";
 import { useSSE } from "../use-sse";
 import type { SSEEvent } from "../../sse-types";
 
@@ -129,6 +128,12 @@ describe("useSSE Hook", () => {
     return instance;
   };
 
+  async function advance(ms: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
   beforeEach(() => {
     eventSourceInstances = [];
 
@@ -168,9 +173,7 @@ describe("useSSE Hook", () => {
       const { result } = renderHook(() => useSSE("/api/sse/events"));
 
       expect(result.current.isConnected).toBe(false);
-      expect(result.current.reconnectAttempts).toBe(0);
       expect(result.current.status).toBe("idle");
-      expect(result.current.error).toBe(null);
     });
 
     it("should establish connection on mount", async () => {
@@ -402,8 +405,7 @@ describe("useSSE Hook", () => {
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(false);
-        expect(result.current.error).toBeNull();
-        expect(result.current.reconnectAttempts).toBe(0);
+        expect(result.current.status).toBe("idle");
       });
 
       activeEventSource.triggerOpen();
@@ -425,25 +427,19 @@ describe("useSSE Hook", () => {
       });
 
       requireLatestEventSource().triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
+      await waitFor(() => expect(result.current.status).toBe("reconnecting"), {
         timeout: 500,
       });
 
       rerender({ reconnectKey: "after" });
 
       await waitFor(() => {
-        expect(result.current.error).toBeNull();
-        expect(result.current.reconnectAttempts).toBe(0);
+        expect(result.current.status).toBe("idle");
       });
     });
 
     it("should attempt reconnection on error", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 1000,
-          maxReconnectAttempts: 3,
-        }),
-      );
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
 
       // Initial connection
       await waitForEventSource();
@@ -462,141 +458,62 @@ describe("useSSE Hook", () => {
       await waitFor(
         () => {
           expect(result.current.isConnected).toBe(false);
-          expect(result.current.reconnectAttempts).toBe(1);
           expect(result.current.status).toBe("reconnecting");
         },
         { timeout: 500 },
       );
     });
 
-    it("should use exponential backoff for reconnection", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10, // Use short delays for fast tests
-          maxReconnectAttempts: 5,
-        }),
-      );
+    it("backs off across five retries, then waits for a wake event", async () => {
+      vi.useFakeTimers();
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
+      await advance(0);
+      requireLatestEventSource().triggerOpen();
 
-      // First connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.isConnected).toBe(true), {
-        timeout: 500,
-      });
+      for (const [index, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
+        requireLatestEventSource().triggerError();
+        expect(result.current.status).toBe(
+          index < 4 ? "reconnecting" : "failed",
+        );
+        await advance(delay - 1);
+        expect(eventSourceInstances).toHaveLength(index + 1);
+        await advance(1);
+        expect(eventSourceInstances).toHaveLength(index + 2);
+      }
+      requireLatestEventSource().triggerError();
+      expect(result.current.status).toBe("failed");
+      await advance(32000);
+      expect(eventSourceInstances).toHaveLength(6);
 
-      // First error - should schedule retry after 10ms (10 * 2^0)
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
-        timeout: 500,
-      });
-
-      // Wait for first retry - new EventSource created
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-
-      // Second error - should schedule retry after 20ms (10 * 2^1)
-      secondInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(2), {
-        timeout: 500,
-      });
-
-      // Wait for second retry
-      await waitFor(() => expect(eventSourceInstances.length).toBe(3), {
-        timeout: 500,
-      });
-
-      // Third error - should schedule retry after 40ms (10 * 2^2)
-      const thirdInstance = requireLatestEventSource();
-      thirdInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(3), {
-        timeout: 500,
-      });
+      act(() => window.dispatchEvent(new Event("online")));
+      await advance(0);
+      expect(eventSourceInstances).toHaveLength(7);
+      expect(result.current.status).toBe("idle");
+      requireLatestEventSource().triggerOpen();
+      expect(result.current.status).toBe("connected");
     });
 
-    it("should stop retrying after max attempts", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10, // Use short delays for fast tests
-          maxReconnectAttempts: 2,
-        }),
-      );
+    it("resets the retry count when the stream opens again", async () => {
+      vi.useFakeTimers();
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
+      await advance(0);
+      requireLatestEventSource().triggerOpen();
+      expect(result.current.status).toBe("connected");
 
-      // Initial connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.isConnected).toBe(true), {
-        timeout: 500,
-      });
+      requireLatestEventSource().triggerError();
+      expect(result.current.status).toBe("reconnecting");
+      await advance(1000);
+      expect(eventSourceInstances).toHaveLength(2);
 
-      // First error
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
-        timeout: 500,
-      });
+      requireLatestEventSource().triggerOpen();
+      expect(result.current.status).toBe("connected");
 
-      // Wait for first retry
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-
-      // Second error - this is attempt 2, should hit max
-      secondInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(2), {
-        timeout: 500,
-      });
-
-      // Should stop retrying and transition to failed
-      await waitFor(
-        () => {
-          expect(result.current.status).toBe("failed");
-        },
-        { timeout: 1000 },
-      );
-    });
-
-    it("should reset reconnect attempts on successful connection", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10, // Use short delays for fast tests
-          maxReconnectAttempts: 5,
-        }),
-      );
-
-      // Initial connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.isConnected).toBe(true), {
-        timeout: 500,
-      });
-
-      // Trigger error
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
-        timeout: 500,
-      });
-
-      // Wait for retry - new EventSource created
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-
-      // Successful reconnection
-      secondInstance.triggerOpen();
-      await waitFor(
-        () => {
-          expect(result.current.isConnected).toBe(true);
-          expect(result.current.reconnectAttempts).toBe(0);
-          expect(result.current.status).toBe("connected");
-        },
-        { timeout: 500 },
-      );
+      // After a successful retry, a later drop starts at the first delay again.
+      requireLatestEventSource().triggerError();
+      await advance(1000);
+      expect(eventSourceInstances).toHaveLength(3);
     });
   });
 
@@ -618,11 +535,7 @@ describe("useSSE Hook", () => {
     });
 
     it("should transition: connected → reconnecting", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          maxReconnectAttempts: 5,
-        }),
-      );
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
 
       await waitForEventSource();
       mockEventSource?.triggerOpen();
@@ -642,78 +555,6 @@ describe("useSSE Hook", () => {
         { timeout: 500 },
       );
     });
-
-    it("should transition: reconnecting → connected on successful retry", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10, // Use short delays for fast tests
-          maxReconnectAttempts: 3,
-        }),
-      );
-
-      // Initial connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.status).toBe("connected"), {
-        timeout: 500,
-      });
-
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.status).toBe("reconnecting"), {
-        timeout: 500,
-      });
-
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-      secondInstance.triggerOpen();
-
-      await waitFor(() => expect(result.current.status).toBe("connected"), {
-        timeout: 500,
-      });
-    });
-
-    it("should transition: reconnecting → failed after max attempts", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10, // Use short delays for fast tests
-          maxReconnectAttempts: 2,
-        }),
-      );
-
-      // Initial connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.status).toBe("connected"), {
-        timeout: 500,
-      });
-
-      // First error
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
-        timeout: 500,
-      });
-
-      // Wait for first retry
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-
-      // Second error - hits max
-      secondInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(2), {
-        timeout: 500,
-      });
-
-      // Should transition to failed
-      await waitFor(() => expect(result.current.status).toBe("failed"), {
-        timeout: 500,
-      });
-    });
   });
 
   describe("Cleanup on Unmount", () => {
@@ -731,42 +572,19 @@ describe("useSSE Hook", () => {
       expect(closeSpy).toHaveBeenCalled();
     });
 
-    it("should clear reconnect timeout on unmount", async () => {
-      const { unmount } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 5000,
-        }),
-      );
+    it("clears the scheduled retry on unmount", async () => {
+      vi.useFakeTimers();
+      const { unmount } = renderHook(() => useSSE("/api/sse/events"));
+      await advance(0);
+      const instance = requireLatestEventSource();
+      instance.triggerOpen();
+      instance.triggerError();
+      expect(vi.getTimerCount()).toBe(1);
 
-      // Initial connection (with real timers)
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(
-        () => expect(firstInstance.readyState).toBe(firstInstance.OPEN),
-        { timeout: 500 },
-      );
-
-      // Trigger error to start reconnection timer
-      firstInstance.triggerError();
-      await waitFor(
-        () => expect(firstInstance.readyState).toBe(firstInstance.CLOSED),
-        { timeout: 500 },
-      );
-
-      const instanceCountBeforeUnmount = eventSourceInstances.length;
-
-      // Unmount before timeout completes
       unmount();
 
-      // Switch to fake timers and flush any pending timers
-      vi.useFakeTimers();
-      await vi.runAllTimersAsync();
-      releaseFakeTimers();
-
-      // Old instance should remain closed, no new instance created
-      expect(firstInstance.readyState).toBe(firstInstance.CLOSED);
-      expect(eventSourceInstances.length).toBe(instanceCountBeforeUnmount); // No new instance
+      expect(vi.getTimerCount()).toBe(0);
+      expect(instance.readyState).toBe(instance.CLOSED);
     });
 
     it("should prevent state updates after unmount", async () => {
@@ -797,17 +615,6 @@ describe("useSSE Hook", () => {
   });
 
   describe("Error Handling", () => {
-    it("should call onError callback when error occurs", async () => {
-      const onError = vi.fn();
-      renderHook(() => useSSE("/api/sse/events", { onError }));
-
-      await waitForEventSource();
-      mockEventSource?.triggerOpen();
-      mockEventSource?.triggerError();
-
-      await waitFor(() => expect(onError).toHaveBeenCalled(), { timeout: 500 });
-    });
-
     it("should handle parse errors gracefully", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       const onMessage = vi.fn();
@@ -832,9 +639,15 @@ describe("useSSE Hook", () => {
 
       // Should not crash, onMessage should not be called
       expect(onMessage).not.toHaveBeenCalled();
-      expect(result.current.error).toBe(
-        "Ungültige Server-Event-Daten empfangen",
-      );
+      expect(result.current.status).toBe("connected");
+      const validEvent: SSEEvent = {
+        type: "activity_start",
+        active_group_id: "1",
+        timestamp: new Date().toISOString(),
+        data: {},
+      };
+      requireLatestEventSource().triggerMessage(validEvent);
+      expect(onMessage).toHaveBeenCalledExactlyOnceWith(validEvent);
     });
   });
 
@@ -933,12 +746,7 @@ describe("useSSE Hook", () => {
 
   describe("Sleep/Wake Reconnection", () => {
     it("should reconnect on visibilitychange when EventSource is closed", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10,
-          maxReconnectAttempts: 5,
-        }),
-      );
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
 
       await waitForEventSource();
       const firstInstance = requireLatestEventSource();
@@ -972,7 +780,6 @@ describe("useSSE Hook", () => {
       await waitFor(
         () => {
           expect(result.current.isConnected).toBe(true);
-          expect(result.current.reconnectAttempts).toBe(0);
           expect(result.current.status).toBe("connected");
         },
         { timeout: 500 },
@@ -980,12 +787,7 @@ describe("useSSE Hook", () => {
     });
 
     it("should reconnect on online event when EventSource is closed", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10,
-          maxReconnectAttempts: 5,
-        }),
-      );
+      const { result } = renderHook(() => useSSE("/api/sse/events"));
 
       await waitForEventSource();
       const firstInstance = requireLatestEventSource();
@@ -1015,7 +817,6 @@ describe("useSSE Hook", () => {
       await waitFor(
         () => {
           expect(result.current.isConnected).toBe(true);
-          expect(result.current.reconnectAttempts).toBe(0);
         },
         { timeout: 500 },
       );
@@ -1023,12 +824,7 @@ describe("useSSE Hook", () => {
 
     it("should not reconnect on visibilitychange if already connected", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
-      renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10,
-          maxReconnectAttempts: 5,
-        }),
-      );
+      renderHook(() => useSSE("/api/sse/events"));
 
       await waitForEventSource();
       const firstInstance = requireLatestEventSource();
@@ -1046,59 +842,6 @@ describe("useSSE Hook", () => {
         await vi.advanceTimersByTimeAsync(100);
       });
       expect(eventSourceInstances.length).toBe(1);
-    });
-
-    it("should reset reconnect attempts on wake reconnection after failed state", async () => {
-      const { result } = renderHook(() =>
-        useSSE("/api/sse/events", {
-          reconnectInterval: 10,
-          maxReconnectAttempts: 2,
-        }),
-      );
-
-      // Initial connection
-      await waitForEventSource();
-      const firstInstance = requireLatestEventSource();
-      firstInstance.triggerOpen();
-      await waitFor(() => expect(result.current.isConnected).toBe(true), {
-        timeout: 500,
-      });
-
-      // Exhaust all reconnection attempts
-      firstInstance.triggerError();
-      await waitFor(() => expect(result.current.reconnectAttempts).toBe(1), {
-        timeout: 500,
-      });
-
-      await waitFor(() => expect(eventSourceInstances.length).toBe(2), {
-        timeout: 500,
-      });
-      const secondInstance = requireLatestEventSource();
-      secondInstance.triggerError();
-
-      await waitFor(() => expect(result.current.status).toBe("failed"), {
-        timeout: 500,
-      });
-
-      // Simulate coming back online — should reset and reconnect
-      window.dispatchEvent(new Event("online"));
-
-      await waitFor(
-        () => expect(eventSourceInstances.length).toBeGreaterThan(2),
-        { timeout: 500 },
-      );
-
-      const freshInstance = requireLatestEventSource();
-      freshInstance.triggerOpen();
-
-      await waitFor(
-        () => {
-          expect(result.current.isConnected).toBe(true);
-          expect(result.current.reconnectAttempts).toBe(0);
-          expect(result.current.status).toBe("connected");
-        },
-        { timeout: 500 },
-      );
     });
 
     it("should clean up visibility and online listeners on unmount", async () => {

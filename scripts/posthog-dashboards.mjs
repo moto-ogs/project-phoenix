@@ -103,28 +103,6 @@ export function readBrowserEvents(
   return events;
 }
 
-/** The values of a `const NAME = [...] as const` list in analytics-policy.ts. */
-function readPolicyList(name, source) {
-  const body = new RegExp(`const ${name} = \\[([\\s\\S]*?)\\] as const;`).exec(source)?.[1];
-  const values = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, value]) => value) : [];
-  if (values.length === 0) throw new Error(`analytics-policy.ts has no ${name}`);
-  return values;
-}
-
-/** The allowed surfaces of the entry (ONBOARDING_SURFACES in analytics-policy.ts). */
-export function readOnboardingSurfaces(
-  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
-) {
-  return readPolicyList('ONBOARDING_SURFACES', source);
-}
-
-/** The allowed steps of the parents' first steps (ONBOARDING_CHECKLIST_STEPS in analytics-policy.ts). */
-export function readOnboardingChecklistSteps(
-  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
-) {
-  return readPolicyList('ONBOARDING_CHECKLIST_STEPS', source);
-}
-
 // --- query builders ----------------------------------------------------------
 
 const sqlString = (value) => `'${String(value).replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
@@ -443,18 +421,6 @@ const OTHER_FEATURE = 'Sonstiges';
 /** Demo roles a visitor picks; transient pages before the pick carry none. */
 const DEMO_ROLES = ['caregiver', 'lead', 'parent', 'all'];
 
-const matchesPage = (pattern, template) => pattern.endsWith('/**')
-  ? template === pattern.slice(0, -3) || template.startsWith(pattern.slice(0, -2))
-  : template === pattern;
-
-const matchesPages = (pages, surface, template) => (pages?.[surface] ?? []).some((pattern) => matchesPage(pattern, template));
-
-/** The feature area of a page, `null` for NO_FEATURE_PAGES, OTHER_FEATURE if unmapped. */
-export function featureOfPage(surface, template) {
-  if (matchesPages(NO_FEATURE_PAGES, surface, template)) return null;
-  return FEATURES.find((feature) => matchesPages(feature.pages, surface, template))?.name ?? OTHER_FEATURE;
-}
-
 function pagesCondition(pages) {
   const bySurface = Object.entries(pages).map(([surface, patterns]) => {
     const exact = patterns.map((pattern) => pattern.replace(/\/\*\*$/, ''));
@@ -761,8 +727,10 @@ function viewsPerWeek(deployment, surface, name) {
  * (Einstieg, #7541). `projectId`
  * feeds the heatmap links.
  */
-export function dashboards({ projectId, routes = readRouteTemplates(), browserEvents = readBrowserEvents(), pageNames = readPageNames() }) {
-  const coreAction = `not startsWith(event, '$') and event not in ${sqlList(browserEvents)}`;
+export function dashboards({ projectId }) {
+  const routes = readRouteTemplates();
+  const pageNames = readPageNames();
+  const coreAction = `not startsWith(event, '$') and event not in ${sqlList(readBrowserEvents())}`;
   const feature = featureExpression();
 
   return [

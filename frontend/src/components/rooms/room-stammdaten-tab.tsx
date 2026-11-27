@@ -122,7 +122,6 @@ export function RoomStammdatenTab({
           onSubmit={handleSave}
           onCancel={edit.discard}
           submitLabel="Speichern"
-          stickyActions
           sectionLevel={3}
           errorPath={errorPath}
           errorObject="das Speichern des Raums"

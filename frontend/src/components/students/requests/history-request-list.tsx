@@ -103,7 +103,7 @@ export function HistoryRequestList({
   const [target, setTarget] = useState<CorrectionTarget | null>(null);
   return (
     <SectionCard padding="none">
-      <RequestRowHeader view="history" />
+      <RequestRowHeader />
       {withdrawals.map((row) => (
         <HistoryWithdrawalCard key={`care_withdrawal:${row.id}`} row={row} />
       ))}

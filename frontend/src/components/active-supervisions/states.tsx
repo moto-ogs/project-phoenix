@@ -4,7 +4,6 @@ import {
   SkeletonRegion,
   CardGridSkeleton,
 } from "~/components/ui/page-skeletons";
-import { TenantPage } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
@@ -12,10 +11,8 @@ import type { FormErrorInput } from "~/components/ui/form-error";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SCHULHOF_SUPERVISE_TOOLTIP } from "~/components/active-supervisions/supervision-action-hints";
-import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Alert } from "~/components/ui/alert";
-import { useNFCEnabled } from "~/lib/tenant-context";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 interface SchulhofSuperviseButtonProps {
@@ -35,58 +32,15 @@ interface ReleaseSupervisionModalProps {
   readonly onConfirm: () => void;
 }
 
-// withHeader is false when the page's own Kopfkarte is already on screen
-// (e.g. re-loading only the student grid) — a second header underneath it
-// would duplicate the page's chrome.
-export function ActiveSupervisionLoadingView({
-  withHeader = true,
-}: Readonly<{ withHeader?: boolean }> = {}) {
-  const grid = (
-    <CardGridSkeleton
-      cards={6}
-      rowsPerCard={2}
-      className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3"
-    />
-  );
-
-  if (!withHeader) {
-    return (
-      <SkeletonRegion label="Aktuelle Aufsicht wird geladen…">
-        {grid}
-      </SkeletonRegion>
-    );
-  }
-
-  // Der Titel ist statisch, die Kopfkarte steht also sofort; nur Statuszeile
-  // und Karten darunter skelettieren.
+export function ActiveSupervisionLoadingView() {
   return (
     <SkeletonRegion label="Aktuelle Aufsicht wird geladen…">
-      <TenantPage title="Aktuelle Aufsicht" statsLoading>
-        {grid}
-      </TenantPage>
+      <CardGridSkeleton
+        cards={6}
+        rowsPerCard={2}
+        className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3"
+      />
     </SkeletonRegion>
-  );
-}
-
-export function NoActiveSupervisionAccessView() {
-  const nfcEnabled = useNFCEnabled();
-
-  useSetBreadcrumb({
-    pageTitle: "Aktuelle Aufsicht",
-  });
-
-  return (
-    <TenantPage
-      title="Aktuelle Aufsicht"
-      stats="Keine Aufsicht aktiv"
-      empty={{
-        icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
-        title: "Keine aktive Raum-Aufsicht",
-        description: `Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität ${
-          nfcEnabled ? "an einem Terminal" : "in der Web-App"
-        }, um Live-Raumdaten einzusehen.`,
-      }}
-    />
   );
 }
 

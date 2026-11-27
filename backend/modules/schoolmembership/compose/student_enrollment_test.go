@@ -39,9 +39,6 @@ func TestStudentMembershipEnrollmentUsesProfileIdentityAndTenant(t *testing.T) {
 	renewedID, err = module.RenewEnrollment(ctx, input)
 	require.NoError(t, err)
 	require.Zero(t, renewedID, "renewal cannot implicitly reactivate an alumnus")
-	assigned, err := module.AssignGroup(ctx, student.ID, nil)
-	require.NoError(t, err)
-	require.True(t, assigned, "an unchanged group is an idempotent no-op, not reactivation")
 }
 
 func TestStudentMembershipResumeUsesFrozenDayAndRollsBack(t *testing.T) {

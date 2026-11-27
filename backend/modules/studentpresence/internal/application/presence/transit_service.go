@@ -31,7 +31,7 @@ func (s *service) ListStudentsInTransit(ctx context.Context) ([]int64, error) {
 		return []int64{}, nil
 	}
 
-	currentVisits, err := s.currentPresenceVisits(ctx, openAttendanceIDs, false)
+	currentVisits, err := s.currentPresenceVisits(ctx, openAttendanceIDs)
 	if err != nil {
 		return nil, &ActiveError{Op: "ListStudentsInTransit", Err: ErrDatabaseOperation}
 	}
@@ -63,15 +63,10 @@ func (s *service) ListStudentsPresentToday(ctx context.Context) ([]int64, error)
 // AssignTransitStudentsToActiveGroupAuthorized checks target access in the
 // same transaction that assigns children, after locking the target session.
 func (s *service) AssignTransitStudentsToActiveGroupAuthorized(ctx context.Context, studentIDs []int64, activeGroupID int64, auth StudentMoveAuthorization) (*TransitAssignResult, error) {
-	return s.assignTransitStudentsInTransaction(ctx, studentIDs, activeGroupID, &auth)
+	return s.assignTransitStudentsInTransaction(ctx, studentIDs, activeGroupID, auth)
 }
 
-// AssignTransitStudentsToActiveGroup is the trusted, pre-authorized entry point.
-func (s *service) AssignTransitStudentsToActiveGroup(ctx context.Context, studentIDs []int64, activeGroupID int64) (*TransitAssignResult, error) {
-	return s.assignTransitStudentsInTransaction(ctx, studentIDs, activeGroupID, nil)
-}
-
-func (s *service) assignTransitStudentsInTransaction(ctx context.Context, studentIDs []int64, activeGroupID int64, auth *StudentMoveAuthorization) (*TransitAssignResult, error) {
+func (s *service) assignTransitStudentsInTransaction(ctx context.Context, studentIDs []int64, activeGroupID int64, auth StudentMoveAuthorization) (*TransitAssignResult, error) {
 	var result *TransitAssignResult
 	err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
 		var err error
@@ -84,7 +79,7 @@ func (s *service) assignTransitStudentsInTransaction(ctx context.Context, studen
 	return result, nil
 }
 
-func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studentIDs []int64, activeGroupID int64, auth *StudentMoveAuthorization) (*TransitAssignResult, error) {
+func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studentIDs []int64, activeGroupID int64, auth StudentMoveAuthorization) (*TransitAssignResult, error) {
 	if activeGroupID <= 0 || len(studentIDs) == 0 {
 		return nil, &ActiveError{Op: opAssignTransit, Err: ErrInvalidData}
 	}
@@ -130,11 +125,11 @@ func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studen
 
 // authorizeTransitTarget lets a restricted caller assign children only to a
 // session they may move children into.
-func (s *service) authorizeTransitTarget(ctx context.Context, auth *StudentMoveAuthorization, targetGroupID int64) error {
-	if auth == nil || auth.BypassResourceChecks {
+func (s *service) authorizeTransitTarget(ctx context.Context, auth StudentMoveAuthorization, targetGroupID int64) error {
+	if auth.BypassResourceChecks {
 		return nil
 	}
-	allowed, _, err := s.moveTargetAccess(ctx, *auth, targetGroupID, opAssignTransit)
+	allowed, _, err := s.moveTargetAccess(ctx, auth, targetGroupID, opAssignTransit)
 	if err != nil {
 		return err
 	}

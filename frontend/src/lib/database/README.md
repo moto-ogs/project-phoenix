@@ -1,6 +1,6 @@
 # Database Component Architecture
 
-This directory contains shared configuration, themes, and service helpers for database management pages.
+This directory contains shared form configuration and service helpers for database management pages.
 
 ## Overview
 
@@ -10,28 +10,26 @@ Entity pages use a shared configuration object and service factory, then compose
 
 ### 1. Entity Configuration (`configs/`)
 
-Each entity has a configuration file that defines:
+Entity configs contain the API calls used by the page and, when the page
+uses `DatabaseFormModal`, the create title, sections and defaults:
 
-- Form fields and sections
-- Detail view layout
-- List view appearance
 - API calls: each calls `bffJson` with its registered route, so path
   parameters, body and answer are checked against the generated contract
-- Business logic hooks
+- Form fields and sections, including validation and option loaders
 
-Example: `configs/students.config.tsx`
+Example: `configs/rooms.config.tsx`
 
 ### 2. Shared Components
 
 - **DatabaseForm**: Renders forms based on configuration
-- **DatabaseFormModal**: Wraps configured forms in create/edit modals
+- **DatabaseFormModal**: Wraps configured forms in creation modals
 - **DatabasePageLayout**: Provides loading and page shell behavior
 - **DatabaseEmptyState**, **DatabaseCreateAction**, and related helpers: Shared page controls
 
 ### 3. Service Factory
 
-The `service-factory.ts` wraps the config's calls in a CRUD service with hooks
-and logging; it does not call `bffJson` itself:
+The `service-factory.ts` wraps the config's calls in a CRUD service with logging;
+it does not call `bffJson` itself:
 
 - getList (an unpaginated list becomes one page)
 - getOne
@@ -45,30 +43,19 @@ and logging; it does not call `bffJson` itself:
 
 ```typescript
 // configs/rooms.config.tsx
-export const roomsConfig = defineEntityConfig<Room>({
+export const roomsConfig = {
   name: {
     singular: "Raum",
     plural: "Räume",
   },
 
-  concept: roomsConcept, // import { roomsConcept } from "~/lib/concepts/rooms"
-
   api: {
-    list: async () => {
-      const page = await bffJson("tenant", "GET /api/rooms/");
-      return { data: page.data.map(mapRoomResponse), pagination: page.pagination };
-    },
-    get: async (id) =>
-      mapRoomResponse(
-        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
-      ),
     create: async (data) =>
       mapRoomResponse(
         await bffJson("tenant", "POST /api/rooms/", {
           body: prepareRoomForBackend(data),
         }),
       ),
-    // update, delete alike; an operation without a call is not offered
   },
 
   form: {
@@ -88,30 +75,8 @@ export const roomsConfig = defineEntityConfig<Room>({
     ],
   },
 
-  detail: {
-    sections: [
-      {
-        title: "Raumdetails",
-        items: [
-          {
-            label: "Raumname",
-            value: (room) => room.name,
-          },
-          // ... more items
-        ],
-      },
-    ],
-  },
-
-  list: {
-    title: "Raum auswählen",
-    searchPlaceholder: "Raum suchen...",
-    item: {
-      title: (room) => room.name,
-      subtitle: (room) => `Etage ${room.floor}`,
-    },
-  },
-});
+  createTitle: "Neuer Raum",
+} satisfies EntityConfig<Room> & EntityFormConfig<Room>;
 ```
 
 ### 2. Use the Configuration in a Page
@@ -138,7 +103,7 @@ export default function RoomsPage() {
 
   return (
     <DatabasePageLayout loading={loading} sessionLoading={sessionLoading}>
-      {/* Fetch with service.getList(), then render the page-specific controls.
+      {/* Render the page's own list and controls.
           Every row links to the type's object route (BAUARTEN-SPEC Bauart 1
           Regel 2); `?from=` carries the way back to this register. Editing
           and deleting live on that route, not next to the list. */}
@@ -151,7 +116,6 @@ export default function RoomsPage() {
       <DatabaseFormModal<Room>
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        mode="create"
         config={roomsConfig}
         onSubmit={handleCreateRoom}
         errorPath={createErrors}
@@ -162,9 +126,8 @@ export default function RoomsPage() {
 }
 ```
 
-`DatabaseFormModal` renders the config's `form.sections` inside the shared
-modal; `mode` picks the `createModalTitle` / `editModalTitle` label (the label
-for the used mode is required — the modal fails loudly when it is missing).
+`DatabaseFormModal` renders the config's `form.sections` with its `createTitle`.
+Editing uses `DatabaseForm` on the object or detail page.
 
 `errorPath` is required on `DatabaseForm` and `DatabaseFormModal` (#2517):
 `onSubmit` lets the error propagate, and the form shows the catalog text with
@@ -193,33 +156,18 @@ The configuration and service factory provide the shared CRUD behavior. Each pag
 - `textarea`: Multi-line text
 - `select`: Dropdown with options
 - `checkbox`: Boolean checkbox
-- `custom`: Custom component (e.g., GroupSelect)
+- `custom`: Custom field component
 
 ### Concepts
 
-Each entity config carries a `concept` definition instead of a hand-rolled
-theme object. The definition comes from its own module in `lib/concepts/`
-(`roomsConcept` from `~/lib/concepts/rooms`), which is the single source for the
-icon and color tone a page header, section header and card header render — see
-the `concept` field on `EntityConfig` in `types.ts`. Import the concept module
-directly so the page carries only that glyph, never the `MOTO_CONCEPTS`
-registry.
+Page and form-section headers take their icon and tone from `lib/concepts/`.
+Import the relevant definition directly (for example, `roomsConcept` from
+`~/lib/concepts/rooms`), not the `MOTO_CONCEPTS` registry.
 
 The former `lib/database/themes.tsx` and its `databaseThemes` export are gone;
 adding a new entity means picking an existing concept module or adding one
 under `lib/concepts/` (plus its `MOTO_CONCEPTS` entry), not defining a new color
 pair.
-
-### Hooks
-
-Optional lifecycle hooks for business logic:
-
-- `beforeCreate`: Transform data before creation
-- `afterCreate`: Side effects after creation
-- `beforeUpdate`: Validate/transform updates
-- `afterUpdate`: Side effects after update
-- `beforeDelete`: Confirm deletion
-- `afterDelete`: Cleanup after deletion
 
 ## Migration Guide
 

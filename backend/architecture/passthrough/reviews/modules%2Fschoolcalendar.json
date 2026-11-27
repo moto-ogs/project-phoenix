@@ -32,26 +32,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/schoolcalendar/internal/application/Service.HolidayDates",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/schoolcalendar/internal/application/Service.ListHolidays",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/schoolcalendar/internal/application/Service.RenderCalendar",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/schoolcalendar/internal/application/Service.RenderCalendarObject",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/schoolcalendar/internal/application/TenantHolidays.HolidayDates",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

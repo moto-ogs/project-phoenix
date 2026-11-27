@@ -423,5 +423,15 @@
     "scenario": "api.students.ogs_group_navigation",
     "route": "GET /api/students/ogs-group-navigation",
     "issue": 8084
+  },
+  {
+    "scenario": "api.traeger.family_billing",
+    "route": "GET /traeger/family-billing/",
+    "issue": 7904
+  },
+  {
+    "scenario": "api.mealplan.week",
+    "route": "GET /api/meal-plan/",
+    "issue": 7930
   }
 ]

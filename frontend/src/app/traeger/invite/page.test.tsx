@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 import { catalogText } from "~/test/error-catalog-text";
 
 const mocks = vi.hoisted(() => ({
@@ -68,7 +67,6 @@ describe("TraegerInvitePage", () => {
       .mockResolvedValue(sessionWith(DASHBOARD_RIGHT));
     mocks.query.value = "token=abc";
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
     assign = vi
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
@@ -77,7 +75,6 @@ describe("TraegerInvitePage", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
   });
 
   // A link without its token: waiting does not repair it, so the page asks

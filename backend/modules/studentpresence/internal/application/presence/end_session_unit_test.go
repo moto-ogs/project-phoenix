@@ -230,8 +230,6 @@ func (m *mockGroupRepository) GetOccupiedActivityGroupIDs(ctx context.Context, g
 // mockVisitRepository supplies presence operations for service failure injection.
 type mockVisitRepository struct {
 	StudentPresence
-	lockRoomSessionWritesFunc func(context.Context, int64) error
-	listOverlappingVisitsFunc func(context.Context, studentpresence.VisitFilter) ([]studentpresence.Visit, error)
 
 	findByActiveGroupIDFunc               func(ctx context.Context, activeGroupID int64) ([]*studentpresence.Visit, error)
 	findByIDFunc                          func(ctx context.Context, id interface{}) (*studentpresence.Visit, error)
@@ -939,12 +937,6 @@ func (m *mockVisitRepository) ListVisitLocations(ctx context.Context, filter stu
 }
 
 func (m *mockVisitRepository) ListVisits(ctx context.Context, filter studentpresence.VisitFilter) ([]studentpresence.Visit, error) {
-	if filter.OverlapFrom != nil {
-		if m.listOverlappingVisitsFunc != nil {
-			return m.listOverlappingVisitsFunc(ctx, filter)
-		}
-		return nil, nil
-	}
 	if len(filter.StudentIDs) == 1 && filter.OpenOnly && filter.Limit == 1 {
 		row, err := m.GetCurrentByStudentID(ctx, filter.StudentIDs[0])
 		if IsNoRows(err) {
@@ -969,10 +961,7 @@ func (m *mockVisitRepository) ListVisits(ctx context.Context, filter studentpres
 	return result, err
 }
 
-func (m *mockVisitRepository) LockRoomSessionWrites(ctx context.Context, roomID int64) error {
-	if m.lockRoomSessionWritesFunc != nil {
-		return m.lockRoomSessionWritesFunc(ctx, roomID)
-	}
+func (m *mockVisitRepository) LockRoomSessionWrites(context.Context, int64) error {
 	return nil
 }
 

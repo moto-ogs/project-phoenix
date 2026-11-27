@@ -979,22 +979,14 @@ func TestCreateSessionWithMultipleSupervisors_TransferredVisitsBranch(t *testing
 	assert.ElementsMatch(t, []int64{33, 44}, assigned)
 }
 
-func TestManualRoomSelectionStrategies(t *testing.T) {
+func TestDetermineRoomID_ManualSelection(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	t.Run("lock failure stops before conflict lookup", func(t *testing.T) {
-		failure := errors.New("room lock failed")
-		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, GroupRepo: &mockGroupRepository{}, SchoolPresence: &mockVisitRepository{
-			lockRoomSessionWritesFunc: func(_ context.Context, id int64) error { require.Equal(t, int64(10), id); return failure },
-		}}}
-		_, err := svc.validateManualRoomSelection(ctx, 10, RoomConflictFail, true)
-		require.ErrorIs(t, err, failure)
-	})
-
-	t.Run("ignore strategy skips conflict check", func(t *testing.T) {
+	selectedRoom := int64(10)
+	t.Run("normal start skips conflict check", func(t *testing.T) {
 		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
-		roomID, err := svc.validateManualRoomSelection(ctx, 10, RoomConflictIgnore, true)
+		roomID, err := svc.determineRoomID(ctx, 1, &selectedRoom, false)
 		require.NoError(t, err)
 		assert.Equal(t, int64(10), roomID)
 	})
@@ -1007,14 +999,14 @@ func TestManualRoomSelectionStrategies(t *testing.T) {
 		}},
 		}
 
-		roomID, err := svc.validateManualRoomSelection(ctx, 10, RoomConflictFail, true)
+		roomID, err := svc.determineRoomID(ctx, 1, &selectedRoom, true)
 
 		require.Error(t, err)
 		assert.Zero(t, roomID)
 		assert.Contains(t, err.Error(), "conflict lookup failed")
 	})
 
-	t.Run("warn strategy permits conflict", func(t *testing.T) {
+	t.Run("force start permits conflict", func(t *testing.T) {
 		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{}, Logger: slog.Default(), GroupRepo: &mockGroupRepository{
 			checkRoomConflictFunc: func(context.Context, int64, int64) (bool, *ports.ActiveGroup, error) {
 				return true, &ports.ActiveGroup{ID: 20}, nil
@@ -1022,7 +1014,7 @@ func TestManualRoomSelectionStrategies(t *testing.T) {
 		}},
 		}
 
-		roomID, err := svc.validateManualRoomSelection(ctx, 10, RoomConflictWarn, true)
+		roomID, err := svc.determineRoomID(ctx, 1, &selectedRoom, true)
 
 		require.NoError(t, err)
 		assert.Equal(t, int64(10), roomID)
@@ -1042,7 +1034,7 @@ func (a *activityGroupRepoForRoomUnitTest) FindByID(context.Context, any) (*port
 	return a.group, a.findErr
 }
 
-func TestDetermineRoomIDWithStrategy_NoSelectionAndNoPlannedRoom(t *testing.T) {
+func TestDetermineRoomID_PlannedRoom(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1055,7 +1047,7 @@ func TestDetermineRoomIDWithStrategy_NoSelectionAndNoPlannedRoom(t *testing.T) {
 			},
 		}}
 
-		roomID, err := svc.determineRoomIDWithStrategy(ctx, 1, nil, RoomConflictFail, true)
+		roomID, err := svc.determineRoomID(ctx, 1, nil, true)
 
 		require.NoError(t, err)
 		assert.Equal(t, plannedRoom, roomID)
@@ -1070,7 +1062,7 @@ func TestDetermineRoomIDWithStrategy_NoSelectionAndNoPlannedRoom(t *testing.T) {
 			},
 		}}
 
-		roomID, err := svc.determineRoomIDWithStrategy(ctx, 1, nil, RoomConflictFail, true)
+		roomID, err := svc.determineRoomID(ctx, 1, nil, true)
 
 		require.ErrorIs(t, err, ErrNoRoomAvailable)
 		assert.Zero(t, roomID)
@@ -1082,7 +1074,7 @@ func TestDetermineRoomIDWithStrategy_NoSelectionAndNoPlannedRoom(t *testing.T) {
 			ActivityGroupRepo: &activityGroupRepoForRoomUnitTest{findErr: lookupErr},
 		}}
 
-		roomID, err := svc.determineRoomIDWithStrategy(ctx, 1, nil, RoomConflictFail, true)
+		roomID, err := svc.determineRoomID(ctx, 1, nil, true)
 
 		require.ErrorIs(t, err, lookupErr)
 		assert.Zero(t, roomID)

@@ -23,17 +23,14 @@ import (
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 )
 
-// buildCareServiceWithAutoExcusal mirrors buildCareService but wires the
-// pickup auto-excusal syncer (#2360) the production factory injects. It
-// returns the careTestService shim so the submit calls below keep reading as
-// "parent sets a pickup time for one day" — the parent submit now carries a
-// mandatory reason and no arrival leg.
-func buildCareServiceWithAutoExcusal(t *testing.T) (careTestService, *bun.DB) {
+func buildCareServiceWithAutoExcusal(t *testing.T) (*parentportal.Portal, careplan.PickupAutoExcusal, *bun.DB) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	timetableOwner := owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
+	excusal := newPickupExcusal(t, db, repos.CarePlan(),
+		newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), timetableOwner, false)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
@@ -45,16 +42,13 @@ func buildCareServiceWithAutoExcusal(t *testing.T) (careTestService, *bun.DB) {
 		Declarations:        owners.ParentDeclarationPolicy(),
 		Locales:             owners.ParentPortalLocales(),
 		Runtime:             owners.ParentPortalRuntime{},
-		CarePlan: owners.NewParentCarePlanCommands(repos.CarePlan(), newPickupExcusal(t, db, repos.CarePlan(),
-			newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)),
-			timetableOwner, false,
-		)),
-		People:         owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)),
-		CareProfiles:   careProfiles(t, db),
-		ChildRepo:      repos.ParentChildReads(),
-		StatusDayRepo:  repos.StudentStatusDay,
-		StudentRepo:    owners.NewParentStudentReads(reposPeople.Student),
-		CareExceptions: owners.NewParentCareExceptions(repos.CarePlan()),
+		CarePlan:            owners.NewParentCarePlanCommands(repos.CarePlan(), excusal),
+		People:              owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)),
+		CareProfiles:        careProfiles(t, db),
+		ChildRepo:           repos.ParentChildReads(),
+		StatusDayRepo:       repos.StudentStatusDay,
+		StudentRepo:         owners.NewParentStudentReads(reposPeople.Student),
+		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 
 		Settings: parentSettingsStub{
 			boolValues: map[string]bool{parentportal.KeyParentPickupChangeEnabled: true},
@@ -67,7 +61,7 @@ func buildCareServiceWithAutoExcusal(t *testing.T) (careTestService, *bun.DB) {
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	return careTestService{Portal: svc}, db
+	return svc, excusal, db
 }
 
 // nextMonday returns the first Monday at least seven days after the fixed
@@ -85,51 +79,10 @@ func loadSlotRow(t *testing.T, db *bun.DB, rowID int64) *testpkg.InstanceStudent
 	return testpkg.InstanceStudentByIDContext(t, testpkg.WithPackageTenantRuntime(context.Background()), db, rowID)
 }
 
-func TestSubmitCareException_PullForwardCouplesAndReleases(t *testing.T) {
-	t.Parallel()
-
-	svc, db := buildCareServiceWithAutoExcusal(t)
-	chain := testpkg.CreateTestParentGuardianChain(t, db)
-	staff := testpkg.CreateTestStaff(t, db, "Parent", "Baseline")
-	room := testpkg.CreateTestRoom(t, db, "Parent auto excusal room")
-
-	date := nextMonday()
-	testpkg.CreateTestPickupSchedule(t, db, chain.StudentID, 1, staff.ID, "16:00")
-	block := testpkg.CreateTestActivityInstance(t, db, date, room.ID, testpkg.ActivityInstanceOpts{
-		StartHHMM: "15:00", EndHHMM: "16:00", Title: "Nachmittags-AG",
-	})
-	slot := testpkg.CreateTestInstanceStudent(t, db, block.ID, chain.StudentID, testpkg.ScheduleAttendanceStatusExpected)
-
-	// Parent pulls the pickup forward to 14:45 → the 15:00 block is excused.
-	_, err := svc.SubmitCareException(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, wallClock(14, 45), nil)
-	require.NoError(t, err)
-
-	row := loadSlotRow(t, db, slot.ID)
-	assert.Equal(t, testpkg.ScheduleAttendanceStatusAbsent, row.Status)
-	require.NotNil(t, row.Substatus)
-	assert.Equal(t, "excused", *row.Substatus)
-	require.NotNil(t, row.PickupExceptionID)
-
-	exception, err := api.FindParentPickupExceptionFixture(testpkg.TenantContext(chain.TenantID), api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db)).CarePlan(), chain.StudentID, date)
-	require.NoError(t, err)
-	require.NotNil(t, exception)
-	assert.True(t, exception.ExcusedAuto)
-	assert.Nil(t, exception.ExcusedCreatedBy)
-
-	// The auto excusal must not lock the parent out of their own exception:
-	// moving the time back past the baseline releases the block again.
-	_, err = svc.SubmitCareException(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, wallClock(16, 30), nil)
-	require.NoError(t, err)
-
-	row = loadSlotRow(t, db, slot.ID)
-	assert.Equal(t, testpkg.ScheduleAttendanceStatusExpected, row.Status)
-	assert.Nil(t, row.PickupExceptionID)
-}
-
 func TestDeleteCareException_ReleasesAutoExcusedBlocks(t *testing.T) {
 	t.Parallel()
 
-	svc, db := buildCareServiceWithAutoExcusal(t)
+	svc, excusal, db := buildCareServiceWithAutoExcusal(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	staff := testpkg.CreateTestStaff(t, db, "Parent", "Withdraw")
 	room := testpkg.CreateTestRoom(t, db, "Parent withdraw room")
@@ -141,7 +94,10 @@ func TestDeleteCareException_ReleasesAutoExcusedBlocks(t *testing.T) {
 	})
 	slot := testpkg.CreateTestInstanceStudent(t, db, block.ID, chain.StudentID, testpkg.ScheduleAttendanceStatusExpected)
 
-	_, err := svc.SubmitCareException(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, wallClock(14, 45), nil)
+	ctx := testpkg.TenantContext(chain.TenantID)
+	records := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db)).CarePlan()
+	exceptionID := seedGuardianPickupException(t, db, chain, date, wallClock(14, 45))
+	_, err := testpkg.TenantQuery1(t, ctx, db, excusal.Sync, exceptionID)
 	require.NoError(t, err)
 	require.Equal(t, testpkg.ScheduleAttendanceStatusAbsent, loadSlotRow(t, db, slot.ID).Status)
 
@@ -152,7 +108,7 @@ func TestDeleteCareException_ReleasesAutoExcusedBlocks(t *testing.T) {
 	assert.Nil(t, row.PickupExceptionID)
 	assert.Nil(t, row.Substatus)
 
-	exception, err := api.FindParentPickupExceptionFixture(testpkg.TenantContext(chain.TenantID), api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db)).CarePlan(), chain.StudentID, date)
+	exception, err := api.FindParentPickupExceptionFixture(ctx, records, chain.StudentID, date)
 	require.NoError(t, err)
 	assert.Nil(t, exception, "withdrawing the override removes the guardian row")
 }

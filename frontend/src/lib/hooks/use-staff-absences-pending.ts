@@ -49,7 +49,6 @@ export function useStaffAbsencesPending(): UseUnreadCountResult {
       fetcher: fetchPendingAbsenceCount,
       eventNames: [ABSENCES_REFRESH_EVENT],
       eventDebounceMs: 500,
-      refetchOnFocus: true,
     },
   );
 }

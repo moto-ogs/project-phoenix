@@ -194,14 +194,12 @@ vi.mock(
     const { createElement } = await import("react");
 
     return {
-      CaregiverBlockerResolutionPanel: ({ active }: { active: boolean }) =>
-        active
-          ? createElement(
-              "div",
-              { "data-testid": "resolution-panel" },
-              "Resolution panel",
-            )
-          : null,
+      CaregiverBlockerResolutionPanel: () =>
+        createElement(
+          "div",
+          { "data-testid": "resolution-panel" },
+          "Resolution panel",
+        ),
     };
   },
 );

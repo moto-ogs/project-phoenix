@@ -29,14 +29,12 @@ type StudentLocationLike = {
   readonly current_location?: string | null;
 };
 
-export function isStudentCheckedIn(student: StudentLocationLike): boolean {
-  return isCheckedInLocation(student.current_location);
-}
-
 export function countCheckedInStudents(
   students: readonly StudentLocationLike[],
 ): number {
-  return students.filter(isStudentCheckedIn).length;
+  return students.filter((student) =>
+    isCheckedInLocation(student.current_location),
+  ).length;
 }
 
 function formatGroupAttendanceCount(group?: OGSGroup | null): string {
@@ -104,7 +102,10 @@ export function matchesAttendanceFilter(
     case "in_room":
       return studentRoomStatus?.in_group_room ?? false;
     case "foreign_room":
-      return matchesForeignRoomFilter(studentRoomStatus);
+      return (
+        !!studentRoomStatus?.current_room_id &&
+        studentRoomStatus.in_group_room === false
+      );
     case "transit":
       return isTransitLocation(student.current_location);
     case "schoolyard":
@@ -118,13 +119,4 @@ export function matchesAttendanceFilter(
     default:
       return true;
   }
-}
-
-export function matchesForeignRoomFilter(
-  studentRoomStatus?: Partial<RoomStatus>,
-): boolean {
-  return (
-    !!studentRoomStatus?.current_room_id &&
-    studentRoomStatus.in_group_room === false
-  );
 }

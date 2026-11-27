@@ -94,7 +94,9 @@ describe("MasterDataReviewItem", () => {
       </>,
     );
 
-    expect(screen.getAllByText("Lara Beispiel")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: /Lara Beispiel/ }),
+    ).toHaveLength(2);
     expandAll();
     expect(screen.getByText("Vorname")).toBeInTheDocument();
     expect(screen.getByText("Montag: Wird abgeholt")).toBeInTheDocument();
@@ -144,7 +146,9 @@ describe("MasterDataReviewItem", () => {
       </>,
     );
 
-    expect(screen.getAllByText("Lara Beispiel")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: /Lara Beispiel/ }),
+    ).toHaveLength(2);
     expandAll();
     expect(screen.getByText("E-Mail")).toBeInTheDocument();
     expect(screen.getByText("Mobiltelefon")).toBeInTheDocument();
@@ -179,7 +183,9 @@ describe("MasterDataReviewItem", () => {
       </>,
     );
 
-    expect(screen.getAllByText("Lara Beispiel")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: /Lara Beispiel/ }),
+    ).toHaveLength(2);
     expandAll();
     expect(screen.getByText("03.05.2018")).toBeInTheDocument();
     expect(screen.getByText("14.06.2018")).toBeInTheDocument();
@@ -224,7 +230,9 @@ describe("MasterDataReviewItem", () => {
       </>,
     );
 
-    expect(screen.getAllByText("Lara Beispiel")).toHaveLength(3);
+    expect(
+      screen.getAllByRole("button", { name: /Lara Beispiel/ }),
+    ).toHaveLength(3);
     expandAll();
     // Unknown mode, weekday, contact, and language keys stay visible as raw values.
     expect(
@@ -317,7 +325,9 @@ describe("MasterDataReviewItem", () => {
       /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuche es später erneut\./,
     );
     expect(onDecided).not.toHaveBeenCalled();
-    expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Lara Beispiel/ }),
+    ).toBeInTheDocument();
   });
 
   it("names the next step from the catalog for a request already decided", async () => {

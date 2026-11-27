@@ -54,8 +54,7 @@ export function schoolPath(path: string): string {
 /**
  * Absolute URL of the school-portal login page on its OWN host.
  *
- * Different from schoolAbsoluteUrl(), which stays on the current origin.
- * This one crosses hosts: the tenant (staff) login uses it to send a
+ * The tenant (staff) login uses it to send a
  * school-portal-only account to the portal it actually belongs to — the
  * mirror of parentsPortalLoginUrl in parent-url.ts.
  *
@@ -73,18 +72,4 @@ export function schoolPortalLoginUrl(search?: string): string {
   const schoolHostname = requiredPortalHostname("school");
 
   return `${window.location.protocol}//${schoolHostname}/login${search ?? ""}`;
-}
-
-/**
- * Returns an absolute URL for school paths.
- * Use for NextAuth callbackUrl where relative paths resolve against
- * NEXTAUTH_URL. Client-side only — throws on server.
- */
-export function schoolAbsoluteUrl(path: string): string {
-  if (typeof window === "undefined") {
-    throw new Error(
-      "schoolAbsoluteUrl() is client-only. Use schoolPath() on the server.",
-    );
-  }
-  return `${window.location.origin}${schoolPath(path)}`;
 }

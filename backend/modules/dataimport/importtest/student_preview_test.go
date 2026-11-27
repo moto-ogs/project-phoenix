@@ -35,7 +35,7 @@ func previewConfigForTest(persons ports.PersonDirectory, students ports.StudentD
 	empty := func(context.Context) ([]dataimport.Reference, error) { return nil, nil }
 	return imports.NewStudentImportConfig(ports.StudentImportDeps{Now: time.Now,
 		Transactions: importCompose.NewTransactions(), Persons: persons, Students: students,
-		Resolver: imports.NewRelationshipResolver(empty, empty), CountsTowardChildQuota: api.ImportChildQuotaRule(),
+		Resolver: imports.NewRelationshipResolver(empty), CountsTowardChildQuota: api.ImportChildQuotaRule(),
 	})
 }
 

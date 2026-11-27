@@ -7,12 +7,6 @@ import (
 	"time"
 )
 
-const (
-	ChildConsentStateGranted     = "granted"
-	ChildConsentStateWithdrawn   = "withdrawn"
-	ChildConsentStateNotRecorded = "not_recorded"
-)
-
 type ChildConsent struct {
 	Key         string
 	State       string

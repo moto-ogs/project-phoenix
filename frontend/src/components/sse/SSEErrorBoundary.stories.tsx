@@ -30,14 +30,3 @@ export const CaughtErrorDefaultFallback: Story = {
     children: <Thrower />,
   },
 };
-
-export const CaughtErrorCustomFallback: Story = {
-  args: {
-    children: <Thrower />,
-    fallback: (
-      <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-700">
-        Benutzerdefinierter Fallback-Inhalt.
-      </div>
-    ),
-  },
-};

@@ -21,9 +21,8 @@ import (
 const invitationMailType = "invitation"
 
 // InvitationWiring is the configuration the invitation flows are composed
-// with. dispatcher may be nil: the link is then not mailed, as before.
+// with. the durable outbox may be nil: the link is then not mailed, as before.
 type InvitationWiring struct {
-	Dispatcher  email.Dispatcher
 	Durable     DurableMailOutbox
 	DefaultFrom email.Email
 	// StaffURL and schoolURL are the portal hosts an invitee accepts on.
@@ -60,7 +59,7 @@ func InvitationDependencies(wiring *InvitationWiring, owners identityPorts.Invit
 		Owners:            owners,
 		DeliveryFor: func(invitations identityaccess.SchoolInvitationDeliveryRecorder) identityPorts.SchoolInvitationDelivery {
 			return invitationDelivery{
-				dispatcher: wiring.Dispatcher, durable: wiring.Durable, from: wiring.DefaultFrom, staffURL: wiring.StaffURL, schoolURL: wiring.SchoolURL,
+				durable: wiring.Durable, from: wiring.DefaultFrom, staffURL: wiring.StaffURL, schoolURL: wiring.SchoolURL,
 				identity: wiring.MailIdentity, backoff: backoff, invitations: invitations, logger: logger,
 				settings: wiring.Settings, outbox: wiring.Outbox, welcomeDelay: wiring.WelcomeDelay, outcomes: wiring.Outcomes,
 			}
@@ -93,7 +92,6 @@ type schoolInvitationRecords interface {
 // invitationDelivery mails an invitation and records the outcome through the
 // module once the send settles.
 type invitationDelivery struct {
-	dispatcher   email.Dispatcher
 	durable      DurableMailOutbox
 	from         email.Email
 	staffURL     string
@@ -146,7 +144,7 @@ func (d invitationDelivery) DispatchSchoolInvitation(ctx context.Context, invita
 }
 
 func (d invitationDelivery) dispatchSchoolInvitation(ctx context.Context, invitation identityaccess.SchoolInvitation, schoolName string, portal identityaccess.InvitationPortal, expiry time.Duration) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	mail := identityaccess.SchoolInvitationMail(invitation, schoolName, d.portalURL(portal), expiry)
@@ -163,8 +161,8 @@ func (d invitationDelivery) dispatchSchoolInvitation(ctx context.Context, invita
 // waits for the invitation delivery record, so a crash after SMTP accepts the
 // invitation cannot lose the follow-up or send it first.
 func (d invitationDelivery) QueueSchoolWelcome(ctx context.Context, invitation identityaccess.SchoolInvitation, schoolName string, portal identityaccess.InvitationPortal, rolePermissions []string) error {
-	if d.dispatcher == nil {
-		d.logger.Warn("email dispatcher unavailable, skipping staff welcome email",
+	if d.durable == nil {
+		d.logger.Warn("email outbox unavailable, skipping staff welcome email",
 			slog.Int64("invitation_id", invitation.ID))
 		return nil
 	}

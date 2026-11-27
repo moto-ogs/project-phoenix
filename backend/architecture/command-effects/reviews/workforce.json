@@ -5740,7 +5740,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.payrollMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.payrollMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -5751,7 +5751,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.payrollMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.payrollMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -5947,7 +5947,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -5958,7 +5958,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.qualificationMailOutbox.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -21376,9 +21376,31 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
       "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
+      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
+      "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.AbsenceEmailDispatcher.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.AbsenceEmailDispatcher.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The absence adapter now passes its message directly to the durable outbox, with the same recipient, tenant, related type and reference. The explicit testhooks fixture drains only committed intents.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -21389,22 +21411,21 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.AbsenceEmailDispatcher.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged.",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.AbsenceEmailDispatcher.Enqueue. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The absence adapter now passes its message directly to the durable outbox, with the same recipient, tenant, related type and reference. The explicit testhooks fixture drains only committed intents.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0083",
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
-      "classification": "unresolved",
-      "effect": "unresolved",
+      "classification": "platform",
+      "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Dynamic callable/parameter flow; typed assignments do not prove its runtime function target. Exact boundary: unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue. See ADR 0083 domain-source expansion and reconciliation binding-flow follow-up.",
+      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
       "source_owner": "workforce",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.absenceEmailSchoolDirectory.FindSchoolSubdomain",

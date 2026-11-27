@@ -90,7 +90,7 @@ func (s *service) lockForceStart(ctx context.Context, activityID, deviceID int64
 		return nil, 0, err
 	}
 
-	finalRoomID, err := s.determineRoomIDForForceStart(ctx, activityID, roomID)
+	finalRoomID, err := s.determineRoomID(ctx, activityID, roomID, true)
 	if err != nil {
 		return nil, 0, &ActiveError{Op: opForceStartSession, Err: err}
 	}
@@ -423,18 +423,21 @@ func normalizeTransferredSupervisorRole(role string) string {
 	return role
 }
 
-// determineRoomIDForForceStart determines room ID for force start with conflict warning but no failure
-func (s *service) determineRoomIDForForceStart(ctx context.Context, activityID int64, roomID *int64) (int64, error) {
-	return s.determineRoomIDWithStrategy(ctx, activityID, roomID, RoomConflictWarn, false)
-}
-
-// determineRoomIDWithStrategy determines room ID with configurable conflict
-// handling strategy. lockRoom serializes the room against concurrent session
-// writes; a force start locks its rooms itself once the final room is known.
-func (s *service) determineRoomIDWithStrategy(ctx context.Context, activityID int64, roomID *int64, strategy RoomConflictStrategy, lockRoom bool) (int64, error) {
-	// Manual room selection has highest priority
+// determineRoomID prefers an explicitly selected room over the activity's planned room.
+func (s *service) determineRoomID(ctx context.Context, activityID int64, roomID *int64, warnRoomConflict bool) (int64, error) {
 	if roomID != nil && *roomID > 0 {
-		return s.validateManualRoomSelection(ctx, *roomID, strategy, lockRoom)
+		if warnRoomConflict {
+			hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, *roomID, 0)
+			if err != nil {
+				return 0, err
+			}
+			if hasConflict {
+				s.getLogger().WarnContext(ctx, "overriding room conflict",
+					slog.Int64("room_id", *roomID),
+				)
+			}
+		}
+		return *roomID, nil
 	}
 
 	// Try to get planned room from activity configuration.
@@ -448,34 +451,6 @@ func (s *service) determineRoomIDWithStrategy(ctx context.Context, activityID in
 
 	// No room selected and none planned: there is no tenant-safe default.
 	return 0, ErrNoRoomAvailable
-}
-
-// validateManualRoomSelection validates manually selected room based on conflict strategy
-func (s *service) validateManualRoomSelection(ctx context.Context, roomID int64, strategy RoomConflictStrategy, lockRoom bool) (int64, error) {
-	if lockRoom && s.GroupRepo != nil {
-		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, roomID); err != nil {
-			return 0, err
-		}
-	}
-	if strategy == RoomConflictIgnore {
-		return roomID, nil
-	}
-
-	hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, roomID, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	if hasConflict {
-		if strategy == RoomConflictFail {
-			return 0, ErrRoomConflict
-		}
-		s.getLogger().WarnContext(ctx, "overriding room conflict",
-			slog.Int64("room_id", roomID),
-		)
-	}
-
-	return roomID, nil
 }
 
 // forceStartCohort freezes sources before preparation. A later discovery

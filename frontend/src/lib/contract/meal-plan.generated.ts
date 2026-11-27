@@ -17,23 +17,6 @@ import {
   success,
 } from "./runtime";
 
-/** Go: mealplan.MealPlanWeekEntryResponse */
-export interface MealPlanWeekEntryResponse {
-  date: string;
-  position: number;
-  dish: string;
-  note?: string;
-  allergens: string[] | null;
-}
-
-export const MealPlanWeekEntryResponseSchema: z.ZodType<MealPlanWeekEntryResponse, unknown> = object<MealPlanWeekEntryResponse>({
-  date: str,
-  position: safeInt,
-  dish: str,
-  note: optional(str),
-  allergens: nullable(arr(str)),
-});
-
 /** Go: mealplan.MealCancellationResponse */
 export interface MealCancellationResponse {
   date: string;
@@ -274,12 +257,6 @@ export const ScheduleChangedResponseSchema: z.ZodType<ScheduleChangedResponse, u
   effective_from: calendarDate,
 });
 
-/** Go: mealplan.SetDayRequest */
-export interface SetDayRequest {
-  dishes?: DishRequest[] | null;
-  expected?: DishRequest[] | null;
-}
-
 export const routes = {
   "DELETE /api/meal-plan/days/{date}/cancellation": {
     method: "DELETE",
@@ -292,26 +269,6 @@ export const routes = {
     pattern: "/api/meal-plan/participation/{studentId}/days/{date}",
     portals: ["tenant"],
     response: noData,
-  },
-  "DELETE /api/meal-plan/{date}": {
-    method: "DELETE",
-    pattern: "/api/meal-plan/{date}",
-    portals: ["tenant"],
-    deprecated: true,
-    query: {
-      "expected_version": { kind: "string" },
-    },
-    response: noData,
-  },
-  "GET /api/meal-plan/": {
-    method: "GET",
-    pattern: "/api/meal-plan/",
-    portals: ["tenant"],
-    deprecated: true,
-    query: {
-      "week_start": { kind: "date" },
-    },
-    response: success(z.array(MealPlanWeekEntryResponseSchema)),
   },
   "GET /api/meal-plan/cancellations": {
     method: "GET",
@@ -429,13 +386,5 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<ChildScheduleRequest>(),
     response: success(ScheduleChangedResponseSchema),
-  },
-  "PUT /api/meal-plan/{date}": {
-    method: "PUT",
-    pattern: "/api/meal-plan/{date}",
-    portals: ["tenant"],
-    deprecated: true,
-    request: requestBody<SetDayRequest>(),
-    response: noData,
   },
 } as const;

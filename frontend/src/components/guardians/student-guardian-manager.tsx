@@ -860,7 +860,6 @@ export default function StudentGuardianManager({
                   setEmailBlockChange({ guardian, action: "resume" })
           }
           readOnly={readOnly}
-          showRelationship={true}
         />
       </div>
 

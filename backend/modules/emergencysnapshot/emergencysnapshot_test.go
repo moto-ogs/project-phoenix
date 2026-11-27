@@ -3,7 +3,6 @@ package emergencysnapshot
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -128,13 +127,6 @@ func (f *fakeRenderer) RenderPDF(doc Document, base string) (File, error) {
 	return File{Filename: base + ".pdf", ContentType: "application/pdf", Data: []byte("%PDF")}, nil
 }
 
-// collateASCIIFold stands in for the German collation: case-insensitive with
-// umlauts folded to their base letter, which is what the ordering tests need.
-func collateASCIIFold(a, b string) int {
-	fold := strings.NewReplacer("ä", "a", "ö", "o", "ü", "u", "Ä", "a", "Ö", "o", "Ü", "u", "ß", "ss")
-	return strings.Compare(strings.ToLower(fold.Replace(a)), strings.ToLower(fold.Replace(b)))
-}
-
 func fullDeps() Dependencies {
 	return Dependencies{
 		Presence:  &fakePresence{},
@@ -145,7 +137,6 @@ func fullDeps() Dependencies {
 		Calendar:  fakeCalendar{},
 		Renderer:  &fakeRenderer{},
 		AccessLog: &fakeAccessLog{},
-		Collate:   collateASCIIFold,
 		Now:       func() time.Time { return generatedAt },
 	}
 }
@@ -189,11 +180,6 @@ func TestNewRejectsMissingPorts(t *testing.T) {
 	require.ErrorIs(t, err, ErrIncompleteDependencies)
 
 	deps := fullDeps()
-	deps.Collate = nil
-	_, err = New(deps)
-	require.ErrorIs(t, err, ErrIncompleteDependencies)
-
-	deps = fullDeps()
 	deps.AccessLog = nil
 	_, err = New(deps)
 	require.ErrorIs(t, err, ErrIncompleteDependencies, "the access log of the health information is required")
@@ -404,16 +390,15 @@ func TestRoomLocationsSkipStudentsWithoutRunningSession(t *testing.T) {
 
 func TestRowsOrderByLocationThenGermanName(t *testing.T) {
 	t.Parallel()
-	projection := newProjection(t, fullDeps())
 	rows := []Row{
 		{Name: "Jan Zimmermann", Location: "Raum A"},
 		{Name: "emre özdemir", Location: "Raum A"},
-		{Name: "Lena Ärmel", Location: "Raum A"},
+		{Name: "Jan Ärmel", Location: "Raum A"},
 		{Name: "Anna Müller", Location: "Unterwegs"},
 		{Name: "Ben Anders", Location: "Unterwegs"},
 	}
 
-	projection.sortRows(rows)
+	sortRows(rows)
 
 	got := make([]string, 0, len(rows))
 	for _, row := range rows {
@@ -421,8 +406,8 @@ func TestRowsOrderByLocationThenGermanName(t *testing.T) {
 	}
 	assert.Equal(t, []string{
 		"Raum A/emre özdemir",
+		"Raum A/Jan Ärmel",
 		"Raum A/Jan Zimmermann",
-		"Raum A/Lena Ärmel",
 		"Unterwegs/Anna Müller",
 		"Unterwegs/Ben Anders",
 	}, got)

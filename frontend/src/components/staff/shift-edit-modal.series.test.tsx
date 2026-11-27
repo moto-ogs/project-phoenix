@@ -152,7 +152,6 @@ async function openSeriesEditor() {
 function renderModal(props: Partial<Parameters<typeof ShiftEditModal>[0]>) {
   return render(
     <ShiftEditModal
-      isOpen={true}
       mode="create"
       staffId="7"
       staffName="Ada Lovelace"
@@ -981,10 +980,10 @@ it("shows the cached series rule on reopening and saves with the version it show
     onClose: vi.fn(),
     onSaved: vi.fn(),
   };
-  const view = render(<ShiftEditModal {...props} isOpen />);
+  const view = render(<ShiftEditModal {...props} />);
   await openSeriesEditor();
-  view.rerender(<ShiftEditModal {...props} isOpen={false} />);
-  view.rerender(<ShiftEditModal {...props} isOpen />);
+  view.rerender(<></>);
+  view.rerender(<ShiftEditModal {...props} />);
   // The cached rule is there at once (ADR 0311): the split sends its
   // version, and the server refuses a series changed since.
   expect(
@@ -1013,7 +1012,6 @@ it("shows the stored series again without a retry when a colleague changed it", 
   const onClose = vi.fn();
   render(
     <ShiftEditModal
-      isOpen
       mode="edit"
       staffId="7"
       staffName="Ada Lovelace"
@@ -1090,7 +1088,6 @@ describe("ShiftEditModal series editor and a colleague's change", () => {
       <>
         <CacheHandle />
         <ShiftEditModal
-          isOpen
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -1153,7 +1150,6 @@ describe("ShiftEditModal split and the rule on screen (ADR 0311)", () => {
       <>
         <CacheHandle />
         <ShiftEditModal
-          isOpen
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -1257,7 +1253,6 @@ describe("ShiftEditModal split effective today after a refusal", () => {
       const [shift, setShift] = useState(today);
       return (
         <ShiftEditModal
-          isOpen
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -1332,7 +1327,6 @@ describe("ShiftEditModal reload answered with the stored shift", () => {
   function renderToday(reloadShift: () => Promise<unknown>) {
     render(
       <ShiftEditModal
-        isOpen
         mode="edit"
         staffId="7"
         staffName="Ada Lovelace"
@@ -1400,7 +1394,6 @@ describe("ShiftEditModal reload answered with the stored shift", () => {
       const [shift, setShift] = useState(today);
       return (
         <ShiftEditModal
-          isOpen
           mode="edit"
           staffId="7"
           staffName="Ada Lovelace"
@@ -1463,7 +1456,6 @@ describe("ShiftEditModal reload answered with the stored shift", () => {
       skippedDates: [],
     });
     const props = {
-      isOpen: true,
       mode: "edit" as const,
       staffId: "7",
       staffName: "Ada Lovelace",

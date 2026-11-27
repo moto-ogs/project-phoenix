@@ -101,7 +101,6 @@ describe("useOrgSchoolFilter — Papierkorb filtering (issue #1435)", () => {
     const { result } = renderHook(() => useOrgSchoolFilter("/devices"));
 
     expect(result.current.activeSchools.map((s) => s.id)).toEqual(["10", "12"]);
-    expect(result.current.schools).toHaveLength(3);
   });
 
   it("filteredSchools without orgId returns activeSchools (no deleted)", () => {

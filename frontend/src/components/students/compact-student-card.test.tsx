@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { CompactStudentCard } from "./compact-student-card";
@@ -67,49 +67,12 @@ describe("CompactStudentCard", () => {
     expect(container.querySelectorAll("p")).toHaveLength(1);
   });
 
-  it("calls onClick when the button is activated", async () => {
-    const onClick = vi.fn();
-    render(
-      <CompactStudentCard
-        studentId="42"
-        firstName="Anna"
-        lastName="Müller"
-        schoolClass="3a"
-        onClick={onClick}
-      />,
-    );
-
-    screen.getByRole("button").click();
-
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("exposes an aria-label and data-testid keyed by studentId", () => {
+  it("exposes a data-testid keyed by studentId", () => {
     render(
       <CompactStudentCard studentId={42} firstName="Anna" lastName="Müller" />,
     );
 
     expect(screen.getByTestId("compact-student-card-42")).toBeInTheDocument();
-  });
-
-  it("uses a button only when an onClick handler is provided", () => {
-    const onClick = vi.fn();
-    render(
-      <CompactStudentCard
-        studentId={42}
-        firstName="Anna"
-        lastName="Müller"
-        onClick={onClick}
-      />,
-    );
-
-    const button = screen.getByRole("button", {
-      // Named by its content, the name first (#7112).
-      name: /^Anna Müller ?, Profil öffnen$/,
-    });
-    expect(button).toHaveAttribute("data-testid", "compact-student-card-42");
-    expect(button).toHaveAttribute("type", "button");
-    expect(button).toHaveClass("moto-hover-elevated");
   });
 
   it("does not elevate non-interactive cards on hover", () => {

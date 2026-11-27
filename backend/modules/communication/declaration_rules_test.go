@@ -105,7 +105,6 @@ func TestEveryConsentIsRevocable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, []string{DeclarationActionRevoked}, DeclarationAllowedActions(rules, true, DeclarationActionAgreed, declarationNow))
-			assert.True(t, DeclarationActionAllowed(rules, true, DeclarationActionAgreed, DeclarationActionRevoked, declarationNow))
 		})
 	}
 }

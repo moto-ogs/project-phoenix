@@ -11,8 +11,7 @@ import (
 // MockMailer is a mock Mailer
 type MockMailer struct {
 	SendFn func(m mailcontract.Message) error
-	// SendInvoked is atomic because Dispatcher delivers each message on its
-	// own goroutine; flows that send several emails write this concurrently.
+	// SendInvoked is atomic because deliveries can run concurrently.
 	SendInvoked atomic.Bool
 }
 

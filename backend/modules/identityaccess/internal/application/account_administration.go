@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -15,8 +14,6 @@ import (
 const (
 	opGetAccount                = "get account"
 	opUpdateAccount             = "update account"
-	opAccountsByRole            = "get accounts by role"
-	opActivateAccount           = "activate account"
 	opDeactivateAccount         = "deactivate account"
 	opHashPassword              = "hash password"
 	opVerifyPassword            = "verify password"
@@ -26,7 +23,7 @@ const (
 )
 
 // AccountAdministration administers platform accounts (#3332): the read of
-// one manageable account, activation and deactivation, and the credential
+// one manageable account, deactivation, and the credential
 // change an account holder makes for themselves.
 //
 // Accounts are platform-wide rows without a tenant, so every administrative
@@ -39,7 +36,6 @@ type AccountAdministration struct {
 	verifier  ports.PasswordVerifier
 	passwords ports.PasswordPolicy
 	runtime   ports.Runtime
-	logger    *slog.Logger
 }
 
 // AccountAdministrationDependencies are the ports the flows consume.
@@ -48,12 +44,10 @@ type AccountAdministrationDependencies struct {
 	Verifier  ports.PasswordVerifier
 	Passwords ports.PasswordPolicy
 	Runtime   ports.Runtime
-	Logger    *slog.Logger
 }
 
 // NewAccountAdministration composes the flows over the account
-// authentication, whose session revocation a deactivation schedules and
-// whose pending account-wide wipe an activation clears.
+// authentication, whose session revocation a deactivation schedules.
 func NewAccountAdministration(auth *AccountAuthentication, deps AccountAdministrationDependencies) (*AccountAdministration, error) {
 	switch {
 	case auth == nil:
@@ -63,13 +57,9 @@ func NewAccountAdministration(auth *AccountAuthentication, deps AccountAdministr
 	case deps.Verifier == nil, deps.Passwords == nil, deps.Runtime == nil:
 		return nil, fmt.Errorf("identity access account administration: password verifier, password policy and tenant runtime are required")
 	}
-	logger := deps.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
 	return &AccountAdministration{
 		auth: auth, store: deps.Store, verifier: deps.Verifier,
-		passwords: deps.Passwords, runtime: deps.Runtime, logger: logger,
+		passwords: deps.Passwords, runtime: deps.Runtime,
 	}, nil
 }
 
@@ -87,7 +77,7 @@ func (a *AccountAdministration) AnonymizeAccountForDeletion(ctx context.Context,
 	})
 }
 
-// FindManageableAccount reads one account within the caller's visibility.
+// findManageableAccount reads one account within the caller's visibility.
 // An account outside it is reported as missing, so the read tells nobody
 // that an account they may not administer exists.
 func (a *AccountAdministration) findManageableAccount(ctx context.Context, accountID int64) (domain.ManagedAccountRecord, error) {
@@ -105,26 +95,13 @@ func (a *AccountAdministration) findManageableAccount(ctx context.Context, accou
 	return account, nil
 }
 
-// ActivateAccount re-enables the account and clears the account-wide
-// session wipe a deactivation had scheduled: without that the reactivated
-// account's next login would be revoked by the standing intent.
-func (a *AccountAdministration) ActivateAccount(ctx context.Context, accountID int64) error {
-	return runFlowErr(ctx, a.flow(), func(ctx context.Context) error {
-		if err := a.setActive(ctx, accountID, true, opActivateAccount); err != nil {
-			return err
-		}
-		a.clearPendingWipe(ctx, accountID)
-		return nil
-	})
-}
-
 // DeactivateAccount disables the account and schedules the account-wide
 // session revocation in the same transaction, so neither can survive a
 // rollback of the other or of the calling workflow.
 func (a *AccountAdministration) DeactivateAccount(ctx context.Context, accountID int64) error {
 	return runFlowErr(ctx, a.flow(), func(ctx context.Context) error {
 		return a.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-			if err := a.setActiveInTransaction(txCtx, accountID, false, opDeactivateAccount); err != nil {
+			if err := a.deactivateInTransaction(txCtx, accountID); err != nil {
 				return err
 			}
 			if err := a.auth.ScheduleAccountWideRevoke(txCtx, accountID, domain.RevocationReasonAccountDeactivated, "", ""); err != nil {
@@ -135,17 +112,17 @@ func (a *AccountAdministration) DeactivateAccount(ctx context.Context, accountID
 	})
 }
 
-func (a *AccountAdministration) setActiveInTransaction(ctx context.Context, accountID int64, active bool, op string) error {
+func (a *AccountAdministration) deactivateInTransaction(ctx context.Context, accountID int64) error {
 	visibility, err := a.visibility(ctx)
 	if err != nil {
-		return failed(op, err)
+		return failed(opDeactivateAccount, err)
 	}
-	found, _, err := a.store.SetManageableAccountActive(ctx, accountID, active, visibility)
+	found, _, err := a.store.DeactivateManageableAccount(ctx, accountID, visibility)
 	if err != nil {
-		return failed(op, err)
+		return failed(opDeactivateAccount, err)
 	}
 	if !found {
-		return failed(op, domain.ErrAccountNotFound)
+		return failed(opDeactivateAccount, domain.ErrAccountNotFound)
 	}
 	return nil
 }
@@ -228,40 +205,6 @@ func (a *AccountAdministration) visibility(ctx context.Context) (domain.AccountV
 	return domain.AccountVisibility{Kind: domain.AccountVisibilityTenant, TenantID: tenantID}, nil
 }
 
-// clearPendingWipe claims the account's standing account-wide wipe. It is
-// deferred to after the caller's commit when there are hooks, skipped while
-// a foreign school transaction is open (the wipe is platform-wide and must
-// not join it), and otherwise run at once on its own administrative
-// transaction. A failure is logged, never returned: the reactivation itself
-// committed, and the scheduler claims the wipe on its next pass.
-func (a *AccountAdministration) clearPendingWipe(ctx context.Context, accountID int64) {
-	run := func() {
-		if err := a.markWipeCompleted(ctx, accountID); err != nil {
-			a.logger.Warn("failed to clear pending account-wide wipe after reactivation",
-				"account_id", accountID,
-				"error", err,
-			)
-		}
-	}
-	if a.runtime.HasAfterCommitHooks(ctx) {
-		a.runtime.RegisterAfterCommit(ctx, run)
-		return
-	}
-	if a.runtime.HasTransaction(ctx) && !a.runtime.IsAdminTx(ctx) {
-		return
-	}
-	run()
-}
-
-func (a *AccountAdministration) markWipeCompleted(ctx context.Context, accountID int64) error {
-	if a.runtime.IsAdminTx(ctx) {
-		return a.auth.MarkAccountWideWipeCompleted(ctx, accountID)
-	}
-	return a.runtime.WithAdminTx(a.runtime.Detach(ctx), func(adminCtx context.Context) error {
-		return a.auth.MarkAccountWideWipeCompleted(adminCtx, accountID)
-	})
-}
-
 func (a *AccountAdministration) FindManageableAccount(ctx context.Context, accountID int64) (identityaccess.ManagedAccount, error) {
 	return runFlow(ctx, a.flow(), func(ctx context.Context) (identityaccess.ManagedAccount, error) {
 		var result domain.ManagedAccountRecord
@@ -271,12 +214,6 @@ func (a *AccountAdministration) FindManageableAccount(ctx context.Context, accou
 			return err
 		})
 		return publicManagedAccount(result), err
-	})
-}
-
-func (a *AccountAdministration) setActive(ctx context.Context, accountID int64, active bool, op string) error {
-	return a.runtime.RunInTx(ctx, func(writeCtx context.Context) error {
-		return a.setActiveInTransaction(writeCtx, accountID, active, op)
 	})
 }
 

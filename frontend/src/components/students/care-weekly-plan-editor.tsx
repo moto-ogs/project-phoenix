@@ -320,7 +320,6 @@ export function CareWeeklyPlanGrid({
   careDaysSource,
   removals,
   disabled = false,
-  pickupNeedsCareDay = false,
   schoolPeriods = NO_SCHOOL_PERIODS,
   timePresets = NO_CARE_TIME_PRESETS,
   notesWithoutPickup = false,
@@ -335,8 +334,6 @@ export function CareWeeklyPlanGrid({
   readonly removals: readonly string[];
   /** Every field is locked while a save is running. */
   readonly disabled?: boolean;
-  /** In bookings mode a pickup time is only possible on a booked care day. */
-  readonly pickupNeedsCareDay?: boolean;
   /** A day without pickup time can still carry a note (#3369). */
   readonly notesWithoutPickup?: boolean;
 }) {
@@ -356,8 +353,7 @@ export function CareWeeklyPlanGrid({
             const row = rows.find((entry) => entry.weekday === day.value);
             const inCare = row?.arrivalInCare ?? false;
             const pickupLocked =
-              disabled ||
-              (pickupNeedsCareDay && careDaysSource === "bookings" && !inCare);
+              disabled || (careDaysSource === "bookings" && !inCare);
             // Without a pickup time the note belongs to the day, not to an
             // Abholung the child does not have (#3369).
             const noteIsForDay =
@@ -962,7 +958,6 @@ export function CareWeeklyPlanEditForm({
           careDaysSource={careDaysSource}
           removals={weeklyRemovals}
           disabled={isSubmitting}
-          pickupNeedsCareDay
           schoolPeriods={schoolPeriods}
           timePresets={timePresets}
           notesWithoutPickup

@@ -141,7 +141,7 @@ func TestModuleLockRefusesACancelledModuleOfItsSchoolOnly(t *testing.T) {
 
 func TestModuleLockTreatsAFailedReadAsAServerError(t *testing.T) {
 	t.Parallel()
-	response, reached := serveThroughModuleLock(t, moduleSwitches{err: errors.New("settings unavailable")}, 4893, "/api/meal-plan/")
+	response, reached := serveThroughModuleLock(t, moduleSwitches{err: errors.New("settings unavailable")}, 4893, "/api/meal-plan/days")
 	assert.False(t, reached)
 	assert.Equal(t, http.StatusInternalServerError, response.Code)
 }
@@ -250,6 +250,6 @@ func TestDeviceLockTreatsAFailedReadAsAServerError(t *testing.T) {
 func TestModuleLockLetsRequestsWithoutSchoolPass(t *testing.T) {
 	t.Parallel()
 	switches := moduleSwitches{err: errors.New("must not be read")}
-	_, reached := serveThroughModuleLock(t, switches, 0, "/api/meal-plan/")
+	_, reached := serveThroughModuleLock(t, switches, 0, "/api/meal-plan/days")
 	assert.True(t, reached)
 }

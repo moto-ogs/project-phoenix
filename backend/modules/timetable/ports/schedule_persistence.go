@@ -155,9 +155,6 @@ type StudentArrivalExceptionRecords interface {
 	// date. Used by the timetable per-student week endpoint to pre-load all
 	// exceptions in a single query.
 	FindByStudentIDAndDateRange(ctx context.Context, studentID int64, from, to calendar.Date) ([]*schedulerecords.StudentArrivalException, error)
-
-	// DeleteByStudentID deletes all arrival exceptions for a student
-	DeleteByStudentID(ctx context.Context, studentID int64) error
 }
 
 type StudentArrivalNoteRecords interface {
@@ -173,9 +170,6 @@ type StudentArrivalNoteRecords interface {
 
 	// FindByStudentIDsAndDate finds all arrival notes for multiple students on a specific date (bulk query)
 	FindByStudentIDsAndDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*schedulerecords.StudentArrivalNote, error)
-
-	// DeleteByStudentID deletes all arrival notes for a student
-	DeleteByStudentID(ctx context.Context, studentID int64) error
 }
 
 type StudentArrivalScheduleRecords interface {
@@ -222,9 +216,6 @@ type StudentPickupExceptionRecords interface {
 	// date. Used by the timetable per-student week endpoint to pre-load all
 	// exceptions in a single query.
 	FindByStudentIDAndDateRange(ctx context.Context, studentID int64, from, to calendar.Date) ([]*schedulerecords.StudentPickupException, error)
-
-	// DeleteByStudentID deletes all pickup exceptions for a student
-	DeleteByStudentID(ctx context.Context, studentID int64) error
 }
 
 type StudentPickupNoteRecords interface {
@@ -240,9 +231,6 @@ type StudentPickupNoteRecords interface {
 
 	// FindByStudentIDsAndDate finds all pickup notes for multiple students on a specific date (bulk query)
 	FindByStudentIDsAndDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*schedulerecords.StudentPickupNote, error)
-
-	// DeleteByStudentID deletes all pickup notes for a student
-	DeleteByStudentID(ctx context.Context, studentID int64) error
 }
 
 type StudentPickupScheduleRecords interface {

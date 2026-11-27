@@ -13,9 +13,8 @@ import (
 )
 
 // PasswordResetWiring is the configuration the reset flows are composed
-// with. dispatcher may be nil: the link is then not mailed, as before.
+// with. the durable outbox may be nil: the link is then not mailed, as before.
 type PasswordResetWiring struct {
-	Dispatcher       email.Dispatcher
 	Durable          DurableMailOutbox
 	DefaultFrom      email.Email
 	StaffURL         string
@@ -47,7 +46,7 @@ func PasswordResetDependencies(wiring *PasswordResetWiring, logger *slog.Logger,
 	return &identityPorts.PasswordResetDependencies{
 		DeliveryFor: func(records identityaccess.PasswordResetDeliveryRecorder) identityPorts.PasswordResetDelivery {
 			return passwordResetDelivery{
-				dispatcher: wiring.Dispatcher, durable: wiring.Durable, from: wiring.DefaultFrom, records: records, logger: logger,
+				durable: wiring.Durable, from: wiring.DefaultFrom, records: records, logger: logger,
 				backoff: backoff,
 				host:    func(scope identityaccess.PasswordResetScope) string { return hosts[scope] },
 			}
@@ -68,9 +67,8 @@ type passwordResetRecords interface {
 // passwordResetDelivery mails a reset link and records the outcome through
 // the module once the send settles.
 type passwordResetDelivery struct {
-	dispatcher email.Dispatcher
-	durable    DurableMailOutbox
-	from       email.Email
+	durable DurableMailOutbox
+	from    email.Email
 	// host is the portal origin of a reset scope.
 	host    func(identityaccess.PasswordResetScope) string
 	backoff []time.Duration
@@ -79,7 +77,7 @@ type passwordResetDelivery struct {
 }
 
 func (d passwordResetDelivery) DispatchPasswordReset(ctx context.Context, link identityaccess.PasswordResetLink, recipient string, scope identityaccess.PasswordResetScope, expiry time.Duration) error {
-	if d.dispatcher == nil {
+	if d.durable == nil {
 		return nil
 	}
 	message := *identityMessage(d.from, email.NewEmail("", recipient), identityaccess.PasswordResetMail(link, d.host(scope), expiry))

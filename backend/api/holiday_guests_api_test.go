@@ -121,9 +121,11 @@ func newHolidayGuestFixture(t *testing.T, name string) holidayGuestFixture {
 			t.Helper()
 			children := map[string]int64{}
 			inNord(t, func(ctx context.Context) error {
-				entries, err := persons.ListStudentRosterByGroup(ctx, []int64{group}, day.String())
+				entries, err := persons.ListStudentRoster(ctx, day.String())
 				for _, entry := range entries {
-					children[entry.FirstName+" "+entry.LastName] = entry.Record.ID
+					if entry.Record.GroupID != nil && *entry.Record.GroupID == group {
+						children[entry.FirstName+" "+entry.LastName] = entry.Record.ID
+					}
 				}
 				return err
 			})

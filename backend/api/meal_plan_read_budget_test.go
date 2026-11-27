@@ -140,38 +140,25 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 		t.Helper()
 		before := snapshot()
 		counts := map[string]int{}
-		response, queries := get("/api/meal-plan/?week_start=" + monday.String())
-		var week struct {
-			Data []struct {
-				Date      string   `json:"date"`
-				Position  int      `json:"position"`
-				Dish      string   `json:"dish"`
-				Allergens []string `json:"allergens"`
-			} `json:"data"`
-		}
-		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &week))
-		require.Len(t, week.Data, children)
-		for i, row := range week.Data {
-			assert.Equal(t, monday.String(), row.Date)
-			assert.Equal(t, i, row.Position)
-			assert.Equal(t, fmt.Sprintf("Gericht%02d", i), row.Dish)
-			assert.Empty(t, row.Allergens)
-		}
-		counts["api.mealplan.week"] = len(queries.Statements)
-		recorded["api.mealplan.week"] = queries
-		response, queries = get("/api/meal-plan/days?week_start=" + monday.String())
+		response, queries := get("/api/meal-plan/days?week_start=" + monday.String())
 		var days struct {
 			Data []struct {
 				Date    string `json:"date"`
 				Version string `json:"version"`
 				Dishes  []struct {
-					Dish string `json:"dish"`
+					Dish      string   `json:"dish"`
+					Allergens []string `json:"allergens"`
 				} `json:"dishes"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &days))
 		require.Len(t, days.Data, 5, "Monday to Friday, empty days included")
 		require.Len(t, days.Data[0].Dishes, children)
+		assert.Equal(t, monday.String(), days.Data[0].Date)
+		for i, dish := range days.Data[0].Dishes {
+			assert.Equal(t, fmt.Sprintf("Gericht%02d", i), dish.Dish)
+			assert.Empty(t, dish.Allergens)
+		}
 		for _, day := range days.Data {
 			assert.NotEmpty(t, day.Version, day.Date)
 		}
@@ -310,7 +297,6 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 	add(5)
 	large := run(8)
 	assert.Equal(t, small, large, "children-N is separate from date-N")
-	querybudgets.AssertQueryBudget(t, "api.mealplan.week", recorded["api.mealplan.week"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.days", recorded["api.mealplan.days"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.cancellations", recorded["api.mealplan.cancellations"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.participants", recorded["api.mealplan.participants"])

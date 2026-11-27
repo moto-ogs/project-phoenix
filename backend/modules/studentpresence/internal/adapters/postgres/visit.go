@@ -61,9 +61,6 @@ func visitQuery(db bun.IDB, tenantID int64, rows any, filter studentpresence.Vis
 	if filter.Offset > 0 {
 		query = query.Offset(int64(filter.Offset))
 	}
-	if filter.ForUpdate {
-		query = query.For("UPDATE")
-	}
 	return query
 }
 
@@ -73,12 +70,6 @@ func visitTimeQuery(query *bun.SelectQuery, filter studentpresence.VisitFilter) 
 	}
 	if filter.EnteredUntil != nil {
 		query = query.Where("visit.entry_time <= ?", *filter.EnteredUntil)
-	}
-	if filter.OverlapFrom != nil {
-		query = query.Where("(visit.exit_time IS NULL OR visit.exit_time >= ?)", *filter.OverlapFrom)
-	}
-	if filter.OverlapUntil != nil {
-		query = query.Where("visit.entry_time <= ?", *filter.OverlapUntil)
 	}
 	if filter.ClosedSince != nil {
 		query = query.Where("(visit.exit_time IS NULL OR visit.exit_time >= ?)", *filter.ClosedSince)

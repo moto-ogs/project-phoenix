@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { inventory, compare, goInventory, goInventoryFile, parsePgSample } from './test-perf.mjs';
+import { inventory, compare, goInventoryFile, parsePgSample } from './test-perf.mjs';
 import { gitTestEnvironment, initGitFixture } from './test-helpers/git-fixture.mjs';
 
 const frontend = '/repo/frontend';
@@ -140,55 +140,60 @@ function goReportFile(t, text) {
   return file;
 }
 
-function backendSample(rows = goRows(), wall = 10) {
-  return { ...sample(wall), profile: 'backend-smoke', inventory: goInventory(goJSONL(rows)) };
-}
+const goFixtureInventory = () => ({
+  packages: [['moto/probe', 'pass']],
+  entries: [['moto/probe', 'TestTenantBoundary', 'pass']],
+});
 
-test('Go inventory retains package outcomes, nested tests, skips and collection-order independence', () => {
+test('Go inventory retains package outcomes, nested tests, skips and collection-order independence', async t => {
   const rows = goRows();
   rows.splice(3, 0, goEvent('run', 'TestTenantBoundary/other'), goEvent('skip', 'TestTenantBoundary/other'));
   rows.push(goEvent('start', null, { Package: 'moto/empty' }), goEvent('skip', null, { Package: 'moto/empty' }));
-  const result = goInventory(goJSONL(rows));
+  const result = await goInventoryFile(goReportFile(t, goJSONL(rows)));
   assert.deepEqual(result.packages, [['moto/empty', 'skip'], ['moto/probe', 'pass']]);
   assert.deepEqual(result.entries, [
     ['moto/probe', 'TestTenantBoundary', 'pass'],
     ['moto/probe', 'TestTenantBoundary/other', 'skip'],
   ].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
   const reordered = [...rows.slice(-2), ...rows.slice(0, -2)];
-  assert.deepEqual(goInventory(goJSONL(reordered)), result);
+  assert.deepEqual(await goInventoryFile(goReportFile(t, goJSONL(reordered))), result);
 });
 
 test('Go inventory retains legitimate internal/external duplicate-name multiplicity', async t => {
   const rows = goRows();
   rows.splice(2, 0, goEvent('run', 'TestTenantBoundary'));
   rows.splice(4, 0, goEvent('pass', 'TestTenantBoundary'));
-  const result = goInventory(goJSONL(rows));
+  const result = await goInventoryFile(goReportFile(t, goJSONL(rows)));
   assert.equal(result.entries.length, 2);
   assert.deepEqual(result.entries[0], result.entries[1]);
-  assert.deepEqual(await goInventoryFile(goReportFile(t, goJSONL(rows))), result);
   // Equal names may end differently; each pass/skip occurrence still matters.
   rows[4] = goEvent('skip', 'TestTenantBoundary');
-  assert.deepEqual(goInventory(goJSONL(rows)).entries.map(entry => entry[2]).sort(), ['pass', 'skip']);
-  assert.deepEqual(await goInventoryFile(goReportFile(t, goJSONL(rows))), goInventory(goJSONL(rows)));
+  const mixed = await goInventoryFile(goReportFile(t, goJSONL(rows)));
+  assert.deepEqual(mixed.entries.map(entry => entry[2]).sort(), ['pass', 'skip']);
 });
 
 test('Go file inventory handles split UTF-8, JSON tokens and lines without a final newline', async t => {
-  const rows = goRows().map(row => row.Test ? { ...row, Test: 'TestGrüße/🦊' } : row);
-  rows.splice(2, 0, goEvent('output', null, { Output: 'Grüße 🦊\\nquoted "JSON"\n' }));
-  rows.push(goEvent('start', null, { Package: 'moto/empty' }), goEvent('skip', null, { Package: 'moto/empty' }));
-  const text = ` \r\n\t\n${goJSONL(rows).replaceAll('\n', '\r\n')}`;
-  const file = goReportFile(t, text);
-  for (const highWaterMark of [1, 2, 7, 64 * 1024]) {
-    assert.deepEqual(await goInventoryFile(file, { highWaterMark }), goInventory(text));
+  const name = 'TestGrüße/🦊';
+  const rows = goRows().map(row => row.Test ? { ...row, Test: name } : row);
+  rows.splice(1, 0, goEvent('output', null, { Output: '🦊\\nquoted "JSON"\n' }));
+  const report = goJSONL(rows).replaceAll('\n', '\r\n');
+  // Align a UTF-8 code point or a CRLF with the real file stream boundary.
+  for (const [marker, bytesBeforeBoundary] of [['🦊', 2], ['\r\n', 1]]) {
+    const offset = Buffer.byteLength(report.slice(0, report.indexOf(marker)));
+    const text = ' '.repeat(64 * 1024 - offset - bytesBeforeBoundary) + report;
+    const file = goReportFile(t, text);
+    assert.deepEqual(await goInventoryFile(file), {
+      packages: [['moto/probe', 'pass']], entries: [['moto/probe', name, 'pass']],
+    });
+    assert.equal(readFileSync(file, 'utf8'), text, 'The raw report must not change');
   }
-  assert.equal(readFileSync(file, 'utf8'), text, 'The raw report must not change');
 });
 
 test('Go file inventory handles an event spanning multiple default-sized chunks', async t => {
   const rows = goRows();
   rows.splice(2, 0, goEvent('output', null, { Output: 'ä🦊'.repeat(32 * 1024) }));
   const text = goJSONL(rows) + '\n';
-  assert.deepEqual(await goInventoryFile(goReportFile(t, text)), goInventory(text));
+  assert.deepEqual(await goInventoryFile(goReportFile(t, text)), goFixtureInventory());
 });
 
 test('Go file inventory rejects a missing report', async t => {
@@ -217,8 +222,7 @@ for (const [name, change] of [
 ]) {
   test(`Go inventory rejects ${name}`, async t => {
     const text = goJSONL(change(goRows()));
-    assert.throws(() => goInventory(text));
-    await assert.rejects(goInventoryFile(goReportFile(t, text), { highWaterMark: 7 }));
+    await assert.rejects(goInventoryFile(goReportFile(t, text)));
   });
 }
 
@@ -229,36 +233,36 @@ const goLongRows = (Test, run = true) => [goEvent('start'), goEvent('run', 'Test
 
 test('Go inventory accepts test framing lines up to PIPE_BUF and rejects longer ones by bytes', async t => {
   const fits = `TestMatrix/${'x'.repeat(492 - 'TestMatrix/'.length)}`;
-  assert.equal(goInventory(goJSONL(goLongRows(fits))).entries.length, 2);
+  const inventory = await goInventoryFile(goReportFile(t, goJSONL(goLongRows(fits))));
+  assert.equal(inventory.entries.length, 2);
   for (const name of [`${fits}x`, `TestMatrix/${'ü'.repeat(241)}`]) {
     const text = goJSONL(goLongRows(name));
-    assert.throws(() => goInventory(text), /exceeds 512 \(PIPE_BUF\), shorten the test name/);
-    await assert.rejects(goInventoryFile(goReportFile(t, text), { highWaterMark: 7 }), /exceeds 512/);
+    await assert.rejects(goInventoryFile(goReportFile(t, text)), /exceeds 512 \(PIPE_BUF\), shorten the test name/);
   }
 });
 
-test('Go inventory names the long test whose run event a concurrent stderr write split', () => {
+test('Go inventory names the long test whose run event a concurrent stderr write split', async t => {
   // The shape test2json emitted when a log line landed inside "^V=== RUN   <name>".
   const name = `TestMatrix/cleanup/K5_resolver_read_SELECT_${'"person"."id",_'.repeat(140)}`;
   const rows = goLongRows(name, false);
   rows.splice(2, 0, goEvent('output', 'TestMatrix', { Output: '==2026/11/10 20:20:06 WARN SMTP mailer not configured\n' }),
     goEvent('output', 'TestMatrix', { Output: `= RUN   ${name}\n` }));
-  assert.throws(() => goInventory(goJSONL(rows)), /exceeds 512 \(PIPE_BUF\), shorten the test name: moto\/probe TestMatrix\/cleanup\/K5/);
+  await assert.rejects(goInventoryFile(goReportFile(t, goJSONL(rows))),
+    /exceeds 512 \(PIPE_BUF\), shorten the test name: moto\/probe TestMatrix\/cleanup\/K5/);
 });
 
 test('Go inventory rejects whitespace-only, malformed and truncated JSONL', async t => {
   for (const input of [' \n\t', '{not-json}', `${goJSONL(goRows())}\n{"Action":`]) {
-    assert.throws(() => goInventory(input));
-    await assert.rejects(goInventoryFile(goReportFile(t, input), { highWaterMark: 2 }));
+    await assert.rejects(goInventoryFile(goReportFile(t, input)));
   }
 });
 
 for (const change of ['skip', 'missing', 'duplicate', 'package-outcome']) {
   test(`Go comparison rejects a faster multiset changed by ${change}`, () => {
-    const rows = goRows();
-    rows.splice(3, 0, goEvent('run', 'TestOther'), goEvent('pass', 'TestOther'));
-    const baseline = backendSample(rows);
-    const candidate = backendSample(rows, 1);
+    const inventory = goFixtureInventory();
+    inventory.entries.unshift(['moto/probe', 'TestOther', 'pass']);
+    const baseline = { ...sample(), profile: 'backend-smoke', inventory };
+    const candidate = { ...sample(1), profile: 'backend-smoke', inventory: structuredClone(inventory) };
     if (change === 'skip') candidate.inventory.entries[0][2] = 'skip';
     if (change === 'missing') candidate.inventory.entries.pop();
     if (change === 'duplicate') candidate.inventory.entries.push(candidate.inventory.entries[0]);
@@ -412,7 +416,7 @@ test('backend CLI inventories output larger than its heap without loading the wh
   const fixture = backendFixture(t, 'backend-smoke', 'output-heavy', { NODE_OPTIONS: '--max-old-space-size=32' });
   assert.equal(fixture.result.status, 0, fixture.result.stderr + fixture.result.stdout);
   assert.equal(fixture.summary.valid, true, fixture.summary.error);
-  assert.deepEqual(fixture.summary.inventory, goInventory(goJSONL(goRows())));
+  assert.deepEqual(fixture.summary.inventory, goFixtureInventory());
   assert.deepEqual(fixture.summary.counts, { packages: 1, tests: 1, passed: 1, skipped: 0 });
   assert.ok(statSync(fixture.summary.rawReport).size > 64 * 1024 * 1024);
 });
@@ -439,7 +443,7 @@ for (const [profile, selection, ...options] of [
     assert.ok(!gateArgs.some(arg => arg.endsWith('test-perf.mjs') || arg.endsWith('dev-bench.sh')));
     assert.equal(fixture.summary.rawReport, join(fixture.out, 'go.jsonl'));
     assert.equal(fixture.record('report-path'), fixture.summary.rawReport);
-    assert.deepEqual(fixture.summary.inventory, goInventory(goJSONL(goRows())));
+    assert.deepEqual(fixture.summary.inventory, goFixtureInventory());
     assert.deepEqual(fixture.summary.counts, { packages: 1, tests: 1, passed: 1, skipped: 0 });
     assert.equal(fixture.summary.context.go, 'go version go-fixture fixture/fixture');
     assert.equal(fixture.summary.context.vitest, undefined);
@@ -468,7 +472,7 @@ test('wrapper fallback exit 0 without a gotestsum report remains invalid', t => 
   assert.match(fixture.table(), /\tok\t/);
 });
 
-test('failed backend wrapper retains raw exit, report path and report despite successful test events', t => {
+test('failed backend wrapper retains raw exit, report path and report despite successful test events', async t => {
   const fixture = backendFixture(t, 'backend-smoke', 'fail');
   assert.equal(fixture.result.status, 1);
   assert.equal(fixture.summary.valid, false);
@@ -476,7 +480,7 @@ test('failed backend wrapper retains raw exit, report path and report despite su
   assert.match(fixture.summary.error, /Measurement failed/);
   assert.match(fixture.table(), /FAILED\(7\)/); // raw command exit is not lost.
   assert.equal(fixture.record('report-path'), fixture.summary.rawReport);
-  assert.deepEqual(goInventory(readFileSync(fixture.summary.rawReport, 'utf8')), goInventory(goJSONL(goRows())));
+  assert.deepEqual(await goInventoryFile(fixture.summary.rawReport), goFixtureInventory());
 });
 
 for (const [mode, error] of [['source-change', /Checkout changed during trial/], ['context-change', /Environment changed during trial/], ['git-ref-change', /Environment changed during trial/]]) {

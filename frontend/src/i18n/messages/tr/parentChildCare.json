@@ -83,7 +83,6 @@
     "loadError": "Kayıtlı saatler yüklenemedi. Lütfen sayfayı yenileyin ve tekrar deneyin.",
     "errorDisabled": "Bu {careTerm}'de teslim alma saatini değiştirme kapalı.",
     "errorStaffConflict": "Bu gün için kurum zaten farklı bir teslim alma saati belirledi. Lütfen ekiple iletişime geçin.",
-    "errorRaced": "Bu gün az önce değiştirildi. Lütfen sayfayı yenileyin ve tekrar deneyin.",
     "errorPastDate": "Geçmiş günler için değişiklik kaydedilemez.",
     "errorTooFar": "Bu gün çok ileride. Lütfen önümüzdeki iki ay içinde bir gün seçin.",
     "staffSet": "Bu gün için kurum zaten farklı bir teslim alma saati belirledi: saat {pickup}.",

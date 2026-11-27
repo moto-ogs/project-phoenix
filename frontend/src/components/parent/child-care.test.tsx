@@ -1346,7 +1346,7 @@ describe("PickupTimeModal — Änderung zurücknehmen", () => {
     const onRemove = vi
       .fn()
       .mockRejectedValue(
-        new ApiError("x", 409, { code: "students.care_exception_raced" }),
+        new ApiError("x", 409, { code: "care.care_exception_conflict" }),
       );
     const { onClose, dialog } = openResetDialog({ onRemove });
 
@@ -1358,7 +1358,7 @@ describe("PickupTimeModal — Änderung zurücknehmen", () => {
     );
 
     expect(
-      await within(dialog).findByText(/Dieser Tag wurde gerade geändert/),
+      await within(dialog).findByText(/abweichende Abholzeit festgelegt/),
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(

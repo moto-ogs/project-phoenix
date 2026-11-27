@@ -766,15 +766,6 @@
     },
     {
       "method": "DELETE",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "no_data": true
-    },
-    {
-      "method": "DELETE",
       "pattern": "/api/iot/{id}",
       "portals": [
         "tenant"
@@ -824,21 +815,6 @@
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
-      ],
-      "no_data": true
-    },
-    {
-      "method": "DELETE",
-      "pattern": "/api/meal-plan/{date}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "query": [
-        {
-          "name": "expected_version",
-          "kind": "string"
-        }
       ],
       "no_data": true
     },
@@ -4102,27 +4078,6 @@
         }
       ],
       "file": true
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/meal-plan/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "query": [
-        {
-          "name": "week_start",
-          "kind": "date"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "MealPlanWeekEntryResponse"
-        }
-      }
     },
     {
       "method": "GET",
@@ -12552,21 +12507,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/traeger/family-billing/",
-      "portals": [
-        "org"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "FamilyBilling"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/traeger/family-billing/contracts/{id}",
       "portals": [
         "org"
@@ -15480,18 +15420,6 @@
         "kind": "ref",
         "ref": "PhoneNumberCreateRequest"
       },
-      "response": {
-        "kind": "ref",
-        "ref": "PhoneNumberResponse"
-      }
-    },
-    {
-      "method": "POST",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
@@ -22599,19 +22527,6 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/guardians/relationships/{relationshipId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "StudentGuardianUpdateRequest"
-      },
-      "no_data": true
-    },
-    {
-      "method": "PUT",
       "pattern": "/api/guardians/students/{studentId}/guardians/{guardianId}",
       "portals": [
         "tenant"
@@ -22639,22 +22554,6 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/guardians/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "GuardianUpdateRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "GuardianResponse"
-      }
-    },
-    {
-      "method": "PUT",
       "pattern": "/api/guardians/{id}/payment",
       "portals": [
         "tenant"
@@ -22664,22 +22563,6 @@
         "ref": "GuardianPaymentRequest"
       },
       "no_data": true
-    },
-    {
-      "method": "PUT",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "PhoneNumberUpdateRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "PhoneNumberResponse"
-      }
     },
     {
       "method": "PUT",
@@ -22782,19 +22665,6 @@
         "kind": "ref",
         "ref": "ScheduleChangedResponse"
       }
-    },
-    {
-      "method": "PUT",
-      "pattern": "/api/meal-plan/{date}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "SetDayRequest"
-      },
-      "no_data": true
     },
     {
       "method": "PUT",
@@ -73943,47 +73813,6 @@
       ]
     },
     {
-      "name": "MealPlanWeekEntryResponse",
-      "go_type": "mealplan.MealPlanWeekEntryResponse",
-      "fields": [
-        {
-          "name": "date",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "position",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "dish",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "note",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "allergens",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "MealWeekChangeResponse",
       "go_type": "parent.MealWeekChangeResponse",
       "fields": [
@@ -86084,53 +85913,6 @@
           "name": "priority",
           "schema": {
             "kind": "int"
-          }
-        }
-      ]
-    },
-    {
-      "name": "PhoneNumberUpdateRequest",
-      "go_type": "users.PhoneNumberUpdateRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "phone_number",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "phone_type",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "label",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "is_primary",
-          "optional": true,
-          "schema": {
-            "kind": "bool",
-            "nullable": true
-          }
-        },
-        {
-          "name": "priority",
-          "optional": true,
-          "schema": {
-            "kind": "int",
-            "nullable": true
           }
         }
       ]
@@ -101374,37 +101156,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "SetDayRequest",
-      "go_type": "mealplan.SetDayRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "dishes",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "DishRequest"
-            }
-          }
-        },
-        {
-          "name": "expected",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "DishRequest"
-            }
           }
         }
       ]

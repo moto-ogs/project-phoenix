@@ -82,12 +82,6 @@ import {
 } from "~/components/database/catalog/catalog-manage-link";
 import { SectionLabel } from "~/components/ui/section-label";
 
-export {
-  formatDecimalHours,
-  isStaleAfterModelSave,
-  parseDecimalHours,
-} from "./arbeitszeit-hours";
-
 const logger = createLogger({ component: "ArbeitszeitmodellTab" });
 
 const OBJECT = "das Arbeitszeitmodell";

@@ -17,37 +17,48 @@ import (
 
 // fixtureMailOutbox drives each committed fixture intent through the actual
 // leased worker without introducing a persistent test service graph.
-type fixtureMailOutbox func(context.Context, owners.DurableMail) error
-
-func (enqueue fixtureMailOutbox) EnqueueTransactionalMail(ctx context.Context, mail owners.DurableMail) error {
-	return enqueue(ctx, mail)
+type fixtureMailOutbox struct {
+	outbox   owners.OutboxEnqueuer
+	runtime  *deliveryCompose.Runtime
+	mailer   email.Mailer
+	logger   *slog.Logger
+	renderer func() deliveryCompose.MailRenderer
 }
 
-func newAuthFixtureOutbox(outbox owners.OutboxEnqueuer, runtime *deliveryCompose.Runtime, mailer email.Mailer, logger *slog.Logger, identity func() identityaccess.Owner) owners.DurableMailOutbox {
-	return fixtureMailOutbox(func(ctx context.Context, mail owners.DurableMail) error {
-		queued, err := outbox.EnqueueMailIntent(ctx, mail)
-		if err != nil {
-			return err
+func newFixtureMailOutbox(delivery DeliveryTestModule, mailer email.Mailer, logger *slog.Logger, identity *identityaccess.Owner) fixtureMailOutbox {
+	return fixtureMailOutbox{
+		outbox:  owners.OutboxEnqueuer{Outbox: delivery.EmailOutbox, Runtime: delivery.Runtime},
+		runtime: delivery.Runtime, mailer: mailer, logger: logger,
+		// Identity is composed after the outbox. Resolve it when the mail is sent.
+		renderer: func() deliveryCompose.MailRenderer {
+			return owners.TransactionalMailRenderer{Identity: *identity, Logger: logger}
+		},
+	}
+}
+
+func (f fixtureMailOutbox) EnqueueTransactionalMail(ctx context.Context, mail owners.DurableMail) error {
+	queued, err := f.outbox.EnqueueMailIntent(ctx, mail)
+	if err != nil {
+		return err
+	}
+	tenant.RegisterAfterCommit(ctx, func() {
+		sendCtx, cancel := context.WithTimeout(identityaccessFixtureContext(ctx), 15*time.Second)
+		defer cancel()
+		provider := &deliveryCompose.MailPushProvider{
+			Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
+				owners.TransactionalMailKind: f.renderer(),
+			}), Mailer: f.mailer, Logger: f.logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: f.runtime.Now,
 		}
-		tenant.RegisterAfterCommit(ctx, func() {
-			sendCtx, cancel := context.WithTimeout(identityaccessFixtureContext(ctx), 15*time.Second)
-			defer cancel()
-			provider := &deliveryCompose.MailPushProvider{
-				Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
-					owners.TransactionalMailKind: owners.TransactionalMailRenderer{Identity: identity(), Logger: logger},
-				}), Mailer: mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: runtime.Now,
+		if err := deliveryCompose.DrainEmailForTest(sendCtx, f.runtime, provider, mail.TenantID, queued.ID); err != nil {
+			f.logger.Error("fixture outbox worker failed", "error", err.Error())
+		}
+		if mail.TenantID == 0 {
+			if err := deliveryCompose.DeleteSystemEmailForTest(sendCtx, f.runtime, queued.ID); err != nil {
+				f.logger.Error("fixture system mail cleanup failed", "error", err.Error())
 			}
-			if err := deliveryCompose.DrainEmailForTest(sendCtx, runtime, provider, mail.TenantID, queued.ID); err != nil {
-				logger.Error("fixture outbox worker failed", "error", err.Error())
-			}
-			if mail.TenantID == 0 {
-				if err := deliveryCompose.DeleteSystemEmailForTest(sendCtx, runtime, queued.ID); err != nil {
-					logger.Error("fixture system mail cleanup failed", "error", err.Error())
-				}
-			}
-		})
-		return nil
+		}
 	})
+	return nil
 }
 
 func identityaccessFixtureContext(ctx context.Context) context.Context {

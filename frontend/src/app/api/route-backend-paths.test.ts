@@ -304,21 +304,17 @@ function handlerContracts(
     if (ts.isCallExpression(node)) {
       const factory = binding(node.expression);
       const [portal, step, explicitRoute] = node.arguments;
-      const imported = factory.names[0] ?? "";
+      const [imported = "", handler = ""] = factory.names;
       follow(node.expression);
       if (
         (factory.from === "~/lib/private-no-store" &&
           imported === "withPrivateNoStore") ||
         (factory.from === "~/lib/route-wrapper.server" &&
-          [
-            "createGetHandler",
-            "createPutHandler",
-            "createDeleteHandler",
-          ].includes(imported)) ||
+          imported === "tenant" &&
+          ["get", "put", "del"].includes(handler)) ||
         (factory.from === "~/lib/operator/route-wrapper.server" &&
-          ["createOperatorPutHandler", "createOperatorDeleteHandler"].includes(
-            imported,
-          )) ||
+          imported === "operator" &&
+          ["put", "del"].includes(handler)) ||
         portalCallback(node.expression)
       )
         follow(portal);
@@ -549,8 +545,8 @@ describe("route file with backend calls of its own", () => {
   it("refuses a file whose backend paths the contract registers", () => {
     const text = `
       import { apiGet } from "~/lib/retired-transport.server";
-      import { createGetHandler } from "~/lib/route-wrapper.server";
-      export const GET = createGetHandler((_request, token, params) =>
+      import { tenant } from "~/lib/route-wrapper.server";
+      export const GET = tenant.get((_request, token, params) =>
         apiGet(\`/api/groups/\${String(params.id)}?details=1\`, token));
     `;
     expect(classify("route.ts", text)).toEqual({

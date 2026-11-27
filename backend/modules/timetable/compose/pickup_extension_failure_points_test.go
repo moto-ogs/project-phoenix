@@ -600,7 +600,7 @@ func TestPickupChainCreatesNoNewDeadlockPairs(t *testing.T) {
 				if err := scanSequentially(ctx); err != nil {
 					return err
 				}
-				_, err := f.module.DeletePlannedActivityInstances(ctx, "2099-03-01", nil, &f.templateID, false)
+				_, err := f.module.DeletePlannedActivityInstances(ctx, "2099-03-01", nil, &f.templateID)
 				return err
 			}
 		},

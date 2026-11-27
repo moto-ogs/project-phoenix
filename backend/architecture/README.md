@@ -3238,10 +3238,10 @@ Every parent-portal write is now an owner command called inside one tenant
 unit of work that the flow opens from the request context, after the
 relationship's `parent_portal.*` check with the same permission constant as
 before. Care Plan reports guardian absences (`GuardianAbsenceReports`, with
-the manual partial-absence guard) and writes the guardian leg of a day's
-pickup exception together with its derived excusal
-(`GuardianPickupExceptions`), both constructed in `modules/careplan/compose`;
-the Stammdaten requests use its existing request commands, and its care
+the manual partial-absence guard) and withdraws guardian pickup exceptions
+together with their derived excusals (`GuardianPickupExceptions`), both
+constructed in `modules/careplan/compose`. Pickup changes are applied through
+staff approval. The Stammdaten requests use its existing request commands, and its care
 profile commands (`StudentProfileCommands.SetStudentLiveStatus`,
 `SetStudentHealthInfo`) write the child's live absence flags and health
 information in `users.student_care_profiles`. People Directory writes the

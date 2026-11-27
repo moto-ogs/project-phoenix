@@ -196,7 +196,7 @@ func (s *service) RemindUnanswered(ctx context.Context, id int64) (int, error) {
 // outside the active window) suppresses it without failing the action — the
 // e-mail still goes out.
 func (s *service) pushPollReminder(ctx context.Context, a *StaffParentAnnouncement, recipients []*StaffAnnouncementPollReminderRecipient) ([]int64, error) {
-	if s.notifier == nil {
+	if s.series.Notify == nil {
 		return nil, nil
 	}
 	accountIDs, localeByAccount := s.pollPushAudience(recipients)
@@ -217,7 +217,7 @@ func (s *service) pushPollReminder(ctx context.Context, a *StaffParentAnnounceme
 	events := make([]communication.NotificationEvent, 0, len(locales))
 	for _, locale := range locales {
 		title, body := s.deliveryPolicy.ParentAnnouncementCopy(locale, ParentPollReminder)
-		events = append(events, NotificationEvent{
+		events = append(events, communication.NotificationEvent{
 			Type:           parentAnnouncementNotificationType,
 			IdempotencyKey: fmt.Sprintf("parent-poll-reminder:%d:%d", a.ID, a.UpdatedAt.UTC().UnixNano()),
 			RelatedType:    relatedEntityTypePollReminder, RelatedID: a.ID,
@@ -225,14 +225,14 @@ func (s *service) pushPollReminder(ctx context.Context, a *StaffParentAnnounceme
 			Body:     body,
 			DeepLink: "/",
 			Priority: PriorityNormal,
-			Audience: NotificationAudience{
+			Audience: communication.NotificationAudience{
 				TenantID:           a.GetTenantID(),
 				Scope:              ScopeGuardian,
 				GuardianAccountIDs: groups[locale],
 			},
-		}.Public())
+		})
 	}
-	_, err := s.notifyEach(ctx, events)
+	_, err := s.series.Notify(ctx, events)
 	if s.deliveryPolicy.IsNotificationsDisabled(err) || s.deliveryPolicy.IsOutsideActiveWindow(err) {
 		s.logger.Info("parent poll reminder push suppressed by tenant notification gate",
 			slog.Int64("announcement_id", a.ID),

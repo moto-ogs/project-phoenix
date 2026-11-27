@@ -233,16 +233,14 @@ describe("useReminders — next_change_at precise timer", () => {
     expect(mockMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("schedules an end-of-day '24:00' boundary at the next midnight", () => {
-    // The backend emits "24:00" from formatMinutes(1440) for a boundary at the
-    // top of the day (e.g. a 23:59 pickup flipping overdue). It must not be
-    // dropped: the timer fires at the next midnight, 14h after the 10:00 clock.
+  it("schedules a date-qualified boundary at the next midnight", () => {
+    // A 23:59 pickup flips overdue at the next Berlin midnight.
     mockUseSWRAuth.mockReturnValue(
       swrReturn({
         reminders: [],
         count: 0,
         enabled: true,
-        next_change_at: "24:00",
+        next_change_at: "2026-07-05T00:00:00+02:00",
       }),
     );
 
@@ -332,83 +330,36 @@ describe("useReminders — next_change_at precise timer", () => {
     expect(mockMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("re-arms across midnight when next_change_at repeats verbatim", () => {
-    // A tenant whose only time-based boundary is an end-of-day flip gets the
-    // same next_change_at = "24:00" every day. The one-shot timer must be
-    // re-armed for the NEXT midnight after it fires, not left dangling because
-    // the day-agnostic string is unchanged — otherwise the precise refresh
-    // silently degrades to the 60s poll from the first midnight on.
-    vi.setSystemTime(new Date(2026, 6, 4, 23, 0, 0)); // 23:00 Berlin (CEST)
+  it("schedules the next midnight when the refreshed answer names it", () => {
+    vi.setSystemTime(new Date(2026, 6, 4, 23, 0, 0));
     mockUseSWRAuth.mockReturnValue(
       swrReturn({
         reminders: [],
         count: 0,
         enabled: true,
-        next_change_at: "24:00",
+        next_change_at: "2026-07-05T00:00:00+02:00",
       }),
     );
-
     const { rerender } = renderHook(() => useReminders());
 
-    // First boundary: 1h to midnight + the 2s buffer.
-    act(() => {
-      vi.advanceTimersByTime(60 * 60 * 1000 + 3000);
-    });
+    act(() => vi.advanceTimersByTime(60 * 60 * 1000 + 3000));
     expect(mockMutate).toHaveBeenCalledTimes(1);
 
-    // The refetch returns the identical "24:00"; a re-render now past midnight
-    // (new Berlin day) must schedule the next midnight rather than nothing.
-    rerender();
-    act(() => {
-      vi.advanceTimersByTime(24 * 60 * 60 * 1000);
-    });
-    expect(mockMutate).toHaveBeenCalledTimes(2);
-  });
-
-  it("re-arms across midnight WITHOUT any re-render (self-sustaining timer)", () => {
-    // The production hazard the re-arm guards against: a persistent end-of-day
-    // "24:00" refetches to a payload SWR compares deep-equal and does NOT
-    // re-render on, so the effect never re-runs. The timer must therefore
-    // reschedule itself from inside its own callback rather than depending on a
-    // render. This test never calls rerender() — the data (and thus the hook's
-    // dependencies) is frozen for the whole run, exactly as SWR would leave it.
-    vi.setSystemTime(new Date(2026, 6, 4, 23, 0, 0)); // 23:00 Berlin (CEST)
     mockUseSWRAuth.mockReturnValue(
       swrReturn({
         reminders: [],
         count: 0,
         enabled: true,
-        next_change_at: "24:00",
+        next_change_at: "2026-07-06T00:00:00+02:00",
       }),
     );
-
-    renderHook(() => useReminders());
-
-    // First midnight: 1h to the boundary + the 2s buffer.
-    act(() => {
-      vi.advanceTimersByTime(60 * 60 * 1000 + 3000);
-    });
-    expect(mockMutate).toHaveBeenCalledTimes(1);
-
-    // No rerender. A whole day later the self-armed timer must fire again.
-    act(() => {
-      vi.advanceTimersByTime(24 * 60 * 60 * 1000);
-    });
+    rerender();
+    act(() => vi.advanceTimersByTime(24 * 60 * 60 * 1000));
     expect(mockMutate).toHaveBeenCalledTimes(2);
-
-    // And again the day after — the timer keeps re-arming indefinitely.
-    act(() => {
-      vi.advanceTimersByTime(24 * 60 * 60 * 1000);
-    });
-    expect(mockMutate).toHaveBeenCalledTimes(3);
   });
 
-  it("does not re-arm (nor busy-refetch) a within-day boundary that is now past", () => {
-    // After a normal within-day boundary fires, re-computing it yields a PAST
-    // instant. The timer must not reschedule that spent one-shot — otherwise a
-    // frozen (non-re-rendering) payload would refetch every 500ms forever. The
-    // next boundary arrives via the effect re-running on a fresh string, not via
-    // self-re-arm. Here the data is frozen, so exactly one refetch must happen.
+  it("does not repeat a within-day refresh without a new boundary", () => {
+    // A spent boundary must not trigger repeated short-delay refreshes.
     mockUseSWRAuth.mockReturnValue(
       swrReturn({
         reminders: [],

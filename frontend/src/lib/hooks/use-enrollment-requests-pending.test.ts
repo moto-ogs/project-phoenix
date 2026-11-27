@@ -99,7 +99,6 @@ describe("useEnrollmentRequestsPending", () => {
     expect(opts.fetcher).toBe(mockFetchPendingEnrollmentChangeRequestCount);
     expect(opts.eventNames).toEqual(["change-requests-refresh"]);
     expect(opts.eventDebounceMs).toBe(500);
-    expect(opts.refetchOnFocus).toBe(true);
   });
 
   // Die Schule stellt useSWRAuth davor; der Schlüssel trägt das Konto.

@@ -60,7 +60,10 @@ func DefaultStudentGuardianRole(relationshipType string, isPrimary, isEmergencyC
 // value grants the permission: a boolean is taken as is, any other non-nil
 // value counts as granted.
 func GuardianPermissionGranted(value any) bool {
-	return authorize.StudentGuardianHasPermission(storedGuardianPermission{value: value}, storedGuardianPermissionKey)
+	if granted, ok := value.(bool); ok {
+		return granted
+	}
+	return value != nil
 }
 
 // GuardianPermissionGrantedJSON reports whether the stored permissions
@@ -84,18 +87,6 @@ func GuardianPermissionGrantedJSON(raw json.RawMessage, permission string) bool 
 	}
 	return GuardianPermissionGranted(stored)
 }
-
-const storedGuardianPermissionKey = "permission"
-
-// storedGuardianPermission carries one stored permission value through the
-// relationship check, so the value is read by the shared rule.
-type storedGuardianPermission struct{ value any }
-
-func (p storedGuardianPermission) GuardianAuthorizationData() (string, string, bool, bool, bool, map[string]interface{}) {
-	return "", "", false, false, false, map[string]interface{}{storedGuardianPermissionKey: p.value}
-}
-
-func (storedGuardianPermission) SetGuardianAuthorizationData(string, map[string]interface{}) {}
 
 // GuardianRoleClass groups the stored relationship roles by the access a
 // guardian invitation may build on them.

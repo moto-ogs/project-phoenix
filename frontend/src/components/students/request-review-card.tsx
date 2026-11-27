@@ -43,8 +43,7 @@ const TYPE_COLOR: Record<RequestRowType, string> = {
 };
 
 /**
- * Spaltenraster der Zeilen. Zeile und Kopfzeile (RequestRowHeader, unten)
- * teilen sich diese beiden Strings, damit sie nicht auseinander laufen.
+ * Spaltenraster der Zeilen. Die Historie teilt ihr Raster mit der Kopfzeile.
  * Unterhalb von `sm` gibt es kein Raster: eine echte Tabelle ist auf einem
  * Telefon unbenutzbar, dort stapelt die Zeile.
  */
@@ -146,7 +145,6 @@ export function RequestReviewCard({
   action,
   reason,
   onReasonChange,
-  reasonPlaceholder,
   reasonError,
   busy,
   approveDisabled,
@@ -188,7 +186,6 @@ export function RequestReviewCard({
   historyBadge?: ReactNode;
   reason?: string;
   onReasonChange?: (value: string) => void;
-  reasonPlaceholder?: string;
   reasonError?: string;
   busy?: boolean;
   /**
@@ -333,14 +330,9 @@ export function RequestReviewCard({
       <RowButton
         open={open}
         onToggle={() => setOpen((o) => !o)}
-        grid={grouped ? GROUPED_OPEN_ROW_GRID : OPEN_ROW_GRID}
-        hiddenName={grouped ? childName : undefined}
+        grid={GROUPED_OPEN_ROW_GRID}
+        hiddenName={childName}
       >
-        {grouped ? null : (
-          <span className="truncate text-sm font-semibold text-gray-900">
-            {childName}
-          </span>
-        )}
         <span className="flex min-w-0 items-center gap-2">
           <TypePill type={type} label={typeLabel} />
           {badge}
@@ -379,7 +371,7 @@ export function RequestReviewCard({
                 placeholder={
                   approveReasonRequired
                     ? "Begründung (Pflicht)"
-                    : reasonPlaceholder
+                    : "Begründung (Pflicht bei Ablehnung)"
                 }
                 disabled={busy}
                 onChange={(e) => {
@@ -488,40 +480,22 @@ function statusMeta(history: RequestReviewCardHistory): {
   );
 }
 
-// ReviewDiffPanel lives in its own module, so a page that shows only the
-// comparison does not load the review card (#5979).
-export { ReviewDiffPanel } from "~/components/students/review-diff-panel";
-
 /**
  * Die Spaltenüberschriften über einer Zeilenliste. Nutzt dieselben Raster wie
  * die Zeilen selbst und erscheint erst ab `sm` — darunter stapeln die Zeilen
  * und eine Kopfzeile hätte nichts, worüber sie stehen könnte.
  */
-export function RequestRowHeader({
-  view,
-}: Readonly<{ view: "open" | "history" }>) {
+export function RequestRowHeader() {
   const cell = "truncate";
   return (
     <div
-      className={`hidden border-b border-gray-100 px-4 py-2.5 text-xs font-medium text-gray-500 sm:px-5 ${
-        view === "history" ? HISTORY_ROW_GRID : OPEN_ROW_GRID
-      }`}
+      className={`hidden border-b border-gray-100 px-4 py-2.5 text-xs font-medium text-gray-500 sm:px-5 ${HISTORY_ROW_GRID}`}
     >
-      {view === "history" ? (
-        <>
-          <span className={cell}>Entschieden</span>
-          <span className={cell}>Kind</span>
-          <span className={cell}>Was geändert wurde</span>
-          <span className={cell}>Status</span>
-          <span className={cell}>Von</span>
-        </>
-      ) : (
-        <>
-          <span className={cell}>Kind</span>
-          <span className={cell}>Was geändert werden soll</span>
-          <span className={cell}>Wartet seit</span>
-        </>
-      )}
+      <span className={cell}>Entschieden</span>
+      <span className={cell}>Kind</span>
+      <span className={cell}>Was geändert wurde</span>
+      <span className={cell}>Status</span>
+      <span className={cell}>Von</span>
       <span />
     </div>
   );

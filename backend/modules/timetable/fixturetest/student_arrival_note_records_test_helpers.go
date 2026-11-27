@@ -11,7 +11,6 @@ import (
 
 type StudentArrivalNoteRecords interface {
 	Create(arg0 context.Context, arg1 *StudentArrivalNote) error
-	DeleteByStudentID(arg0 context.Context, arg1 int64) error
 	FindByID(arg0 context.Context, arg1 int64) (*StudentArrivalNote, error)
 	FindByStudentID(arg0 context.Context, arg1 int64) ([]*StudentArrivalNote, error)
 	FindByStudentIDAndDate(arg0 context.Context, arg1 int64, arg2 calendar.Date) ([]*StudentArrivalNote, error)
@@ -32,11 +31,6 @@ func FromStudentArrivalNoteRecords(value ports.StudentArrivalNoteRecords) Studen
 
 func (adapter fromStudentArrivalNoteRecords) Create(arg0 context.Context, arg1 *StudentArrivalNote) error {
 	result0 := adapter.value.Create(arg0, toNative41(arg1))
-	return result0
-}
-
-func (adapter fromStudentArrivalNoteRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {
-	result0 := adapter.value.DeleteByStudentID(arg0, arg1)
 	return result0
 }
 

@@ -45,44 +45,6 @@ test("every change that breaks a reader of the base is named", () => {
   assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
 });
 
-test("the #8085 cutover only retires the old staff navigation fields", () => {
-  const route = { pattern: "/api/me/navigation", response: { kind: "ref", ref: "Row" } };
-  const fields = [field("current_staff", "json"), field("school_switches", "json")];
-  const before = model([...fields, field("educational_groups", "json"), field("incomplete", "bool"), field("supervised_groups", "json"), field("unavailable_sections", "json")], route);
-  before.types[0].go_type = "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]";
-  assert.deepEqual(breakingChanges(before, model(fields, route)), []);
-  assert.deepEqual(breakingChanges(before, model(fields.slice(0, 1), route)), [
-    "GET /api/me/navigation.school_switches: removed without a release as deprecated",
-  ]);
-
-  before.types[0].go_type = "identityaccess.FutureResponse";
-  assert.equal(breakingChanges(before, model(fields, route)).length, 4);
-});
-
-test("the supervision cleanup only retires the two former tenant reads", () => {
-  for (const [pattern, goType] of [
-    ["/api/active/supervisors/all", "presence.ActiveGroupResponse"],
-    ["/api/students/ogs-group-navigation", "grouplive.NavigationGroup"],
-  ]) {
-    const before = model(base.types[0].fields, { pattern });
-    before.types[0].go_type = goType;
-    const after = { ...before, routes: [] };
-    assert.deepEqual(breakingChanges(before, after), []);
-
-    const breaking = [`GET ${pattern}: route removed without a release as deprecated`];
-    before.routes[0].portals = ["tenant", "school"];
-    assert.deepEqual(breakingChanges(before, after), breaking);
-    before.routes[0].portals = ["tenant"];
-    before.types[0].go_type = "future.Replacement";
-    assert.deepEqual(breakingChanges(before, after), breaking);
-  }
-
-  const supervised = model(base.types[0].fields, { pattern: "/api/me/groups/supervised" });
-  assert.deepEqual(breakingChanges(supervised, { ...supervised, routes: [] }), [
-    "GET /api/me/groups/supervised: route removed without a release as deprecated",
-  ]);
-});
-
 test("a decimal string identifier may become an id on either side", () => {
   const body = (kind) => {
     const route = model([field("id", kind)], { method: "POST", request: { kind: "ref", ref: "Row" }, response: undefined, no_data: true });

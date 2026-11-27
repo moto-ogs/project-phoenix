@@ -3,13 +3,12 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import {
-  accountCareTerm,
   ParentCareTermScope,
   ParentChildCareTermScope,
   ParentSchoolCareTermScope,
   useParentCareTerms,
 } from "./parent-care-term";
-import { useErrorCareFacilityTerm } from "./care-facility-term-context";
+import { useErrorCareTermValues } from "./care-facility-term-context";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const resources = vi.hoisted(() => ({
@@ -67,13 +66,6 @@ function Today() {
 }
 
 describe("care term in the parents portal (#6082)", () => {
-  it("names one term when all schools share it, else every term once", () => {
-    expect(accountCareTerm([])).toBeUndefined();
-    expect(accountCareTerm(["GTS", " GTS "])).toBe("GTS");
-    expect(accountCareTerm(["OGS", "GTS", "OGS"])).toBe("OGS/GTS");
-    expect(accountCareTerm([undefined, "GTS"])).toBe("GTS");
-  });
-
   it("names each child's care with its own school's term", () => {
     link([child("1", "Barnstorf"), "GTS"], [child("2", "Sonnenschule"), "OGS"]);
     render(
@@ -91,7 +83,7 @@ describe("care term in the parents portal (#6082)", () => {
   });
 
   it("uses the account's term for texts without a child", () => {
-    link([child("1", "Barnstorf"), "GTS"], [child("2", "Barnstorf"), "GTS"]);
+    link([child("1", "Barnstorf"), "GTS"], [child("2", "Barnstorf"), " GTS "]);
     const { unmount } = render(
       <ParentCareTermScope enabled>
         <Today />
@@ -154,8 +146,8 @@ describe("care term in the parents portal (#6082)", () => {
     expect(terms?.valuesOf("2").careAcc).toBe("die GTS");
     expect(terms?.valuesOfSchool("Barnstorf").careVon).toBe("vom Hort");
     expect(terms?.valuesOf(undefined).careNom).toBe("der Hort/die GTS");
-    expect(terms?.termOf("1")).toBe("Hort");
-    expect(terms?.account).toBe("Hort/GTS");
+    expect(terms?.valuesOf("1").careTerm).toBe("Hort");
+    expect(terms?.valuesOf(undefined).careTerm).toBe("Hort/GTS");
   });
 
   it("keeps a child's subtree mounted when its term arrives late", () => {
@@ -205,7 +197,7 @@ describe("care term in the parents portal (#6082)", () => {
       </ParentChildCareTermScope>,
     );
     expect(screen.getByText("In der OGS")).toBeInTheDocument();
-    expect(terms?.termOf("1")).toBe("OGS");
+    expect(terms?.valuesOf("1").careTerm).toBe("OGS");
   });
 
   it("keeps OGS while no school named its term", () => {
@@ -232,16 +224,16 @@ describe("care term in the parents portal (#6082)", () => {
         <Probe />
       </ParentCareTermScope>,
     );
-    expect(terms?.termOfSchool("Barnstorf")).toBe("GTS");
-    expect(terms?.termOfSchool("Sonnenschule")).toBe("OGS");
-    expect(terms?.termOfSchool("Unbekannt")).toBe("GTS/OGS");
-    expect(terms?.termOf("2")).toBe("OGS");
+    expect(terms?.valuesOfSchool("Barnstorf").careTerm).toBe("GTS");
+    expect(terms?.valuesOfSchool("Sonnenschule").careTerm).toBe("OGS");
+    expect(terms?.valuesOfSchool("Unbekannt").careTerm).toBe("GTS/OGS");
+    expect(terms?.valuesOf("2").careTerm).toBe("OGS");
   });
 
   it("names a letter's own school in its texts and error messages (#6258)", () => {
     link([child("1", "Barnstorf"), "GTS"], [child("2", "Sonnenschule"), "OGS"]);
     function ErrorTerm() {
-      return <p>Fehler: {useErrorCareFacilityTerm()}</p>;
+      return <p>Fehler: {useErrorCareTermValues().careTerm}</p>;
     }
     render(
       <ParentCareTermScope enabled>

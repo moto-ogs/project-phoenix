@@ -43,7 +43,6 @@ func (u UploadFiles) Private(keys FileKeys) (*PrivateUploads, error) {
 	return NewPrivateUploads(u.backend, keys), nil
 }
 
-func (UploadFiles) PublicDir() (string, error) { return ResolvePublicDir() }
 func (UploadFiles) StoredPath(publicDir, urlPath, requiredPrefix string) (string, error) {
 	return ResolveStoredPath(publicDir, urlPath, requiredPrefix)
 }

@@ -67,11 +67,6 @@ func TestLocalSaveOpenRemoveRoundTrip(t *testing.T) {
 		t.Fatalf("Save returned %d bytes, want %d", written, len("payload"))
 	}
 
-	size, err := backend.ObjectSize(ctx, "docs/9/file.pdf")
-	if err != nil || size != int64(len("payload")) {
-		t.Fatalf("Stat = %d, %v", size, err)
-	}
-
 	object, err := backend.OpenObject(ctx, "docs/9/file.pdf")
 	if err != nil {
 		t.Fatalf("Open: %v", err)
@@ -142,6 +137,9 @@ func TestLocalRejectsEscapingKey(t *testing.T) {
 	if _, err := backend.OpenObject(context.Background(), "../"+filepath.Base(outside)); !errors.Is(err, ErrInvalidKey) {
 		t.Fatalf("Open outside root = %v, want ErrInvalidKey", err)
 	}
+	if _, err := backend.OpenObject(context.Background(), outside); !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Open absolute key = %v, want ErrInvalidKey", err)
+	}
 	if _, err := backend.WriteObject(context.Background(), "../escaped.txt", bytes.NewReader([]byte("x")), SaveOptions{}); !errors.Is(err, ErrInvalidKey) {
 		t.Fatal("Save outside root must be rejected")
 	}
@@ -153,9 +151,6 @@ func TestLocalOpenMissingReturnsNotFound(t *testing.T) {
 	backend := NewLocal(t.TempDir())
 	if _, err := backend.OpenObject(context.Background(), "nope.pdf"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("Open missing = %v, want ErrNotFound", err)
-	}
-	if _, err := backend.ObjectSize(context.Background(), "nope.pdf"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("Stat missing = %v, want ErrNotFound", err)
 	}
 }
 
@@ -232,9 +227,6 @@ func TestLocalRefusesAFileAsADirectory(t *testing.T) {
 	if _, err := backend.OpenObject(ctx, "blocker/child.pdf"); err == nil || errors.Is(err, ErrNotFound) {
 		t.Fatalf("Open below a plain file = %v, want a real failure", err)
 	}
-	if _, err := backend.ObjectSize(ctx, "blocker/child.pdf"); err == nil || errors.Is(err, ErrNotFound) {
-		t.Fatalf("Stat below a plain file = %v, want a real failure", err)
-	}
 }
 
 // TestLocalRefusesADirectoryAsAnObject pins that a key naming a directory never
@@ -286,10 +278,8 @@ func TestLocalSaveSurfacesReadFailure(t *testing.T) {
 	}
 }
 
-// TestLocalRemoveAndStatRejectEscapingKey completes the traversal guard: Save
-// and Open already refuse to leave the root, and so must the two operations
-// that a cleanup sweep uses.
-func TestLocalRemoveAndStatRejectEscapingKey(t *testing.T) {
+// TestLocalRemoveRejectsEscapingKey verifies cleanup cannot leave the root.
+func TestLocalRemoveRejectsEscapingKey(t *testing.T) {
 	t.Parallel()
 
 	backend := NewLocal(t.TempDir())
@@ -297,9 +287,6 @@ func TestLocalRemoveAndStatRejectEscapingKey(t *testing.T) {
 
 	if err := backend.RemoveObject(ctx, "../escaped.txt"); !errors.Is(err, ErrInvalidKey) {
 		t.Fatalf("Remove outside root = %v, want ErrInvalidKey", err)
-	}
-	if _, err := backend.ObjectSize(ctx, "/etc/passwd"); !errors.Is(err, ErrInvalidKey) {
-		t.Fatalf("Stat of an absolute key = %v, want ErrInvalidKey", err)
 	}
 }
 

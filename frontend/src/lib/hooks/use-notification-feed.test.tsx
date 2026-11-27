@@ -4,12 +4,12 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationFeedPage } from "~/lib/notification-feed-helpers";
 import {
-  LIVE_FALLBACK_INTERVAL_MS,
   LIVE_RECONCILE_INTERVAL_MS,
   SWRScopeBoundary,
   useLiveEventScope,
   usePublishLiveChannel,
 } from "~/lib/swr";
+import { LIVE_FALLBACK_INTERVAL_MS } from "~/lib/swr/live-sync";
 import { resetSWRScope } from "~/lib/swr/scope";
 import { SWRConfig } from "~/lib/swr/testing";
 import {

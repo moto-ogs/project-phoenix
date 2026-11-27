@@ -46,8 +46,6 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 const logger = createLogger({ component: "CaregiverBlockerResolution" });
 
 interface CaregiverBlockerResolutionPanelProps {
-  /** Der Schritt ist sichtbar; beim Aktivieren wird die Vertretungsliste geladen. */
-  readonly active: boolean;
   readonly state: CaregiverCapabilityState;
   readonly onConfirmationVisibilityChange?: (visible: boolean) => void;
 }
@@ -130,7 +128,6 @@ function buildUpdatedTeacherIds(
  * ein Modal über einem Modal ist portalweit verboten (Bauart 2, Regel 3).
  */
 export function CaregiverBlockerResolutionPanel({
-  active,
   state,
   onConfirmationVisibilityChange,
 }: CaregiverBlockerResolutionPanelProps) {
@@ -140,14 +137,14 @@ export function CaregiverBlockerResolutionPanel({
     error: candidatesError,
     mutate: reloadCandidates,
   } = useSWRAuth(
-    active ? staffAccessKeys.groupLeaderCandidates() : null,
+    staffAccessKeys.groupLeaderCandidates(),
     fetchGroupLeaderCandidates,
   );
   const availableStaff = useMemo(
     () => (candidates ?? []).filter((s) => s.id !== state.staffId),
     [candidates, state.staffId],
   );
-  const loadingStaff = active && !candidates && !candidatesError;
+  const loadingStaff = !candidates && !candidatesError;
   // Ladefehler der Ersatzkräfte vor Ort, Fehler beim Auflösen im Panel des
   // Dialogs, beide mit Katalogtext (#2517).
   const { error: staffLoadError } = useSwrResourceLoadError(
@@ -177,9 +174,7 @@ export function CaregiverBlockerResolutionPanel({
     [state.groupAssignments],
   );
   const groupsKey =
-    active && blockerGroupIds.length > 0
-      ? groupsKeys.byIds(blockerGroupIds)
-      : null;
+    blockerGroupIds.length > 0 ? groupsKeys.byIds(blockerGroupIds) : null;
   const storedGroupReads = useSWRAuth(groupsKey, () =>
     groupsKeys.byIdsFetcher(blockerGroupIds),
   );
@@ -320,7 +315,6 @@ export function CaregiverBlockerResolutionPanel({
     groups.length;
 
   useEffect(() => {
-    if (!active) return;
     setSupervisions(state.activeSupervisions);
     setSubstitutions(state.activeSubstitutions);
     setActivities(state.activitySupervisions);
@@ -328,7 +322,7 @@ export function CaregiverBlockerResolutionPanel({
     setActivityReplacements({});
     setGroupReplacements({});
     clearActionErrors();
-  }, [active, state, clearActionErrors]);
+  }, [state, clearActionErrors]);
 
   function setItemProcessing(key: string, value: boolean) {
     setProcessing((prev) => ({ ...prev, [key]: value }));

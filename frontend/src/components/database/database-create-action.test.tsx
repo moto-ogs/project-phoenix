@@ -64,20 +64,21 @@ describe("DatabaseCreateAction", () => {
     ).toBe("");
   });
 
-  it("keeps the desktop action without rendering a mobile FAB when requested", () => {
+  it("does not reserve FAB clearance at desktop widths", () => {
+    stubMatchMedia(false);
     render(
       <DatabaseCreateAction
         label="Raum"
         ariaLabel="Raum erstellen"
-        showMobileFab={false}
         onClick={() => undefined}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Raum erstellen" })).toHaveClass(
-      "md:flex",
-    );
-    expect(document.body.querySelector("[data-icon-only]")).toBeNull();
+    const [desktop, mobile] = screen.getAllByRole("button", {
+      name: "Raum erstellen",
+    });
+    expect(desktop).toHaveClass("md:flex");
+    expect(mobile).toHaveClass("md:hidden");
     expect(
       document.documentElement.style.getPropertyValue(
         "--moto-floating-fab-offset",

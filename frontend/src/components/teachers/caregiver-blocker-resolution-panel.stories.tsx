@@ -69,7 +69,6 @@ const meta: Meta<typeof CaregiverBlockerResolutionPanel> = {
     ),
   ],
   args: {
-    active: true,
     state: baseState,
   },
 };

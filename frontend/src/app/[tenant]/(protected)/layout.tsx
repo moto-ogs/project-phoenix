@@ -62,7 +62,7 @@ export default function ProtectedLayout({
             <StaffOnboardingWizard />
             {/* Samsung Internet needs its own route to Chrome. All other mobile
               installation guidance belongs to the notification setup. */}
-            <PwaInstallHint samsungOnly />
+            <PwaInstallHint />
             {/* Derselbe geführte Einstieg wie im Elternportal (#2831). Ohne ihn
               findet eine Betreuungskraft die Einrichtung nur zufällig. */}
             <PortalNotificationSetup portal="tenant" />

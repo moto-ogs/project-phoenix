@@ -26,12 +26,8 @@ function DatabaseRowSkeleton() {
  * the full-width list state that appears when data arrives.
  */
 export function MasterDetailSkeleton({
-  rowCount = 8,
-  label = "Daten werden geladen",
   intro = true,
 }: Readonly<{
-  rowCount?: number;
-  label?: string;
   /** Set to false when the page already renders its real head card above. */
   intro?: boolean;
 }>) {
@@ -39,7 +35,7 @@ export function MasterDetailSkeleton({
     <div
       role="status"
       aria-busy="true"
-      aria-label={label}
+      aria-label="Daten werden geladen"
       data-testid="master-detail-skeleton"
       className="flex w-full flex-col"
     >
@@ -57,7 +53,7 @@ export function MasterDetailSkeleton({
           unselectedBehavior="expand"
           list={
             <div>
-              {Array.from({ length: rowCount }, (_, i) => (
+              {Array.from({ length: 8 }, (_, i) => (
                 <DatabaseRowSkeleton key={i} />
               ))}
             </div>

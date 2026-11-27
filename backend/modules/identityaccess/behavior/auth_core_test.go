@@ -71,7 +71,6 @@ type testAuthService interface {
 	RegisterSchoolAccount(ctx context.Context, email, username, password string, roleID *int64, tenantID int64, identity *identityaccess.SchoolAccountIdentity) (*testpkg.AccountFixture, *identityaccess.SchoolIdentity, error)
 	LinkAccountToTenant(ctx context.Context, email string, roleID *int64, tenantID int64) (*testpkg.AccountFixture, error)
 	GetAccountByID(ctx context.Context, id int) (*testpkg.AccountFixture, error)
-	ActivateAccount(ctx context.Context, accountID int) error
 	DeactivateAccount(ctx context.Context, accountID int) error
 	ChangePassword(ctx context.Context, accountID int, currentPassword, newPassword string) error
 }
@@ -147,10 +146,6 @@ func (s *fixtureOwnedAuthService) GetAccountByID(ctx context.Context, id int) (*
 		return nil, err
 	}
 	return managedAccountModel(account), nil
-}
-
-func (s *fixtureOwnedAuthService) ActivateAccount(ctx context.Context, accountID int) error {
-	return s.administration.ActivateAccount(ctx, int64(accountID))
 }
 
 func (s *fixtureOwnedAuthService) DeactivateAccount(ctx context.Context, accountID int) error {
@@ -864,48 +859,8 @@ func TestAuthService_GetAccountByID(t *testing.T) {
 // =============================================================================
 
 // =============================================================================
-// Account Activation/Deactivation Tests
+// Account Deactivation Tests
 // =============================================================================
-
-func TestAuthService_ActivateAccount(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("activates account successfully", func(t *testing.T) {
-		// ARRANGE
-		email, username := uniqueTestCredentials("activate")
-		account, err := service.Register(ctx, email, username, testPassword, nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		// First deactivate
-		err = service.DeactivateAccount(ctx, int(account.ID))
-		require.NoError(t, err)
-
-		// ACT
-		err = service.ActivateAccount(ctx, int(account.ID))
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// Verify account is active
-		updated, err := service.GetAccountByID(ctx, int(account.ID))
-		require.NoError(t, err)
-		assert.True(t, updated.Active)
-	})
-
-	t.Run("returns error for non-existent account", func(t *testing.T) {
-		// ACT
-		err := service.ActivateAccount(ctx, 99999999)
-
-		// ASSERT
-		require.Error(t, err)
-	})
-}
 
 func TestAuthService_DeactivateAccount(t *testing.T) {
 	t.Parallel()

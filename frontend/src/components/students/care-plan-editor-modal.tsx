@@ -24,7 +24,6 @@ import { fetchStudentGuardians } from "~/lib/guardian-api";
 import {
   type ArrivalDayData,
   formatShortDate,
-  getWeekdayLabel,
 } from "~/lib/arrival-schedule-helpers";
 import type { DayData as PickupDayData } from "~/lib/pickup-schedule-helpers";
 import {
@@ -34,6 +33,7 @@ import {
 } from "~/lib/departure-plan";
 import {
   formatPickupTime,
+  getWeekdayLabel,
   pickupScheduleSourceLabel,
 } from "~/lib/pickup-schedule-helpers";
 import { parentsConcept } from "~/lib/concepts/parents";

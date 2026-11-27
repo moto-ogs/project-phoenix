@@ -2,6 +2,6 @@
   "scenario": "api.mealplan.days",
   "max": 8,
   "exact": true,
-  "description": "Production Serve root, positive N=3/8 content and tenant meal-row preservation; full route SQL excluding only independently budgeted session-family verification. The week of days with their versions (ADR 0311) reads as the week of entries does. Fixed March 2030 meal fixture.",
+  "description": "Production Serve root, positive N=3/8 versioned days and tenant meal-row preservation; full route SQL excluding only independently budgeted session-family verification. Fixed March 2030 meal fixture.",
   "route": "GET /api/meal-plan/days"
 }

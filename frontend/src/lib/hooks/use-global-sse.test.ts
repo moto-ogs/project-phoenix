@@ -21,8 +21,6 @@ const { mockUseSession, mockUseSSE, mockMutate, capturedOptions } = vi.hoisted(
 
     type SSEState = {
       isConnected: boolean;
-      error: null;
-      reconnectAttempts: number;
       status: "idle" | "connected" | "reconnecting" | "failed";
     };
     return {
@@ -31,8 +29,6 @@ const { mockUseSession, mockUseSSE, mockMutate, capturedOptions } = vi.hoisted(
         Object.assign(capturedOptions, opts);
         return {
           isConnected: false,
-          error: null,
-          reconnectAttempts: 0,
           status: "idle",
         };
       }),
@@ -125,8 +121,6 @@ beforeEach(() => {
       Object.assign(capturedOptions, opts);
       return {
         isConnected: false,
-        error: null,
-        reconnectAttempts: 0,
         status: "idle" as const,
       };
     },
@@ -612,8 +606,6 @@ describe("useGlobalSSE — return value", () => {
         Object.assign(capturedOptions, opts);
         return {
           isConnected: true,
-          error: null,
-          reconnectAttempts: 2,
           status: "connected" as const,
         };
       },
@@ -623,7 +615,6 @@ describe("useGlobalSSE — return value", () => {
 
     expect(result.current.isConnected).toBe(true);
     expect(result.current.status).toBe("connected");
-    expect(result.current.reconnectAttempts).toBe(2);
   });
 
   it("connects to /api/sse/events", () => {
@@ -1081,8 +1072,7 @@ describe("useGlobalSSE — Heute anders", () => {
         Object.assign(capturedOptions, opts);
         return {
           isConnected: status === "connected",
-          error: null,
-          reconnectAttempts: status === "reconnecting" ? 1 : 0,
+
           status,
         };
       },

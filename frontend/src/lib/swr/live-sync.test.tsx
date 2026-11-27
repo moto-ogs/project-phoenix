@@ -2,13 +2,13 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  LIVE_FALLBACK_INTERVAL_MS,
   LIVE_RECONCILE_INTERVAL_MS,
   useLiveEventScope,
   useLiveRefreshInterval,
   usePublishLiveChannel,
   useSWRAuth,
 } from "./index";
+import { LIVE_FALLBACK_INTERVAL_MS } from "./live-sync";
 import { resetSWRScope, resumeSWRSession, suspendSWRSession } from "./scope";
 import { SWRConfig } from "./testing";
 

@@ -51,14 +51,14 @@ export const AdminOnlyForbidden: Story = {
   },
 };
 
-export const StaffOnlyAllowed: Story = {
+export const StaffAllowed: Story = {
   render: (args) => (
     <SessionProvider session={buildSession(["teacher"])}>
       <RoleGuard {...args} />
     </SessionProvider>
   ),
   args: {
-    variant: "staffOnly",
+    variant: "staffOrAdmin",
     children: <div className="p-6">Geschützter Mitarbeiter-Inhalt</div>,
   },
 };

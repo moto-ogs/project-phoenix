@@ -3,7 +3,6 @@ package identityaccess
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 )
 
@@ -171,51 +170,6 @@ type AccountRole struct {
 	IsSystem     bool
 	TenantID     *int64
 	SchoolPortal bool
-}
-
-// AccountClaims is the tenant-scoped claims material of an account: the
-// roles and permissions at the school, the person names, the admin flag and
-// the organization.
-type AccountClaims struct {
-	RoleNames   []string
-	Roles       []AccountRole
-	Permissions []string
-	Username    string
-	FirstName   string
-	LastName    string
-	IsAdmin     bool
-	TenantID    int64
-	OrgID       int64
-	Scope       string
-}
-
-// IsGuardianOnly reports whether every role is the guardian role.
-func (c AccountClaims) IsGuardianOnly() bool {
-	if len(c.RoleNames) == 0 {
-		return false
-	}
-	for _, name := range c.RoleNames {
-		if !strings.EqualFold(name, "guardian") {
-			return false
-		}
-	}
-	return true
-}
-
-// IsSchoolPortalOnly reports whether every role is a school-portal role:
-// the lehrkraft system role (#2207) or a school role made from its template
-// (#4574).
-func (c AccountClaims) IsSchoolPortalOnly() bool {
-	if len(c.Roles) == 0 {
-		return false
-	}
-	for _, role := range c.Roles {
-		facts := RoleFacts{Name: role.Name, IsSystem: role.IsSystem, SchoolPortal: role.SchoolPortal}
-		if !IsLehrkraftRole(&facts) {
-			return false
-		}
-	}
-	return true
 }
 
 // School is the tenant fact login resolves.
@@ -479,15 +433,10 @@ type AccountSessionMaintenance interface {
 	ListSessionIDs(ctx context.Context, accountID int64) ([]int64, error)
 	RevokeAllTokensWithReason(ctx context.Context, accountID int64, reason string) error
 	RevokeTokensByTenantID(ctx context.Context, tenantID int64) (int, error)
-	ScheduleAccountWideRevoke(ctx context.Context, accountID int64, reason, ipAddress, userAgent string) error
-	MarkAccountWideWipeCompleted(ctx context.Context, accountID int64) error
 }
 
-// AccountClaimsQuery resolves the claims material and portal facts the
-// retained staff preview and password reset flows read.
-type AccountClaimsQuery interface {
-	// LoadAccountClaims runs on the caller's transaction.
-	LoadAccountClaims(ctx context.Context, accountID, tenantID int64) (AccountClaims, error)
+// GuardianTenantQuery resolves the school a guardian can sign in to.
+type GuardianTenantQuery interface {
 	FindGuardianTenant(ctx context.Context, accountID int64) (bool, int64, error)
 }
 

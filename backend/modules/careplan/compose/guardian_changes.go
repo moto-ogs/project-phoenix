@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 )
@@ -20,12 +19,12 @@ func NewGuardianAbsences(records GuardianAbsenceRecords) (careplan.GuardianAbsen
 	return &application.GuardianAbsences{Records: records}, nil
 }
 
-// NewGuardianPickupExceptions accepts a nil excusal; the pickup leg is then
-// written without deriving or releasing block excusals.
+// NewGuardianPickupExceptions accepts a nil excusal; withdrawal then skips
+// releasing block excusals.
 func NewGuardianPickupExceptions(records GuardianPickupRecords, excusal careplan.PickupAutoExcusal) (careplan.GuardianPickupExceptions, error) {
 	if records == nil {
 		return nil, errors.New("guardian pickup exceptions: records are required")
 	}
 	// A nil interface converts to a nil port, which skips the coupling.
-	return &application.GuardianPickupExceptions{Records: records, Excusal: excusal, IsUniqueViolation: postgres.IsPickupExceptionConflict}, nil
+	return &application.GuardianPickupExceptions{Records: records, Excusal: excusal}, nil
 }
