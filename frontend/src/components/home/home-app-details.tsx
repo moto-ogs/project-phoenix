@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useSession } from "next-auth/react";
 
 import { isDone, withKeys } from "~/components/home/day-changes-block";
 import {
@@ -35,6 +36,18 @@ import type {
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useDayChangeHref } from "~/components/home/day-change-link";
+import {
+  DaySwitch,
+  isOverviewOfDay,
+  nextDayISO,
+} from "~/components/home/day-switch";
+import type { DayChangesDay } from "~/components/home/day-changes-text";
+import { SkeletonRows } from "~/components/ui/skeleton";
+import { trackEvent } from "~/lib/analytics";
+import { fetchDayChanges } from "~/lib/day-changes";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import type { HomeGroupSnapshot } from "~/lib/hooks/use-home-group";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { useDeviceContext } from "~/lib/device-context";
@@ -59,7 +72,10 @@ export function DayChangesList({
   include,
   label,
   mineTitle = "Betrifft dich",
+  day = "today",
 }: {
+  /** Der gezeigte Tag (#7657): morgen führen Kinder-Zeilen nirgendwohin. */
+  readonly day?: DayChangesDay;
   readonly overview: DayChangesOverview;
   readonly include: (entry: DayChange) => boolean;
   /** Name der Liste für Vorleseprogramme. */
@@ -90,27 +106,94 @@ export function DayChangesList({
       {entries.length === 0 ? (
         <Collection label={label}>
           <CollectionGroup title={label}>
-            <CollectionRow title="Heute läuft hier alles wie geplant." />
+            <CollectionRow
+              title={
+                day === "tomorrow"
+                  ? "Morgen läuft hier alles wie geplant."
+                  : "Heute läuft hier alles wie geplant."
+              }
+            />
           </CollectionGroup>
         </Collection>
       ) : (
         <Collection label={label}>
           {mine.length > 0 ? (
             <CollectionGroup title={mineTitle} count={mine.length}>
-              <DayChangeRows entries={mine} />
+              <DayChangeRows entries={mine} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
           {school.length > 0 ? (
             <CollectionGroup title="Schule" count={school.length}>
-              <DayChangeRows entries={school} />
+              <DayChangeRows entries={school} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
           {done.length > 0 ? (
             <CollectionGroup title="Schon vorbei" count={done.length}>
-              <DayChangeRows entries={done} />
+              <DayChangeRows entries={done} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
         </Collection>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Das Blatt „Heute anders“ mit dem Umschalter Heute / Morgen wie die Karte
+ * am Desktop (#7657): morgen ist der nächste Kalendertag, auch am Wochenende.
+ * Heute zeigt die schon geladene Übersicht der Startseite, morgen lädt erst
+ * beim Umschalten.
+ */
+export function DayChangesDaySheet({
+  overview,
+  include,
+}: {
+  readonly overview: DayChangesOverview;
+  readonly include: (entry: DayChange) => boolean;
+}) {
+  const { data: session } = useSession();
+  const accountId = session?.user?.id ?? "";
+  const [day, setDay] = useState<DayChangesDay>("today");
+  const tomorrow = nextDayISO(overview.date);
+  const read = useSWRAuth<DayChangesOverview>(
+    day === "tomorrow" ? homeKeys.dayChanges(accountId, tomorrow) : null,
+    () => fetchDayChanges(tomorrow),
+    { revalidateOnFocus: true },
+  );
+  const loadError = useSwrLoadError(
+    day === "tomorrow" ? read.error : undefined,
+    "die Übersicht „Heute anders“",
+    () => read.mutate(),
+  );
+  const tomorrowOverview = isOverviewOfDay(read.data, tomorrow)
+    ? read.data
+    : undefined;
+  return (
+    <div className="space-y-3">
+      <DaySwitch
+        value={day}
+        onChange={(next) => {
+          if (next === "tomorrow") trackEvent("day_changes_tomorrow_shown");
+          setDay(next);
+        }}
+      />
+      {day === "today" ? (
+        <DayChangesList
+          overview={overview}
+          include={include}
+          label="Heute anders"
+        />
+      ) : loadError ? (
+        <LoadErrorAlert error={loadError} />
+      ) : tomorrowOverview ? (
+        <DayChangesList
+          overview={tomorrowOverview}
+          include={include}
+          label="Morgen anders"
+          day="tomorrow"
+        />
+      ) : (
+        <SkeletonRows rows={3} />
       )}
     </div>
   );
@@ -204,8 +287,14 @@ export function DayChangesPreview({
 function DayChangeRows({
   entries,
   brief = false,
+  day = "today",
+  date,
 }: {
   readonly entries: readonly DayChange[];
+  /** Morgen (#7657): wie am Desktop ohne Link in die Kindakte. */
+  readonly day?: DayChangesDay;
+  /** Der gezeigte Kalendertag, für Links in den Tagesplan. */
+  readonly date?: string;
   /** Vorschau der Startseite: Hinweise nur mit Titel, der Text steht im Blatt. */
   readonly brief?: boolean;
 }) {
@@ -263,7 +352,10 @@ function DayChangeRows({
       for (const item of entry.childSummary.items) {
         const childText = childChangeText(item.kind, item.child);
         if (!childText) continue;
-        const href = dayChangeLinkHref(item.link);
+        const href =
+          day === "tomorrow" && item.link?.target === "student"
+            ? null
+            : dayChangeLinkHref(item.link);
         rows.push(
           <CollectionRow
             key={`${key}:${item.kind}:${item.child.studentId}`}
@@ -275,7 +367,7 @@ function DayChangeRows({
       }
       continue;
     }
-    const href = changeHref(entry.link);
+    const href = changeHref(entry.link, day, date);
     rows.push(
       <CollectionRow
         key={key}

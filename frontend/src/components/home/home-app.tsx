@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
+  DayChangesDaySheet,
   DayChangesList,
   DayChangesPreview,
   DayDetail,
@@ -70,6 +71,7 @@ import type {
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
 import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
 import { useEnrollmentsUnread } from "~/lib/hooks/use-enrollments-unread";
 import { useHomeGroup } from "~/lib/hooks/use-home-group";
@@ -90,6 +92,7 @@ const CHILD_KINDS = new Set([
   "child_goes_alone",
   "child_pickup_changed",
   "child_pickup_note",
+  "child_pickup_person",
 ]);
 
 /** Ein Hinweis, dessen Kenntnisnahme verlangt ist und noch fehlt. */
@@ -186,9 +189,13 @@ export function HomeApp({
   const { href: dayPlanHref } = useDayPlanLink();
   const clock = useBerlinClock();
 
+  // Der heutige Schlüssel trägt den Berliner Kalendertag wie am Desktop:
+  // nach Mitternacht steht nie die gestrige Antwort im Cache, und der
+  // Seed des Servers gilt auch hier.
+  const today = useBerlinToday();
   const dayChanges = useSWRAuth<DayChangesOverview>(
-    has("section.day_changes") ? homeKeys.dayChanges(accountId) : null,
-    fetchDayChanges,
+    has("section.day_changes") ? homeKeys.dayChanges(accountId, today) : null,
+    () => fetchDayChanges(),
     { revalidateOnFocus: true },
   );
   const retry = () => dayChanges.mutate();
@@ -282,11 +289,7 @@ export function HomeApp({
             kind: "list",
             title: "Heute anders",
             body: (
-              <DayChangesList
-                overview={overview}
-                include={isDayChange}
-                label="Heute anders"
-              />
+              <DayChangesDaySheet overview={overview} include={isDayChange} />
             ),
           },
         }

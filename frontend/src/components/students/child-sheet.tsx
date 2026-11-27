@@ -45,6 +45,7 @@ import { ParentAttentionSheetButton } from "~/components/students/parent-attenti
 import { TrackingIndicators } from "~/components/students/tracking-indicators";
 import { dayHomeChange } from "~/components/students/student-table";
 import { searchStudentDay } from "~/components/students/search-student-card";
+import { PlannedActivityRows } from "~/components/students/student-card";
 import { DEPARTURE_MODE_LABELS } from "~/lib/departure-plan";
 import {
   HANDOVER_ABSENT_WORDING,
@@ -343,6 +344,19 @@ export function ChildSummary({
                 {pickupText(student)}
               </OverdueTime>
             </DataField>
+            {/* Tagesablauf wie auf der Kinderkarte (#8194): die Angebote
+                zwischen Kommen und Gehen, das laufende hervorgehoben. */}
+            {student.planned_activities?.length ? (
+              <DataField
+                label={isToday ? "Angebote heute" : "Angebote"}
+                fullWidth
+              >
+                <PlannedActivityRows
+                  activities={student.planned_activities}
+                  today={isToday}
+                />
+              </DataField>
+            ) : null}
             <DataField label="Heimweg">
               {dailyDepartureLabelForStudent(student)}
             </DataField>
