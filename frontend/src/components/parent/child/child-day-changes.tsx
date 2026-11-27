@@ -168,11 +168,14 @@ export function ChildDayChangesList({
   firstName,
   day = "today",
   toolbar,
+  failure,
 }: Readonly<{
   changes: parentMeContract.ChildDayChangesResponse | undefined;
   firstName: string;
   day?: DayChangesDay;
   toolbar?: ReactNode;
+  /** Steht statt der Einträge, wenn der Tag nicht geladen werden konnte. */
+  failure?: ReactNode;
 }>) {
   const t = useCareTermTranslations("parentToday");
   const d = dayText(t, day);
@@ -222,7 +225,8 @@ export function ChildDayChangesList({
           {d("allAsPlanned")}
         </p>
       )}
-      {!changes && (
+      {failure && <div className="mt-2">{failure}</div>}
+      {!changes && !failure && (
         <div
           className="mt-2"
           data-testid="child-day-changes-loading"
@@ -274,8 +278,11 @@ export function ChildDayChanges({
     return () =>
       window.removeEventListener(NOTIFICATION_FEED_REFRESH_EVENT, reload);
   }, [mutate]);
-  if (failure) return <LoadErrorAlert error={error} />;
-  if (!resource.data && day === "today") return null;
+  // Heute ohne Antwort und ohne Fehler: nichts, wie vor #8236. Unter
+  // „Morgen“ bleibt der Umschalter auch bei einem Fehler, damit die
+  // Person zu „Heute“ zurück kann.
+  if (failure && day === "today") return <LoadErrorAlert error={error} />;
+  if (!resource.data && !failure && day === "today") return null;
   // Eine Antwort eines anderen Tags steht nie mit den Sätzen dieses Tags da.
   const data = resource.data?.date === shown ? resource.data : undefined;
   return (
@@ -283,6 +290,7 @@ export function ChildDayChanges({
       changes={data}
       firstName={firstName}
       day={day}
+      failure={failure ? <LoadErrorAlert error={error} /> : undefined}
       toolbar={
         <DaySwitch
           value={day}

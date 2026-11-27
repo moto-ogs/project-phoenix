@@ -227,12 +227,14 @@ func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
 	}
-	var on calendar.Date
+	var on *calendar.Date
 	if raw := r.URL.Query().Get("date"); raw != "" {
-		if on, err = calendar.ParseDate(raw); err != nil {
+		parsed, parseErr := calendar.ParseDate(raw)
+		if parseErr != nil {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errDayChangesDateFormat))
 			return
 		}
+		on = &parsed
 	}
 	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID(), on)
 	switch {

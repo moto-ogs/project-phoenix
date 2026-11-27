@@ -375,6 +375,26 @@ describe("ChildDayChanges", () => {
     expect(screen.queryByText(/Felix geht/)).toBeNull();
     expect(screen.queryByText(/wie geplant/)).toBeNull();
   });
+
+  it("lässt den Umschalter stehen, wenn morgen nicht lädt", async () => {
+    const tomorrow = testClockDay(1);
+    mockedRead.mockImplementation((_studentId: string, date?: string) =>
+      date === tomorrow
+        ? Promise.reject(new Error("down"))
+        : Promise.resolve(day([entry({ kind: "child_goes_alone" })])),
+    );
+    renderLoader();
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Heute" }));
+    expect(
+      await screen.findByText("Felix geht heute allein nach Hause."),
+    ).toBeInTheDocument();
+  });
 });
 
 function renderLoader() {

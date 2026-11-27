@@ -3,6 +3,7 @@ vi.unmock("swr");
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import { TEST_CLOCK_INSTANT, testClockDay } from "~/test/clock";
 import type {
   TraegerSchoolDayChanges,
@@ -246,5 +247,28 @@ describe("TraegerDayChangesCard (#7672, #8146)", () => {
     await screen.findByRole("button", { name: "Morgen", pressed: true });
     expect(screen.queryByText("OGS Nur heute")).not.toBeInTheDocument();
     expect(screen.queryByText("fällt morgen aus")).not.toBeInTheDocument();
+  });
+
+  it("shows the load error when tomorrow fails instead of loading forever", async () => {
+    const tomorrow = testClockDay(1);
+    mockFetchDayChanges.mockImplementation((date?: string) =>
+      date === tomorrow
+        ? Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        : Promise.resolve(
+            answer([school("61", "OGS Heute da", { closedRooms: 1 })]),
+          ),
+    );
+    renderCard();
+    expect(await screen.findByText("OGS Heute da")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("OGS Heute da")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Heute", pressed: false }),
+    ).toBeInTheDocument();
   });
 });

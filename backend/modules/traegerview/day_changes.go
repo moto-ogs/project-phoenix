@@ -63,9 +63,9 @@ type SchoolsDayChanges struct {
 // DayChangesReport answers "Heute anders" of the Träger-Portal.
 type DayChangesReport interface {
 	// SchoolsDayChanges returns the changes on day of every school of the
-	// Träger that has one. The zero day reads today; any other day must be
+	// Träger that has one. A nil day reads today; any other day must be
 	// today or tomorrow in Berlin, else ErrDayOutOfRange (#8236).
-	SchoolsDayChanges(ctx context.Context, organizationID int64, day calendar.Date) (SchoolsDayChanges, error)
+	SchoolsDayChanges(ctx context.Context, organizationID int64, day *calendar.Date) (SchoolsDayChanges, error)
 }
 
 // ErrDayOutOfRange reports a day of "Heute anders" other than today or

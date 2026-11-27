@@ -25,19 +25,19 @@ type dayChangeSources struct {
 // statement; every other owner is read once for the whole school set, in the
 // administrative unit, and only the Träger's schools are read. The answer
 // names no person and no reason, so the read is not written to the access
-// log (ADR 0084 section 7). The zero on reads today; tomorrow is the preview
+// log (ADR 0084 section 7). A nil on reads today; tomorrow is the preview
 // with the same rules (#8236), any other day is ErrDayOutOfRange.
-func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64, on calendar.Date) (traegerview.SchoolsDayChanges, error) {
+func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64, on *calendar.Date) (traegerview.SchoolsDayChanges, error) {
 	if organizationID <= 0 {
 		return traegerview.SchoolsDayChanges{}, traegerview.ErrTraegerRequired
 	}
 	asOf := o.now()
 	day := calendar.DateFromTime(asOf)
-	if !on.IsZero() {
-		if on != day && on != day.AddDays(1) {
+	if on != nil {
+		if *on != day && *on != day.AddDays(1) {
 			return traegerview.SchoolsDayChanges{}, traegerview.ErrDayOutOfRange
 		}
-		day = on
+		day = *on
 	}
 	result := traegerview.SchoolsDayChanges{Day: day, Schools: []traegerview.SchoolDayChanges{}, AsOf: asOf}
 	err := o.read(ctx, organizationID, nil, func(adminCtx context.Context, schools []traegerview.TraegerSchool) error {

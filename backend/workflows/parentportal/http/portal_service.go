@@ -34,9 +34,9 @@ type PortalService interface {
 	GetChildTodayStatus(ctx context.Context, accountID, studentID int64) (*parentService.TodayStatus, error)
 
 	// GetChildDayChanges liefert „Heute anders“ eines Kindes (#7671): was
-	// heute für das Kind anders ist, ohne Namen von Beschäftigten. Der leere
-	// Tag liest heute, sonst nur heute oder morgen der Schule (#8236).
-	GetChildDayChanges(ctx context.Context, accountID, studentID int64, day timezone.Date) (parentService.ChildDay, error)
+	// heute für das Kind anders ist, ohne Namen von Beschäftigten. Ohne Tag
+	// (nil) liest es heute, sonst nur heute oder morgen der Schule (#8236).
+	GetChildDayChanges(ctx context.Context, accountID, studentID int64, day *timezone.Date) (parentService.ChildDay, error)
 
 	// ListEnrollableForAccount returns every (school, open phase)
 	// pair the parent could enroll a new child at, with a flag for

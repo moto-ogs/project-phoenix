@@ -16,11 +16,11 @@ import (
 // school besides the name of a closing day; the parents portal cannot leak
 // what it cannot carry.
 //
-// day is the day to read: the zero Date reads the school's today, any other
-// day must be today or tomorrow of the school, else the port answers
+// day is the day to read: nil reads the school's today, any other day must
+// be today or tomorrow of the school, else the port answers
 // ErrDayChangesDayOutOfRange (#8236).
 type ChildDayChanges interface {
-	ChildDayChanges(ctx context.Context, studentID, accountID int64, day calendar.Date) (ChildDay, error)
+	ChildDayChanges(ctx context.Context, studentID, accountID int64, day *calendar.Date) (ChildDay, error)
 }
 
 // ChildDay is the day of one child: the school's calendar day, the state of
@@ -90,9 +90,9 @@ var ErrDayChangesDayOutOfRange = errors.New("parent: day changes read only today
 // GetChildDayChanges reads "Heute anders" of a child with an OGS place the
 // guardian may see (parent_portal.access). The relationship authorization and
 // tenant-scoped read share one transaction, so a revoked permission cannot
-// authorize a later read. The zero day reads today; tomorrow is the preview
+// authorize a later read. A nil day reads today; tomorrow is the preview
 // with the same rules (#8236). The relationship is checked before the day.
-func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID int64, day calendar.Date) (ChildDay, error) {
+func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID int64, day *calendar.Date) (ChildDay, error) {
 	var result ChildDay
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
 		if err := child.RequireCarePlace(); err != nil {

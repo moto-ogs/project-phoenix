@@ -33,6 +33,10 @@ export function useTraegerDayChanges(tomorrow?: string) {
     {
       revalidateOnFocus: true,
       refreshInterval: DAY_CHANGES_REFRESH_MS,
+      // Beim Wechsel auf morgen (#8236) gelten die Daten von heute nicht als
+      // bestätigt: Schlägt morgen fehl, zeigt die Karte den Fehler statt
+      // einer endlosen Ladeanzeige.
+      keepPreviousData: false,
       ...guard.callbacks,
     },
   );
