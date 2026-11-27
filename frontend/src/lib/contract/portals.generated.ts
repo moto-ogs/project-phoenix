@@ -161,6 +161,7 @@ import { routes as traegerHolidayPeriods } from "./traeger-holiday-periods.gener
 import { routes as traegerHolidayQuotes } from "./traeger-holiday-quotes.generated";
 import { routes as traegerHolidayRegistrations } from "./traeger-holiday-registrations.generated";
 import { routes as traegerInvitations } from "./traeger-invitations.generated";
+import { routes as traegerInvoiceJournal } from "./traeger-invoice-journal.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
@@ -489,6 +490,8 @@ export const portalRoutes = {
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/export"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["DELETE /traeger/master-data/logo"],
     traegerMasterData["DELETE /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"],

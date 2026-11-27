@@ -119,6 +119,7 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/traeger/billing-run-due-dates", settings.ModuleElternbeitraege},
 	{"/traeger/billing-document-kinds", settings.ModuleElternbeitraege},
 	{"/traeger/billing-families", settings.ModuleElternbeitraege},
+	{"/traeger/invoice-journal", settings.ModuleElternbeitraege},
 	{"/traeger/billing-terms", settings.ModuleElternbeitraege},
 	{"/traeger/number-ranges", settings.ModuleElternbeitraege},
 	{"/traeger/family-billing", settings.ModuleElternbeitraege},
