@@ -104,7 +104,7 @@ export function useFreshTraegerResource<T>(
  */
 export function useTraegerListRequest(
   family: string,
-  hasShownRows: () => boolean,
+  shownRows: () => { readonly key: string } | null,
 ) {
   const { data: session } = useSession();
   const key = session?.user.scope === "org" ? family : null;
@@ -116,17 +116,16 @@ export function useTraegerListRequest(
   async function run<T>(
     fetch: () => Promise<T>,
     {
-      dataKey = key,
+      dataKey,
       onRefusal,
-      listRead = false,
     }: {
-      dataKey?: string | null;
+      dataKey?: string;
       onRefusal?: (error: unknown) => void;
-      listRead?: boolean;
     },
   ) {
     const complete = begin(key);
-    const completeData = dataKey === key ? complete : begin(dataKey);
+    const completeData = dataKey === undefined ? complete : begin(dataKey);
+    const shown = shownRows();
     let result: T;
     try {
       result = await fetch();
@@ -140,7 +139,13 @@ export function useTraegerListRequest(
       complete(() => {
         onRefusal?.(error);
         if (scoped === null || refusalFor(scoped) !== undefined) return;
-        if (listRead && isAccessRefusal(error) && hasShownRows()) {
+        if (
+          shown !== null &&
+          shown.key === dataKey &&
+          shown === shownRows() &&
+          completeData.isCurrent() &&
+          isAccessRefusal(error)
+        ) {
           noteShownDataRefusal();
         }
         markRefused(scoped, error);
@@ -154,7 +159,7 @@ export function useTraegerListRequest(
 
   async function request<T>(fetch: () => Promise<T>, dataKey?: string) {
     try {
-      return await run(fetch, { dataKey, listRead: dataKey !== undefined });
+      return await run(fetch, { dataKey });
     } catch (error) {
       if (!isDiscardedAnswer(error)) throw error;
     }
@@ -162,9 +167,10 @@ export function useTraegerListRequest(
 
   return {
     read: async <T>(
+      dataKey: string,
       fetch: () => Promise<T>,
       onRefusal?: (error: unknown) => void,
-    ) => (await run(fetch, { onRefusal, listRead: true })).result,
+    ) => (await run(fetch, { dataKey, onRefusal })).result,
     request,
   };
 }

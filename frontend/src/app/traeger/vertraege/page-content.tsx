@@ -75,6 +75,10 @@ import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useLatest } from "~/lib/hooks/use-latest";
+import {
+  AT_LEAST_MD,
+  useResolvedMediaQuery,
+} from "~/lib/hooks/use-media-query";
 import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { isDiscardedAnswer } from "~/lib/swr/hooks";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
@@ -368,6 +372,7 @@ const COLUMNS_SORTED_BY_SCHOOL = COLUMNS.map((column) =>
 );
 
 export default function TraegerVertraegePage() {
+  const desktop = useResolvedMediaQuery(AT_LEAST_MD);
   const router = useRouter();
   const { data: session } = useSession();
   const [status, setStatus] = useState<StatusChoice>("all");
@@ -403,12 +408,12 @@ export default function TraegerVertraegePage() {
   });
   const listAccess = useTraegerListRequest(
     traegerContractKeys.listFamily,
-    () => hasShownRows.current,
+    () => shownRows.current,
   );
   const fetchFirstPage = () => fetchCareContracts({ ...filter, offset: 0 });
   const firstPage = useFreshTraegerResource(
     listKey,
-    () => listAccess.read(fetchFirstPage),
+    () => listAccess.read(listKey, fetchFirstPage),
     "die Liste der Verträge",
     { refusalKey: traegerContractKeys.listFamily },
   );
@@ -565,7 +570,7 @@ export default function TraegerVertraegePage() {
       try {
         await firstPage.reloadOrThrow({
           fetcher: () =>
-            listAccess.read(fetchFirstPage, (error) => {
+            listAccess.read(listKey, fetchFirstPage, (error) => {
               refusal = error;
             }),
         });
@@ -586,7 +591,15 @@ export default function TraegerVertraegePage() {
     failedRefresh.page === firstPage.data
       ? afterWrite.error
       : null;
-  const loading = !loadError && !refreshError && !data;
+  const hasMetadata =
+    candidateRead.data !== null &&
+    modeRead.data !== null &&
+    schoolList.schools !== null;
+  const loading =
+    !firstPage.error &&
+    !refreshError &&
+    !data &&
+    (!metadataError || hasMetadata);
   const listError = !data ? (firstPage.error ?? refreshError) : null;
   const showList = !firstPage.refused && (data || loading || listError);
 
@@ -601,7 +614,13 @@ export default function TraegerVertraegePage() {
     );
 
   const contracts = useMemo(() => [...(data?.list.contracts ?? [])], [data]);
-  const hasShownRows = useLatest(contracts.length > 0);
+  const hasShownRows = contracts.length > 0;
+  const shownRows = useLatest(
+    useMemo(
+      () => (hasShownRows ? { key: listKey, page: firstPage.data } : null),
+      [hasShownRows, listKey, firstPage.data],
+    ),
+  );
   const schools = (schoolList.schools ?? []).map((school) => ({
     value: school.id,
     label: school.name,
@@ -982,21 +1001,6 @@ export default function TraegerVertraegePage() {
         </SectionCard>
       ) : null}
       {showList ? (
-        <div className="md:hidden">
-          <CustomSelect
-            label="Sortieren nach"
-            value={`${sort.key}:${sort.direction}`}
-            options={MOBILE_SORT_OPTIONS}
-            onChange={(value) => {
-              const option = MOBILE_SORT_OPTIONS.find(
-                (entry) => entry.value === value,
-              );
-              if (option) setSort(option.sort);
-            }}
-          />
-        </div>
-      ) : null}
-      {showList ? (
         <DataTable
           columns={sort.key === "school" ? COLUMNS_SORTED_BY_SCHOOL : COLUMNS}
           rows={contracts}
@@ -1008,6 +1012,21 @@ export default function TraegerVertraegePage() {
           dense
           stackedLayout="row"
           stackedDetailKey="school"
+          headerActions={
+            desktop === false ? (
+              <CustomSelect
+                label="Sortieren nach"
+                value={`${sort.key}:${sort.direction}`}
+                options={MOBILE_SORT_OPTIONS}
+                onChange={(value) => {
+                  const option = MOBILE_SORT_OPTIONS.find(
+                    (entry) => entry.value === value,
+                  );
+                  if (option) setSort(option.sort);
+                }}
+              />
+            ) : undefined
+          }
           // A column orders every contract of the filter, not the loaded
           // rows: the database sorts and the list starts again (#8138).
           serverSort={{ ...sort, onChange: setSort }}

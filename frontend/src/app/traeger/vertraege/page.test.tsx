@@ -341,19 +341,52 @@ describe("TraegerVertraegePage", () => {
     expect(reloadDocument).not.toHaveBeenCalled();
   });
 
-  it("uses the mobile sort selection for the first page and the download", async () => {
+  it("withdraws the list but does not reload the document when a superseded sort is refused", async () => {
+    const oldSort = deferred<CareContractList>();
+    const other = deferred<void>();
+    api.fetchCareContracts.mockReturnValueOnce(oldSort.promise);
+    resetPageReloads();
+    renderPage(<OtherRefresh reload={() => other.promise} />);
+    await waitFor(() => expect(api.fetchCareContracts).toHaveBeenCalledOnce());
+    sortByChild();
+    expect((await screen.findAllByText("Lina Muster"))[0]).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Andere Liste laden" }));
+    api.fetchCareContracts.mockReturnValue(new Promise(() => undefined));
+    await act(async () => oldSort.reject(new ApiError("refused", 403)));
+    // Anker: Die Ablehnung gilt für alle Sortierungen derselben Liste.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Verträge"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Lina Muster")).not.toBeInTheDocument();
+    await act(async () => other.resolve());
+    expect(reloadDocument).not.toHaveBeenCalled();
+  });
+
+  it("uses the mobile sort for the first page and keeps it for the download", async () => {
+    setViewportWidth(PHONE_WIDTH);
+    onTestFinished(() => setViewportWidth(DESKTOP_WIDTH));
     renderPage();
     await screen.findAllByText("Lina Muster");
     const sort = screen.getByRole("combobox", { name: "Sortieren nach" });
+    expect(
+      screen.getByTestId("data-table-stacked").parentElement,
+    ).toContainElement(sort);
     fireEvent.click(sort);
     fireEvent.click(screen.getByRole("option", { name: "Kind: Z bis A" }));
     expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
       expect.objectContaining({ offset: 0, sort: "child", order: "desc" }),
     );
     expect(sort).toHaveTextContent("Kind: Z bis A");
+    setViewportWidth(DESKTOP_WIDTH);
     await screen.findAllByText("Lina Muster");
     bffFile.mockResolvedValueOnce(new Response("Verträge"));
-    downloadCsv();
+    const [menu] = await screen.findAllByRole("button", {
+      name: "Weitere Aktionen",
+    });
+    fireEvent.click(menu!);
+    fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
     expect(bffFile).toHaveBeenCalledWith(
       "org",
       "GET /traeger/contracts/export",
@@ -1057,6 +1090,48 @@ describe("TraegerVertraegePage", () => {
   // #6652: after a confirmed send a failed reload is a load error above the
   // list, not a failed send or a page error that replaces the contracts.
   describe("reload after a write (#6652)", () => {
+    it("preserves sort focus while a confirmed metadata refresh shows a warning", async () => {
+      api.createCareContracts.mockResolvedValueOnce({
+        created: [DRAFT],
+        skipped: [],
+      });
+      renderPage();
+      await screen.findAllByText("Lina Muster");
+      fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+      fireEvent.click(await screen.findByRole("option", { name: /^Entwurf/ }));
+      await screen.findAllByText("Lina Muster");
+      fireEvent.click(
+        screen.getByRole("button", { name: /Verträge erstellen/ }),
+      );
+      api.fetchContractCandidates.mockRejectedValue(new ApiError("down", 503));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "1 Entwurf erstellen" }),
+      );
+      expect(
+        await screen.findByText(
+          catalogText("general.unavailable", "die Liste der Verträge"),
+        ),
+      ).toBeVisible();
+      const sorted = deferred<CareContractList>();
+      api.fetchCareContracts.mockReturnValueOnce(sorted.promise);
+      const child = screen.getByRole("button", {
+        name: "Kind – Spalte sortieren",
+      });
+      child.focus();
+      fireEvent.click(child);
+      expect(child).toHaveFocus();
+      await act(async () =>
+        sorted.resolve({
+          contracts: [DRAFT],
+          counts: { entwurf: 1 },
+          hasMore: false,
+          revision: "v1:0:11",
+        }),
+      );
+      expect((await screen.findAllByText("Lina Muster"))[0]).toBeVisible();
+      expect(child).toHaveFocus();
+    });
+
     it("retries a failed list reload after a send error without resending", async () => {
       api.sendCareContracts.mockRejectedValueOnce(
         new ApiError("send unavailable", 503),
