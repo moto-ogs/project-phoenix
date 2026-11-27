@@ -21,12 +21,15 @@ import (
 // of a change that does not exist. actor names the account of the request,
 // which is left out. Without Delivery's notifications it is nil, and School
 // Calendar tells nobody.
-func NewTraegerOpeningChangeNotices(notifications DeliveryNotifications, actor func(context.Context) int64) traegercalendar.OpeningChangeNotices {
+func NewTraegerOpeningChangeNotices(notifications DeliveryNotifications, actor func(context.Context) int64, logger *slog.Logger) traegercalendar.OpeningChangeNotices {
 	school := NewSchoolCalendarOpeningChangeNotices(notifications, actor)
 	if school == nil {
 		return nil
 	}
-	return traegerOpeningChangeNotices{school: school, logger: slog.Default()}
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return traegerOpeningChangeNotices{school: school, logger: logger.With("component", "traeger_opening_change_notices")}
 }
 
 type traegerOpeningChangeNotices struct {

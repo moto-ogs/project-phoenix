@@ -61,7 +61,7 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	testpkg.CreateTestTraegerMember(t, db, traeger, office.ID, identityaccess.TraegerRoleReadOnly)
 
 	resource := calendarAPI.NewTraegerOpeningChangeResource(
-		rootAPI.NewTraegerOpeningChangesWithNotices(traegerDirectorySchools{db: db}, f.notifications, func() string { return openingFeedToday }),
+		rootAPI.NewTraegerOpeningChangesWithNotices(traegerDirectorySchools{db: db}, f.notifications, nil, func() string { return openingFeedToday }),
 		requireTraegerRight(identityaccess.TraegerRightOverviewRead), requireTraegerRight(identityaccess.TraegerRightSettingsManage), nil)
 	router := chi.NewRouter()
 	router.Mount("/traeger/opening-changes", resource.TraegerRouter(rootAPI.ProtectedTraegerRoutes))

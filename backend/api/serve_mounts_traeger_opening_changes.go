@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,15 +21,15 @@ import (
 // A write tells each named school through Delivery's notification feed
 // (#8231); today names the push window's day (YYYY-MM-DD).
 func mountTraegerOpeningChangeRoutes(root chi.Router, schools traegercalendar.Schools, staffing schoolCalendarHTTP.StaffingChangeQueue,
-	notifications owners.DeliveryNotifications, today func() string,
+	notifications owners.DeliveryNotifications, logger *slog.Logger, today func() string,
 ) {
-	root.Mount("/traeger/opening-changes", newTraegerOpeningChangeRouter(schools, staffing, notifications, today))
+	root.Mount("/traeger/opening-changes", newTraegerOpeningChangeRouter(schools, staffing, notifications, logger, today))
 }
 
 func newTraegerOpeningChangeRouter(schools traegercalendar.Schools, staffing schoolCalendarHTTP.StaffingChangeQueue,
-	notifications owners.DeliveryNotifications, today func() string,
+	notifications owners.DeliveryNotifications, logger *slog.Logger, today func() string,
 ) chi.Router {
-	resource := schoolCalendarHTTP.NewTraegerOpeningChangeResource(NewTraegerOpeningChangesWithNotices(schools, notifications, today),
+	resource := schoolCalendarHTTP.NewTraegerOpeningChangeResource(NewTraegerOpeningChangesWithNotices(schools, notifications, logger, today),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage), staffing)
 	return resource.TraegerRouter(ProtectedTraegerRoutes)
 }
@@ -36,9 +37,9 @@ func newTraegerOpeningChangeRouter(schools traegercalendar.Schools, staffing sch
 // NewTraegerOpeningChangesWithNotices composes the Träger's opening changes
 // the way the serving root mounts them (#8231); without Delivery's
 // notifications they tell nobody.
-func NewTraegerOpeningChangesWithNotices(schools traegercalendar.Schools, notifications owners.DeliveryNotifications, today func() string) traegercalendar.OpeningChanges {
+func NewTraegerOpeningChangesWithNotices(schools traegercalendar.Schools, notifications owners.DeliveryNotifications, logger *slog.Logger, today func() string) traegercalendar.OpeningChanges {
 	notices := owners.NewTraegerOpeningChangeNotices(notifications, func(ctx context.Context) int64 {
 		return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
-	})
+	}, logger)
 	return schoolCalendarCompose.NewTraegerOpeningChanges(schools, notices, today)
 }

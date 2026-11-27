@@ -171,7 +171,7 @@ func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity Traege
 	calendarSchools := owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings)
 	closingDays := mountTraegerClosingDayRoutes(router, calendarSchools, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
-	mountTraegerOpeningChangeRoutes(router, calendarSchools, staffing, owners.DeliveryNotifications{}, func() string { return today().String() })
+	mountTraegerOpeningChangeRoutes(router, calendarSchools, staffing, owners.DeliveryNotifications{}, nil, func() string { return today().String() })
 	dayChanges, err := traegerDayChangePorts(organizations, closingDays, traegerTestTimetable(t, database, membership, now))
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
