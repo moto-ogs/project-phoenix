@@ -196,12 +196,12 @@ function recipientCell(document: JournalDocument) {
           href={traegerPath(
             `/traeger/abrechnung/familien/${encodeURIComponent(document.familyId)}`,
           )}
-          className={LINK_CLASS}
+          className={`${LINK_CLASS} whitespace-nowrap`}
         >
           {name}
         </NavigationLink>
       ) : (
-        <span className="text-gray-900">{name}</span>
+        <span className="whitespace-nowrap text-gray-900">{name}</span>
       )}
       {document.childNames.length > 0 ? (
         <span className="block text-sm text-gray-500">
@@ -1079,7 +1079,7 @@ export default function TraegerInvoiceJournalPage() {
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "Nummer, Empfänger oder Kind",
+        placeholder: "Nummer, Name oder Kind",
         debounceMs: SEARCH_PAUSE_MS,
         resetKey: jumps,
       }}
