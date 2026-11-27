@@ -27,14 +27,14 @@ func TestRoomClosureOfOwnBlockConcernsYou(t *testing.T) {
 	absent, absentAccount := testpkg.CreateTestStaffWithAccount(t, db, "Abe", "Abwesend")
 	cancelled, cancelledAccount := testpkg.CreateTestStaffWithAccount(t, db, "Cora", "Abgesagt")
 	_, bystanderAccount := testpkg.CreateTestStaffWithAccount(t, db, "Udo", "Ohne Termin")
-	werken := testpkg.CreateTestActivityInstance(t, db, day, werkraum.ID, testpkg.ActivityInstanceOpts{Title: "Werken"})
-	testpkg.CreateTestInstanceStaff(t, db, werken.ID, planned.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
+	andererRaum := testpkg.CreateTestRoom(t, db, "Musikraum Offen")
+	werken := testpkg.CreateTestActivityInstance(t, db, day, andererRaum.ID, testpkg.ActivityInstanceOpts{Title: "Werken"})
+	testpkg.CreateTestInstanceStaff(t, db, werken.ID, planned.ID, testpkg.InstanceStaffOpts{IsPrimary: true, RoomID: &werkraum.ID})
 	testpkg.CreateTestInstanceStaff(t, db, werken.ID, absent.ID, testpkg.InstanceStaffOpts{IsAbsent: true})
 	abgesagt := testpkg.CreateTestActivityInstance(t, db, day, werkraum.ID, testpkg.ActivityInstanceOpts{Title: "Basteln", Status: "cancelled", StartHHMM: "15:00", EndHHMM: "16:00"})
 	testpkg.CreateTestInstanceStaff(t, db, abgesagt.ID, cancelled.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
 	// A block of the planned member in another room does not make an
 	// unrelated closure the member's own.
-	andererRaum := testpkg.CreateTestRoom(t, db, "Musikraum Offen")
 	singen := testpkg.CreateTestActivityInstance(t, db, day, andererRaum.ID, testpkg.ActivityInstanceOpts{Title: "Singen", StartHHMM: "16:00", EndHHMM: "17:00"})
 	testpkg.CreateTestInstanceStaff(t, db, singen.ID, planned.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
 
@@ -46,7 +46,7 @@ func TestRoomClosureOfOwnBlockConcernsYou(t *testing.T) {
 		assert.Empty(t, lines[0].People, "a room closure names no person")
 		return lines[0].Section
 	}
-	assert.Equal(t, "you", section(plannedAccount.ID), "the own block lies in the closed room")
+	assert.Equal(t, "you", section(plannedAccount.ID), "the own staff override lies in the closed room")
 	assert.Equal(t, "school", section(bystanderAccount.ID), "no block in the room")
 	assert.Equal(t, "school", section(absentAccount.ID), "an absent supervisor is not in the room")
 	assert.Equal(t, "school", section(cancelledAccount.ID), "a cancelled block does not take place")

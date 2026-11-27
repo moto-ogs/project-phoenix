@@ -9,8 +9,9 @@ import (
 )
 
 // ListRoomBlockStaff reads, in one statement, the staff rows of the planned
-// or active blocks of the caller's school in roomID from through until (#8234), with
-// whether the member is marked absent.
+// or active blocks of the caller's school whose effective room is roomID from
+// through until (#8234), with whether the member is marked absent. A staff
+// row's room override wins over the block's primary room.
 func (s *Store) ListRoomBlockStaff(ctx context.Context, roomID int64, from, until calendar.Date) ([]timetable.RoomBlockStaffRow, domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
@@ -27,7 +28,7 @@ func (s *Store) ListRoomBlockStaff(ctx context.Context, roomID int64, from, unti
 			AND "activity_instance".tenant_id = "instance_staff".tenant_id`).
 		ColumnExpr(`"instance_staff".staff_id, "instance_staff".is_absent`).
 		Where(`"instance_staff".tenant_id = ?`, tenantID).
-		Where(`"activity_instance".room_id = ?`, roomID).
+		Where(`COALESCE("instance_staff".room_id, "activity_instance".room_id) = ?`, roomID).
 		Where(`"activity_instance".date >= ?`, from).
 		Where(`"activity_instance".date <= ?`, until).
 		Where(`"activity_instance".status IN (?, ?)`, timetable.InstanceStatusPlanned, timetable.InstanceStatusActive).

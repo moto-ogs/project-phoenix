@@ -96,7 +96,7 @@ func filterInstanceStaffChanges(query *bun.SelectQuery, filter timetable.Instanc
 			ColumnExpr(`to_char("activity_instance".start_time, 'HH24:MI') AS block_start_time`).
 			ColumnExpr(`to_char("activity_instance".end_time, 'HH24:MI') AS block_end_time`).
 			ColumnExpr(`"activity_instance".status AS block_status`).
-			ColumnExpr(`"activity_instance".room_id AS block_room_id`)
+			ColumnExpr(`COALESCE("instance_staff".room_id, "activity_instance".room_id) AS block_room_id`)
 	}
 	if !filter.StaffChangesOnly {
 		return query
