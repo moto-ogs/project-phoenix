@@ -83,7 +83,7 @@ func newTraegerOpeningFixtureWithStaffing(t *testing.T, db *bun.DB, staffing cal
 }
 
 func traegerOpeningChangeRoutes(db *bun.DB, staffing calendarAPI.StaffingChangeQueue) chi.Router {
-	resource := calendarAPI.NewTraegerOpeningChangeResource(schoolCalendarCompose.NewTraegerOpeningChanges(traegerDirectorySchools{db: db}),
+	resource := calendarAPI.NewTraegerOpeningChangeResource(schoolCalendarCompose.NewTraegerOpeningChanges(traegerDirectorySchools{db: db}, nil, nil),
 		requireTraegerRight(identityaccess.TraegerRightOverviewRead), requireTraegerRight(identityaccess.TraegerRightSettingsManage), staffing)
 	return resource.TraegerRouter(rootAPI.ProtectedTraegerRoutes)
 }

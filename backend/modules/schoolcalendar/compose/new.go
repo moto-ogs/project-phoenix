@@ -109,9 +109,9 @@ func NewTraegerClosingDays(schools traegercalendar.Schools, notices traegercalen
 	return application.NewTraegerClosingDays(postgres.NewTraegerClosingDayStore(), schools, notices)
 }
 
-// NewTraegerOpeningChanges builds a Träger's opening changes (#8202) in its Träger transaction (ADR 0105) over its schools.
-func NewTraegerOpeningChanges(schools traegercalendar.Schools) traegercalendar.OpeningChanges {
-	return application.NewTraegerOpeningChanges(postgres.NewTraegerOpeningChangeStore(), schools)
+// NewTraegerOpeningChanges builds a Träger's opening changes (#8202) in its Träger transaction (ADR 0105) over its schools; notices tells each named school of a write (#8231), nil tells nobody; today names the push window's day (YYYY-MM-DD).
+func NewTraegerOpeningChanges(schools traegercalendar.Schools, notices traegercalendar.OpeningChangeNotices, today func() string) traegercalendar.OpeningChanges {
+	return application.NewNoticedTraegerOpeningChanges(postgres.NewTraegerOpeningChangeStore(), schools, notices, today)
 }
 
 // NewOpeningChanges composes the opening changes of a school (#7654) over the ambient tenant transaction.
@@ -127,9 +127,4 @@ func NewHolidayClosureEvents(today func() calendar.Date) *postgres.HolidayClosur
 // NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel; today is the root's day clock.
 func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, today func() calendar.Date) schoolcalendar.HolidayClosureCareCalendar {
 	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(today), holidays)
-}
-
-// NewNoticedTraegerOpeningChanges builds a Träger's opening changes (#8202) that tell each named school of a write (#8231); today names the push window's day (YYYY-MM-DD).
-func NewNoticedTraegerOpeningChanges(schools traegercalendar.Schools, notices traegercalendar.OpeningChangeNotices, today func() string) traegercalendar.OpeningChanges {
-	return application.NewNoticedTraegerOpeningChanges(postgres.NewTraegerOpeningChangeStore(), schools, notices, today)
 }

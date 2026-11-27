@@ -18,14 +18,17 @@ import (
 
 // NewNoticedTraegerOpeningChanges builds the Träger's opening changes over
 // store and tells each named school through notices; today names the day
-// (YYYY-MM-DD) the push window counts from.
+// (YYYY-MM-DD) the push window counts from. Without notices they tell nobody.
 func NewNoticedTraegerOpeningChanges(store TraegerOpeningChangeStore, schools traegercalendar.Schools,
 	notices traegercalendar.OpeningChangeNotices, today func() string,
 ) *TraegerOpeningChanges {
-	if notices == nil || today == nil {
-		panic("school calendar: the Träger opening change notices and the day are required")
-	}
 	changes := NewTraegerOpeningChanges(store, schools)
+	if notices == nil {
+		return changes
+	}
+	if today == nil {
+		panic("school calendar: the day of the Träger opening change notices is required")
+	}
 	changes.notices, changes.today = notices, today
 	return changes
 }

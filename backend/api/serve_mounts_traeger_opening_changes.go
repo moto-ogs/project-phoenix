@@ -40,8 +40,5 @@ func NewTraegerOpeningChangesWithNotices(schools traegercalendar.Schools, notifi
 	notices := owners.NewTraegerOpeningChangeNotices(notifications, func(ctx context.Context) int64 {
 		return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
 	})
-	if notices == nil {
-		return schoolCalendarCompose.NewTraegerOpeningChanges(schools)
-	}
-	return schoolCalendarCompose.NewNoticedTraegerOpeningChanges(schools, notices, today)
+	return schoolCalendarCompose.NewTraegerOpeningChanges(schools, notices, today)
 }
