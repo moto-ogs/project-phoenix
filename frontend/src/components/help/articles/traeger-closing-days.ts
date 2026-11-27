@@ -91,6 +91,8 @@ export function traegerClosingDaysTopic(): HelpTopic {
     notes: [
       "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen der gewählten Schulen zur neuen Schließzeit. Die Schulen sehen den Tag mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+      // #8231: Hinweis an die gewählten Schulen.
+      "Legst du eine geänderte Öffnungszeit an, änderst oder löschst sie, bekommen Team, Eltern und Träger-Büro jeder gewählten Schule einen Hinweis. Du selbst bekommst keinen. Hat eine Schule `Benachrichtigung bei geänderter Öffnungszeit` ausgeschaltet, bekommt dort niemand einen Hinweis.",
       "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",
       "Jede Familie bekommt eine E-Mail, auch wenn mehrere Kinder oder Wochen betroffen sind. Speicherst du den Schließtag noch einmal, bekommt niemand eine zweite E-Mail.",
       "Das Bundesland einer Schule legt das moto-Team fest. Stimmt es nicht, schreibe dem moto-Team.",

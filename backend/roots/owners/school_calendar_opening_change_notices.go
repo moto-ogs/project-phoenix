@@ -21,6 +21,9 @@ const (
 	openingChangeParentLink  = "/parents/calendar"
 	openingChangeTraegerLink = "/traeger/schulen/%d"
 	openingChangeRelatedType = "opening_change"
+	// A change of the Träger (#8231) is another object than a school's
+	// change with the same id; the feed bundles by object.
+	traegerOpeningChangeRelatedType = "traeger_opening_change"
 )
 
 // schoolCalendarOpeningChangeNotices binds School Calendar's notice about a
@@ -63,9 +66,14 @@ func (n schoolCalendarOpeningChangeNotices) NotifyOpeningChangeChanged(ctx conte
 	slices.Sort(staff)
 	staff = slices.Compact(staff)
 	title, body := openingChangeNoticeCopy(notice)
+	relatedType := openingChangeRelatedTypeOf(notice)
 	key := fmt.Sprintf("opening_change:%d:%d", notice.OpeningChangeID, n.now().UnixNano())
+	if notice.Traeger {
+		// One change of the Träger reaches several schools.
+		key = fmt.Sprintf("%s:%d:%d:%d", relatedType, tenantID, notice.OpeningChangeID, n.now().UnixNano())
+	}
 	event := deliveryCompose.NotificationEvent{
-		RelatedType: openingChangeRelatedType, RelatedID: notice.OpeningChangeID, Title: title, Body: body,
+		RelatedType: relatedType, RelatedID: notice.OpeningChangeID, Title: title, Body: body,
 	}
 	if len(staff) > 0 {
 		staffEvent := event
@@ -77,7 +85,7 @@ func (n schoolCalendarOpeningChangeNotices) NotifyOpeningChangeChanged(ctx conte
 			return err
 		}
 	}
-	if err := n.notifyOpeningChangeTraeger(ctx, tenantID, notice.OpeningChangeID, title, body, withoutAccount(audience.TraegerAccountIDs, actor)); err != nil {
+	if err := n.notifyOpeningChangeTraeger(ctx, tenantID, relatedType, notice.OpeningChangeID, title, body, withoutAccount(audience.TraegerAccountIDs, actor)); err != nil {
 		return err
 	}
 	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
@@ -98,14 +106,14 @@ func (n schoolCalendarOpeningChangeNotices) NotifyOpeningChangeChanged(ctx conte
 
 // notifyOpeningChangeTraeger writes the notice into the bell of the
 // Träger-Portal of the school's Träger; the bell names the school.
-func (n schoolCalendarOpeningChangeNotices) notifyOpeningChangeTraeger(ctx context.Context, tenantID, openingChangeID int64, title, body string, members []int64) error {
+func (n schoolCalendarOpeningChangeNotices) notifyOpeningChangeTraeger(ctx context.Context, tenantID int64, relatedType string, openingChangeID int64, title, body string, members []int64) error {
 	if n.traeger == nil || len(members) == 0 {
 		return nil
 	}
 	err := n.traeger.NotifyTraeger(ctx, deliveryContract.TraegerFeedEvent{
 		Type: deliveryContract.NotificationTraegerOpeningChangeChanged, TenantID: tenantID, AccountIDs: members,
 		Title: title, Body: body, DeepLink: fmt.Sprintf(openingChangeTraegerLink, tenantID),
-		RelatedType: openingChangeRelatedType, RelatedID: openingChangeID,
+		RelatedType: relatedType, RelatedID: openingChangeID,
 	})
 	if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) {
 		return nil
@@ -145,7 +153,19 @@ func openingChangeNoticeCopy(notice schoolcalendar.OpeningChangeNotice) (title, 
 		title = "Öffnungszeit geändert"
 		body = fmt.Sprintf("%s gilt jetzt %s. Bisher: %s.", named, openingChangeSpanText(*notice.Current), openingChangeSpanText(*notice.Previous))
 	}
+	if notice.Traeger {
+		body += " Das hat der Träger eingetragen."
+	}
 	return title, body
+}
+
+// openingChangeRelatedTypeOf names the object of the notice: the school's
+// own change or the change of its Träger.
+func openingChangeRelatedTypeOf(notice schoolcalendar.OpeningChangeNotice) string {
+	if notice.Traeger {
+		return traegerOpeningChangeRelatedType
+	}
+	return openingChangeRelatedType
 }
 
 // openingChangeSpanText reads a change as "am 12.12.2030 von 08:00 bis

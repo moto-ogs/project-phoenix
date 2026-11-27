@@ -28,6 +28,8 @@ export function traegerNotificationFeedTopic(): HelpTopic {
       "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
       // #8178: Hinweis zur geänderten Öffnungszeit.
       "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
+      // #8231: geänderte Öffnungszeit vom Träger-Büro.
+      "Plant jemand aus deinem Träger-Büro eine geänderte Öffnungszeit, siehst du sie für jede gewählte Schule. Wer sie eingetragen hat, bekommt keinen Hinweis.",
       "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
       "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
       "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",

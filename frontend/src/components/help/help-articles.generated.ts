@@ -1407,6 +1407,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
       "Ein Schließtag mit `Vom Träger` hat dein Träger geplant. Er gilt wie deine eigenen Schließtage. Ändern kann ihn nur das Träger-Büro.",
       // #8202: geänderte Öffnungszeiten des Trägers.
       "Einen Tag mit `Vom Träger` unter `Geänderte Öffnungszeiten` hat dein Träger geplant. Er gilt wie deine eigenen Tage. Ändern kann ihn nur das Träger-Büro.",
+      // #8231: Hinweis bei Tagen vom Träger.
+      "Auch wenn dein Träger einen solchen Tag anlegt, ändert oder löscht, bekommen Team, Eltern und Träger-Büro einen Hinweis. Dafür gilt deine Einstellung `Benachrichtigung bei geänderter Öffnungszeit` genauso.",
       "Mit `Auch in den Ferien und an Schließtagen planen` planst du auch dann Schichten.",
       "An gesetzlichen Feiertagen plant eine Serie nie Schichten.",
       "Schichten, die schon geplant waren, bleiben stehen.",
@@ -13522,6 +13524,8 @@ export const traegerClosingDaysTopic =
       notes: [
         "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
         "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen der gewählten Schulen zur neuen Schließzeit. Die Schulen sehen den Tag mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
+        // #8231: Hinweis an die gewählten Schulen.
+        "Legst du eine geänderte Öffnungszeit an, änderst oder löschst sie, bekommen Team, Eltern und Träger-Büro jeder gewählten Schule einen Hinweis. Du selbst bekommst keinen. Hat eine Schule `Benachrichtigung bei geänderter Öffnungszeit` ausgeschaltet, bekommt dort niemand einen Hinweis.",
         "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",
         "Jede Familie bekommt eine E-Mail, auch wenn mehrere Kinder oder Wochen betroffen sind. Speicherst du den Schließtag noch einmal, bekommt niemand eine zweite E-Mail.",
         "Das Bundesland einer Schule legt das moto-Team fest. Stimmt es nicht, schreibe dem moto-Team.",
@@ -15156,6 +15160,8 @@ export const traegerNotificationFeedTopic =
         "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
         // #8178: Hinweis zur geänderten Öffnungszeit.
         "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
+        // #8231: geänderte Öffnungszeit vom Träger-Büro.
+        "Plant jemand aus deinem Träger-Büro eine geänderte Öffnungszeit, siehst du sie für jede gewählte Schule. Wer sie eingetragen hat, bekommt keinen Hinweis.",
         "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",

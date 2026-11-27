@@ -83,7 +83,8 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/iot/compose/compose.go:(*Resource).Router":               104,
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
-	// activity read; gofmt splits its root step (+2).
+	// activity read; gofmt splits its root step (+2). The room-closure
+	// notification binding adds four lines (#8234).
 	"api/root_serve.go:composeServeRoot":                                 506,
 	"api/root_test_root.go:composeTestRootWith":                          280,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,

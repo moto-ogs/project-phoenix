@@ -38,6 +38,8 @@ type openingFeedFixture struct {
 	changes  chi.Router
 	feed     chi.Router
 	versions map[string]string
+	// notifications reach Delivery as the serving root binds them.
+	notifications owners.DeliveryNotifications
 }
 
 func newOpeningFeedFixture(t *testing.T, school int64) *openingFeedFixture {
@@ -55,9 +57,10 @@ func newOpeningFeedFixture(t *testing.T, school int64) *openingFeedFixture {
 	require.True(t, ok)
 	traeger, ok := notifier.(deliveryContract.TraegerFeedNotifier)
 	require.True(t, ok)
-	changes := rootAPI.NewOpeningChangesWithNotices(owners.DeliveryNotifications{
+	notifications := owners.DeliveryNotifications{
 		Notifier: notifier, Preferences: module.NotificationPreferences, SchoolAudience: audience, TraegerNotices: traeger,
-	}, func() string { return openingFeedToday })
+	}
+	changes := rootAPI.NewOpeningChangesWithNotices(notifications, func() string { return openingFeedToday })
 	// Equal bounds open the push window all day.
 	testpkg.SetTestTenantSetting(t, db, school, "notifications.dispatch_enabled", `true`)
 	testpkg.SetTestTenantSetting(t, db, school, "notifications.active_window_start", `"06:00"`)
@@ -66,7 +69,7 @@ func newOpeningFeedFixture(t *testing.T, school int64) *openingFeedFixture {
 	inner.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(changes).Router(rootAPI.ProtectedTenantRoutes))
 	return &openingFeedFixture{
 		db: db, school: school, changes: testpkg.MountedQueryBudgetRouter("/api", inner),
-		feed: module.NotificationPreferenceRouterForTests(), versions: map[string]string{},
+		feed: module.NotificationPreferenceRouterForTests(), versions: map[string]string{}, notifications: notifications,
 	}
 }
 
