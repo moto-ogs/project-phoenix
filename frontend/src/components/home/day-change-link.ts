@@ -25,20 +25,24 @@ function dayPlanHrefOnDay(href: string, day: string): string {
 export function useDayChangeHref(): (
   link: DayChangeLink | null,
   day?: DayChangesDay,
+  displayedDate?: string,
 ) => string | null {
   const tenantPath = useTenantAwarePath();
   const { href: dayPlanHref } = useDayPlanLink();
   return useCallback(
-    (link, day = "today") => {
+    (link, day = "today", displayedDate) => {
       // Die Kindakte kennt keinen angezeigten Kalendertag. Ein Link aus der
       // Vorschau würde dort deshalb fälschlich den heutigen Status zeigen.
       if (day === "tomorrow" && link?.target === "student") return null;
       const path = dayChangeLinkHref(link);
       if (path === null) return null;
       if (link?.target === "day_plan") {
-        return day === "tomorrow" && link.day
-          ? dayPlanHrefOnDay(dayPlanHref, link.day)
-          : dayPlanHref;
+        if (day === "tomorrow") {
+          return displayedDate
+            ? dayPlanHrefOnDay(dayPlanHref, displayedDate)
+            : null;
+        }
+        return dayPlanHref;
       }
       return tenantPath(path);
     },

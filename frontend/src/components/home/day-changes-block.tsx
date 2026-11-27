@@ -316,6 +316,7 @@ function DayChangesContent({
           title="Betrifft dich"
           entries={mine}
           day={day}
+          date={overview.date}
           now={now}
           onChanged={onChanged}
         />
@@ -325,6 +326,7 @@ function DayChangesContent({
           title="Schule"
           entries={school}
           day={day}
+          date={overview.date}
           now={now}
           onChanged={onChanged}
           folds
@@ -338,6 +340,7 @@ function DayChangesSection({
   title,
   entries,
   day,
+  date,
   now,
   onChanged,
   folds = false,
@@ -345,6 +348,8 @@ function DayChangesSection({
   readonly title: string;
   readonly entries: readonly DayChange[];
   readonly day: DayChangesDay;
+  /** Der angezeigte Kalendertag für Links in den Tagesplan. */
+  readonly date: string;
   /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
   readonly now: number;
   readonly onChanged: () => Promise<unknown>;
@@ -377,7 +382,7 @@ function DayChangesSection({
                 onChanged={onChanged}
               />
             ) : (
-              <DayChangeRow key={key} entry={entry} day={day} />
+              <DayChangeRow key={key} entry={entry} day={day} date={date} />
             ),
           )}
         </ul>
@@ -573,20 +578,28 @@ function withKeys(
 function DayChangeRow({
   entry,
   day = "today",
+  date,
   muted = false,
 }: {
   readonly entry: DayChange;
   /** Der Tag der Sätze; „erledigt“ gibt es nur heute. */
   readonly day?: DayChangesDay;
+  /** Der angezeigte Kalendertag für Links in den Tagesplan. */
+  readonly date?: string;
   /** Erledigt: grau, damit das Aktuelle vorne bleibt. */
   readonly muted?: boolean;
 }) {
   if (entry.childSummary) {
     return (
-      <ChildSummaryRow entry={entry} summary={entry.childSummary} day={day} />
+      <ChildSummaryRow
+        entry={entry}
+        summary={entry.childSummary}
+        day={day}
+        date={date}
+      />
     );
   }
-  return <DayChangeLinkRow entry={entry} day={day} muted={muted} />;
+  return <DayChangeLinkRow entry={entry} day={day} date={date} muted={muted} />;
 }
 
 /**
@@ -598,10 +611,12 @@ function ChildSummaryRow({
   entry,
   summary,
   day,
+  date,
 }: {
   readonly entry: DayChange;
   readonly summary: NonNullable<DayChange["childSummary"]>;
   readonly day: DayChangesDay;
+  readonly date?: string;
 }) {
   const hrefOf = useDayChangeHref();
   const [expanded, setExpanded] = useState(false);
@@ -625,7 +640,7 @@ function ChildSummaryRow({
           {summary.items.map((item) => {
             const text = childChangeText(item.kind, item.child, day);
             if (!text) return null;
-            const href = hrefOf(item.link, day);
+            const href = hrefOf(item.link, day, date);
             const body = (
               <span className="block min-w-0 flex-1 text-sm text-gray-900">
                 {text}
@@ -657,16 +672,18 @@ function ChildSummaryRow({
 function DayChangeLinkRow({
   entry,
   day,
+  date,
   muted = false,
 }: {
   readonly entry: DayChange;
   readonly day: DayChangesDay;
+  readonly date?: string;
   readonly muted?: boolean;
 }) {
   const hrefOf = useDayChangeHref();
   const text = dayChangeText(entry, day) ?? "";
   const span = dayChangeSpan(entry);
-  const href = hrefOf(entry.link, day);
+  const href = hrefOf(entry.link, day, date);
   // Zeitraum und Ort stehen bei jeder Zeile an derselben Stelle: hinter dem
   // Satz, kleiner und grau. Eine lange Änderung, die vor heute begann
   // („… · seit 3.11.“), ist ganz grau, damit sie die neuen nicht verdrängt.

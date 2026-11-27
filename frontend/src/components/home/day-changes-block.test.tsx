@@ -1469,7 +1469,7 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
           kind: "activity_cancelled",
           section: "you",
           activity: { id: "chor", title: "Chor" },
-          link: { target: "day_plan", staffId: null, day: tomorrow },
+          link: { target: "day_plan", staffId: null },
         }),
       ],
     });
@@ -1490,7 +1490,7 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
           kind: "activity_cancelled",
           section: "you",
           activity: { id: "theater", title: "Theater" },
-          link: { target: "day_plan", staffId: null, day: tomorrow },
+          link: { target: "day_plan", staffId: null },
         }),
       ],
     });
