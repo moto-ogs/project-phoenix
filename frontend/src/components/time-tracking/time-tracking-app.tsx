@@ -24,6 +24,7 @@ import {
   CollectionGroup,
   CollectionRow,
 } from "~/components/ui/collection";
+import { ListRow } from "~/components/ui/list-row";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import {
   StatusBadge,
@@ -93,6 +94,11 @@ export interface AppClockPanelProps {
    * nicht gerendert ist.
    */
   readonly headSlot?: HTMLElement | null;
+  /**
+   * Telefon (Runde 21): Platz im schmalen Kopf beim Rollen; dort steht der
+   * Zustand der Stempeluhr als Kurzstatus.
+   */
+  readonly compactSlot?: HTMLElement | null;
   /** Schulzeit jetzt („HH:MM“, Berlin): ob der Dienst schon begonnen hat. */
   readonly nowClock?: string;
 }
@@ -117,6 +123,11 @@ function clockBadge(
   }
   if (state === "done") return { label: "Ausgestempelt", tone: "gray" };
   return { label: "Nicht eingestempelt", tone: "gray" };
+}
+
+/** Erster Teil einer zusammengesetzten Schichtart („Betreuung / Zeit am Kind“). */
+function shortShiftTypeName(name: string): string {
+  return name.split(/\s+[/–-]\s+/)[0]?.trim() || name;
 }
 
 function plannedLine(shifts: readonly StaffShift[]): string | null {
@@ -144,6 +155,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
     disabled,
     busy,
     headSlot,
+    compactSlot,
     nowClock,
   } = props;
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
@@ -203,6 +215,17 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
+  const sheetPlanLine =
+    plannedShifts.length === 0
+      ? null
+      : [
+          `Dienst heute ${plannedShifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")}`,
+          ...new Set(
+            plannedShifts.flatMap((s) =>
+              s.shiftTypeName ? [s.shiftTypeName] : [],
+            ),
+          ),
+        ].join(" · ");
   // iPad quer: Die Leiste gehört zur linken Spalte der `SplitView`, steht
   // aber außerhalb von ihr; die Spalte scrollt und blendet unten aus und
   // würde eine Leiste in ihr abschneiden.
@@ -236,19 +259,26 @@ export function AppClockPanel(props: AppClockPanelProps) {
           <span role="status" className="inline-flex shrink-0">
             <StatusBadge label={badge.label} tone={badge.tone} />
           </span>
-          <span className="tabular-nums">
-            <span
-              className={cn(
-                "font-semibold",
-                state === "break" ? "text-moto-orange-strong" : "text-gray-900",
-              )}
-            >
-              {headline}
+          {/* Runde 21: Vor dem ersten Stempeln steht der Dienst in der
+              Zeile von heute direkt darunter („Geplant 08:00–16:30“); im
+              Kopf bleibt so Platz für den Saldo in derselben Zeile. */}
+          {idleBeforeWork && planned !== null ? null : (
+            <span className="tabular-nums">
+              <span
+                className={cn(
+                  "font-semibold",
+                  state === "break"
+                    ? "text-moto-orange-strong"
+                    : "text-gray-900",
+                )}
+              >
+                {headline}
+              </span>
+              {detail && !idleBeforeWork ? (
+                <span className="text-gray-500"> · {detail}</span>
+              ) : null}
             </span>
-            {detail && !idleBeforeWork ? (
-              <span className="text-gray-500"> · {detail}</span>
-            ) : null}
-          </span>
+          )}
           {showToday ? (
             <span className="whitespace-nowrap tabular-nums">
               <span className="font-semibold text-gray-900">{todayText}</span>{" "}
@@ -268,8 +298,18 @@ export function AppClockPanel(props: AppClockPanelProps) {
       </div>
     );
 
+  // Runde 21: Beim Rollen bleibt der Zustand als Kurzstatus im schmalen
+  // Kopf stehen, wie Uhrzeit oder Raum auf den anderen Seiten.
+  const compactBadge = compactSlot
+    ? createPortal(
+        <StatusBadge label={badge.label} tone={badge.tone} compact />,
+        compactSlot,
+      )
+    : null;
+
   return (
     <>
+      {compactBadge}
       {/* Wiedererkennbar (#8070): dieselbe Karte „Stempeluhr“ mit Zustand
           rechts wie heute, aber kompakt – Dienst bzw. laufende Zeit in einer
           Zeile, damit am kleinen Telefon die Tage darunter Platz haben.
@@ -413,6 +453,13 @@ export function AppClockPanel(props: AppClockPanelProps) {
         title="Wo arbeitest du heute?"
       >
         <div className="flex flex-col gap-3 pt-1">
+          {/* Runde 21: Der heutige Dienst mit vollem Namen der Schichtart;
+              die Zeile von heute in der Woche kürzt ihn. */}
+          {sheetPlanLine ? (
+            <p className="text-sm text-gray-600 tabular-nums">
+              {sheetPlanLine}
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="success"
@@ -439,24 +486,30 @@ export function AppClockPanel(props: AppClockPanelProps) {
           >
             Unterwegs einstempeln
           </Button>
-          <p className="-mt-1 text-center text-sm text-gray-500">
+          <p className="-mt-1 text-sm text-gray-500">
             Unterwegs: zum Beispiel Ausflug, Fortbildung oder zu Hause.
           </p>
           {/* Neutral (Runde 11): Rot las sich im Einstempeln-Blatt wie
-              Löschen; eine Abwesenheit zu melden ist nichts Gefährliches. */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="md"
-            disabled={disabled || pending}
+              Löschen. Runde 21: als Zeile mit Pfeil, denn sie führt in ein
+              eigenes Formular, statt als blasser Textknopf. */}
+          <ListRow
             onClick={() => {
+              if (disabled || pending) return;
               setStatusSheetOpen(false);
               props.onAddAbsence();
             }}
-            tooltip="Öffnet ein Fenster, um eine Abwesenheit einzutragen."
+            className="mt-1"
+            trailing={
+              <ChevronRight
+                className="size-5 text-gray-500"
+                aria-hidden="true"
+              />
+            }
           >
-            Abwesenheit melden
-          </Button>
+            <span className="min-w-0 flex-1 text-left font-medium text-gray-900">
+              Abwesenheit melden
+            </span>
+          </ListRow>
         </div>
       </OverlaySheet>
 
@@ -948,9 +1001,14 @@ function dayRows(
       // Runde 17: Die Stempeluhr steht im Kopf und nennt nur Zustand und
       // Zeit; Schichtart, Vertretung und entfallene Schichten stehen hier.
       // Die Pause vorn: am SE kürzt die Zeile die Schichtart, nicht sie.
+      // Runde 21: nur der erste Teil der Schichtart („Betreuung“ statt
+      // „Betreuung / Zeit am Kind“), damit die Zeile zweizeilig bleibt; den
+      // vollen Namen nennt das Einstempeln-Blatt.
       const types = [
         ...new Set(
-          d.shifts.flatMap((s) => (s.shiftTypeName ? [s.shiftTypeName] : [])),
+          d.shifts.flatMap((s) =>
+            s.shiftTypeName ? [shortShiftTypeName(s.shiftTypeName)] : [],
+          ),
         ),
       ];
       const parts = [

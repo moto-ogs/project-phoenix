@@ -407,9 +407,11 @@ export function FilterPanel({
       // Im Blatt: Abschnitte als Gruppen mit Trennlinie, keine Karte im Blatt.
       <div className="divide-y divide-gray-100">
         {filterSections.map((section) => (
+          // Telefon (Runde 21): Felder bündig mit Titel und × des Blatts
+          // (16 px), nicht 8 px weiter eingerückt.
           <section
             key={section.title}
-            className="space-y-3 px-2 py-4 first:pt-1"
+            className="phone:px-0 space-y-3 px-2 py-4 first:pt-1"
           >
             <SectionLabel as="h3" className="flex items-center gap-2">
               {section.icon ? (

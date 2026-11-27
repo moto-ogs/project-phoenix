@@ -639,6 +639,7 @@ function ClockInCard({
   setTargetHref,
   app = false,
   headSlot,
+  compactSlot,
 }: {
   readonly currentSession: WorkSession | null;
   readonly breaks: WorkSessionBreak[];
@@ -668,6 +669,8 @@ function ClockInCard({
   readonly app?: boolean;
   /** Telefon (Runde 17): Platz der Stempeluhr in der Kopfkarte. */
   readonly headSlot?: HTMLElement | null;
+  /** Telefon (Runde 21): Kurzstatus im schmalen Kopf. */
+  readonly compactSlot?: HTMLElement | null;
 }) {
   // Null until the staff member explicitly picks Vor Ort / Homeoffice / Abwesend.
   // No pre-selection per Issue #1368 — silent defaults are unacceptable for an
@@ -1044,6 +1047,7 @@ function ClockInCard({
         breakSheetOpen={breakMenuOpen && !isOnBreak}
         onBreakSheetOpenChange={setBreakMenuOpen}
         headSlot={headSlot}
+        compactSlot={compactSlot}
         nowClock={berlinClockFromISO(now.toISOString())}
       />
     );
@@ -3484,6 +3488,8 @@ function TimeTrackingContent() {
   const [clockHeadSlot, setClockHeadSlot] = useState<HTMLDivElement | null>(
     null,
   );
+  const [clockCompactSlot, setClockCompactSlot] =
+    useState<HTMLSpanElement | null>(null);
   const clockInHead = app && device.layout === "phone";
   // WeekChart shows trailing 10 workdays from today; no UI to navigate it
   // anymore (the table owns its own range state). Kept as a constant so the
@@ -4347,14 +4353,21 @@ function TimeTrackingContent() {
       title="Zeiterfassung"
       info={app ? TIME_TRACKING_APP_INFO : TIME_TRACKING_INFO}
       statsLoading={metricsLoading && !clockInHead}
+      appCompactStats={
+        clockInHead ? (
+          <span ref={setClockCompactSlot} className="inline-flex" />
+        ) : undefined
+      }
       // Laden kommt aus dem Gerüst (Bauart 3, Regel 5) — kein eigenes
       // Seiten-Skelett neben den Zuständen der TenantPage.
       loading={authStatus === "loading"}
       loadingLabel="Zeiterfassung wird geladen…"
       stats={
         clockInHead ? (
-          <div className="space-y-1">
-            <div ref={setClockHeadSlot} />
+          // Runde 21: Zustand und Saldo in einer Zeile, solange beide
+          // passen; die laufende Zeit bricht den Saldo in die nächste.
+          <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+            <div ref={setClockHeadSlot} className="min-w-0" />
             {metricsLoad.error ? (
               <LoadErrorAlert error={metricsLoad.error} />
             ) : metricsPending ? null : (
@@ -4698,6 +4711,7 @@ function TimeTrackingContent() {
             <ClockInCard
               app
               headSlot={clockInHead ? clockHeadSlot : undefined}
+              compactSlot={clockInHead ? clockCompactSlot : undefined}
               currentSession={currentSession ?? null}
               breaks={currentBreaks}
               onCheckIn={handleCheckIn}

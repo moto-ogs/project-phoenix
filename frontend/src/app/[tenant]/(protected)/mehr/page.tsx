@@ -428,7 +428,8 @@ function MorePageContent() {
               icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
               title="Daten aktualisieren"
               // Eine Aktion, kein Ziel (Runde 11): der Satz sagt, was sie tut.
-              subtitle="Holt alle Angaben neu vom Server"
+              // Runde 21: ohne das Fachwort „Server“.
+              subtitle="Lädt alles neu, wenn etwas nicht stimmt"
               meta={
                 refresh === "busy" ? (
                   <span role="status" className="inline-flex items-center">
