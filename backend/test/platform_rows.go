@@ -16,6 +16,7 @@ type Operator struct {
 	// CredentialGeneration starts at the column default; only the owner's
 	// credential writer moves it (#6308).
 	CredentialGeneration int64 `bun:"credential_generation,scanonly"`
+	MoreContrast         *bool `bun:"more_contrast,scanonly"` // only SetMoreContrast writes it
 	bun.BaseModel        `bun:"table:platform.operators,alias:operator"`
 	ID                   int64      `bun:"id,pk,autoincrement"`
 	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`

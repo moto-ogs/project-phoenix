@@ -12,6 +12,7 @@ import {
   useSessionPollInterval,
 } from "~/components/auth/session-account-binding";
 import { SentrySessionContext } from "~/components/auth/sentry-session-context";
+import { ContrastAccountSync } from "~/components/settings/contrast-account-sync";
 import {
   SessionTreeBoundary,
   StaleSessionMarkCheck,
@@ -283,6 +284,7 @@ export function TenantProviders({
       <SWRScopeBoundary expectedTenantId={tenant.tenantId} />
       <SessionCachePrimer />
       <SentrySessionContext portal="tenant" />
+      <ContrastAccountSync portal="tenant" />
       {/* Everything that shows or holds this session's data (#8082). */}
       <SessionTreeBoundary
         portal="tenant"

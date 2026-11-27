@@ -25,6 +25,8 @@ export function teacherClassDayTopic(): HelpTopic {
       "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder unterwegs sind und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
       "Fällt einer deiner Termine heute aus oder ist er an einem anderen Ort? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet den `Kalender`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
+      // Vorschau auf morgen (#7657).
+      "Wähle oben in `Heute anders` die Schaltfläche `Morgen`. Dann siehst du schon heute, was morgen für deine Klassen und die Schule anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen, deine Aufsichten, deine Termine und die ganze Schule.",
       "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
       "Steht bei einer Klasse `4 Kinder anders als sonst`, weicht dort heute etwas vom üblichen Plan ab.",

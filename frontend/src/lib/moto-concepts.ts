@@ -76,6 +76,7 @@ import { accountsConcept } from "~/lib/concepts/accounts";
 import { rolesConcept } from "~/lib/concepts/roles";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { privacyConcept } from "~/lib/concepts/privacy";
+import { displayConcept } from "~/lib/concepts/display";
 import { signInConcept } from "~/lib/concepts/signIn";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import { exportsConcept } from "~/lib/concepts/exports";
@@ -172,6 +173,7 @@ const registry = {
   roles: rolesConcept,
   permissions: permissionsConcept,
   privacy: privacyConcept,
+  display: displayConcept,
   signIn: signInConcept,
   passkeys: passkeysConcept,
   exports: exportsConcept,

@@ -14,6 +14,17 @@ import type {
 import { formatTime } from "~/lib/date-helpers";
 import { schoolClassLabel } from "~/lib/school-class-label";
 
+/**
+ * Der Tag der Übersicht (#7657): heute oder die Vorschau auf morgen. Die
+ * Sätze sind dieselben, nur das Wort für den Tag wechselt.
+ */
+export type DayChangesDay = "today" | "tomorrow";
+type DayWord = "heute" | "morgen";
+
+function dayWord(day: DayChangesDay): DayWord {
+  return day === "tomorrow" ? "morgen" : "heute";
+}
+
 function personWith(
   change: DayChange,
   role: string,
@@ -25,18 +36,18 @@ function nameOf(person: DayChangePerson | undefined): string {
   return person?.name.trim() ? person.name : "Jemand aus dem Team";
 }
 
-function staffAbsentText(change: DayChange): string {
+function staffAbsentText(change: DayChange, w: DayWord): string {
   const person = personWith(change, "absent");
-  const when = change.halfDay ? "heute einen halben Tag" : "heute";
+  const when = change.halfDay ? `${w} einen halben Tag` : `${w}`;
   if (person?.isSelf) return `Du bist ${when} nicht da.`;
   return `${nameOf(person)} ist ${when} nicht da.`;
 }
 
-function staffAbsentCountText(change: DayChange): string {
+function staffAbsentCountText(change: DayChange, w: DayWord): string {
   const count = change.count ?? 0;
   return count === 1
-    ? "1 weitere Person aus dem Team ist heute nicht da."
-    : `${count} weitere Personen aus dem Team sind heute nicht da.`;
+    ? `1 weitere Person aus dem Team ist ${w} nicht da.`
+    : `${count} weitere Personen aus dem Team sind ${w} nicht da.`;
 }
 
 /**
@@ -51,58 +62,58 @@ function groupPhrase(name: string | null, dative: boolean): string {
     : `${article} Gruppe ${name}`;
 }
 
-function groupSubstitutionText(change: DayChange): string {
+function groupSubstitutionText(change: DayChange, w: DayWord): string {
   const substitute = personWith(change, "substitute");
   const replaced = personWith(change, "replaced");
   const group = groupPhrase(change.groupName, false);
   const inGroup = `in ${groupPhrase(change.groupName, true)}`;
   if (substitute?.isSelf) {
     return replaced
-      ? `Du vertrittst heute ${nameOf(replaced)} ${inGroup}.`
-      : `Du vertrittst heute ${group}.`;
+      ? `Du vertrittst ${w} ${nameOf(replaced)} ${inGroup}.`
+      : `Du vertrittst ${w} ${group}.`;
   }
   if (replaced?.isSelf) {
-    return `${nameOf(substitute)} vertritt dich heute ${inGroup}.`;
+    return `${nameOf(substitute)} vertritt dich ${w} ${inGroup}.`;
   }
-  return `${nameOf(substitute)} vertritt heute ${group}.`;
+  return `${nameOf(substitute)} vertritt ${w} ${group}.`;
 }
 
-function groupSubstitutionCountText(change: DayChange): string {
+function groupSubstitutionCountText(change: DayChange, w: DayWord): string {
   const count = change.count ?? 0;
   return count === 1
-    ? "In 1 weiteren Gruppe vertritt heute jemand."
-    : `In ${count} weiteren Gruppen vertritt heute jemand.`;
+    ? `In 1 weiteren Gruppe vertritt ${w} jemand.`
+    : `In ${count} weiteren Gruppen vertritt ${w} jemand.`;
 }
 
 // Die Uhrzeit eines Dienstes steht nicht im Satz, sondern daneben
 // (`dayChangeSpan`, #7660).
-function shiftChangedText(change: DayChange): string {
+function shiftChangedText(change: DayChange, w: DayWord): string {
   const person = personWith(change, "on_duty");
   return person?.isSelf
-    ? "Dein Dienst ist heute anders."
-    : `${nameOf(person)} hat heute einen anderen Dienst.`;
+    ? `Dein Dienst ist ${w} anders.`
+    : `${nameOf(person)} hat ${w} einen anderen Dienst.`;
 }
 
-function shiftCancelledText(change: DayChange): string {
+function shiftCancelledText(change: DayChange, w: DayWord): string {
   const person = personWith(change, "on_duty");
-  if (person?.isSelf) return "Dein Dienst fällt heute aus.";
-  return `Der Dienst von ${nameOf(person)} fällt heute aus.`;
+  if (person?.isSelf) return `Dein Dienst fällt ${w} aus.`;
+  return `Der Dienst von ${nameOf(person)} fällt ${w} aus.`;
 }
 
-function shiftReplacementText(change: DayChange): string {
+function shiftReplacementText(change: DayChange, w: DayWord): string {
   const substitute = personWith(change, "substitute");
   const replaced = personWith(change, "replaced");
   if (substitute?.isSelf) {
     return replaced
-      ? `Du vertrittst heute ${nameOf(replaced)}.`
-      : "Du hast heute einen Dienst als Vertretung.";
+      ? `Du vertrittst ${w} ${nameOf(replaced)}.`
+      : `Du hast ${w} einen Dienst als Vertretung.`;
   }
   if (replaced?.isSelf) {
-    return `${nameOf(substitute)} vertritt dich heute.`;
+    return `${nameOf(substitute)} vertritt dich ${w}.`;
   }
   return replaced
-    ? `${nameOf(substitute)} vertritt heute ${nameOf(replaced)}.`
-    : `${nameOf(substitute)} hat heute einen Dienst als Vertretung.`;
+    ? `${nameOf(substitute)} vertritt ${w} ${nameOf(replaced)}.`
+    : `${nameOf(substitute)} hat ${w} einen Dienst als Vertretung.`;
 }
 
 function childName(child: DayChangeChild): string {
@@ -110,38 +121,42 @@ function childName(child: DayChangeChild): string {
 }
 
 /** Der Satz zu einem Kind (#7665); der Grund steht nie dabei. */
-const CHILD_TEXTS: Readonly<Record<string, (child: DayChangeChild) => string>> =
-  {
-    child_absent: (child) =>
-      child.status === "sick"
-        ? `${childName(child)} ist heute krank gemeldet.`
-        : `${childName(child)} ist heute entschuldigt.`,
-    child_pickup_changed: (child) =>
-      child.pickupTime
-        ? `${childName(child)} geht heute um ${child.pickupTime} Uhr.`
-        : `${childName(child)} kommt heute nicht.`,
-    child_goes_alone: (child) =>
-      `${childName(child)} geht heute allein nach Hause.`,
-    child_pickup_note: (child) =>
-      `Hinweis zum Abholen von ${childName(child)}: ${child.note ?? ""}`,
-    // Wer heute abholt (#7655); bei einer einmaligen Person den Ausweis prüfen.
-    child_pickup_person: (child) =>
-      child.pickupPerson
-        ? `${child.pickupPerson.name} holt ${childName(child)} heute ab.${
-            child.pickupPerson.oneTime ? " Bitte den Ausweis prüfen." : ""
-          }`
-        : `${childName(child)} wird heute von einer anderen Person abgeholt.`,
-  };
+const CHILD_TEXTS: Readonly<
+  Record<string, (child: DayChangeChild, w: DayWord) => string>
+> = {
+  child_absent: (child, w) =>
+    child.status === "sick"
+      ? `${childName(child)} ist ${w} krank gemeldet.`
+      : `${childName(child)} ist ${w} entschuldigt.`,
+  child_pickup_changed: (child, w) =>
+    child.pickupTime
+      ? `${childName(child)} geht ${w} um ${child.pickupTime} Uhr.`
+      : `${childName(child)} kommt ${w} nicht.`,
+  child_goes_alone: (child, w) =>
+    `${childName(child)} geht ${w} allein nach Hause.`,
+  child_pickup_note: (child) =>
+    `Hinweis zum Abholen von ${childName(child)}: ${child.note ?? ""}`,
+  // Wer heute abholt (#7655); bei einer einmaligen Person den Ausweis prüfen.
+  child_pickup_person: (child, w) =>
+    child.pickupPerson
+      ? `${child.pickupPerson.name} holt ${childName(child)} ${w} ab.${
+          child.pickupPerson.oneTime ? " Bitte den Ausweis prüfen." : ""
+        }`
+      : `${childName(child)} wird ${w} von einer anderen Person abgeholt.`,
+};
 
 export function childChangeText(
   kind: string,
   child: DayChangeChild,
+  day: DayChangesDay = "today",
 ): string | null {
-  return CHILD_TEXTS[kind]?.(child) ?? null;
+  return CHILD_TEXTS[kind]?.(child, dayWord(day)) ?? null;
 }
 
-function childText(change: DayChange): string {
-  return change.child ? (childChangeText(change.kind, change.child) ?? "") : "";
+function childText(change: DayChange, w: DayWord): string {
+  return change.child
+    ? (CHILD_TEXTS[change.kind]?.(change.child, w) ?? "")
+    : "";
 }
 
 /** „Gruppe Igel“, „Sternengruppe“, „Klasse 4c“ oder „Ohne Gruppe“. */
@@ -197,12 +212,12 @@ function namesOf(people: readonly DayChangePerson[]): string {
   return `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
 }
 
-function activityLeadChangedText(change: DayChange): string {
+function activityLeadChangedText(change: DayChange, w: DayWord): string {
   const name = activityName(change, false);
   // Ohne Namen: der Termin gehört anderen, und nur die Leitung sieht, wer
   // fehlt und wer übernimmt (#7662).
   if (change.people.length === 0) {
-    return `Bei ${name} ändert sich heute, wer betreut.`;
+    return `Bei ${name} ändert sich ${w}, wer betreut.`;
   }
   const substitutes = change.people.filter(
     (person) => person.role === "substitute",
@@ -212,8 +227,8 @@ function activityLeadChangedText(change: DayChange): string {
   const others = absent.filter((person) => !person.isSelf);
   if (substitutes.some((person) => person.isSelf)) {
     return others.length > 0
-      ? `Du übernimmst heute ${name} für ${namesOf(others)}.`
-      : `Du übernimmst heute ${name}.`;
+      ? `Du übernimmst ${w} ${name} für ${namesOf(others)}.`
+      : `Du übernimmst ${w} ${name}.`;
   }
   if (substitutes.length > 0) {
     const forWhom = meAbsent
@@ -222,12 +237,12 @@ function activityLeadChangedText(change: DayChange): string {
         ? ` für ${namesOf(absent)}`
         : "";
     const verb = substitutes.length === 1 ? "übernimmt" : "übernehmen";
-    return `${namesOf(substitutes)} ${verb} heute ${name}${forWhom}.`;
+    return `${namesOf(substitutes)} ${verb} ${w} ${name}${forWhom}.`;
   }
-  if (meAbsent) return `Bei ${name} bist du heute nicht da.`;
+  if (meAbsent) return `Bei ${name} bist du ${w} nicht da.`;
   return absent.length === 1
-    ? `Bei ${name} ist ${namesOf(absent)} heute nicht da.`
-    : `Bei ${name} sind ${namesOf(absent)} heute nicht da.`;
+    ? `Bei ${name} ist ${namesOf(absent)} ${w} nicht da.`
+    : `Bei ${name} sind ${namesOf(absent)} ${w} nicht da.`;
 }
 
 /**
@@ -235,29 +250,32 @@ function activityLeadChangedText(change: DayChange): string {
  * Quelle Personal. Wer vertreten wird, heißt dort „replaced“; die Sätze sind
  * dieselben wie bei „andere Leitung“ aus dem Stundenplan.
  */
-function blockStaffText(change: DayChange): string {
-  return activityLeadChangedText({
-    ...change,
-    people: change.people.map((person) =>
-      person.role === "replaced" ? { ...person, role: "absent" } : person,
-    ),
-  });
+function blockStaffText(change: DayChange, w: DayWord): string {
+  return activityLeadChangedText(
+    {
+      ...change,
+      people: change.people.map((person) =>
+        person.role === "replaced" ? { ...person, role: "absent" } : person,
+      ),
+    },
+    w,
+  );
 }
 
-function blockChangeCountText(change: DayChange): string {
+function blockChangeCountText(change: DayChange, w: DayWord): string {
   const count = change.count ?? 0;
   return count === 1
-    ? "Bei 1 weiteren Termin ändert sich heute, wer betreut."
-    : `Bei ${count} weiteren Terminen ändert sich heute, wer betreut.`;
+    ? `Bei 1 weiteren Termin ändert sich ${w}, wer betreut.`
+    : `Bei ${count} weiteren Terminen ändert sich ${w}, wer betreut.`;
 }
 
-function closingDayText(change: DayChange): string {
+function closingDayText(change: DayChange, w: DayWord): string {
   const closing = change.closing;
   const name = closing?.name.trim();
   if (!closing || !name) return "";
   return closing.traeger
-    ? `Der Träger hat die OGS heute geschlossen: ${name}.`
-    : `Die OGS ist heute geschlossen: ${name}.`;
+    ? `Der Träger hat die OGS ${w} geschlossen: ${name}.`
+    : `Die OGS ist ${w} geschlossen: ${name}.`;
 }
 
 /** „1 Kind aus Klasse 3a ist“, „12 Kinder aus Klasse 3a sind“ (#7681). */
@@ -271,20 +289,20 @@ function classChildren(change: DayChange): string {
 }
 
 /** Ein Ausflug einer Klasse; nie ein Name oder ein Grund (#7681). */
-function classTripText(change: DayChange): string {
+function classTripText(change: DayChange, w: DayWord): string {
   if (!change.schoolClass) return "";
   const time = change.schoolClass.time;
   return time
-    ? `${classChildren(change)} heute auf Ausflug und ${change.schoolClass.children === 1 ? "kommt" : "kommen"} um ${time} Uhr zurück.`
-    : `${classChildren(change)} heute den ganzen Tag unterwegs.`;
+    ? `${classChildren(change)} ${w} auf Ausflug und ${change.schoolClass.children === 1 ? "kommt" : "kommen"} um ${time} Uhr zurück.`
+    : `${classChildren(change)} ${w} den ganzen Tag unterwegs.`;
 }
 
 /** Ein geänderter Unterrichtsschluss einer Klasse (#7681). */
-function classDismissalText(change: DayChange): string {
+function classDismissalText(change: DayChange, w: DayWord): string {
   const klass = schoolClassLabel(change.schoolClass?.name ?? "");
   const time = change.schoolClass?.time;
   if (!klass || !time) return "";
-  return `Bei ${klass} endet der Unterricht heute um ${time} Uhr.`;
+  return `Bei ${klass} endet der Unterricht ${w} um ${time} Uhr.`;
 }
 
 /** Der Titel eines Termins in Anführungszeichen, ohne Titel „Ein Termin“. */
@@ -293,33 +311,33 @@ function appointmentName(change: DayChange): string {
   return title ? `„${title}“` : "Ein Termin";
 }
 
-function appointmentCancelledText(change: DayChange): string {
-  return `${appointmentName(change)} fällt heute aus.`;
+function appointmentCancelledText(change: DayChange, w: DayWord): string {
+  return `${appointmentName(change)} fällt ${w} aus.`;
 }
 
 /**
  * Ein Termin heute an einem anderen Ort oder zu einer anderen Zeit (#7663).
  * Die neue Uhrzeit steht unter dem Satz, der neue Ort im Satz.
  */
-function appointmentChangedText(change: DayChange): string {
+function appointmentChangedText(change: DayChange, w: DayWord): string {
   const name = appointmentName(change);
   const appointment = change.appointment;
   const location = appointment?.location?.trim();
   if (appointment?.locationChanged) {
     const where = location ? ` Neuer Ort: ${location}.` : "";
     return appointment.timeChanged
-      ? `${name} ist heute zu einer anderen Zeit und an einem anderen Ort.${where}`
-      : `${name} ist heute an einem anderen Ort.${where}`;
+      ? `${name} ist ${w} zu einer anderen Zeit und an einem anderen Ort.${where}`
+      : `${name} ist ${w} an einem anderen Ort.${where}`;
   }
-  return `${name} ist heute zu einer anderen Zeit.`;
+  return `${name} ist ${w} zu einer anderen Zeit.`;
 }
 
 /** Das Mittagessen fällt heute aus, mit dem Grund der Schule (#7656). */
-function mealCancelledText(change: DayChange): string {
+function mealCancelledText(change: DayChange, w: DayWord): string {
   const reason = change.mealCancellation?.reason.trim().replace(/\.$/, "");
   return reason
-    ? `Das Mittagessen fällt heute aus: ${reason}.`
-    : "Das Mittagessen fällt heute aus.";
+    ? `Das Mittagessen fällt ${w} aus: ${reason}.`
+    : `Das Mittagessen fällt ${w} aus.`;
 }
 
 /**
@@ -338,7 +356,7 @@ function roomClosedText(change: DayChange): string {
 
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
-  Record<string, (change: DayChange) => string>
+  Record<string, (change: DayChange, w: DayWord) => string>
 > = {
   staff_absent: staffAbsentText,
   staff_absent_count: staffAbsentCountText,
@@ -356,12 +374,12 @@ const DAY_CHANGE_TEXTS: Readonly<
   // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
   staff_notice: (change) => change.notice?.title ?? "",
   // Termine aus dem Stundenplan (#7662).
-  activity_cancelled: (change) =>
-    `${activityName(change, true)} fällt heute aus.`,
+  activity_cancelled: (change, w) =>
+    `${activityName(change, true)} fällt ${w} aus.`,
   activity_reinstated: (change) =>
     `${activityName(change, true)} findet doch statt.`,
-  activity_room_changed: (change) =>
-    `${activityName(change, true)} ist heute in einem anderen Raum.`,
+  activity_room_changed: (change, w) =>
+    `${activityName(change, true)} ist ${w} in einem anderen Raum.`,
   activity_lead_changed: activityLeadChangedText,
   // Abwesenheit und Vertretung bei einem Termin (#7675).
   block_staff_absent: blockStaffText,
@@ -375,17 +393,20 @@ const DAY_CHANGE_TEXTS: Readonly<
   appointment_cancelled: appointmentCancelledText,
   appointment_changed: appointmentChangedText,
   // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
-  meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
+  meal_plan_changed: (_change, w) => `Der Speiseplan für ${w} wurde geändert.`,
   // Das Mittagessen fällt aus, obwohl die OGS offen ist (#7656).
   meal_cancelled: mealCancelledText,
   // Ein gesperrter Raum (#8161).
   room_closed: roomClosedText,
 };
 
-export function dayChangeText(change: DayChange): string | null {
+export function dayChangeText(
+  change: DayChange,
+  day: DayChangesDay = "today",
+): string | null {
   // Ein leerer Satz (ein Hinweis ohne Titel, ein Kind ohne Daten) zählt wie
   // eine unbekannte Art.
-  return DAY_CHANGE_TEXTS[change.kind]?.(change) || null;
+  return DAY_CHANGE_TEXTS[change.kind]?.(change, dayWord(day)) || null;
 }
 
 /** „3.11.“ aus „2026-11-03“. */

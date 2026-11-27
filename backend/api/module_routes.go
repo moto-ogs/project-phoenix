@@ -37,6 +37,7 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/ready", moduleRouteBasis},
 	{"/analytics-consent", moduleRouteBasis},
 	{"/analytics-policy", moduleRouteBasis},
+	{"/display-preferences", moduleRouteBasis},
 	{"/internal", moduleRouteBasis},
 	{"/auth", moduleRouteBasis},
 	{"/operator", moduleRouteBasis},

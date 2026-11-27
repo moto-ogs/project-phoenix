@@ -28,6 +28,7 @@ import { markPasswordChanged } from "~/lib/login-session-notice";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
+import { ContrastPreferenceSection } from "~/components/settings/contrast-preference-section";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
 
 const logger = createLogger({ component: "OperatorSettingsPage" });
@@ -369,6 +370,7 @@ function OperatorSettingsContent() {
 
       <PasskeySettingsSection scope="operator" />
       <TrustedDevicesSection scope="operator" />
+      <ContrastPreferenceSection portal="operator" />
     </TenantPage>
   );
 }

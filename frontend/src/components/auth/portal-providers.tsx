@@ -11,6 +11,7 @@ import {
   useSessionPollInterval,
 } from "~/components/auth/session-account-binding";
 import { SessionEndBarrier } from "~/components/auth/session-end-barrier";
+import { ContrastAccountSync } from "~/components/settings/contrast-account-sync";
 import {
   SessionTreeBoundary,
   StaleSessionMarkCheck,
@@ -72,6 +73,7 @@ export function PortalProviders({
       <PersonalStorageGuard homeHref={PORTAL_FRAME[portal].homeHref} />
       <SWRScopeBoundary />
       <SentrySessionContext portal={portal} />
+      <ContrastAccountSync portal={portal} />
       <SessionTreeBoundary
         portal={portal}
         sessionMark={mark}

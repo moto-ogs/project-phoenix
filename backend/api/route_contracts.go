@@ -500,6 +500,7 @@ func traegerContractMounts() []contractMount {
 func sharedPortalContractMounts() []contractMount {
 	return []contractMount{
 		{"/analytics-consent", meAPI.AnalyticsConsentRouteContracts()},
+		{"/display-preferences", meAPI.DisplayPreferencesRouteContracts()},
 		// The analytics package writes its envelope without api/common; the
 		// root names its answer.
 		{"/analytics-policy", []common.RouteContract{{

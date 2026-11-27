@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
 import { PushNotificationSection } from "~/components/settings/push-notification-section";
+import { ContrastPreferenceSection } from "~/components/settings/contrast-preference-section";
 import { SchoolAnalyticsConsentSection } from "~/components/settings/analytics-consent-section";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -30,7 +31,9 @@ function SchoolSettingsContent() {
           ? "Hier legst du fest, worüber moto dich benachrichtigt. Die Themen gelten für dein Konto, nicht nur für dieses Gerät."
           : section.key === "devices"
             ? "Hier stehen die Geräte, die du dir beim Anmelden gemerkt hast. Dort fragt moto nicht nach dem Code. Nutzt du ein Gerät nicht mehr, entferne es hier."
-            : "Hier entscheidest du über die Nutzungsanalyse. Du kannst deine Wahl jederzeit hier ändern."
+            : section.key === "display"
+              ? "Hier legst du fest, wie moto für dich aussieht. Das gilt für dein Konto, auf jedem Gerät."
+              : "Hier entscheidest du über die Nutzungsanalyse. Du kannst deine Wahl jederzeit hier ändern."
       }
     >
       {section.key === "notifications" && (
@@ -43,6 +46,9 @@ function SchoolSettingsContent() {
         </>
       )}
       {section.key === "devices" && <TrustedDevicesSection scope="school" />}
+      {section.key === "display" && (
+        <ContrastPreferenceSection portal="school" />
+      )}
       {section.key === "privacy" && <SchoolAnalyticsConsentSection />}
     </TenantPage>
   );

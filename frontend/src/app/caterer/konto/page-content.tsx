@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { TenantPasswordChangeModal } from "~/components/auth/tenant-password-change-modal";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
+import { ContrastPreferenceSection } from "~/components/settings/contrast-preference-section";
 import { EmailCodeFactorSection } from "~/components/settings/email-code-factor-section";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -59,6 +60,7 @@ export default function CatererAccountPage() {
       />
       <PasskeySettingsSection scope="caterer" />
       {mfaEnabled && <TrustedDevicesSection scope="caterer" />}
+      <ContrastPreferenceSection portal="caterer" />
 
       <TenantPasswordChangeModal
         isOpen={showPasswordModal}

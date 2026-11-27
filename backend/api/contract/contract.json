@@ -2786,6 +2786,12 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "Overview"
@@ -8939,6 +8945,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/accounts",
       "portals": [
         "platform"
@@ -10860,6 +10882,12 @@
       "pattern": "/school/day-changes/today",
       "portals": [
         "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -23885,6 +23913,26 @@
         "ref": "ReplaceRolePermissionsRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "displayPreferencesRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
     },
     {
       "method": "PUT",
@@ -127378,6 +127426,34 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "displayPreferencesRequest",
+      "go_type": "me.displayPreferencesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "moreContrast",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "displayPreferencesResponse",
+      "go_type": "me.displayPreferencesResponse",
+      "fields": [
+        {
+          "name": "moreContrast",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
           }
         }
       ]

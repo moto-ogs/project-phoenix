@@ -85,7 +85,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const [ownRevealed, setOwnRevealed] = useState(false);
   const isRevealed = revealed ?? ownRevealed;
 
-  const controlClassName = `block w-full rounded-lg border-0 bg-white text-gray-900 shadow-sm ring-1 ring-gray-500/80 transition duration-200 ring-inset placeholder:text-gray-500 focus:outline-none focus:ring-inset focus-visible:ring-2 focus-visible:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 read-only:bg-gray-50 read-only:text-gray-500 aria-[invalid=true]:ring-moto-red ${CONTROL_SIZE_CLASS[controlSize]}`;
+  const controlClassName = `block w-full rounded-lg border-0 bg-white text-gray-900 shadow-sm ring-1 ring-field-edge transition duration-200 ring-inset placeholder:text-gray-500 focus:outline-none focus:ring-inset focus-visible:ring-2 focus-visible:ring-field-focus disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 read-only:bg-gray-50 read-only:text-gray-500 aria-[invalid=true]:ring-moto-red ${CONTROL_SIZE_CLASS[controlSize]}`;
 
   const revealPadding = controlSize === "large" ? "pr-12" : "pr-10";
   const control = (

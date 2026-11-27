@@ -510,3 +510,31 @@ Projektion nutzt „change“.
   den Block als `class_day_changed`. Eine abgesagte oder geänderte
   Termin-Ausnahme sendet kein Signal an das Schulportal; der Block holt sie
   beim Fokus und beim erneuten Verbinden.
+
+## Nachtrag 2026-11-26: Vorschau auf morgen (#7657)
+
+- **Punkt 6 wird erweitert.** Die Übersicht liest heute oder morgen. Die
+  Routen `GET /api/day-changes/today` und `GET /school/day-changes/today`
+  nehmen den optionalen Parameter `date` (`YYYY-MM-DD`). Ohne ihn liest das
+  Backend heute wie bisher. Die Projektion prüft den Tag
+  (`daychangesview.Query.On`): erlaubt sind heute und der nächste
+  Kalendertag in der Zeitzone der Schule. Jeder andere Tag und ein falsches
+  Format antworten mit 400 und `general.input`. Ein eigener Pfad
+  `/tomorrow` hätte die Route verdoppelt; der Filter ist ein Parameter
+  (Backend-Regel 6). Der Pfad behält seinen Namen, damit Frontend, Proxy und
+  Analytics-Routen unverändert bleiben.
+- Die Quellen-Ports nahmen den Tag schon als `calendar.Date`; keine Quelle
+  liest die Uhr. Sichtregel, Savepoint, Status pro Quelle und Query-Budget
+  sind für morgen dieselben wie für heute.
+- Morgen ist der nächste Kalendertag, auch am Wochenende oder an einem
+  Schließtag. Der Schließtag steht dann als Eintrag da; die Vorschau springt
+  nicht zum nächsten Betreuungstag. Es gibt keine Uhrzeit, ab der die
+  Vorschau erscheint, und keine Schuleinstellung.
+- Frontend: ein Umschalter „Heute / Morgen“ im Kopf von „Heute anders“
+  (`components/home/day-switch.tsx`), im Staff-Portal und in moto schule.
+  Die Sätze sind dieselben, nur „heute“ wird „morgen“. Der Klassenbericht
+  von moto schule wird für den gezeigten Tag geladen. Das Ereignis
+  `day_changes_tomorrow_shown` zählt, ob die Vorschau genutzt wird.
+- **Nicht in diesem Schritt:** Elternportal (#7671) und Träger-Portal
+  (#7672) haben eigene Lesewege (`ChildQuery.ChildDay`,
+  `traegerview.DayChangesReport`). Sie folgen in einem eigenen Ticket.

@@ -1072,6 +1072,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          // Vorschau auf morgen (#7657), components/home/day-switch.tsx.
+          "Oben in der Karte wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+          "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
@@ -6078,6 +6081,7 @@ export const ownProfileTopic = function ownProfileTopic(): HelpTopic {
     notes: [
       "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
       "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+      "Unter `Mehr Kontrast` schaltest du dunklere Ränder an Eingabefeldern, Kästchen und Schaltern ein. Das gilt für dein Konto, auf jedem Gerät.",
     ],
     related: [
       HELP_TOPICS.staffNotifications,
@@ -10473,6 +10477,8 @@ export const teacherClassDayTopic = function teacherClassDayTopic(): HelpTopic {
       "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder unterwegs sind und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
       "Fällt einer deiner Termine heute aus oder ist er an einem anderen Ort? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet den `Kalender`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
+      // Vorschau auf morgen (#7657).
+      "Wähle oben in `Heute anders` die Schaltfläche `Morgen`. Dann siehst du schon heute, was morgen für deine Klassen und die Schule anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen, deine Aufsichten, deine Termine und die ganze Schule.",
       "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
       "Steht bei einer Klasse `4 Kinder anders als sonst`, weicht dort heute etwas vom üblichen Plan ab.",
@@ -11194,6 +11200,7 @@ export const teacherSettingsTopic = function teacherSettingsTopic(): HelpTopic {
       "`Nachrichten von Kolleginnen und Kollegen`: neue Nachrichten im Team-Chat der OGS.",
       "`Absage eines Termins`: moto meldet sich, wenn ein Termin ausfällt, bei dem du eingeplant bist. Das gilt für Absagen von heute bis in 14 Tagen. Diese Benachrichtigung ist von Anfang an eingeschaltet. Den Hinweis in der Glocke bekommst du auch, wenn du sie ausschaltest.",
       "Benachrichtigungen kommen erst an, wenn moto schule auf dem Startbildschirm liegt.",
+      "Im Bereich `Darstellung` schaltest du `Mehr Kontrast` ein. Dann bekommen Eingabefelder, Kästchen und Schalter einen dunkleren Rand. Das gilt für dein Konto, auf jedem Gerät.",
       "Im Bereich `Vertraute Geräte` stehen die Geräte, die du dir beim Anmelden gemerkt hast. Öffne das Menü am Gerät und wähle `Entfernen`. Dort fragt moto beim nächsten Anmelden wieder nach dem Code.",
     ],
     differences: [

@@ -176,6 +176,10 @@
 .ns-play[data-nav-scene="ClockCounterClockwiseIcon"] .ns-back{animation:ns-back 620ms cubic-bezier(.4,0,.2,1) both}
 @keyframes ns-back{0%{transform:none}85%{transform:rotate(-375deg)}100%{transform:rotate(-360deg)}}
 
+/* CircleHalfIcon: die dunkle Hälfte wechselt die Seite und kehrt zurück */
+[data-nav-scene="CircleHalfIcon"] .ns-half{transform-origin:128px 128px} .ns-play[data-nav-scene="CircleHalfIcon"] .ns-half{animation:ns-half 560ms var(--ns-o) both}
+@keyframes ns-half{0%,100%{transform:none}35%,55%{transform:scaleX(-1)}85%{transform:scaleX(1.08)}}
+
 /* CoinsIcon: die hintere Münze wird geworfen */
 [data-nav-scene="CoinsIcon"] .ns-toss{transform-origin:104px 100px} .ns-play[data-nav-scene="CoinsIcon"] .ns-toss{animation:ns-toss 560ms var(--ns-o) both}
 @keyframes ns-toss{0%,100%{transform:none}35%{transform:translateY(-56px) scaleY(-1)}65%{transform:translateY(-26px) scaleY(1)}85%{transform:translateY(4px) scaleY(.85)}}

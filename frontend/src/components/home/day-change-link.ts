@@ -2,11 +2,20 @@
 
 import { useCallback } from "react";
 
-import { dayChangeLinkHref } from "~/components/home/day-changes-text";
+import {
+  dayChangeLinkHref,
+  type DayChangesDay,
+} from "~/components/home/day-changes-text";
 import { trackEvent } from "~/lib/analytics";
 import type { DayChangeLink } from "~/lib/day-changes";
 import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+
+function dayPlanHrefOnDay(href: string, day: string): string {
+  const url = new URL(href, "https://moto.invalid");
+  url.searchParams.set("d", day);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
 
 /**
  * Wohin ein Eintrag von „Heute anders“ führt, mit Schulpräfix: für jede Zeile
@@ -15,14 +24,27 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
  */
 export function useDayChangeHref(): (
   link: DayChangeLink | null,
+  day?: DayChangesDay,
+  displayedDate?: string,
 ) => string | null {
   const tenantPath = useTenantAwarePath();
   const { href: dayPlanHref } = useDayPlanLink();
   return useCallback(
-    (link) => {
+    (link, day = "today", displayedDate) => {
+      // Die Kindakte kennt keinen angezeigten Kalendertag. Ein Link aus der
+      // Vorschau würde dort deshalb fälschlich den heutigen Status zeigen.
+      if (day === "tomorrow" && link?.target === "student") return null;
       const path = dayChangeLinkHref(link);
       if (path === null) return null;
-      return link?.target === "day_plan" ? dayPlanHref : tenantPath(path);
+      if (link?.target === "day_plan") {
+        if (day === "tomorrow") {
+          return displayedDate
+            ? dayPlanHrefOnDay(dayPlanHref, displayedDate)
+            : null;
+        }
+        return dayPlanHref;
+      }
+      return tenantPath(path);
     },
     [dayPlanHref, tenantPath],
   );

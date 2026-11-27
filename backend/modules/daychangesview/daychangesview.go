@@ -547,9 +547,11 @@ type Dependencies struct {
 	Logger       *slog.Logger
 }
 
-// Query reads the overview of the session's school.
+// Query reads the overview of the session's school: today, or on a day
+// that must be today or tomorrow of the school (#7657, day.go).
 type Query interface {
 	Today(ctx context.Context) (Overview, error)
+	On(ctx context.Context, day calendar.Date) (Overview, error)
 }
 
 // ErrDependencies reports missing wiring.
@@ -595,9 +597,9 @@ func New(deps Dependencies) (Query, error) {
 	}, nil
 }
 
-// Today reads every source separately. A failed source leaves its entries
-// out and is marked failed; only a failure of the isolation itself fails the
-// request.
+// overview reads every source separately for day. A failed source leaves
+// its entries out and is marked failed; only a failure of the isolation
+// itself fails the request.
 //
 // The sources only read, so consecutive sources share one isolation while
 // they succeed: rolling a failed source back also rolls back the reads before
@@ -606,8 +608,7 @@ func New(deps Dependencies) (Query, error) {
 // runs isolated from a failed statement of another (ADR 0299 point 7,
 // addendum of #7667), at two statements per request instead of two per
 // source.
-func (v *view) Today(ctx context.Context) (Overview, error) {
-	day := v.today()
+func (v *view) overview(ctx context.Context, day calendar.Date) (Overview, error) {
 	results := make([][]SourceEntry, len(v.sources))
 	failed := make([]bool, len(v.sources))
 	for start := 0; start < len(v.sources); {
