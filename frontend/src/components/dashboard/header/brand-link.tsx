@@ -79,13 +79,23 @@ interface BrandLinkProps {
   readonly hideLabelBelow?: "md" | "lg";
   /** Träger der Schule als zweite Zeile, siehe `BrandTraegerLine`. */
   readonly traegerName?: string | null;
+  /**
+   * Volle Breite statt der Kopfzeilen-Höchstbreite: „Mehr“ am Telefon
+   * (#8070) zeigt Schule und Träger als eigene Zeile, ungekürzt.
+   */
+  readonly wide?: boolean;
 }
+
+/** Breite des Markenbereichs in der Kopfzeile (Logo + Name). */
+const BRAND_LINK_WIDTH =
+  "max-w-[180px] sm:max-w-[240px] lg:max-w-[280px]" as const;
 
 export function BrandLink({
   href = "/home",
   label,
   hideLabelBelow,
   traegerName,
+  wide = false,
 }: BrandLinkProps) {
   const displayLabel = label?.trim() || "moto";
   const usesTenantLabel = Boolean(label?.trim());
@@ -93,7 +103,7 @@ export function BrandLink({
   return (
     <NavigationLink
       href={href}
-      className="group flex max-w-[180px] min-w-0 items-center gap-2.5 sm:max-w-[240px] lg:max-w-[280px]"
+      className={`group flex min-w-0 items-center gap-2.5 ${wide ? "min-h-11 w-full" : BRAND_LINK_WIDTH}`}
     >
       <BrandLogo />
 
