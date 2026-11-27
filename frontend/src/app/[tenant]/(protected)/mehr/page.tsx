@@ -1,7 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Bell, RotateCw, Search } from "lucide-react";
+import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
+import { Bell, Eye, RotateCw, Search } from "lucide-react";
+import { ListBulletsIcon } from "@phosphor-icons/react/ssr";
+import { StaffPreviewModal } from "~/components/staff-preview/staff-preview-modal";
+import { organizationsConcept } from "~/lib/concepts/organizations";
+import { TRAEGER_RETURN_LABEL } from "~/lib/traeger-handoff";
 import { useInvalidateMatching } from "~/lib/swr";
 import { LogoutModal } from "~/components/auth/logout-modal";
 import {
@@ -19,6 +23,7 @@ import {
 } from "~/components/dashboard/header/staff-news-button";
 import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { SchoolSearchSlot } from "~/components/search/school-search-slot";
+import { BrandTenantSwitcher } from "~/components/tenant/tenant-switcher";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
@@ -28,11 +33,16 @@ import { Collection, CollectionGroup } from "~/components/ui/collection";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
 import { logoutConcept } from "~/lib/concepts/logout";
-import { ENROLLMENT_SECTION } from "~/lib/section-navigation";
+import { databaseConcept } from "~/lib/concepts/database";
+import {
+  DATABASE_SECTION,
+  ENROLLMENT_SECTION,
+  ENROLLMENT_SUB_PAGES,
+} from "~/lib/section-navigation";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { isDemoBuild } from "~/lib/demo-access";
 import { useShellAuth } from "~/lib/shell-auth-context";
-import { useTenantSlugSafe } from "~/lib/tenant-context";
+import { useTenant, useTenantSlugSafe } from "~/lib/tenant-context";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
 import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
@@ -146,51 +156,80 @@ function MenuRows({
   return items.map((item) => {
     const counter = counters[item.href];
     const emergency = item.href === EMERGENCY_HREF;
+    // Erreichbarkeit (27.11.): Die Seitenleiste klappt diese Bereiche in
+    // ihre Unterseiten auf. Am Telefon führt „Datenverwaltung“ darum immer
+    // zur Übersicht, die jede erlaubte Unterseite als Kachel zeigt, und
+    // „Anmeldungen“ trägt seine Unterseiten als eigene Zeilen; die
+    // Übersichtsseite listet sie dort nicht.
+    const database = !item.locked && item.concept === databaseConcept;
+    const enrollmentSubPages =
+      !item.locked && item.href === ENROLLMENT_SECTION.href
+        ? ENROLLMENT_SUB_PAGES.filter(
+            (page) => page.href !== ENROLLMENT_SECTION.href,
+          )
+        : [];
+    const icon = (
+      <MobileNavIcon
+        item={item}
+        active={false}
+        className={
+          emergency ? "text-moto-red-strong h-5 w-5 shrink-0" : ROW_ICON
+        }
+      />
+    );
     return (
-      <li key={item.href}>
-        <ListRowLink
-          href={model.resolveItemHref(item)}
-          className={ROW_HEIGHT}
-          icon={
-            // Runde 19: Der Notfall steht in derselben Symbolspalte wie
-            // jede Zeile; er fällt durch Rot in Symbol und Wort auf.
-            <MobileNavIcon
-              item={item}
-              active={false}
-              className={
-                emergency ? "text-moto-red-strong h-5 w-5 shrink-0" : ROW_ICON
-              }
+      <Fragment key={item.href}>
+        <li>
+          <ListRowLink
+            href={
+              database
+                ? model.tenantPath(DATABASE_SECTION.href)
+                : model.resolveItemHref(item)
+            }
+            className={ROW_HEIGHT}
+            // Runde 19: Der Notfall steht in derselben Symbolspalte wie jede
+            // Zeile; er fällt durch Rot in Symbol und Wort auf.
+            icon={icon}
+            title={
+              emergency ? (
+                <span className="text-moto-red-strong font-semibold">
+                  {item.label}
+                </span>
+              ) : (
+                item.label
+              )
+            }
+            badge={
+              item.locked ? (
+                <ModuleLockMark />
+              ) : item.href === ENROLLMENT_SECTION.href ? (
+                <UnreadBadge
+                  count={model.enrollmentsUnreadCount}
+                  tone="parents"
+                  noun="ungelesene Anmeldungen"
+                />
+              ) : counter && counter.count > 0 ? (
+                // Eine Farbe für „ungelesen/offen“ (Runde 11, 17): Blau.
+                <UnreadBadge
+                  count={counter.count}
+                  tone="parents"
+                  noun={counter.count === 1 ? counter.one : counter.noun}
+                />
+              ) : undefined
+            }
+          />
+        </li>
+        {enrollmentSubPages.map((page) => (
+          <li key={page.href}>
+            <ListRowLink
+              href={model.tenantPath(page.href)}
+              className={ROW_HEIGHT}
+              icon={icon}
+              title={page.label}
             />
-          }
-          title={
-            emergency ? (
-              <span className="text-moto-red-strong font-semibold">
-                {item.label}
-              </span>
-            ) : (
-              item.label
-            )
-          }
-          badge={
-            item.locked ? (
-              <ModuleLockMark />
-            ) : item.href === ENROLLMENT_SECTION.href ? (
-              <UnreadBadge
-                count={model.enrollmentsUnreadCount}
-                tone="parents"
-                noun="ungelesene Anmeldungen"
-              />
-            ) : counter && counter.count > 0 ? (
-              // Eine Farbe für „ungelesen/offen“ (Runde 11, 17): Blau.
-              <UnreadBadge
-                count={counter.count}
-                tone="parents"
-                noun={counter.count === 1 ? counter.one : counter.noun}
-              />
-            ) : undefined
-          }
-        />
-      </li>
+          </li>
+        ))}
+      </Fragment>
     );
   });
 }
@@ -274,6 +313,7 @@ function MorePageContent({
   const canCollapse = tenantSlug !== "" && accountId !== "";
   const openNotificationsSheet = useOpenNotificationsSheet();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [staffPreviewOpen, setStaffPreviewOpen] = useState(false);
   const { resolved, isApp, layout, isSplit } = useDeviceContext();
   const router = useTenantRouter();
   const counters = useRowCounters();
@@ -291,7 +331,11 @@ function MorePageContent({
   };
   // Name und Adresse wie im Profilmenü des Desktops; die Demo zeigt keine
   // technische Adresse (#3891).
-  const { user } = useShellAuth();
+  const { user, homeUrl } = useShellAuth();
+  // Schule und Träger stehen am Desktop links in der Kopfzeile, die das
+  // Telefon nicht hat (Erreichbarkeit, 27.11.). Derselbe Baustein: bei
+  // mehreren Schulen wechselt er die Schule, sonst führt er zur Startseite.
+  const { tenant } = useTenant();
   const userEmail = isDemoBuild() ? "" : (user?.email ?? "");
 
   // Die Lupe im schmalen Kopf tippt das Suchfeld der Kopfkarte an: eine
@@ -431,10 +475,25 @@ function MorePageContent({
     sections.push({
       key: "konto",
       title: "Konto",
-      size: 3 + looseItems.length,
+      size:
+        4 +
+        looseItems.length +
+        (model.traegerReturnHref ? 1 : 0) +
+        (isTeacher && model.canStartStaffPreview ? 1 : 0) +
+        (isTeacher && model.simpleNav.available ? 1 : 0),
       pending: pendingIn(looseItems, model, counters),
       rows: (
         <>
+          {tenant?.name ? (
+            <li className="flex items-center px-4 py-1.5">
+              <BrandTenantSwitcher
+                href={homeUrl}
+                label={tenant.name}
+                traegerName={tenant.traegerName}
+                wide
+              />
+            </li>
+          ) : null}
           <li>
             <ListRowLink
               href={model.tenantPath(model.profileUrl)}
@@ -456,6 +515,48 @@ function MorePageContent({
               }
             />
           </li>
+          {/* Erreichbarkeit (27.11.): was am Desktop im Profilmenü und
+              unten in der Seitenleiste steht und im früheren Mehr-Blatt
+              stand, gehört auch hierher. */}
+          {model.traegerReturnHref ? (
+            <li>
+              <ListRowLink
+                href={model.traegerReturnHref}
+                className={ROW_HEIGHT}
+                icon={
+                  <MobileNavIcon
+                    item={{ iconKey: "profile", concept: organizationsConcept }}
+                    active={false}
+                    className={ROW_ICON}
+                  />
+                }
+                title={TRAEGER_RETURN_LABEL}
+              />
+            </li>
+          ) : null}
+          {isTeacher && model.canStartStaffPreview ? (
+            <li>
+              <ListRowLink
+                onClick={() => setStaffPreviewOpen(true)}
+                className={ROW_HEIGHT}
+                chevron={false}
+                icon={<Eye className={ROW_ICON} aria-hidden="true" />}
+                title="Ansicht eines Mitarbeitenden"
+                subtitle="Zeigt moto so, wie eine Person es sieht"
+              />
+            </li>
+          ) : null}
+          {isTeacher && model.simpleNav.available ? (
+            <li>
+              <ListRowLink
+                onClick={model.simpleNav.toggle}
+                className={ROW_HEIGHT}
+                chevron={false}
+                icon={<ListBulletsIcon className={ROW_ICON} aria-hidden />}
+                title={model.simpleNav.toggleLabel}
+              />
+            </li>
+          ) : null}
           <MenuRows items={looseItems} model={model} counters={counters} />
           <li>
             <ListRowLink
@@ -568,7 +669,18 @@ function MorePageContent({
         </Button>
       }
       overlays={
-        <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
+        <>
+          <LogoutModal
+            isOpen={logoutOpen}
+            onClose={() => setLogoutOpen(false)}
+          />
+          {isTeacher && model.canStartStaffPreview ? (
+            <StaffPreviewModal
+              isOpen={staffPreviewOpen}
+              onClose={() => setStaffPreviewOpen(false)}
+            />
+          ) : null}
+        </>
       }
     >
       {columns === 1 ? (
