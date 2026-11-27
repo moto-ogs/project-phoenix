@@ -2,6 +2,7 @@ package timetable
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -14,6 +15,19 @@ import (
 // rooms:update write.
 type RoomBlockStaffQuery interface {
 	RoomBlockStaffIDs(ctx context.Context, roomID int64, from, until calendar.Date) ([]int64, error)
+}
+
+// ErrNoRoomBlockStaff reports room reference queries without the read.
+var ErrNoRoomBlockStaff = errors.New("timetable: the room reference queries name no room block staff")
+
+// RoomBlockStaffOf is the room block staff read of the room reference
+// queries the owner composed.
+func RoomBlockStaffOf(references RoomReferenceQuery) (RoomBlockStaffQuery, error) {
+	staff, ok := references.(RoomBlockStaffQuery)
+	if !ok {
+		return nil, ErrNoRoomBlockStaff
+	}
+	return staff, nil
 }
 
 // RoomBlockStaffRow is one staff row of a planned block in the room: the

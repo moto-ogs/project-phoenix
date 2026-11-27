@@ -75,12 +75,3 @@ func NewClosures(dependencies Dependencies) (facilities.Closures, error) {
 func NewTraegerRooms() facilities.TraegerRooms {
 	return postgres.NewTraegerRooms(tenant.TransactionFromContext, tenant.IsAdminTx)
 }
-
-// NewNoticedClosures adds the notice of a new closure to the staff planned
-// in the room (#8234) over closures, on the root's clock.
-func NewNoticedClosures(closures facilities.Closures, notices facilities.ClosureNotices, now func() time.Time) facilities.Closures {
-	if notices == nil {
-		return closures
-	}
-	return application.NewNoticedClosures(closures, notices, calendar.CalendarDateClock(now))
-}

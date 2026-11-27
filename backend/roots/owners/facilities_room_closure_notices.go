@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -50,11 +51,15 @@ type facilitiesRoomClosureNotices struct {
 // NewFacilitiesRoomClosureNotices binds the notices over the root's
 // notifications; actor names the account of the request. Without Delivery's
 // notifications it is nil, and Facilities tells nobody.
-func NewFacilitiesRoomClosureNotices(db transactionruntime.Database, notifications DeliveryNotifications, accounts roomClosureStaffAccounts, actor func(context.Context) int64) (facilitiesModule.ClosureNotices, error) {
+func NewFacilitiesRoomClosureNotices(db transactionruntime.Database, notifications DeliveryNotifications, accounts roomClosureStaffAccounts, actor func(context.Context) int64, today func() timezone.Date) (facilitiesModule.ClosureNotices, error) {
 	if notifications.Notifier == nil || notifications.Preferences == nil || accounts == nil || actor == nil {
 		return nil, nil
 	}
-	staff, err := timetableCompose.NewRoomBlockStaffQueries(db.Pool(), observeTimetableActivities)
+	references, err := timetableCompose.NewRoomReferenceQueries(db.Pool(), observeTimetableActivities, today)
+	if err != nil {
+		return nil, err
+	}
+	staff, err := timetable.RoomBlockStaffOf(references)
 	if err != nil {
 		return nil, err
 	}
@@ -139,9 +144,10 @@ func roomClosureNoticeCopy(notice facilitiesModule.RoomClosureNotice) (title, bo
 // NoticeRoomClosures adds the notice of a new closure to closures (#8234);
 // without Delivery's notifications they stay as they are.
 func NoticeRoomClosures(db transactionruntime.Database, closures facilitiesModule.Closures, notifications DeliveryNotifications, accounts roomClosureStaffAccounts, actor func(context.Context) int64, now func() time.Time) (facilitiesModule.Closures, error) {
-	notices, err := NewFacilitiesRoomClosureNotices(db, notifications, accounts, actor)
+	today := timezone.CalendarDateClock(now)
+	notices, err := NewFacilitiesRoomClosureNotices(db, notifications, accounts, actor, today)
 	if err != nil || notices == nil {
 		return closures, err
 	}
-	return facilitiesCompose.NewNoticedClosures(closures, notices, now), nil
+	return facilitiesCompose.NewNoticedClosures(closures, notices, today), nil
 }
