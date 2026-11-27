@@ -26122,6 +26122,7 @@
         "group_substitution_count",
         "meal_cancelled",
         "meal_plan_changed",
+        "room_closed",
         "shift_cancelled",
         "shift_changed",
         "shift_replacement",
@@ -26140,6 +26141,7 @@
         "meal_plan",
         "own_absences",
         "own_shift_plan",
+        "room",
         "school_calendar",
         "school_class",
         "school_supervisions",
@@ -26291,6 +26293,7 @@
         "closing_days",
         "meal_plan",
         "notices",
+        "room_closures",
         "staff",
         "supervisions"
       ]
@@ -53929,6 +53932,18 @@
       ]
     },
     {
+      "name": "DayRoomClosure",
+      "go_type": "daychangesview.DayRoomClosure",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayRow",
       "go_type": "classday.DayRow",
       "fields": [
@@ -57133,6 +57148,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayMealCancellation"
+          }
+        },
+        {
+          "name": "room_closure",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayRoomClosure"
           }
         }
       ]
@@ -72566,6 +72589,13 @@
         },
         {
           "name": "instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
           "optional": true,
           "schema": {
             "kind": "id"

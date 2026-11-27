@@ -1068,6 +1068,8 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
+          // Gesperrte Räume in „Heute anders" (#8161), api/day_changes_room_closures.go.
+          "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
@@ -8561,7 +8563,7 @@ export const roomsCatalogTopic = function roomsCatalogTopic(
       {
         title: "Einen Raum sperren",
         description:
-          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort.",
+          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort. Am Tag der Sperre sieht das Team den Raum mit dem Grund auf der `Startseite` unter `Heute anders`.",
         steps: [
           "Öffne `Räume` und wähle den Raum aus der Liste.",
           "Öffne den Reiter `Stammdaten`.",

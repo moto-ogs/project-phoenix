@@ -223,6 +223,8 @@ type Link struct {
 	StaffID    *ident.ID  `json:"staff_id,omitempty"`
 	StudentID  *ident.ID  `json:"student_id,omitempty"`
 	InstanceID *ident.ID  `json:"instance_id,omitempty"`
+	// RoomID is set for the room's page (#8161).
+	RoomID *ident.ID `json:"room_id,omitempty"`
 }
 
 // Child is the child an entry concerns, with what is different today:
@@ -391,6 +393,8 @@ type SourceEntry struct {
 	Appointment *DayAppointment
 	// MealCancellation is set on KindMealCancelled only (#7656).
 	MealCancellation *DayMealCancellation
+	// RoomClosure is set on KindRoomClosed only (#8161); Room names the room.
+	RoomClosure *DayRoomClosure
 	// EnteredByYou marks a change the reading guardian entered itself, in
 	// the child's day of the parents portal (#7671).
 	EnteredByYou bool
@@ -432,6 +436,8 @@ type Entry struct {
 	Appointment *DayAppointment `json:"appointment"`
 	// MealCancellation is set on KindMealCancelled only (#7656).
 	MealCancellation *DayMealCancellation `json:"meal_cancellation"`
+	// RoomClosure is set on KindRoomClosed only (#8161).
+	RoomClosure *DayRoomClosure `json:"room_closure"`
 	// EnteredByYou: see SourceEntry. Never set in the staff overview.
 	EnteredByYou bool `json:"-"`
 }
@@ -536,7 +542,9 @@ type Dependencies struct {
 	Appointments AppointmentChanges
 	// MealPlan is the Essen source (#7666).
 	MealPlan MealPlanChanges
-	Logger   *slog.Logger
+	// RoomClosures is the Räume source (#8161).
+	RoomClosures RoomClosures
+	Logger       *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -561,7 +569,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil || deps.MealPlan == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil || deps.MealPlan == nil || deps.RoomClosures == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -582,6 +590,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceClasses, read: deps.Classes.ClassChanges},
 			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
 			{source: SourceMealPlan, read: deps.MealPlan.MealPlanChanges},
+			{source: SourceRoomClosures, read: deps.RoomClosures.RoomClosures},
 		},
 	}, nil
 }
@@ -705,6 +714,7 @@ func toEntry(entry SourceEntry) Entry {
 		Closing: entry.Closing, Opening: entry.Opening, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
 		Class: entry.Class, Appointment: entry.Appointment, MealCancellation: entry.MealCancellation, EnteredByYou: entry.EnteredByYou,
+		RoomClosure: entry.RoomClosure,
 	}
 }
 
