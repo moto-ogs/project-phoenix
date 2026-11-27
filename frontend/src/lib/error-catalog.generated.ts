@@ -913,6 +913,8 @@ export const ERROR_CATALOG = {
         "{object} kann noch nicht beginnen. Bitte warte bis {planned_start_time} Uhr.",
       "iot.room_capacity_exceeded":
         "Im Raum {room_name} ist kein Platz mehr. Bitte wähle einen anderen Raum.",
+      "iot.room_closed":
+        "Dieser Raum ist heute gesperrt. Bitte wähle einen anderen Raum.",
       "iot.student_already_active":
         "{object} ist bereits im Raum {room_name}. Bitte prüfe den aktuellen Aufenthalt.",
       "meals.billing_month_attendance_expired":
@@ -1339,6 +1341,8 @@ export const ERROR_CATALOG = {
         "Die Ausgangsphase gibt es nicht mehr. Bitte lade die Seite neu.",
       "rooms.archived":
         "Dieser Raum ist archiviert. Du kannst ihn nicht mehr ändern.",
+      "rooms.closure_not_found":
+        "Diese Sperre gibt es nicht mehr. Lade die Seite neu.",
       "rooms.color_already_in_use":
         "Diese Farbe hat schon ein anderer Raum. Bitte wähle eine andere Farbe.",
       "rooms.not_found":
@@ -1347,6 +1351,8 @@ export const ERROR_CATALOG = {
         "Dieser Raum ist nicht mehr freigegeben. Bitte wähle einen anderen Raum.",
       "rooms.required_by_care_offering":
         "Ein Betreuungsangebot braucht diesen Raum noch. Wähle dort zuerst einen anderen Raum.",
+      "rooms.room_closed":
+        "Dieser Raum ist heute gesperrt. Bitte wähle einen anderen Raum.",
       "rooms.session_running":
         "In diesem Raum läuft gerade eine Aktivität. Beende sie zuerst.",
       "rooms.still_planned":
@@ -1762,6 +1768,8 @@ export const ERROR_CATALOG = {
         "Ein Kind ist inzwischen nach Hause gegangen. Der Termin lässt sich nicht wieder öffnen.",
       "timetable.reopen_supervision_changed":
         "Die Betreuung wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
+      "timetable.room_closed":
+        "Dieser Raum ist an diesem Tag gesperrt. Bitte wähle einen anderen Raum.",
       "timetable.room_occupied":
         "In diesem Raum läuft schon eine andere Gruppe. Bitte wähle einen anderen Raum.",
       "timetable.school_vacation_not_found":
@@ -1931,6 +1939,10 @@ export const ERROR_CATALOG = {
         "Diese Person gehört nicht mehr zum Träger-Büro. Bitte lade die Seite neu.",
       "traeger.no_membership":
         "Dein Konto hat keinen Zugang zum Träger-Portal. Bitte wende dich an das moto-Team.",
+      "traeger.opening_change_invalid":
+        "Die geänderte Öffnungszeit ist nicht vollständig. Bitte prüfe Datum, Uhrzeiten, Name und Schulen.",
+      "traeger.opening_change_not_found":
+        "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.report_template_invalid": "Bitte prüfe die Angaben der Vorlage.",
       "traeger.report_template_name_taken":
         "Eine Vorlage mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
@@ -3005,6 +3017,10 @@ export const ERROR_CATALOG = {
         "This person no longer belongs to the Träger office. Please reload the page.",
       "traeger.no_membership":
         "Your account has no access to the Träger portal. Please contact the moto team.",
+      "traeger.opening_change_invalid":
+        "The changed opening hours are incomplete. Please check the dates, times, name and schools.",
+      "traeger.opening_change_not_found":
+        "These changed opening hours no longer exist. Please reload the page.",
       "traeger.report_template_invalid":
         "Please check the details of the template.",
       "traeger.report_template_name_taken":

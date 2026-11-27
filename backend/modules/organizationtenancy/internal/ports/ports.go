@@ -56,6 +56,10 @@ type TraegerMembershipStore interface {
 	HasRetainedTraegerMembership(ctx context.Context, accountID int64) (bool, domain.OperationStats, error)
 	ListActiveAccountTraegerIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error)
 	ListTraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, domain.OperationStats, error)
+	// ListLiveTraegerSchools reads in one statement whether the Träger
+	// exists and is active and undeleted, and its undeleted schools with
+	// their names (#8146).
+	ListLiveTraegerSchools(ctx context.Context, organizationID int64) (domain.TraegerSchoolSet, domain.OperationStats, error)
 	ListTraegerMemberships(ctx context.Context, organizationID int64) ([]organizationtenancy.TraegerMembership, domain.OperationStats, error)
 	UpsertActiveTraegerMembership(ctx context.Context, organizationID, accountID int64) (organizationtenancy.TraegerMembership, domain.OperationStats, error)
 	DeactivateTraegerMembership(ctx context.Context, organizationID, accountID int64) (bool, domain.OperationStats, error)

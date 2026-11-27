@@ -134,7 +134,8 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
-	hub realtime.Broadcaster, membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query, now func() time.Time,
+	hub realtime.Broadcaster, membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query,
+	roomClosures facilitiesModule.Closures, now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -181,14 +182,14 @@ func mountSchoolPortalRoutes(
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
-	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, membership, calendarAppointments, classArrivals, calendar, classDay.Today, logger)
+	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, membership, calendarAppointments, classArrivals, calendar, roomClosures, classDay.Today, logger)
 	if err != nil {
 		return err
 	}
 	school.ParentLetters, school.DayChanges = parentLetters, dayChanges
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
-	mountOpeningChangeRoutes(tenant)
+	mountOpeningChangeRoutes(tenant, notifications, now)
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
 	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed, notifications.CatererFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
@@ -197,9 +198,26 @@ func mountSchoolPortalRoutes(
 }
 
 // mountOpeningChangeRoutes serves the changed opening hours on single days
-// (#7654), maintained beside the closing days with their rights.
-func mountOpeningChangeRoutes(tenant chi.Router) {
-	tenant.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(schoolCalendarCompose.NewOpeningChanges()).Router(ProtectedTenantRoutes))
+// (#7654), maintained beside the closing days with their rights. A write
+// reaches the staff, the families and the Träger of the school through
+// Delivery's notification feed, without the account of the request (#8178).
+func mountOpeningChangeRoutes(tenant chi.Router, notifications owners.DeliveryNotifications, now func() time.Time) {
+	today := timezone.CalendarDateClock(now)
+	changes := NewOpeningChangesWithNotices(notifications, func() string { return today().String() })
+	tenant.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(changes).Router(ProtectedTenantRoutes))
+}
+
+// NewOpeningChangesWithNotices composes the opening changes the way the
+// serving root mounts them (#8178); without Delivery's notifications they
+// tell nobody. today names the school's day (YYYY-MM-DD).
+func NewOpeningChangesWithNotices(notifications owners.DeliveryNotifications, today func() string) schoolcalendar.OpeningChanges {
+	notices := owners.NewSchoolCalendarOpeningChangeNotices(notifications, func(ctx context.Context) int64 {
+		return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
+	})
+	if notices == nil {
+		return schoolCalendarCompose.NewOpeningChanges()
+	}
+	return schoolCalendarCompose.NewNoticedOpeningChanges(notices, today)
 }
 
 // schoolClassSurfaces builds the class-bound surfaces of a Lehrkraft in
@@ -207,7 +225,8 @@ func mountOpeningChangeRoutes(tenant chi.Router) {
 func schoolClassSurfaces(
 	announcements communicationModule.ParentAnnouncementCapability, caller *owners.CallerRows,
 	membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query,
-	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, today func() timezone.Date, logger *slog.Logger,
+	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, roomClosures facilitiesModule.Closures,
+	today func() timezone.Date, logger *slog.Logger,
 ) (*announcementAPI.Resource, *dayChangesHTTP.SchoolResource, error) {
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
 	// announcement resource, narrowed by the caller's class reach.
@@ -220,11 +239,12 @@ func schoolClassSurfaces(
 	}
 	// "Heute anders" of moto schule (#7670) reads the class arrivals and
 	// the closing days already built for the timetable, the caller's staff
-	// record with its classes and her appointments (#8155).
+	// record with its classes, her appointments (#8155) and the room
+	// closures (#8161).
 	dayChanges, err := NewSchoolDayChanges(SchoolDayChangesSources{
 		Caller: caller.Caller(), Staff: staff, ClassArrivals: classArrivals, ClosingDays: calendar,
-		Appointments: dayChangesAppointmentsOf(calendarAppointments),
-		Today:        today, Logger: logger.With("service", "school-day-changes"),
+		Appointments: dayChangesAppointmentsOf(calendarAppointments), RoomClosures: roomClosures,
+		Today: today, Logger: logger.With("service", "school-day-changes"),
 	})
 	return parentLetters, dayChanges, err
 }
@@ -314,6 +334,7 @@ func mountSchoolRoutes(
 	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed, now)
 	tenant.Mount("/rooms", roomsHTTPAdapter.NewResource(facilities, roomsHTTPAdapter.Dependencies{
 		Facilities:          rooms.RoomService,
+		Closures:            rooms.Closures,
 		RoomHistorySettings: NewRoomHistorySettings(settings, logger.With("handler", "rooms"), settingsFacts.PrefetchSettings),
 		UserContext:         caller, Active: active,
 		Users: peopleCompose.NewRoomSnapshotPeople(users), Education: education,

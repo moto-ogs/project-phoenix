@@ -9,39 +9,50 @@ import (
 
 var _ traegerview.DayChangesReport = (*Overview)(nil)
 
-// SchoolsDayChanges returns "Heute anders" of the Träger-Portal (#7672): the
-// schools of the Träger with a closing day or a cancelled block today. Every
-// owner is read once for the whole school set, in the administrative unit,
-// and only the Träger's schools are read. The answer names no person and no
-// reason, so the read is not written to the access log (ADR 0084 section 7).
-func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64) (traegerview.SchoolsDayChanges, error) {
+// dayChangeSources are the owners' answers of "Heute anders" for the school
+// set, keyed by school.
+type dayChangeSources struct {
+	days   map[int64]traegerview.SchoolCalendarDay
+	blocks map[int64]int
+	meals  map[int64]bool
+	rooms  map[int64]int
+}
+
+// SchoolsDayChanges returns "Heute anders" of the Träger-Portal (#7672,
+// #8146): the schools of the Träger with a closing day, changed opening
+// hours, a cancelled block, a cancelled lunch or a closed room today.
+// Organisation & Tenancy reads the Träger's schools with their names in one
+// statement; every other owner is read once for the whole school set, in the
+// administrative unit, and only the Träger's schools are read. The answer
+// names no person and no reason, so the read is not written to the access
+// log (ADR 0084 section 7). A nil on reads today; tomorrow is the preview
+// with the same rules (#8236), any other day is ErrDayOutOfRange.
+func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64, on *calendar.Date) (traegerview.SchoolsDayChanges, error) {
 	if organizationID <= 0 {
 		return traegerview.SchoolsDayChanges{}, traegerview.ErrTraegerRequired
 	}
 	asOf := o.now()
 	day := calendar.DateFromTime(asOf)
+	if on != nil {
+		if *on != day && *on != day.AddDays(1) {
+			return traegerview.SchoolsDayChanges{}, traegerview.ErrDayOutOfRange
+		}
+		day = *on
+	}
 	result := traegerview.SchoolsDayChanges{Day: day, Schools: []traegerview.SchoolDayChanges{}, AsOf: asOf}
-	err := o.read(ctx, organizationID, func(adminCtx context.Context, ids []int64) error {
-		if len(ids) == 0 {
+	err := o.read(ctx, organizationID, nil, func(adminCtx context.Context, schools []traegerview.TraegerSchool) error {
+		if len(schools) == 0 {
 			return nil
 		}
-		closings, err := o.dayChanges.Closings.SchoolClosingDaysOn(adminCtx, organizationID, ids, day)
+		ids := make([]int64, 0, len(schools))
+		for _, school := range schools {
+			ids = append(ids, school.ID.Int64())
+		}
+		sources, err := o.readDayChangeSources(adminCtx, organizationID, ids, day)
 		if err != nil {
 			return err
 		}
-		blocks, err := o.dayChanges.Blocks.CancelledBlocksByTenant(adminCtx, ids, day)
-		if err != nil {
-			return err
-		}
-		if len(closings) == 0 && len(blocks) == 0 {
-			// No school has a change: the names are not needed.
-			return nil
-		}
-		schools, err := o.rows.Schools(adminCtx, ids)
-		if err != nil {
-			return err
-		}
-		result.Schools = schoolsWithDayChanges(schools, closings, blocks, day)
+		result.Schools = schoolsWithDayChanges(schools, sources, day)
 		return nil
 	})
 	if err != nil {
@@ -50,19 +61,45 @@ func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64) 
 	return result, nil
 }
 
+// readDayChangeSources reads each owner once for the school set.
+func (o *Overview) readDayChangeSources(ctx context.Context, organizationID int64, ids []int64, day calendar.Date) (dayChangeSources, error) {
+	var sources dayChangeSources
+	var err error
+	if sources.days, err = o.dayChanges.Days.SchoolCalendarDaysOn(ctx, organizationID, ids, day); err != nil {
+		return sources, err
+	}
+	if sources.blocks, err = o.dayChanges.Blocks.CancelledBlocksByTenant(ctx, ids, day); err != nil {
+		return sources, err
+	}
+	if sources.meals, err = o.dayChanges.Meals.MealCancelledSchools(ctx, ids, day); err != nil {
+		return sources, err
+	}
+	sources.rooms, err = o.dayChanges.Rooms.ClosedRoomsByTenant(ctx, ids, day)
+	return sources, err
+}
+
 // schoolsWithDayChanges keeps the schools, in their order by name, that
-// have a closing day or a cancelled block on day.
-func schoolsWithDayChanges(schools []traegerview.TraegerSchool, closings map[int64][]traegerview.SchoolClosingDay, blocks map[int64]int, day calendar.Date) []traegerview.SchoolDayChanges {
+// have a change on day.
+func schoolsWithDayChanges(schools []traegerview.TraegerSchool, sources dayChangeSources, day calendar.Date) []traegerview.SchoolDayChanges {
 	result := []traegerview.SchoolDayChanges{}
 	for _, school := range schools {
 		id := school.ID.Int64()
-		closed, cancelled := closings[id], blocks[id]
-		if len(closed) == 0 && cancelled <= 0 {
+		calendarDay := sources.days[id]
+		cancelled, rooms, meal := max(sources.blocks[id], 0), max(sources.rooms[id], 0), sources.meals[id]
+		if len(calendarDay.Closings) == 0 && len(calendarDay.Openings) == 0 && cancelled == 0 && rooms == 0 && !meal {
 			continue
 		}
-		changes := traegerview.SchoolDayChanges{TraegerSchool: school, ClosingDays: make([]traegerview.SchoolDayClosing, 0, len(closed)), CancelledBlocks: max(cancelled, 0)}
-		for _, closing := range closed {
+		changes := traegerview.SchoolDayChanges{
+			TraegerSchool: school, CancelledBlocks: cancelled, MealCancelled: meal, ClosedRooms: rooms,
+			ClosingDays:    make([]traegerview.SchoolDayClosing, 0, len(calendarDay.Closings)),
+			OpeningChanges: make([]traegerview.SchoolDayOpening, 0, len(calendarDay.Openings)),
+		}
+		for _, closing := range calendarDay.Closings {
 			changes.ClosingDays = append(changes.ClosingDays, dayClosing(closing, day))
+		}
+		for _, opening := range calendarDay.Openings {
+			since, until := daySpan(opening.StartDate, opening.EndDate, day)
+			changes.OpeningChanges = append(changes.OpeningChanges, traegerview.SchoolDayOpening{OpensAt: opening.OpensAt, ClosesAt: opening.ClosesAt, Since: since, Until: until})
 		}
 		result = append(result, changes)
 	}
@@ -72,14 +109,25 @@ func schoolsWithDayChanges(schools []traegerview.TraegerSchool, closings map[int
 // dayClosing keeps "seit" and "bis" only where the closing reaches past the
 // day.
 func dayClosing(closing traegerview.SchoolClosingDay, day calendar.Date) traegerview.SchoolDayClosing {
-	result := traegerview.SchoolDayClosing{Name: closing.Name, Traeger: closing.Traeger}
-	if closing.StartDate.Before(day) {
-		since := closing.StartDate
-		result.Since = &since
+	since, until := daySpan(closing.StartDate, closing.EndDate, day)
+	return traegerview.SchoolDayClosing{Name: closing.Name, Traeger: closing.Traeger, Since: since, Until: until}
+}
+
+// daySpan returns "seit" and "bis" of a range, each only where it reaches
+// past the day.
+func daySpan(start, end, day calendar.Date) (since, until *calendar.Date) {
+	if start.Before(day) {
+		first := start
+		since = &first
 	}
-	if closing.EndDate.After(day) {
-		until := closing.EndDate
-		result.Until = &until
+	if end.After(day) {
+		last := end
+		until = &last
 	}
-	return result
+	return since, until
+}
+
+// dayChangePortsBound reports whether every read of "Heute anders" is bound.
+func dayChangePortsBound(ports traegerview.DayChangePorts) bool {
+	return ports.Schools != nil && ports.Days != nil && ports.Blocks != nil && ports.Meals != nil && ports.Rooms != nil
 }

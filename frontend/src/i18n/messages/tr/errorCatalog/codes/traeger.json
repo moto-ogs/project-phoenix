@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "Bu alacaklı kimliği {school_name} için başka bir hesapla zaten kayıtlı. Aynı hesabı girin veya alacaklı kimliğini kontrol edin.",
   "member_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "no_membership": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "opening_change_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "opening_change_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "report_template_invalid": "Lütfen şablonun bilgilerini kontrol edin.",
   "report_template_name_taken": "Bu adda bir şablon zaten var. Lütfen başka bir ad seçin.",
   "report_template_not_found": "Bu şablon artık yok. Lütfen sayfayı yenileyin.",

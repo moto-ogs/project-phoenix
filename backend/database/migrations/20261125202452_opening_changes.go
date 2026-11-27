@@ -69,9 +69,9 @@ GRANT USAGE ON SEQUENCE schedule.opening_changes_id_seq TO phoenix_tenant;
 `
 
 // openingChangesFingerprint is the incoming-FK fingerprint of the school
-// erasure plan with the opening changes and days without lunch; the repeatable
-// preflight checks it.
-const openingChangesFingerprint = "3515c196a607918b21a1f3172f1c189d0aff66d3837746e4e3480d2e6cf8e12f"
+// erasure plan with the opening changes, room closures and days without lunch;
+// the repeatable preflight checks it.
+const openingChangesFingerprint = "506025661459b11a31e0fc02fa30a210f87dd34c20798715e252e235e3ca1974"
 
 // openingChangesErasureLines are the lines the repeatable school erasure
 // carries for the opening changes, per function. The down takes them out of

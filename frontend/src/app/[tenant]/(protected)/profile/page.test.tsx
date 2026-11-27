@@ -184,6 +184,10 @@ vi.mock("lucide-react", () => ({
   Cake: (props: Record<string, unknown>) => (
     <svg data-testid="cake-icon" {...props} />
   ),
+  // Used by the ContrastPreferenceSection („Mehr Kontrast“).
+  Contrast: (props: Record<string, unknown>) => (
+    <svg data-testid="contrast-icon" {...props} />
+  ),
   // Used by the PushInstallSteps inside the PushNotificationSection.
   Share: (props: Record<string, unknown>) => (
     <svg data-testid="share-icon" {...props} />
@@ -291,6 +295,29 @@ describe("ProfilePage", () => {
   });
 
   describe("Profile Form", () => {
+    it("hides account display preferences in a staff-view preview", () => {
+      mockUseSession.mockReturnValue({
+        data: {
+          user: {
+            id: "1",
+            name: "Test User",
+            email: "test@example.com",
+            token: "test-token",
+            isAdmin: false,
+            isPreview: true,
+          },
+        },
+        status: "authenticated",
+        update: vi.fn().mockResolvedValue(undefined),
+      });
+
+      render(<ProfilePage />);
+
+      // Anker: Das geladene Profil bleibt in der Vorschau sichtbar.
+      expect(screen.getByText("Vorname")).toBeInTheDocument();
+      expect(screen.queryByText("Mehr Kontrast")).not.toBeInTheDocument();
+    });
+
     it("should render profile fields in read mode", async () => {
       render(<ProfilePage />);
 

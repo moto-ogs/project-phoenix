@@ -10183,7 +10183,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
-      "reason": "Guarded leaf lock for a cancellation with covers (#7683): modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067).",
+      "reason": "Guarded leaf lock for a cancellation with covers (#7683): modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067). Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -22956,7 +22956,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
-      "reason": "Guarded leaf lock for a cancellation with covers (#7683): *modules/workforce/internal/planning.staffShiftService.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067).",
+      "reason": "Guarded leaf lock for a cancellation with covers (#7683): *modules/workforce/internal/planning.staffShiftService.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067). Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"

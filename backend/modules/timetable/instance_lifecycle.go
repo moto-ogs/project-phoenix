@@ -34,6 +34,9 @@ var (
 	// ErrInvalidInstanceReference: a supplied foreign id does not resolve in
 	// the current tenant.
 	ErrInvalidInstanceReference = errors.New("invalid instance reference")
+	// ErrRoomClosed: a new or moved appointment selects a room that is
+	// closed on its planning day. Existing appointments stay in place.
+	ErrRoomClosed = errors.New("room is closed on this date")
 	// ErrInstanceWeekend: an update introduces or restores a weekend date.
 	// Existing legacy weekend rows may keep their date.
 	ErrInstanceWeekend = errors.New("timetable entries can only be scheduled from Monday to Friday")

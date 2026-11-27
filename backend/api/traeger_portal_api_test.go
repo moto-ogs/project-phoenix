@@ -168,14 +168,16 @@ func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity Traege
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	closingDays := mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
+	calendarSchools := owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings)
+	closingDays := mountTraegerClosingDayRoutes(router, calendarSchools, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
-	dayChanges, err := traegerDayChangePorts(closingDays, traegerTestTimetable(t, database, membership, now))
+	mountTraegerOpeningChangeRoutes(router, calendarSchools, staffing)
+	dayChanges, err := traegerDayChangePorts(organizations, closingDays, traegerTestTimetable(t, database, membership, now))
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, schoolSettings.Settings, testHealthCipher(), days,
 		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, NewTraegerBookedModules(organizations, schoolSettings.Settings), today, now,
-		owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), dayChanges)
+		calendarSchools, dayChanges)
 	require.NoError(t, err)
 	router.Mount("/traeger", portal.RouterWithAuthRateLimiter(nil, ProtectedTraegerRoutes))
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})

@@ -29,6 +29,7 @@ const (
 var (
 	ErrOpenRoomNotFound          = errors.New("open room not found")
 	ErrOpenRoomNotReleased       = errors.New("room is not released as an open room")
+	ErrOpenRoomClosed            = errors.New("room is closed today")
 	ErrOpenRoomStudentNotPresent = errors.New("student is not checked in")
 )
 

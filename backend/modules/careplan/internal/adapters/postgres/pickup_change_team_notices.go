@@ -136,17 +136,41 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 		return nil, domain.OperationStats{}, err
 	}
 	rows := make([]pickupChangeNoticeReadRow, 0)
-	query := withTenant(db.NewSelect().TableExpr(tableExprPickupChangeTeamNotices), "pickup_notice", tenantID).
+	query := db.NewSelect().TableExpr(`schedule.pickup_change_team_notices AS "pickup_notice"`).
 		ColumnExpr(`"pickup_notice".request_id, "request".student_id, "student".first_name, "request".status, "request".payload, "pickup_notice".informed_at`).
 		Join(`JOIN schedule.care_schedule_change_requests AS "request" ON "request".tenant_id = "pickup_notice".tenant_id AND "request".id = "pickup_notice".request_id`).
 		Join(`LEFT JOIN schedule.student_pickup_exceptions AS "exception" ON "exception".tenant_id = "request".tenant_id AND "exception".student_id = "request".student_id AND "exception".exception_date = "pickup_notice".pickup_date`).
+		Join(`LEFT JOIN schedule.student_pickup_persons AS "person" ON "person".tenant_id = "request".tenant_id AND "person".student_id = "request".student_id AND "person".exception_date = "pickup_notice".pickup_date`).
 		Join(`JOIN (?) AS "student" ON "student".tenant_id = "request".tenant_id AND "student".id = "request".student_id AND "student".first_name IS NOT NULL`, s.directory.StudentDisplayRows(db, tenantID)).
 		Where(`"pickup_notice".recipient_account_id = ?`, readerAccountID).
 		Where(`"pickup_notice".read_at IS NULL`).
 		Where(`"pickup_notice".pickup_date >= ?`, string(from)).
-		Where(`(("request".status = ? AND to_char("exception".pickup_time, 'HH24:MI') = "request".payload->>'pickup_time') OR ("request".status = ? AND "exception".id IS NULL))`, requestApproved, requestRejected).
+		Where(`(("request".status = ?
+			AND (NULLIF("request".payload->>'pickup_time', '') IS NOT NULL OR jsonb_exists("request".payload, 'pickup_person'))
+			AND (NULLIF("request".payload->>'pickup_time', '') IS NULL OR to_char("exception".pickup_time, 'HH24:MI') = "request".payload->>'pickup_time')
+			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR (("person".requested_by_guardian = "request".submitted_by
+				AND "person".person_name = "request".payload->'pickup_person'->>'name'
+				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', ''))
+				OR ("person".id IS NULL
+					AND NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', '') IS NOT NULL
+					AND EXISTS (
+					SELECT 1 FROM schedule.student_pickup_notes AS "legacy_note"
+					WHERE "legacy_note".tenant_id = "request".tenant_id
+						AND "legacy_note".student_id = "request".student_id
+						AND "legacy_note".note_date = "pickup_notice".pickup_date
+						AND "legacy_note".content = concat('Abholung durch ', "request".payload->'pickup_person'->>'name', ' (Erlaubnis der Eltern)')
+				))))
+			) OR ("request".status = ? AND (
+				(NULLIF("request".payload->>'pickup_time', '') IS NOT NULL AND "exception".id IS NULL)
+				OR (jsonb_exists("request".payload, 'pickup_person') AND (
+					COALESCE("person".requested_by_guardian <> "request".submitted_by, ("person".requested_by_guardian IS NULL) <> ("request".submitted_by IS NULL))
+					OR COALESCE("person".person_name <> "request".payload->'pickup_person'->>'name', ("person".person_name IS NULL) <> ("request".payload->'pickup_person'->>'name' IS NULL))
+					OR COALESCE("person".guardian_profile_id::text <> NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', ''), ("person".guardian_profile_id::text IS NULL) <> (NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', '') IS NULL))
+				))
+			)))`, requestApproved, requestRejected).
 		OrderExpr(`"pickup_notice".informed_at DESC, "pickup_notice".request_id DESC`).
 		Limit(int64(limit))
+	query = withTenant(query, "pickup_notice", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = query.Scan(ctx, &rows)

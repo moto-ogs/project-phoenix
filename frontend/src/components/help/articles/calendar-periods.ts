@@ -137,12 +137,16 @@ export function calendarPeriodsTopic(): HelpTopic {
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
       // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
+      // #8178: Hinweis an Team, Eltern und Träger.
+      "Legst du einen Tag mit geänderter Öffnungszeit an, änderst oder löschst ihn, bekommen Team, Eltern und Träger-Büro einen Hinweis. Ausschalten kannst du das in den Einstellungen mit `Benachrichtigung bei geänderter Öffnungszeit`.",
       "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. Das gilt für eine geänderte Abholzeit und für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",
       "Schicht-Serien im Dienstplan lassen Ferien und Schließtage aus.",
       "Ein Schließtag mit `Vom Träger` hat dein Träger geplant. Er gilt wie deine eigenen Schließtage. Ändern kann ihn nur das Träger-Büro.",
+      // #8202: geänderte Öffnungszeiten des Trägers.
+      "Einen Tag mit `Vom Träger` unter `Geänderte Öffnungszeiten` hat dein Träger geplant. Er gilt wie deine eigenen Tage. Ändern kann ihn nur das Träger-Büro.",
       "Mit `Auch in den Ferien und an Schließtagen planen` planst du auch dann Schichten.",
       "An gesetzlichen Feiertagen plant eine Serie nie Schichten.",
       "Schichten, die schon geplant waren, bleiben stehen.",

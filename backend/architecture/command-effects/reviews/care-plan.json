@@ -8918,7 +8918,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalChildQueries.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -8928,7 +8928,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalChildQueries.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22610,7 +22610,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.FindForAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.FindForAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22620,7 +22620,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22630,7 +22630,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22640,7 +22640,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.ListByAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.ListByAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22650,7 +22650,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22660,7 +22660,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -23158,17 +23158,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupApprovalRecords.CreatePickupException",
       "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through roots/owners.RequestRecords.CreatePickupException. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.RequestRecords.CreatePickupNote",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupApprovalRecords.CreatePickupNote",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through roots/owners.RequestRecords.CreatePickupNote. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"

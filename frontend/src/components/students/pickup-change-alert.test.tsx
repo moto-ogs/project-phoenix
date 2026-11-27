@@ -105,7 +105,7 @@ describe("PickupChangeAlert", () => {
     );
 
     expect(
-      screen.getByText("Abholzeit an einzelnen Tagen geändert"),
+      screen.getByText("Abholung an einzelnen Tagen geändert"),
     ).toBeInTheDocument();
     expect(screen.getByText("Morgen: 14:30 Uhr")).toBeInTheDocument();
   });
@@ -171,10 +171,66 @@ describe("PickupChangeAlert", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Hinweis zur geänderten Abholzeit schließen",
+        name: "Hinweis zur geänderten Abholung schließen",
       }),
     );
     expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("names an unseen pickup person without presenting an existing time as new", () => {
+    render(
+      <PickupChangeAlert
+        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
+        today={TODAY}
+        fresh={[notice({ pickupTime: "", pickupPerson: "Tante Frieda" })]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Morgen: Tante Frieda holt ab"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Neu")).toBeInTheDocument();
+    expect(screen.queryByText("Morgen: 14:30 Uhr")).not.toBeInTheDocument();
+  });
+
+  it("names a withdrawn pickup person without presenting a time change", () => {
+    render(
+      <PickupChangeAlert
+        exceptions={[]}
+        today={TODAY}
+        fresh={[
+          notice({
+            pickupTime: "",
+            pickupPerson: "Tante Frieda",
+            withdrawn: true,
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Morgen: Abholperson zurückgenommen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("wieder normale Abholzeit"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names both legs of a withdrawn pickup change", () => {
+    render(
+      <PickupChangeAlert
+        exceptions={[]}
+        today={TODAY}
+        fresh={[notice({ pickupPerson: "Tante Frieda", withdrawn: true })]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Morgen: wieder normale Abholzeit"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Morgen: Abholperson zurückgenommen"),
+    ).toBeInTheDocument();
   });
 });
 
@@ -185,6 +241,7 @@ function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
     studentFirstName: "Mia",
     date: "2026-09-10",
     pickupTime: "14:30",
+    pickupPerson: "",
     withdrawn: false,
     informedAt: "2026-09-09T11:00:00Z",
     ...over,
@@ -251,6 +308,24 @@ describe("StudentPickupChanges", () => {
     );
     expect(refreshes).toEqual([expect.stringContaining("7")]);
     expect(screen.getByText("Neu")).toBeInTheDocument();
+  });
+
+  it("shows and confirms a pickup-person-only notice", async () => {
+    const personOnly = notice({
+      pickupTime: "",
+      pickupPerson: "Tante Frieda",
+    });
+    notices.list = [personOnly];
+    render(
+      <StudentPickupChanges studentId="7" exceptions={[]} today={TODAY} />,
+    );
+
+    expect(
+      screen.getByText("Morgen: Tante Frieda holt ab"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(notices.markRead).toHaveBeenCalledWith("7", [personOnly]),
+    );
   });
 
   it("keeps notices unread when fetching fresh pickup times fails", async () => {
@@ -345,7 +420,7 @@ describe("StudentPickupChanges", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Hinweis zur geänderten Abholzeit schließen",
+        name: "Hinweis zur geänderten Abholung schließen",
       }),
     );
     expect(screen.queryByTestId("pickup-change-alert")).not.toBeInTheDocument();

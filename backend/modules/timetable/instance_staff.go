@@ -31,6 +31,8 @@ type InstanceStaffBlock struct {
 	EndTime   string
 	// Cancelled says the block is cancelled; only WithBlock reads such rows.
 	Cancelled bool
+	// RoomID is the block's room, zero without one (#8234).
+	RoomID int64
 }
 
 type InstanceStaffInput struct {

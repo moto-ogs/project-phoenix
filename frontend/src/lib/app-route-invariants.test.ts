@@ -157,6 +157,7 @@ it("keeps known audit-producing and side-effecting GETs out of page and shell se
     "GET /traeger/master-data/",
     "GET /traeger/master-data/responsibilities",
     "GET /traeger/holiday-periods/{id}/places",
+    "GET /traeger/schools/children",
   ];
   const violations: string[] = [];
 

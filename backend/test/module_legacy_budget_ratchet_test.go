@@ -218,7 +218,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 180,
 	// ADR 0241: the rooms of the utilization (+13).
-	"modules/facilities/compose":                   197,
+	"modules/facilities/compose":                   195,
 	"modules/facilities/compose/repositoryadapter": 11,
 	// Raised by ADR 0298: the demo seed's feedback history writer and the
 	// aliases of its input (+15).
@@ -294,7 +294,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0278: the time import of the guardian profile clock (+1).
 	// ADR 0307 (#7760): the read of child records by
 	// identifier the link of imported contracts binds (+13).
-	"modules/peopledirectory/compose":    1015,
+	// ADR 0327 (#8137): the names behind the Träger-Büro's list of the
+	// children of its schools (+13).
+	"modules/peopledirectory/compose":    1028,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,

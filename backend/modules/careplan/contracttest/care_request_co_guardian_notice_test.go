@@ -95,7 +95,7 @@ func careServiceWithCoGuardianEmitter(t *testing.T, f *careFixture, sharedWith [
 	t.Helper()
 	emitter := f.emitter(t, messagingOnSettings{}, testpkg.NewRecordingBroadcaster())
 	return owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		f.reposCare.CarePlan(), f.persons,
+		owners.CarePlanRequestRecords(f.reposCare.CarePlan()), f.persons,
 		f.schedules.Arrivals, f.schedules.Pickups, newPickupChangePresence(t, f.db), f.autoExcusal,
 		f.reposCare.CarePlan(),
 		f.caller, emitter, nil,

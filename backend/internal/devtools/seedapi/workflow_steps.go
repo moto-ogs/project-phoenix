@@ -318,7 +318,7 @@ func traegerSteps(seeder *Seeder) []Step {
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
 // master data.
 func traegerSetupSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedSchoolResponsibilitiesStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
+	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerOpeningChangeStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedSchoolResponsibilitiesStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
 }
 
 // traegerCareSteps conclude and bill the contracts of the school's accepted
@@ -407,8 +407,8 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedMasterDataStep{seeder: seeder},
 		seedPlanningDemoStep{},
 		seedStudentStatusVariantsStep{},
-		// Class trips of today for "Heute anders" (#7681).
-		seedDayChangesClassesStep{},
+		// Class trips of today (#7681) and changes of tomorrow (#7657) for "Heute anders".
+		seedDayChangesClassesStep{}, seedDayChangesTomorrowStep{},
 		seedOperationsDemoStep{},
 		// Before the parents' invitations queue up in the outbox.
 		seedMealCatererInvitationStep{seeder: seeder},
@@ -425,7 +425,7 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedPrivacyConsentsStep{},
 		seedAccidentReportsStep{},
 		seedFamilyProtectionStep{},
-		seedRoomHistoryStopStep{},
+		seedRoomHistoryStopStep{}, seedRoomClosureStep{},
 		markStudentsSickStep{},
 		seedAnnouncementsStep{},
 		seedStaffMessagingStep{},

@@ -111,6 +111,8 @@ func (s *Service) classifyOpenRoomFailure(ctx context.Context, err error) error 
 		return devicescan.NotFoundWithCode(devicescan.MessageOpenRoomNotFound, devicescan.CodeOpenRoomNotFound)
 	case errors.Is(err, devicescan.ErrOpenRoomNotReleased):
 		return &devicescan.Failure{Kind: devicescan.FailureConflict, Message: devicescan.MessageOpenRoomNotReleased, Code: devicescan.CodeOpenRoomNotReleased}
+	case errors.Is(err, devicescan.ErrOpenRoomClosed):
+		return devicescan.InvalidRequestWithCode("the room is closed today", devicescan.CodeRoomClosed)
 	case errors.Is(err, devicescan.ErrOpenRoomStudentNotPresent):
 		return &devicescan.Failure{Kind: devicescan.FailureConflict, Message: devicescan.MessageStudentNotPresent, Code: devicescan.CodeStudentNotPresent}
 	}

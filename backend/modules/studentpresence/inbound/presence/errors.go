@@ -30,6 +30,7 @@ var errorRules = []common.ErrorRule{
 	{Target: studentpresence.ErrCannotDeleteActiveGroup, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrInvalidTimeRange, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrRoomConflict, Render: common.ErrorConflict},
+	{Target: studentpresence.ErrRoomClosed, Render: common.ErrorConflict},
 	// A full room is a business rejection too (#3633): 409 with its code and
 	// the numbers.
 	{Target: studentpresence.ErrRoomCapacityExceeded, Render: common.ErrorBusinessRejectionOr(studentpresence.RoomCapacityCode)},

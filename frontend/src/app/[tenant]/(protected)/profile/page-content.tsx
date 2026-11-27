@@ -43,6 +43,7 @@ import { MessageCountSection } from "~/components/settings/message-count-section
 import { BirthdayVisibilitySection } from "~/components/settings/birthday-visibility-section";
 import { PushNotificationSection } from "~/components/settings/push-notification-section";
 import { OwnQualificationsSection } from "~/components/settings/own-qualifications-section";
+import { ContrastPreferenceSection } from "~/components/settings/contrast-preference-section";
 
 const logger = createLogger({ component: "ProfilePage" });
 
@@ -381,6 +382,11 @@ function ProfileContent() {
           Sichtbarkeits- und Benachrichtigungsentscheidungen des eigenen Kontos. */}
       <BirthdayVisibilitySection />
       <PushNotificationSection />
+      {/* Darstellung des Kontos in allen Portalen: dunklere Feldränder.
+          Eine Vorschau zeigt die fremde Person und ändert deshalb kein Konto. */}
+      {session?.user?.isPreview !== true ? (
+        <ContrastPreferenceSection portal="tenant" />
+      ) : null}
       <PasskeySettingsSection />
       <TrustedDevicesSection />
       {/* Eigene Einwilligung zur Nutzungsanalyse (#4901), mit Hinweis auf

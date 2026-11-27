@@ -51,6 +51,8 @@
     "pickupAt": "{name} sot merret në orën {time}.",
     "notComing": "{name} sot nuk vjen.",
     "goesAlone": "{name} sot shkon vetëm në shtëpi.",
+    "pickupPerson": "{person} e merr sot {name}.",
+    "pickupPersonOneTime": "{person} e merr sot {name} dhe tregon dokumentin e identitetit.",
     "classTrip": "Klasa {class} sot është në ekskursion.",
     "classTripBack": "Klasa {class} sot është në ekskursion. Kthehet në orën {time}.",
     "classDismissal": "Mësimi i klasës {class} sot mbaron në orën {time}.",
@@ -65,5 +67,31 @@
     "activityReinstated": "{title} në orën {time} sot zhvillohet gjithsesi.",
     "activityRoomChanged": "{title} në orën {time} sot është në {room}.",
     "activityLeadChanged": "{title} në orën {time} sot e drejton një zëvendësues."
+  },
+  "changesDay": {
+    "label": "Dita e përmbledhjes",
+    "today": "Sot",
+    "tomorrow": "Nesër"
+  },
+  "changesTomorrow": {
+    "allAsPlanned": "Nesër gjithçka shkon sipas planit.",
+    "loadObject": "ndryshimet e nesërme",
+    "sick": "Për {name} nesër është njoftuar sëmundje.",
+    "excused": "{name} nesër mungon me arsye.",
+    "pickupAt": "{name} nesër merret në orën {time}.",
+    "notComing": "{name} nesër nuk vjen.",
+    "goesAlone": "{name} nesër shkon vetëm në shtëpi.",
+    "pickupPerson": "{person} e merr nesër {name}.",
+    "pickupPersonOneTime": "{person} e merr nesër {name} dhe tregon dokumentin e identitetit.",
+    "classTrip": "Klasa {class} nesër është në ekskursion.",
+    "classTripBack": "Klasa {class} nesër është në ekskursion. Kthehet në orën {time}.",
+    "classDismissal": "Mësimi i klasës {class} nesër mbaron në orën {time}.",
+    "closingDay": "{careTerm} nesër është e mbyllur: {name}.",
+    "openingChanged": "{careTerm} nesër është e hapur nga {opens} deri në {closes}: {name}.",
+    "mealCancelled": "Nesër nuk ka drekë për {name}. Ajo nuk do të faturohet.",
+    "activityCancelled": "{title} në orën {time} nesër anulohet.",
+    "activityReinstated": "{title} në orën {time} nesër zhvillohet gjithsesi.",
+    "activityRoomChanged": "{title} në orën {time} nesër është në {room}.",
+    "activityLeadChanged": "{title} në orën {time} nesër e drejton një zëvendësues."
   }
 }

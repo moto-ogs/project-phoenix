@@ -51,6 +51,8 @@
     "pickupAt": "Odbiór {name} dziś o {time}.",
     "notComing": "{name} dziś nie przychodzi.",
     "goesAlone": "{name} wraca dziś do domu samodzielnie.",
+    "pickupPerson": "{person} odbiera dziś {name}.",
+    "pickupPersonOneTime": "{person} odbiera dziś {name} i pokazuje dowód osobisty.",
     "classTrip": "Klasa {class} jest dziś na wycieczce.",
     "classTripBack": "Klasa {class} jest dziś na wycieczce. Powrót o {time}.",
     "classDismissal": "Lekcje klasy {class} kończą się dziś o {time}.",
@@ -65,5 +67,31 @@
     "activityReinstated": "{title} o {time} jednak się dziś odbywa.",
     "activityRoomChanged": "{title} o {time} jest dziś w sali {room}.",
     "activityLeadChanged": "{title} o {time} prowadzi dziś zastępstwo."
+  },
+  "changesDay": {
+    "label": "Dzień przeglądu",
+    "today": "Dziś",
+    "tomorrow": "Jutro"
+  },
+  "changesTomorrow": {
+    "allAsPlanned": "Jutro wszystko pójdzie zgodnie z planem.",
+    "loadObject": "jutrzejszych zmian",
+    "sick": "Na jutro zgłoszono chorobę: {name}.",
+    "excused": "Jutro usprawiedliwiona nieobecność: {name}.",
+    "pickupAt": "Odbiór {name} jutro o {time}.",
+    "notComing": "{name} jutro nie przyjdzie.",
+    "goesAlone": "{name} wraca jutro do domu samodzielnie.",
+    "pickupPerson": "{person} odbiera jutro {name}.",
+    "pickupPersonOneTime": "{person} odbiera jutro {name} i pokazuje dowód osobisty.",
+    "classTrip": "Klasa {class} jest jutro na wycieczce.",
+    "classTripBack": "Klasa {class} jest jutro na wycieczce. Powrót o {time}.",
+    "classDismissal": "Lekcje klasy {class} kończą się jutro o {time}.",
+    "closingDay": "{careTerm} jest jutro zamknięta: {name}.",
+    "openingChanged": "{careTerm} jest jutro otwarta od {opens} do {closes}: {name}.",
+    "mealCancelled": "Jutro nie ma obiadu dla {name}. Nie zostanie on naliczony.",
+    "activityCancelled": "{title} o {time} jest jutro odwołane.",
+    "activityReinstated": "{title} o {time} jednak się jutro odbędzie.",
+    "activityRoomChanged": "{title} o {time} jest jutro w sali {room}.",
+    "activityLeadChanged": "{title} o {time} prowadzi jutro zastępstwo."
   }
 }

@@ -903,6 +903,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/rooms/{id}/closures/{closureId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/settings/enrollment/legal-agb-document",
       "portals": [
         "tenant"
@@ -2079,6 +2087,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/report-templates/{id}",
       "portals": [
         "org"
@@ -2766,6 +2785,12 @@
       "pattern": "/api/day-changes/today",
       "portals": [
         "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -4774,6 +4799,10 @@
           "kind": "bool"
         },
         {
+          "name": "open_on",
+          "kind": "date"
+        },
+        {
           "name": "page",
           "kind": "int"
         },
@@ -4787,6 +4816,34 @@
         "elem": {
           "kind": "ref",
           "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/closures",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomClosureResponse"
         }
       }
     },
@@ -8888,6 +8945,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/accounts",
       "portals": [
         "platform"
@@ -9800,6 +9873,12 @@
       "pattern": "/parent/me/children/{studentId}/day-changes",
       "portals": [
         "parent"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -10809,6 +10888,12 @@
       "pattern": "/school/day-changes/today",
       "portals": [
         "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -13273,6 +13358,30 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OpeningChange"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/organization/",
       "portals": [
         "org"
@@ -13512,6 +13621,62 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/children",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerChildren"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/children/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "roster_date",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/comparison",
       "portals": [
         "org"
@@ -13625,6 +13790,12 @@
       "pattern": "/traeger/schools/day-changes",
       "portals": [
         "org"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -15825,6 +15996,21 @@
         "ref": "roomSnapshotExportRequest"
       },
       "file": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/rooms/{id}/closures",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomClosureRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoomClosureResponse"
+      }
     },
     {
       "method": "POST",
@@ -21773,6 +21959,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/report-templates/",
       "portals": [
         "org"
@@ -23727,6 +23928,26 @@
     },
     {
       "method": "PUT",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "displayPreferencesRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/operator/accounts/{accountId}/mfa/global-override",
       "portals": [
         "platform"
@@ -25092,6 +25313,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/profile/name",
       "portals": [
         "org"
@@ -25840,6 +26076,7 @@
         "child_absent",
         "child_goes_alone",
         "child_pickup_changed",
+        "child_pickup_person",
         "class_dismissal_changed",
         "class_trip",
         "closing_day",
@@ -26011,6 +26248,7 @@
         "group_substitution_count",
         "meal_cancelled",
         "meal_plan_changed",
+        "room_closed",
         "shift_cancelled",
         "shift_changed",
         "shift_replacement",
@@ -26029,6 +26267,7 @@
         "meal_plan",
         "own_absences",
         "own_shift_plan",
+        "room",
         "school_calendar",
         "school_class",
         "school_supervisions",
@@ -26180,6 +26419,7 @@
         "closing_days",
         "meal_plan",
         "notices",
+        "room_closures",
         "staff",
         "supervisions"
       ]
@@ -45314,6 +45554,19 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_person_one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "activity_title",
           "schema": {
             "kind": "string",
@@ -53818,6 +54071,18 @@
       ]
     },
     {
+      "name": "DayRoomClosure",
+      "go_type": "daychangesview.DayRoomClosure",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayRow",
       "go_type": "classday.DayRow",
       "fields": [
@@ -55982,6 +56247,14 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
           "name": "signature",
           "optional": true,
           "schema": {
@@ -57022,6 +57295,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayMealCancellation"
+          }
+        },
+        {
+          "name": "room_closure",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayRoomClosure"
           }
         }
       ]
@@ -72459,6 +72740,13 @@
           "schema": {
             "kind": "id"
           }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },
@@ -77647,6 +77935,66 @@
       ]
     },
     {
+      "name": "OpeningChange",
+      "go_type": "traegercalendar.OpeningChange",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OpeningChangeRequest",
       "go_type": "staffcalendarhttp.OpeningChangeRequest",
       "request": true,
@@ -77743,6 +78091,12 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -85899,6 +86253,13 @@
           }
         },
         {
+          "name": "pickup_person_one_time",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "signed",
           "schema": {
             "kind": "bool"
@@ -91682,6 +92043,80 @@
       ]
     },
     {
+      "name": "RoomClosureRequest",
+      "go_type": "httpadapter.RoomClosureRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomClosureResponse",
+      "go_type": "httpadapter.RoomClosureResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomHistoryStopResponse",
       "go_type": "studentpresencehttp.RoomHistoryStopResponse",
       "fields": [
@@ -95969,6 +96404,48 @@
       ]
     },
     {
+      "name": "SchoolChildCount",
+      "go_type": "traegerview.SchoolChildCount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolClassesRequest",
       "go_type": "staff.SchoolClassesRequest",
       "request": true,
@@ -96219,6 +96696,29 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "opening_changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayOpening"
+            }
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -96354,6 +96854,38 @@
           "name": "traeger",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayOpening",
+      "go_type": "traegerview.SchoolDayOpening",
+      "fields": [
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -109608,6 +110140,14 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
           "name": "signature",
           "optional": true,
           "schema": {
@@ -112540,6 +113080,107 @@
       ]
     },
     {
+      "name": "TraegerChild",
+      "go_type": "traegerview.TraegerChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerChildren",
+      "go_type": "traegerview.TraegerChildren",
+      "fields": [
+        {
+          "name": "roster_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolChildCount"
+            }
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "matched",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerChild"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerClosingDayDeleted",
       "go_type": "staffcalendarhttp.TraegerClosingDayDeleted",
       "fields": [
@@ -114214,6 +114855,68 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerOpeningChangeRequest",
+      "go_type": "staffcalendarhttp.TraegerOpeningChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -126740,6 +127443,34 @@
       ]
     },
     {
+      "name": "displayPreferencesRequest",
+      "go_type": "me.displayPreferencesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "moreContrast",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "displayPreferencesResponse",
+      "go_type": "me.displayPreferencesResponse",
+      "fields": [
+        {
+          "name": "moreContrast",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "editedInWindowResponse",
       "go_type": "timetablehttp.editedInWindowResponse",
       "fields": [
@@ -129738,6 +130469,12 @@
           }
         },
         {
+          "name": "skipped_closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "candidates_raced",
           "schema": {
             "kind": "int"
@@ -132600,6 +133337,13 @@
         },
         {
           "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_person",
           "optional": true,
           "schema": {
             "kind": "string"

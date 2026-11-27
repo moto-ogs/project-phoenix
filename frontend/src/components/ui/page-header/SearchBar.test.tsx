@@ -167,6 +167,30 @@ describe("SearchBar", () => {
       expect(mockOnChange).toHaveBeenCalledWith("Maxi");
     });
 
+    it("keeps keys typed while the owner still renders the reported term", () => {
+      const { rerender } = render(
+        <SearchBar value="" onChange={mockOnChange} debounceMs={300} />,
+      );
+      const input = screen.getByPlaceholderText("Name suchen...");
+      fireEvent.change(input, { target: { value: "Ma" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Ma");
+
+      // The owner is slow: the next key arrives before it hands "Ma" back.
+      fireEvent.change(input, { target: { value: "Max" } });
+      rerender(
+        <SearchBar value="Ma" onChange={mockOnChange} debounceMs={300} />,
+      );
+
+      expect(input).toHaveValue("Max");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Max");
+    });
+
     it("follows an external value change, e.g. a cleared filter chip", () => {
       const { rerender } = render(
         <SearchBar value="Maxi" onChange={mockOnChange} debounceMs={300} />,
@@ -184,6 +208,29 @@ describe("SearchBar", () => {
 
       // The pending keystroke must not resurrect the cleared term.
       expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it("keeps a newer draft when the owner echoes an earlier sent term", () => {
+      const { rerender } = render(
+        <SearchBar value="M" onChange={mockOnChange} debounceMs={300} />,
+      );
+      const input = screen.getByPlaceholderText("Name suchen...");
+      fireEvent.change(input, { target: { value: "Ma" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Ma");
+
+      fireEvent.change(input, { target: { value: "Max" } });
+      rerender(
+        <SearchBar value="Ma" onChange={mockOnChange} debounceMs={300} />,
+      );
+
+      expect(input).toHaveValue("Max");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Max");
     });
 
     it("uses the current callback when it changes during a pending debounce", () => {

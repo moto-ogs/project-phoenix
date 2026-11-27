@@ -54,6 +54,8 @@ const layout = {
   policies: {},
   canManagePolicies: true,
 };
+let mounted: ReturnType<typeof render> | undefined;
+
 function signedIn(id: string) {
   return {
     data: {
@@ -86,6 +88,11 @@ beforeEach(() => {
   mocks.layout.mockResolvedValue(layout);
 });
 afterEach(() => {
+  // This file uses real SWR. Detach its subscribers before dropping the
+  // scope, otherwise the reset can notify a tree that Testing Library only
+  // unmounts in its later cleanup hook.
+  mounted?.unmount();
+  mounted = undefined;
   resumeSWRSession();
   resetSWRScope({ revalidate: false });
 });
@@ -102,6 +109,7 @@ describe("HomeBlocksTab, Vorgabe während eines Kontowechsels", () => {
         }),
       );
       const view = render(<HomeBlocksTab />, { wrapper: Wrapper });
+      mounted = view;
       const group = await screen.findByRole("group", {
         name: "Vorgabe für Geburtstage",
       });

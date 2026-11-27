@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "Ky identifikues kreditori është regjistruar tashmë për {school_name} me një llogari tjetër. Vendosni të njëjtën llogari ose kontrolloni identifikuesin.",
   "member_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "no_membership": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "opening_change_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "opening_change_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "report_template_invalid": "Ju lutemi kontrolloni të dhënat e shabllonit.",
   "report_template_name_taken": "Një shabllon me këtë emër ekziston tashmë. Ju lutemi zgjidhni një emër tjetër.",
   "report_template_not_found": "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",

@@ -101,8 +101,15 @@ export function appOverviewTopic(): HelpTopic {
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
+          // Gesperrte Räume in „Heute anders" (#8161), api/day_changes_room_closures.go.
+          "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
+          // #8234: eigener Termin im gesperrten Raum.
+          "Hast du heute einen Termin in dem gesperrten Raum, steht die Sperre unter `Betrifft dich`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          // Vorschau auf morgen (#7657), components/home/day-switch.tsx.
+          "Oben in der Karte wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+          "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht

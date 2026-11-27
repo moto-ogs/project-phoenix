@@ -58,6 +58,23 @@ func RequiresActiveOperator(lookup identityaccess.OperatorSessionLiveness) func(
 	}
 }
 
+// RequiresLivePlatformOperator verifies a platform session's operator and
+// refresh-token family without refusing the non-platform sessions that a
+// shared route also permits.
+func RequiresLivePlatformOperator(lookup identityaccess.OperatorSessionLiveness) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		activeOperator := RequiresActiveOperator(lookup)(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := sessiontoken.ClaimsFromCtx(r.Context())
+			if !claims.IsPlatformScope() {
+				next.ServeHTTP(w, r)
+				return
+			}
+			activeOperator.ServeHTTP(w, r)
+		})
+	}
+}
+
 func renderOperatorLookupError(w http.ResponseWriter, r *http.Request, operatorID int, err error) {
 	if errors.Is(err, identityaccess.ErrOperatorInactive) ||
 		errors.Is(err, identityaccess.ErrOperatorSessionEnded) ||

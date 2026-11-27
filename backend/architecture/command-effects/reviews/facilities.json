@@ -119,7 +119,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevices",
       "target_owner": "device-fleet"
@@ -129,7 +129,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -139,7 +139,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -149,7 +149,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -159,7 +159,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryLiveGroups",
       "target_owner": "student-presence"
@@ -181,7 +181,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities/internal/application.Service.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomReferenceQuery.CountRoomReferences",
       "target_owner": "timetable-activities"
@@ -268,7 +268,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevices",
       "target_owner": "device-fleet"
@@ -278,7 +278,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -288,7 +288,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -298,7 +298,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -308,7 +308,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryLiveGroups",
       "target_owner": "student-presence"
@@ -318,7 +318,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities/internal/application.Service.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomReferenceQuery.CountRoomReferences",
       "target_owner": "timetable-activities"
@@ -577,6 +577,142 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/staffdirectoryview.Directory.AccountIDsByStaffIDs (staff-directory-view) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed to name the login accounts of the staff planned in the closed room. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.AccountIDsByStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Platform protocol participation (durable): facilities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234). The notification feed entries and the push outbox entries join the unit that saves the room closure; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target: facilities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234) to drop explicit push declines. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target: facilities reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed (#8234) to remove accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): the root names the account of the request from the session claims already in the context, to leave the person who closed the room out of the audience. No database access, persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs (people-directory) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed to map the planned staff to their accounts in one read. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed; it only constructs the staff directory read. No persistent, lock or scope effect.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ClosureNotices.NotifyRoomClosed",
+      "reason": "Read-only target (#8234): facilities reaches modules/timetable.RoomBlockStaffQuery.RoomBlockStaffIDs (timetable-activities) through roots/owners.facilitiesRoomClosureNotices.NotifyRoomClosed: one SELECT of the staff planned on planned blocks of the room within the closure, in the caller's tenant transaction that writes the closure. No row mutation or locking read.",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomBlockStaffQuery.RoomBlockStaffIDs",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.CloseRoom",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.CloseRoom",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.CloseRoom, the room closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ListRoomClosures",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ListRoomClosures",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.ListRoomClosures, the room closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ReopenRoom",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ReopenRoom",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.ReopenRoom, the room closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosedOn",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.RoomClosedOn, the room closures of #7653. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosureRanges",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.RoomClosureRanges. The caller enters the platform contract inside its own unit; the locked room rows remain held through the caller's write (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.CreateRoom",
       "classification": "platform",
@@ -603,7 +739,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevices",
       "target_owner": "device-fleet"
@@ -613,7 +749,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -623,7 +759,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -633,7 +769,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -643,7 +779,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryLiveGroups",
       "target_owner": "student-presence"
@@ -665,7 +801,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.DeleteRoom",
-      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities.Capability.DeleteRoom and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomReferenceQuery.CountRoomReferences",
       "target_owner": "timetable-activities"
@@ -686,7 +822,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/devicefleet.Capability.ListDevices (device-fleet) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevices",
       "target_owner": "device-fleet"
@@ -696,7 +832,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Capability.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -706,7 +842,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -716,7 +852,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/schoolstructure.Owner.ListGroups (school-structure) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -726,7 +862,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/studentpresence.Owner.QueryLiveGroups (student-presence) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryLiveGroups",
       "target_owner": "student-presence"
@@ -736,7 +872,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.RoomRemovalImpact",
-      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
+      "reason": "Read-only reference count (#6845): the Facilities room removal preview reaches modules/timetable.RoomReferenceQuery.CountRoomReferences (timetable-activities) through modules/facilities.Capability.RoomRemovalImpact and the root-bound reference closure (roots/owners.NewRoomReferences). One bounded read per owner inside the removal's tenant transaction; it decides whether the room stays, is archived or deleted, and writes nothing in the target owner. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RoomReferenceQuery.CountRoomReferences",
       "target_owner": "timetable-activities"

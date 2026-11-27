@@ -35,8 +35,12 @@
   "pickupPerson": {
     "label": "Kim alıyor?",
     "none": "Her zamanki gibi",
-    "hint": "Sadece kişilerinize eklediğiniz kişiler.",
-    "manageLink": "Kişilerinize yeni bir kişi ekleyin"
+    "hint": "Kişilerinizden birini veya “Başka biri” seçeneğini seçin.",
+    "manageLink": "Kişilerinize yeni bir kişi ekleyin",
+    "other": "Başka biri",
+    "otherNameLabel": "Kişinin adı",
+    "otherNameHint": "Bu kişi alırken kimliğini gösterir.",
+    "otherNameMissing": "Lütfen kişinin adını yazın."
   },
   "proofPdfTooltip": "Belgeyi PDF olarak bu cihaza kaydeder."
 }

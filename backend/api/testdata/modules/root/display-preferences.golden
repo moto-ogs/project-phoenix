@@ -1,0 +1,2 @@
+GET /display-preferences/ -> basis
+PUT /display-preferences/ -> basis

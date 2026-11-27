@@ -43,6 +43,14 @@ var sharedPortalRoutes = map[string]struct {
 		[]string{"parent", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
 		"the account's own consent; the resource refuses operator, Träger and preview sessions (me.ownAccount)",
 	},
+	"GET /display-preferences/": {
+		[]string{"caterer", "org", "parent", "platform", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the person's own display preference; platform sessions read the operator, every other session its account; the resource refuses preview sessions (me.ownHolder)",
+	},
+	"PUT /display-preferences/": {
+		[]string{"caterer", "org", "parent", "platform", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the person's own display preference; platform sessions write the operator, every other session its account; the resource refuses preview sessions (me.ownHolder)",
+	},
 	"GET /analytics-policy": {
 		[]string{"parent", "school"}, "modules/identityaccess/sessiontoken.ParseVerified",
 		"only a boolean from the verified session; without a portal session it answers off",

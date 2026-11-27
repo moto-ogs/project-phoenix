@@ -15,8 +15,12 @@ import (
 // has no field for a staff member's name and none for a free text of the
 // school besides the name of a closing day; the parents portal cannot leak
 // what it cannot carry.
+//
+// day is the day to read: nil reads the school's today, any other day must
+// be today or tomorrow of the school, else the port answers
+// ErrDayChangesDayOutOfRange (#8236).
 type ChildDayChanges interface {
-	ChildDayChanges(ctx context.Context, studentID, accountID int64) (ChildDay, error)
+	ChildDayChanges(ctx context.Context, studentID, accountID int64, day *calendar.Date) (ChildDay, error)
 }
 
 // ChildDay is the day of one child: the school's calendar day, the state of
@@ -50,6 +54,11 @@ type ChildDayChange struct {
 	// PickupTime is the changed pickup ("15:04"); nil on
 	// child_pickup_changed means the child does not come.
 	PickupTime *string
+	// PickupPersonName is who collects the child today on
+	// child_pickup_person (#8162); PickupPersonOneTime marks a person who
+	// shows an ID card at the pickup.
+	PickupPersonName    *string
+	PickupPersonOneTime bool
 	// PickupAfterClosing marks a changed pickup after today's changed
 	// closing time (#8170).
 	PickupAfterClosing bool
@@ -74,12 +83,17 @@ type ChildDayChange struct {
 // ErrDayChangesUnavailable reports a composition without the day changes.
 var ErrDayChangesUnavailable = errors.New("parent: day changes capability is required")
 
+// ErrDayChangesDayOutOfRange reports a day other than today or tomorrow of
+// the child's school (#8236).
+var ErrDayChangesDayOutOfRange = errors.New("parent: day changes read only today and tomorrow")
+
 // GetChildDayChanges reads "Heute anders" of a child with an OGS place the
 // guardian may see (parent_portal.access). The relationship authorization and
 // tenant-scoped read share one transaction, so a revoked permission cannot
-// authorize a later read.
-func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID int64) (ChildDay, error) {
-	var day ChildDay
+// authorize a later read. A nil day reads today; tomorrow is the preview
+// with the same rules (#8236). The relationship is checked before the day.
+func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID int64, day *calendar.Date) (ChildDay, error) {
+	var result ChildDay
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
 		if err := child.RequireCarePlace(); err != nil {
 			return err
@@ -89,12 +103,12 @@ func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID i
 		}
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
-		read, readErr := s.DayChanges.ChildDayChanges(txCtx, studentID, accountID)
-		day = read
+		read, readErr := s.DayChanges.ChildDayChanges(txCtx, studentID, accountID, day)
+		result = read
 		return readErr
 	})
 	if err != nil {
 		return ChildDay{}, fmt.Errorf("parent: child day changes: %w", err)
 	}
-	return day, nil
+	return result, nil
 }

@@ -30,24 +30,9 @@ func (s traegerRooms) RoomsByTenant(ctx context.Context, schools []int64) (map[i
 	if len(schools) == 0 {
 		return result, nil
 	}
-	transaction, ok := s.transaction(ctx)
-	if !ok {
-		return nil, errors.New("facilities: transaction is required")
-	}
-	if !s.admin(ctx) {
-		return nil, errors.New("facilities: the rooms of a Träger need the administrative transaction")
-	}
-	var db bun.IDB
-	switch tx := transaction.(type) {
-	case bun.Tx:
-		db = tx
-	case *bun.Tx:
-		if tx != nil {
-			db = *tx
-		}
-	}
-	if db == nil {
-		return nil, fmt.Errorf("facilities postgres: unsupported transaction %T", transaction)
+	db, err := s.adminDB(ctx)
+	if err != nil {
+		return nil, err
 	}
 	var rows []struct {
 		TenantID int64  `bun:"tenant_id"`
@@ -62,4 +47,25 @@ func (s traegerRooms) RoomsByTenant(ctx context.Context, schools []int64) (map[i
 		result[row.TenantID] = append(result[row.TenantID], facilities.TraegerRoom{ID: row.ID, Name: row.Name, Capacity: row.Capacity})
 	}
 	return result, nil
+}
+
+// adminDB returns the caller's administrative transaction; the Träger reads
+// run in no other.
+func (s traegerRooms) adminDB(ctx context.Context) (bun.IDB, error) {
+	transaction, ok := s.transaction(ctx)
+	if !ok {
+		return nil, errors.New("facilities: transaction is required")
+	}
+	if !s.admin(ctx) {
+		return nil, errors.New("facilities: the reads of a Träger need the administrative transaction")
+	}
+	switch tx := transaction.(type) {
+	case bun.Tx:
+		return tx, nil
+	case *bun.Tx:
+		if tx != nil {
+			return *tx, nil
+		}
+	}
+	return nil, fmt.Errorf("facilities postgres: unsupported transaction %T", transaction)
 }

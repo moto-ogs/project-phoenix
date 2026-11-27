@@ -2551,6 +2551,68 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Reviewed school-audience read (#8178): the root lists the active staff accounts, the active guardians with parent_portal.access for a child of the school and the active members of the school's Träger, in the caller's tenant transaction that saves the opening change. The target only SELECTs platform.delivery_realtime_recipients, with no row mutation or locking read.",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.SchoolAudience.SchoolAudience",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger (delivery-platform) through roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged (#8178). The feed entries of the Träger-Portal bell join the unit that saves the opening change, in the school's tenant transaction; no push and no after-commit signal follow, and transaction correctness stays with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged (#8178). The notification feed entries and the push outbox entries join the unit that saves the opening change; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged (#8178). No persistent, lock or scope effect.",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged (#8178) to remove OGS accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect.",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarOpeningChangeNotices.NotifyOpeningChangeChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.OpeningChangeNotices.NotifyOpeningChangeChanged",
+      "reason": "Read-only target (#8178): the root names the account of the request from the session claims already in the context, to leave it out of the audience. No database access, persistent, lock or scope effect.",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.FindCalendarPeriod",
       "classification": "platform",
@@ -4413,7 +4475,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.Rooms.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities/compose.FindRoomNames; modules/facilities/compose/room_rows.go:10. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities/compose.FindRoomNames; modules/facilities/compose/room_names.go:14. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/facilities/compose.FindRoomNames",
       "target_owner": "facilities"

@@ -1,6 +1,7 @@
 package parent
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -29,20 +30,24 @@ type ChildDaySourceStatus struct {
 
 // ChildDayChangeEntry is one change of the child's day.
 type ChildDayChangeEntry struct {
-	Kind             string         `json:"kind"`
-	AllDay           bool           `json:"all_day"`
-	Since            *calendar.Date `json:"since"`
-	Until            *calendar.Date `json:"until"`
-	StartsAt         *time.Time     `json:"starts_at"`
-	EndsAt           *time.Time     `json:"ends_at"`
-	EnteredByYou     bool           `json:"entered_by_you"`
-	ChildStatus      *string        `json:"child_status"`
-	PickupTime       *string        `json:"pickup_time"`
-	ActivityTitle    *string        `json:"activity_title"`
-	RoomName         *string        `json:"room_name"`
-	PreviousRoomName *string        `json:"previous_room_name"`
-	ClosingName      *string        `json:"closing_name"`
-	ClosingTraeger   bool           `json:"closing_traeger"`
+	Kind         string         `json:"kind"`
+	AllDay       bool           `json:"all_day"`
+	Since        *calendar.Date `json:"since"`
+	Until        *calendar.Date `json:"until"`
+	StartsAt     *time.Time     `json:"starts_at"`
+	EndsAt       *time.Time     `json:"ends_at"`
+	EnteredByYou bool           `json:"entered_by_you"`
+	ChildStatus  *string        `json:"child_status"`
+	PickupTime   *string        `json:"pickup_time"`
+	// PickupPersonName is who collects the child (#8162);
+	// PickupPersonOneTime asks the person to bring an ID card.
+	PickupPersonName    *string `json:"pickup_person_name"`
+	PickupPersonOneTime bool    `json:"pickup_person_one_time"`
+	ActivityTitle       *string `json:"activity_title"`
+	RoomName            *string `json:"room_name"`
+	PreviousRoomName    *string `json:"previous_room_name"`
+	ClosingName         *string `json:"closing_name"`
+	ClosingTraeger      bool    `json:"closing_traeger"`
 	// OpeningName, OpensAt and ClosesAt describe an opening change (#8170);
 	// PickupAfterClosing marks a changed pickup after its closing time.
 	OpeningName        *string `json:"opening_name"`
@@ -55,7 +60,7 @@ type ChildDayChangeEntry struct {
 
 // ChildDayChangeKinds are the kinds of the child's day.
 var ChildDayChangeKinds = []string{
-	"child_absent", "child_pickup_changed", "child_goes_alone", "class_trip",
+	"child_absent", "child_pickup_changed", "child_goes_alone", "child_pickup_person", "class_trip",
 	"closing_day", "opening_changed",
 	"activity_cancelled", "activity_reinstated", "activity_room_changed", "activity_lead_changed",
 	"class_dismissal_changed", "meal_cancelled",
@@ -74,8 +79,16 @@ func childDayChangesEnums() []common.EnumContract {
 	}
 }
 
+// errChildDayDateFormat reports a date query parameter that is not
+// YYYY-MM-DD.
+var errChildDayDateFormat = errors.New("date query parameter must be YYYY-MM-DD")
+
 // getChildDayChanges reads "Heute anders" of a linked child the account may
-// see (parent_portal.access).
+// see (parent_portal.access). Without date it reads today of the child's
+// school; date may name tomorrow for the preview (#8236). A malformed date
+// is refused at once; a well-formed day other than today and tomorrow is
+// refused after the relationship check, so a child without the right
+// answers 403/404 for it.
 func (rs *Resource) getChildDayChanges(w http.ResponseWriter, r *http.Request) {
 	accountID, ok := rs.parentAccountID(w, r)
 	if !ok {
@@ -85,7 +98,20 @@ func (rs *Resource) getChildDayChanges(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	day, err := rs.ParentService.GetChildDayChanges(r.Context(), accountID, studentID)
+	var on *calendar.Date
+	if raw := r.URL.Query().Get("date"); raw != "" {
+		parsed, parseErr := calendar.ParseDate(raw)
+		if parseErr != nil {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errChildDayDateFormat))
+			return
+		}
+		on = &parsed
+	}
+	day, err := rs.ParentService.GetChildDayChanges(r.Context(), accountID, studentID, on)
+	if errors.Is(err, parentService.ErrDayChangesDayOutOfRange) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return
@@ -111,6 +137,7 @@ func toChildDayChangesResponse(day parentService.ChildDay) ChildDayChangesRespon
 			Kind: entry.Kind, AllDay: entry.AllDay, Since: entry.Since, Until: entry.Until,
 			StartsAt: entry.StartsAt, EndsAt: entry.EndsAt, EnteredByYou: entry.EnteredByYou,
 			ChildStatus: entry.ChildStatus, PickupTime: entry.PickupTime,
+			PickupPersonName: entry.PickupPersonName, PickupPersonOneTime: entry.PickupPersonOneTime,
 			ActivityTitle: entry.ActivityTitle, RoomName: entry.RoomName, PreviousRoomName: entry.PreviousRoomName,
 			ClosingName: entry.ClosingName, ClosingTraeger: entry.ClosingTraeger,
 			OpeningName: entry.OpeningName, OpensAt: entry.OpensAt, ClosesAt: entry.ClosesAt, PickupAfterClosing: entry.PickupAfterClosing,

@@ -51,6 +51,8 @@
     "pickupAt": "{name} сегодня заберут в {time}.",
     "notComing": "{name} сегодня не придёт.",
     "goesAlone": "{name} сегодня возвращается домой самостоятельно.",
+    "pickupPerson": "{person} сегодня забирает {name}.",
+    "pickupPersonOneTime": "{person} сегодня забирает {name} и показывает удостоверение личности.",
     "classTrip": "Класс {class} сегодня на экскурсии.",
     "classTripBack": "Класс {class} сегодня на экскурсии. Вернётся в {time}.",
     "classDismissal": "Уроки класса {class} сегодня заканчиваются в {time}.",
@@ -65,5 +67,31 @@
     "activityReinstated": "{title} в {time} сегодня всё-таки состоится.",
     "activityRoomChanged": "{title} в {time} сегодня проходит в {room}.",
     "activityLeadChanged": "{title} в {time} сегодня ведёт замена."
+  },
+  "changesDay": {
+    "label": "День обзора",
+    "today": "Сегодня",
+    "tomorrow": "Завтра"
+  },
+  "changesTomorrow": {
+    "allAsPlanned": "Завтра всё пройдёт по плану.",
+    "loadObject": "изменения на завтра",
+    "sick": "{name} завтра болеет.",
+    "excused": "{name} завтра отсутствует по уважительной причине.",
+    "pickupAt": "{name} завтра заберут в {time}.",
+    "notComing": "{name} завтра не придёт.",
+    "goesAlone": "{name} завтра возвращается домой самостоятельно.",
+    "pickupPerson": "{person} завтра забирает {name}.",
+    "pickupPersonOneTime": "{person} завтра забирает {name} и показывает удостоверение личности.",
+    "classTrip": "Класс {class} завтра на экскурсии.",
+    "classTripBack": "Класс {class} завтра на экскурсии. Вернётся в {time}.",
+    "classDismissal": "Уроки класса {class} завтра заканчиваются в {time}.",
+    "closingDay": "{careTerm} завтра закрыта: {name}.",
+    "openingChanged": "{careTerm} завтра открыта с {opens} до {closes}: {name}.",
+    "mealCancelled": "Завтра обеда для {name} не будет. Оплата за него не взимается.",
+    "activityCancelled": "{title} в {time} завтра отменяется.",
+    "activityReinstated": "{title} в {time} завтра всё-таки состоится.",
+    "activityRoomChanged": "{title} в {time} завтра проходит в {room}.",
+    "activityLeadChanged": "{title} в {time} завтра ведёт замена."
   }
 }

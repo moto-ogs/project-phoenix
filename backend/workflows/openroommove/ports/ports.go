@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 )
 
@@ -19,6 +20,12 @@ import (
 type Rooms interface {
 	FindRoom(context.Context, int64) (facilities.Room, error)
 	FindRoomForUpdate(context.Context, int64) (facilities.Room, error)
+}
+
+// RoomClosures serializes an open-room move with Facilities' room closures.
+// The caller holds the resulting room lock through the enclosing tenant unit.
+type RoomClosures interface {
+	RoomClosedOn(context.Context, int64, calendar.Date) (bool, error)
 }
 
 // Activities is the Timetable & Activities surface that resolves, and on first
@@ -62,6 +69,7 @@ type Runtime struct {
 	WithinTenant func(context.Context, func(context.Context) error) error
 	// AcquireLock takes an exclusive lock held until the transaction ends.
 	AcquireLock func(ctx context.Context, key string) error
+	Today       func() calendar.Date
 }
 
 // Observation is the runtime evidence of one command run.

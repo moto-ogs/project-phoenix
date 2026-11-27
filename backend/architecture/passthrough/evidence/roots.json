@@ -1780,6 +1780,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s traegerDayChangeSchools) TraegerSchoolsWithNames(ctx context.Context, organizationID int64) ([]traegerview.TraegerSchool, error) {\n\tschools, err := s.schools.ListTraegerSchools(ctx, organizationID)\n\tif errors.Is(err, organizationtenancy.ErrOrganizationInactive) || errors.Is(err, organizationtenancy.ErrOrganizationNotFound) {\n\t\treturn nil, traegerview.ErrTraegerUnavailable\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.TraegerSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, traegerview.TraegerSchool{ID: ident.ID(school.ID), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, City: school.City})\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerDayChangeSchools.TraegerSchoolsWithNames",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (l traegerDocumentAccessLog) RecordAccess(ctx context.Context, access organizationtenancy.TraegerDocumentAccess) error {\n\tnow := time.Now()\n\treturn l.log.Create(ctx, \u0026auditModels.DataAccessLog{ActorAccountID: access.AccountID, ActorRole: traegerAccessActorRole, ResourceType: auditModels.ResourceTypeTraegerDocumentDownload, RangeStart: now, RangeEnd: now, Metadata: map[string]any{\"channel\": \"traeger_portal\", \"organization_id\": access.OrganizationID, \"document_id\": access.DocumentID}})\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerDocumentAccessLog.RecordAccess",
@@ -1930,6 +1937,13 @@
       "evidence": "func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, blockID int64) error {\n\treturn e.access.EndSpringerWindow(ctx, blockID)\n}",
       "form": "forward-debt",
       "id": "api/traegerSpringerEmployments.EndSpringerAccess",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (n traegerStudentNames) StudentNamesByTenant(ctx context.Context, schools []int64, query traegerview.StudentNameQuery) ([]traegerview.StudentName, int, error) {\n\tnames, matched, err := n.names.StudentNamesByTenant(ctx, schools, peopledirectory.SchoolStudentNameQuery{StudentProfileIDs: query.Students, Search: query.Search, Limit: query.Limit, After: peopledirectory.SchoolStudentName(query.After)})\n\tif err != nil {\n\t\treturn nil, 0, err\n\t}\n\tresult := make([]traegerview.StudentName, 0, len(names))\n\tfor _, name := range names {\n\t\tresult = append(result, traegerview.StudentName(name))\n\t}\n\treturn result, matched, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerStudentNames.StudentNamesByTenant",
       "owner": "roots"
     },
     {

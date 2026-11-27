@@ -61,6 +61,7 @@ export function buildMaterializeResponse(
     skipped_not_started: 0,
     skipped_holidays: 0,
     skipped_closing_days: 0,
+    skipped_closed_rooms: 0,
     candidates_raced: 0,
     instance_students_created: 0,
     instance_staff_created: 0,

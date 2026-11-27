@@ -41,6 +41,7 @@ import { routes as database } from "./database.generated";
 import { routes as dayChanges } from "./day-changes.generated";
 import { routes as demoAccess } from "./demo-access.generated";
 import { routes as display } from "./display.generated";
+import { routes as displayPreferences } from "./display-preferences.generated";
 import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as feedback } from "./feedback.generated";
@@ -163,6 +164,7 @@ import { routes as traegerInvitations } from "./traeger-invitations.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
+import { routes as traegerOpeningChanges } from "./traeger-opening-changes.generated";
 import { routes as traegerOrganization } from "./traeger-organization.generated";
 import { routes as traegerProfile } from "./traeger-profile.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
@@ -207,8 +209,12 @@ export const portalRoutes = {
     catererSchools["GET /caterer/schools"],
     catererSchools["GET /caterer/schools/{schoolId}/orders"],
     catererSchools["POST /caterer/schools/{schoolId}/orders/{orderId}/confirm"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
   ],
   org: [
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     traegerAbsenceTypes["GET /traeger/absence-types/"],
     traegerAbsenceTypes["POST /traeger/absence-types/"],
     traegerAbsenceTypes["PUT /traeger/absence-types/{id}"],
@@ -507,6 +513,10 @@ export const portalRoutes = {
     traegerNumberRanges["GET /traeger/number-ranges/"],
     traegerNumberRanges["PUT /traeger/number-ranges/{service}"],
     traegerNumberRanges["PUT /traeger/number-ranges/{service}/start"],
+    traegerOpeningChanges["DELETE /traeger/opening-changes/{id}"],
+    traegerOpeningChanges["GET /traeger/opening-changes/"],
+    traegerOpeningChanges["POST /traeger/opening-changes/"],
+    traegerOpeningChanges["PUT /traeger/opening-changes/{id}"],
     traegerOrganization["GET /traeger/organization/"],
     traegerProfile["GET /traeger/profile/"],
     traegerProfile["PUT /traeger/profile/name"],
@@ -530,6 +540,8 @@ export const portalRoutes = {
     traegerSchools["GET /traeger/schools/alerts/export"],
     traegerSchools["GET /traeger/schools/arrival-pickup-times"],
     traegerSchools["GET /traeger/schools/arrival-pickup-times/export"],
+    traegerSchools["GET /traeger/schools/children"],
+    traegerSchools["GET /traeger/schools/children/export"],
     traegerSchools["GET /traeger/schools/comparison"],
     traegerSchools["GET /traeger/schools/comparison/export"],
     traegerSchools["GET /traeger/schools/daily-attendance"],
@@ -615,6 +627,8 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     analyticsPolicy["GET /analytics-policy"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     parentEnrollments["GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId}"],
     parentEnrollments["GET /parent/enrollments/{tenantSlug}/profile"],
     parentEnrollments["POST /parent/enrollments/{tenantSlug}/submit"],
@@ -746,6 +760,8 @@ export const portalRoutes = {
     parentNewsAttachments["GET /parent-news-attachments/{announcementId}/{attachmentId}/download"],
   ],
   platform: [
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     operatorAccounts["DELETE /operator/accounts/{accountId}/tenants/{tenantId}"],
     operatorAccounts["GET /operator/accounts"],
     operatorAccounts["GET /operator/accounts/{accountId}/mfa/global-override"],
@@ -926,6 +942,8 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     analyticsPolicy["GET /analytics-policy"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     schoolAuth["DELETE /school/auth/mfa/trusted-devices/{deviceId}"],
     schoolAuth["GET /school/auth/mfa/trusted-devices"],
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
@@ -1135,6 +1153,8 @@ export const portalRoutes = {
     display["PATCH /api/display/{id}"],
     display["POST /api/display/"],
     display["POST /api/display/{id}/regenerate"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     emergency["POST /api/emergency/snapshot/export"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/children/{childId}"],
@@ -1381,12 +1401,15 @@ export const portalRoutes = {
     pwa["POST /api/pwa/usage"],
     reminders["GET /api/reminders/"],
     rooms["DELETE /api/rooms/{id}"],
+    rooms["DELETE /api/rooms/{id}/closures/{closureId}"],
     rooms["GET /api/rooms/"],
+    rooms["GET /api/rooms/closures"],
     rooms["GET /api/rooms/{id}"],
     rooms["GET /api/rooms/{id}/history"],
     rooms["GET /api/rooms/{id}/removal-impact"],
     rooms["POST /api/rooms/"],
     rooms["POST /api/rooms/export"],
+    rooms["POST /api/rooms/{id}/closures"],
     rooms["PUT /api/rooms/{id}"],
     schoolSetup["GET /api/school-setup/"],
     schoolSetup["POST /api/school-setup/complete"],

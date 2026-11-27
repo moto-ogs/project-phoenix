@@ -51,6 +51,8 @@ func TestFeedTypesAreTheStaffNoticesBesideMessagesAndReminders(t *testing.T) {
 		notifications.TypeInstanceRoomChanged,
 		notifications.TypeInstanceRoomChangedLater,
 		notifications.TypeSchoolClosingDayChanged,
+		notifications.TypeOpeningChangeChanged,
+		notifications.TypeRoomClosed,
 		notifications.TypeStaffingChanged,
 		notifications.TypeGroupStaffingChanged,
 		notifications.TypeTeamMemberAbsent,

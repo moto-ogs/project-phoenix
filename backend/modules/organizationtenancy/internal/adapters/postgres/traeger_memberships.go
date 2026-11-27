@@ -70,6 +70,52 @@ func (s *Store) ListTraegerSchoolIDs(ctx context.Context, organizationID int64) 
 	return ids, stats, nil
 }
 
+// listLiveTraegerSchoolsQuery reads the Träger and its undeleted schools in
+// one statement (#8146): no row means no Träger, a row without a school a
+// Träger without schools.
+const listLiveTraegerSchoolsQuery = `SELECT ("organization".active AND "organization".deleted_at IS NULL) AS live,
+		"school".id AS school_id, COALESCE("school".name, '') AS name, COALESCE("school".slug, '') AS slug,
+		COALESCE("school".subdomain, '') AS subdomain, COALESCE("school".city, '') AS city
+	FROM platform.organizations AS "organization"
+	LEFT JOIN platform.schools AS "school"
+		ON "school".organization_id = "organization".id AND "school".deleted_at IS NULL
+	WHERE "organization".id = ?
+	ORDER BY "school".name, "school".id`
+
+type liveTraegerSchoolRow struct {
+	Live      bool   `bun:"live"`
+	SchoolID  *int64 `bun:"school_id"`
+	Name      string `bun:"name"`
+	Slug      string `bun:"slug"`
+	Subdomain string `bun:"subdomain"`
+	City      string `bun:"city"`
+}
+
+// ListLiveTraegerSchools reads the Träger and its undeleted schools with
+// their names in one statement.
+func (s *Store) ListLiveTraegerSchools(ctx context.Context, organizationID int64) (domain.TraegerSchoolSet, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return domain.TraegerSchoolSet{}, domain.OperationStats{}, err
+	}
+	var rows []liveTraegerSchoolRow
+	started := time.Now()
+	err = db.NewRaw(listLiveTraegerSchoolsQuery, organizationID).Scan(ctx, &rows)
+	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(rows))}
+	if err != nil {
+		return domain.TraegerSchoolSet{}, stats, fmt.Errorf("organization tenancy postgres: list Träger schools with names: %w", err)
+	}
+	set := domain.TraegerSchoolSet{Schools: []domain.TraegerSchool{}}
+	for _, row := range rows {
+		set.Found, set.Live = true, row.Live
+		if row.SchoolID == nil {
+			continue
+		}
+		set.Schools = append(set.Schools, domain.TraegerSchool{ID: *row.SchoolID, Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain, City: row.City})
+	}
+	return set, stats, nil
+}
+
 const listTraegerMembershipsQuery = `SELECT organization_id, account_id, status, activated_at, created_at,
 		COALESCE(display_name, '') AS display_name
 	FROM platform.organization_accounts

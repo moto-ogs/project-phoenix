@@ -12,7 +12,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 )
 
-type requestDecisionAdapter struct{ requestEditAdapter }
+// requestDecisionAdapter takes the student/day lock from the bound day locker
+// directly, so corrections lock like decisions without a forwarding method.
+type requestDecisionAdapter struct {
+	requestEditAdapter
+	studentDayLocker
+}
+
+type studentDayLocker interface {
+	LockStudentAndExceptionDay(context.Context, int64, string) error
+}
 
 func (a requestDecisionAdapter) LockStudent(ctx context.Context, id int64) (compose.ReviewStudent, error) {
 	student, err := a.s.People.FindStudentRecordForMutation(ctx, id)

@@ -9985,6 +9985,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "binding_digest": "1714e67940bef27813a59de6bac9ec6f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomClosures.RoomClosedOn",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListRoomSessionHistory",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryQuery.ListRoomSessionHistory",

@@ -484,6 +484,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/holiday-closures", enrollmentHTTP.HolidayClosureRouteContracts()},
 		{"/traeger/holiday-closures/pending", holidayClosureHTTP.TraegerRouteContracts()},
 		{"/traeger/closing-days", calendarAPI.TraegerClosingDayRouteContracts()},
+		{"/traeger/opening-changes", calendarAPI.TraegerOpeningChangeRouteContracts()},
 		// Enrollment renders the registration a rebooking answers.
 		{"/traeger/holiday-contributions", parentBillingHTTP.HolidayRouteContracts(enrollmentOwner.HolidayRegistrationDetail{})},
 		{"/traeger/required-details", parentBillingHTTP.RequiredDetailsRouteContracts()},
@@ -499,6 +500,7 @@ func traegerContractMounts() []contractMount {
 func sharedPortalContractMounts() []contractMount {
 	return []contractMount{
 		{"/analytics-consent", meAPI.AnalyticsConsentRouteContracts()},
+		{"/display-preferences", meAPI.DisplayPreferencesRouteContracts()},
 		// The analytics package writes its envelope without api/common; the
 		// root names its answer.
 		{"/analytics-policy", []common.RouteContract{{

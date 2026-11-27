@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "Цей ідентифікатор кредитора вже вказано для {school_name} з іншим рахунком. Укажіть той самий рахунок або перевірте ідентифікатор.",
   "member_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "no_membership": "У вас немає доступу до: {object}. Зверніться до школи.",
+  "opening_change_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "opening_change_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "report_template_invalid": "Перевірте дані шаблону.",
   "report_template_name_taken": "Шаблон із такою назвою вже є. Виберіть іншу назву.",
   "report_template_not_found": "Цього шаблону більше немає. Оновіть сторінку.",

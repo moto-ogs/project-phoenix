@@ -25,6 +25,8 @@
   "school_party_creditor_account_conflict": "Diese Gläubiger-ID ist schon bei {school_name} mit einem anderen Konto eingetragen. Eine Gläubiger-ID gehört zu genau einem Konto: Trag dieselbe IBAN, dieselbe BIC und denselben Kontoinhaber ein oder prüfe die Gläubiger-ID.",
   "member_not_found": "Diese Person gehört nicht mehr zum Träger-Büro. Bitte lade die Seite neu.",
   "no_membership": "Dein Konto hat keinen Zugang zum Träger-Portal. Bitte wende dich an das moto-Team.",
+  "opening_change_invalid": "Die geänderte Öffnungszeit ist nicht vollständig. Bitte prüfe Datum, Uhrzeiten, Name und Schulen.",
+  "opening_change_not_found": "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu.",
   "report_template_invalid": "Bitte prüfe die Angaben der Vorlage.",
   "report_template_name_taken": "Eine Vorlage mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
   "report_template_not_found": "Diese Vorlage gibt es nicht mehr. Bitte lade die Seite neu.",

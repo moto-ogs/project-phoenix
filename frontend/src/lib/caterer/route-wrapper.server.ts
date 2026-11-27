@@ -6,6 +6,7 @@ import {
   type CatalogRoute,
   type HandOffHead,
 } from "../contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "../contract/catalog-outside-mounts";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /** The caterer portal's route handlers (ADR 0077), on the caterer session. */
@@ -21,9 +22,16 @@ export const catalogProxy = (
   method: CatalogMethod,
   publicRoutes: readonly CatalogRoute[] = [],
 ) =>
-  makeCatalogProxy(caterer, "/caterer", routes, method, [], {
-    routes: publicRoutes,
-  });
+  makeCatalogProxy(
+    caterer,
+    "/caterer",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.caterer,
+    {
+      routes: publicRoutes,
+    },
+  );
 
 /**
  * The caterer portal's proxy for a route file below `/api/caterer/<head…>`
