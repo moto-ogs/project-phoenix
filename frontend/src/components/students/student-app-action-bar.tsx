@@ -124,9 +124,7 @@ export function studentAppQuickActions(
  * Wie viele der Tagesaktionen in der Leiste stehen: nur die Hauptaktion.
  * Die übrigen stehen sichtbar in der Kachelzeile unter der Kopfkarte.
  */
-export function studentAppBarCount(
-  entries: readonly StudentQuickAction[],
-): number {
+function studentAppBarCount(entries: readonly StudentQuickAction[]): number {
   return Math.min(1, entries.length);
 }
 
