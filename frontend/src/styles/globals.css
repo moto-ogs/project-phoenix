@@ -915,7 +915,7 @@
 html[data-contrast="more"] {
   --moto-field-edge: var(--moto-edge-more);
   --moto-control-edge: var(--moto-edge-more);
-  --moto-switch-edge: var(--color-gray-500);
+  --moto-switch-edge: var(--moto-edge-more);
   --moto-field-focus: var(--color-gray-900);
 }
 
@@ -923,7 +923,7 @@ html[data-contrast="more"] {
   html:not([data-contrast]) {
     --moto-field-edge: var(--moto-edge-more);
     --moto-control-edge: var(--moto-edge-more);
-    --moto-switch-edge: var(--color-gray-500);
+    --moto-switch-edge: var(--moto-edge-more);
     --moto-field-focus: var(--color-gray-900);
   }
 }
