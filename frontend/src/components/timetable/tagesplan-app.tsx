@@ -45,7 +45,6 @@ import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
-import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   blockChildrenLabel,
@@ -639,8 +638,10 @@ export function TagesplanApp(props: TagesplanAppProps) {
     <Collection
       label="Blöcke des Tages"
       // Beginn und Ende stehen auf Höhe des Titels, auch wenn die Angaben
-      // darunter umbrechen.
-      className="[&_[data-collection-row]>span:first-child]:self-start"
+      // darunter umbrechen. Am SE 54 statt 58 px je Zeile (erlaubt sind
+      // 44–55 px, die ganze Zeile bleibt Trefferfläche): so stehen mehr
+      // Blöcke im ersten Bild.
+      className="max-[389px]:[&_[data-collection-row]]:min-h-12 max-[389px]:[&_[data-collection-row]]:py-1.5 [&_[data-collection-row]>span:first-child]:self-start"
     >
       {pastToggle}
       {groups.map((group, index) =>
@@ -1092,7 +1093,16 @@ function BlockRow({
   const { instance, state } = entry;
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
   const staff = blockStaffNames(instance);
+  // Höchstens ein Abzeichen hinter dem Titel (#8070 R21): der Zustand
+  // („Läuft“, „Fällt aus“, „Als Nächstes“ …), sonst „Mit dir“. Zwei
+  // Abzeichen brachen am Telefon auf eine eigene Zeile um. Was nicht mehr
+  // hinter den Titel passt („Mit dir“ neben einem Zustand), steht als Wort
+  // in der Angabenzeile; im Blatt stehen alle Abzeichen.
   const chips = blockChips(state, next, mine);
+  const rowChip = chips[0];
+  const labels = chipLabels(state, next, mine);
+  const rowChipLabel = labels[0] ?? labels[1];
+  const mineInMeta = mine && labels[0] != null;
   const children = childrenPart(entry);
   const openEnd = hasOpenEnd(instance);
   // Am iPad hoch ist die Zeile breit genug für alle Namen.
@@ -1103,7 +1113,7 @@ function BlockRow({
   // stand sonst „OGS-Ra…“ und „Anna Müll…“. Ein Ausfall nennt seinen Grund
   // rot wie am Desktop.
   const count = rowChildren(entry);
-  const parts: BlockRowPart[] = [];
+  const parts: (BlockRowPart & { mine?: boolean })[] = [];
   const push = (
     key: string,
     text: string | null | undefined,
@@ -1112,6 +1122,7 @@ function BlockRow({
   ) => {
     if (text) parts.push({ key, text, danger, shrink });
   };
+  if (mineInMeta) parts.push({ key: "mine", text: "Mit dir", mine: true });
   // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
   // nicht noch einmal daneben, wohl aber sein Grund.
   // Vorbei: die Zeile ist grau, steht über der Jetzt-Linie und beginnt mit
@@ -1141,31 +1152,28 @@ function BlockRow({
   } else if (!state.cancelled) {
     push("staff", blockStaffShort(instance), false, "staff");
   }
+  // Der Bereich („Randzeiten“) steht im Blatt („Bereich“), nicht in der
+  // Zeile: als Abzeichen brach er die Titelzeile um, als Wort die
+  // Angabenzeile (am SE fast jede Zeile dreizeilig).
   return (
     <CollectionRow
       onClick={onOpen}
       selected={selected}
       wrap
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
-      // Sprachsteuerung den Block beim Namen findet.
+      // Sprachsteuerung den Block beim Namen findet (WCAG 2.5.3); das
+      // Abzeichen hinter dem Titel gehört zum sichtbaren Namen.
       aria-label={[
-        // Titel und Bereich wie sichtbar, damit der Name mit der Zeile
-        // beginnt (WCAG 2.5.3).
-        // Die Abzeichen hinter dem Titel gehören zum sichtbaren Namen.
-        [
-          instance.title,
-          instance.planningTrackName,
-          ...chipLabels(state, next, mine),
-        ]
-          .filter(Boolean)
-          .join(" "),
+        [instance.title, rowChipLabel].filter(Boolean).join(" "),
         blockTimeRange(instance),
+        mineInMeta ? "Mit dir" : null,
         state.running || state.cancelled ? null : state.label,
         state.cancelled ? instance.cancelReason : null,
         state.room,
         instance.groupName,
         children,
         state.cancelled ? null : staff,
+        instance.planningTrackName,
       ]
         .filter(Boolean)
         .join(", ")}
@@ -1174,10 +1182,6 @@ function BlockRow({
           data-tagesplan-row={instance.id}
           className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums"
         >
-          {openEnd ? (
-            // Ein spontaner Block hat noch kein Ende: „seit 00:03“.
-            <span className="block text-gray-600">seit</span>
-          ) : null}
           <span
             className={cn(
               "block font-semibold",
@@ -1186,9 +1190,11 @@ function BlockRow({
           >
             {instance.startTime}
           </span>
-          {openEnd ? null : (
-            <span className="block text-gray-600">{instance.endTime}</span>
-          )}
+          {/* Beginn und Ende wie jede Zeile; ein spontaner Block hat noch
+              kein Ende („offen“, wie auf der Startseite). */}
+          <span className="block text-gray-600">
+            {openEnd ? "offen" : instance.endTime}
+          </span>
         </span>
       }
       title={
@@ -1196,38 +1202,20 @@ function BlockRow({
           className={cn(
             state.over && "text-gray-600",
             state.running && "font-semibold",
-            state.cancelled && "line-through decoration-gray-400",
           )}
         >
-          {instance.title}
-          {/* Der Bereich als graues Abzeichen: als lose graue Schrift las er
-              sich wie abgeschnittener Text hinter dem Titel. */}
-          {instance.planningTrackName ? (
+          <span
+            className={cn(
+              state.cancelled && "line-through decoration-gray-400",
+            )}
+          >
+            {instance.title}
+          </span>
+          {rowChip ? (
             <>
               {" "}
               <span className="inline-flex align-[1px] font-normal">
-                <StatusBadge
-                  tone="gray"
-                  size="xs"
-                  label={instance.planningTrackName}
-                />
-              </span>
-            </>
-          ) : null}
-          {/* Zustand und „Mit dir“ hinter dem Titel: die Angabenzeile
-              darunter bleibt einzeilig. */}
-          {chips.length > 0 ? (
-            <>
-              {" "}
-              {/* Leerzeichen zwischen den Abzeichen: der sichtbare Text
-                  muss zum zugänglichen Namen passen (WCAG 2.5.3). */}
-              <span className="font-normal no-underline">
-                {chips.map((chip, index) => (
-                  <Fragment key={index}>
-                    {index > 0 ? " " : null}
-                    <span className="inline-flex align-[1px]">{chip}</span>
-                  </Fragment>
-                ))}
+                {rowChip}
               </span>
             </>
           ) : null}
@@ -1245,7 +1233,13 @@ function BlockRow({
                   className={cn(
                     "inline-block max-w-full",
                     part.danger && "text-moto-red-strong",
+                    part.mine && "font-medium",
                   )}
+                  style={
+                    part.mine
+                      ? { color: MOTO_COLOR_PALETTE.indigo.strong }
+                      : undefined
+                  }
                 >
                   {part.text}
                   {index < parts.length - 1 ? (
