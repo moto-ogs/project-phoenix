@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CLASS_DAY_REFRESH_EVENT } from "~/components/class-day/use-class-day-refresh";
@@ -17,6 +23,7 @@ const state = vi.hoisted(() => ({
   today: "2026-09-09",
   selectedDate: "2026-09-09",
   overview: undefined as DayChangesOverview | undefined,
+  overviewByDate: undefined as Record<string, DayChangesOverview> | undefined,
   classes: undefined as
     | {
         school_day: boolean;
@@ -44,7 +51,14 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
     if (key?.startsWith("school-day-changes-")) {
       requestedChangeKeys(key);
-      return { data: state.overview, error: undefined, mutate: reloadChanges };
+      // Die Übersicht trägt den Tag ihres Schlüssels.
+      const date = key.slice("school-day-changes-".length);
+      const overview = state.overviewByDate?.[date] ?? state.overview;
+      return {
+        data: overview && { ...overview, date },
+        error: undefined,
+        mutate: reloadChanges,
+      };
     }
     if (key?.startsWith("school-assigned-classes-")) {
       return { data: state.classes, error: undefined, mutate: reloadClasses };
@@ -88,6 +102,7 @@ describe("SchoolDayChangesBlock", () => {
     requestedChangeKeys.mockReset();
     state.today = "2026-09-09";
     state.selectedDate = "2026-09-09";
+    state.overviewByDate = undefined;
     state.permissions = ["class_day:read"];
     state.classes = {
       school_day: true,
@@ -280,9 +295,11 @@ describe("SchoolDayChangesBlock", () => {
       classes: [{ school_class: "3a", changes: 0 }],
     };
 
-    const { container } = renderBlock();
+    renderBlock();
 
-    expect(container.firstChild).toBeNull();
+    // Anker: Der Umschalter bleibt für eigene Änderungen von morgen sichtbar.
+    expect(screen.getByRole("button", { name: "Morgen" })).toBeVisible();
+    expect(screen.queryByText("Heute läuft alles wie geplant.")).toBeNull();
   });
 
   it("gibt bei einem Teilausfall nie Entwarnung", () => {
@@ -375,5 +392,84 @@ describe("useJumpToDayChange", () => {
     expect(document.activeElement).toHaveTextContent("Ben, heute krank");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     window.location.hash = "";
+  });
+});
+
+describe("SchoolDayChangesBlock: Vorschau auf morgen (#7657)", () => {
+  beforeEach(() => {
+    requestedChangeKeys.mockReset();
+    state.today = "2026-09-09";
+    state.selectedDate = "2026-09-09";
+    state.overviewByDate = undefined;
+    state.permissions = ["class_day:read", "calendar:school"];
+    state.classes = { school_day: true, classes: [] };
+    state.overview = {
+      date: state.today,
+      failedSources: [],
+      entries: [
+        change({
+          kind: "class_dismissal_changed",
+          section: "you",
+          schoolClass: { name: "3a", time: "11:30", children: 0 },
+          link: { target: "school_class", staffId: null },
+        }),
+      ],
+    };
+  });
+
+  it("liest morgen und verlinkt in den Klassentag von morgen", async () => {
+    const { nextDayISO } = await import("~/components/home/day-switch");
+    const tomorrow = nextDayISO(state.today);
+    renderBlock();
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      `school-day-changes-${state.today}`,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      `school-day-changes-${tomorrow}`,
+    );
+    const row = screen.getByRole("link", {
+      name: "Bei Klasse 3a endet der Unterricht morgen um 11:30 Uhr.",
+    });
+    expect(row.getAttribute("href")).toContain(`tag=${tomorrow}`);
+  });
+
+  it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {
+    state.overview = { date: state.today, failedSources: [], entries: [] };
+    renderBlock();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+    expect(screen.getByText("Morgen läuft alles wie geplant.")).toBeVisible();
+  });
+
+  it("zeigt ohne Schulkalender die Änderungen der eigenen Klassen von morgen", async () => {
+    const { nextDayISO } = await import("~/components/home/day-switch");
+    const tomorrow = nextDayISO(state.today);
+    state.permissions = ["class_day:read"];
+    state.overviewByDate = {
+      [state.today]: { date: state.today, failedSources: [], entries: [] },
+      [tomorrow]: {
+        date: tomorrow,
+        failedSources: [],
+        entries: [
+          change({
+            kind: "class_dismissal_changed",
+            section: "you",
+            schoolClass: { name: "3a", time: "11:30", children: 0 },
+            link: { target: "school_class", staffId: null },
+          }),
+        ],
+      },
+    };
+    renderBlock();
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(
+      screen.getByText(
+        "Bei Klasse 3a endet der Unterricht morgen um 11:30 Uhr.",
+      ),
+    ).toBeVisible();
   });
 });

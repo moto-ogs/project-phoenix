@@ -11,6 +11,9 @@ export const routes = {
     method: "GET",
     pattern: "/school/day-changes/today",
     portals: ["school"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(OverviewSchema),
   },
 } as const;
