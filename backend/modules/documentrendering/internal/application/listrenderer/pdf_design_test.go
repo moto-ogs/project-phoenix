@@ -471,14 +471,17 @@ func TestDesignedPDFKeepsDocumentNumbersOnOneLine(t *testing.T) {
 	columns := []listrecords.Column{
 		{ID: "number", Label: "Nummer"},
 		{ID: "issued", Label: "Ausgestellt am"},
+		{ID: "reference", Label: "Bezug"},
 		{ID: "gross", Label: "Brutto (Euro)", Numeric: true},
 	}
 	for i := len(columns); i < 15; i++ {
 		columns = append(columns, listrecords.Column{ID: listrecords.ColumnID(fmt.Sprint(i)), Label: "Spalte"})
 	}
+	longNumber := strings.Repeat("W", 32) + "-0001"
 	rows := []listrecords.Row{
-		{Values: map[listrecords.ColumnID]string{"number": "FE-2026-0001", "issued": "27.11.2026", "gross": "157,50"}},
-		{Values: map[listrecords.ColumnID]string{"number": strings.Repeat("W", 32) + "-0001", "issued": "27.11.2026", "gross": "1.157,50"}},
+		{Values: map[listrecords.ColumnID]string{"number": "FE-2026-0001", "issued": "30.08.2026", "reference": "Storno zu FE-2026-0001", "gross": "157,50"}},
+		{Values: map[listrecords.ColumnID]string{"number": longNumber, "issued": "30.08.2026", "reference": "Storno zu " + longNumber, "gross": "1.157,50"}},
+		{Values: map[listrecords.ColumnID]string{"number": "Summe", "gross": "1234567,89"}},
 	}
 	r, err := newDesignRenderer(listrecords.Document{Columns: columns, Rows: rows})
 	if err != nil {
@@ -486,7 +489,7 @@ func TestDesignedPDFKeepsDocumentNumbersOnOneLine(t *testing.T) {
 	}
 	for _, row := range rows {
 		cells := r.buildRow(row).cells
-		for i, column := range columns[:3] {
+		for i, column := range columns[:4] {
 			if len(cells[i]) != 1 || cells[i][0].text != row.Values[column.ID] {
 				t.Errorf("%s %q broken into %v", column.ID, row.Values[column.ID], cells[i])
 			}

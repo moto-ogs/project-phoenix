@@ -9,11 +9,8 @@
 import { bffFile, bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import {
-  INVOICE_STATUS_VALUES,
-  type BillingInvoiceStatus,
-} from "./traeger-billing-families-api";
-import {
   JOURNAL_DOCUMENT_TYPE_VALUES,
+  JOURNAL_INVOICE_STATUS_VALUES,
   JOURNAL_REFERENCE_KIND_VALUES,
   JOURNAL_RUN_KIND_VALUES,
   type JournalDocumentType,
@@ -28,6 +25,11 @@ import {
 } from "./traeger-list-export";
 
 export type { JournalDocumentType };
+
+export const JOURNAL_INVOICE_STATES = JOURNAL_INVOICE_STATUS_VALUES.filter(
+  (status) => status !== "",
+);
+export type JournalInvoiceState = (typeof JOURNAL_INVOICE_STATES)[number];
 
 /** The columns a page of the journal is ordered by (#8138). */
 export type JournalSort = "number" | "issued" | "recipient" | "gross" | "open";
@@ -91,7 +93,7 @@ export interface JournalDocument {
    * The state of an invoice (#8138); null on a document without one: a
    * Storno, a Gutschrift, a Jahresbescheid.
    */
-  readonly status: BillingInvoiceStatus | null;
+  readonly status: JournalInvoiceState | null;
   /** What an invoice still asks for; 0 without a state. */
   readonly openCents: number;
   /** First names of the children the document bills. */
@@ -177,8 +179,9 @@ export interface InvoiceJournalFilter {
   readonly documentType: JournalDocumentType | "";
   readonly run: JournalRunFilter | null;
   /** Empty for every state. */
-  readonly status: BillingInvoiceStatus | "";
+  readonly status: JournalInvoiceState | "";
   readonly search: string;
+  readonly referenceNumber: string;
 }
 
 /** The order of a page; null keeps the order of the journal. */
@@ -202,6 +205,7 @@ function journalQuery(filter: InvoiceJournalFilter) {
     run_id: filter.run?.id,
     status: filter.status || undefined,
     search: filter.search.trim() || undefined,
+    reference_number: filter.referenceNumber || undefined,
   };
 }
 
@@ -251,7 +255,7 @@ function toDocument(
           number: document.reference.number,
         }
       : null,
-    status: knownEnum(INVOICE_STATUS_VALUES, document.status) ?? null,
+    status: knownEnum(JOURNAL_INVOICE_STATES, document.status) ?? null,
     openCents: document.open_cents,
     childNames: document.child_names ?? [],
     debtorNumber: document.debtor_number,

@@ -13,7 +13,10 @@ func newPageChrome(landscape bool, title, subtitle string, generatedAt time.Time
 	if landscape {
 		size = *gopdf.PageSizeA4Landscape
 	}
+	return newPageChromeForSize(size, title, subtitle, generatedAt, filters, footer)
+}
 
+func newPageChromeForSize(size gopdf.Rect, title, subtitle string, generatedAt time.Time, filters []string, footer string) (*pageChrome, error) {
 	pdf := &gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: size})
 

@@ -27,7 +27,7 @@ export function traegerInvoiceJournalTopic(): HelpTopic {
           "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Ohne eigene Sortierung steht das neueste Dokument oben. In einem Nummernkreis steht dann die höchste Nummer oben.",
           "Neben der Dokumentart steht bei einer Rechnung ihr Stand, zum Beispiel `Forderung offen`, `Teilgutschrift` oder `Storniert`. Die Spalte `Offene Forderung` nennt, was die Rechnung noch fordert.",
           "Unter dem Empfänger stehen die Vornamen der Kinder. Wähle einen unterstrichenen Empfängernamen. Du kommst zur Familie mit all ihren Dokumenten.",
-          "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört. Wähle diese Nummer. moto sucht sie in allen Dokumenten und leert dabei die anderen Filter.",
+          "Neben einem Storno oder einer Gutschrift steht die Nummer der zugehörigen Rechnung. Wähle diese Nummer. moto zeigt die Rechnung und alle Dokumente, die genau diese Nummer als Bezug haben. Andere Filter werden dabei geleert.",
           "Wähle den Namen in der Spalte `Lauf`. Du kommst zum Lauf mit seinen Schreiben.",
           "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen. Daneben steht die Summe der offenen Forderungen.",
           "Wähle einen Spaltenkopf, zum Beispiel `Brutto` oder `Offene Forderung`. moto sortiert alle Dokumente zu Suche und Filter, nicht nur die geladenen Zeilen. Wähle ihn noch einmal für die andere Richtung.",

@@ -144,6 +144,8 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	for _, id := range []int64{f.siblings, f.again} {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
+	debtor := f.changeDebtorNumber(t, f.office.token, f.siblings, "XFE-0002")
+	require.Equal(t, http.StatusOK, debtor.Code, debtor.Body.String())
 	setNumberRange(t, f, billing, "FE-{NNNN}")
 	draft := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	empty := invoiceJournal(t, f.traeger, billing, nil)
@@ -300,8 +302,13 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Len(t, only.Runs, 2, "the filters keep every run to choose from")
 	ofRun := invoiceJournal(t, f.traeger, billing, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(secondRun)}})
 	assert.Equal(t, []string{"FE-0007"}, journalNumbers(ofRun))
-	assert.ElementsMatch(t, []string{"FE-0002", "FE-0004"}, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})),
-		"a number finds its document and what refers to it")
+	assert.Subset(t, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {"fe-0002"}})),
+		[]string{"FE-0001", "FE-0002", "FE-0004"}, "typing a number also searches debtor numbers")
+	jump := url.Values{"reference_number": {"FE-0002"}}
+	assert.ElementsMatch(t, []string{"FE-0002", "FE-0004"}, journalNumbers(invoiceJournal(t, f.traeger, billing, jump)))
+	jumpFile := billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?"+jump.Encode())
+	require.Len(t, jumpFile, 4)
+	assert.NotContains(t, strings.Join(jumpFile, "\n"), "FE-0001")
 	byName := invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(cancellation.RecipientLastName)}})
 	assert.Contains(t, journalNumbers(byName), "FE-0003", "the search finds a recipient by name")
 	issued := byNumber["FE-0001"].IssuedOn

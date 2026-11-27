@@ -23,7 +23,10 @@ const { mockFetchJournal, mockDownload, mockDownloadBlob } = vi.hoisted(() => ({
   mockDownloadBlob: vi.fn(),
 }));
 
-vi.mock("~/lib/traeger-invoice-journal-api", () => ({
+vi.mock("~/lib/traeger-invoice-journal-api", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/lib/traeger-invoice-journal-api")
+  >()),
   // An order is passed on only when a column is chosen.
   fetchInvoiceJournal: (
     filter: InvoiceJournalFilter,
@@ -213,6 +216,7 @@ describe("TraegerInvoiceJournalPage", () => {
         run: null,
         status: "",
         search: "",
+        referenceNumber: "",
       },
       1,
     );
@@ -329,11 +333,31 @@ describe("TraegerInvoiceJournalPage", () => {
       expect(mockFetchJournal).toHaveBeenLastCalledWith(
         expect.objectContaining({
           documentType: "",
-          search: "MB-2026-0001",
+          search: "",
+          referenceNumber: "MB-2026-0001",
         }),
         1,
       ),
     );
+    mockFetchJournal.mockResolvedValueOnce(
+      journal({ documents: [], totalCount: 0 }),
+    );
+    fireEvent.change(
+      screen.getAllByPlaceholderText("Nummer, Name oder Kind")[0]!,
+      {
+        target: { value: "91234" },
+      },
+    );
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: "91234", referenceNumber: "" }),
+        1,
+      ),
+    );
+    expect(await screen.findByText(/passt zur Suche\./)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Sortieren nach" }),
+    ).not.toBeInTheDocument();
     expect(table).toBeDefined();
   });
 
@@ -429,7 +453,9 @@ describe("TraegerInvoiceJournalPage", () => {
 
   it("uses the same server order for the mobile selection and desktop headers", async () => {
     renderPage();
-    const mobileSort = screen.getByRole("combobox", { name: "Sortieren nach" });
+    const mobileSort = await screen.findByRole("combobox", {
+      name: "Sortieren nach",
+    });
     fireEvent.click(mobileSort);
     fireEvent.click(
       await screen.findByRole("option", {
@@ -600,6 +626,9 @@ describe("TraegerInvoiceJournalPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.queryByText(/Summen für/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Sortieren nach" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the load error instead of an empty list", async () => {

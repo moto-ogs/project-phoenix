@@ -13303,6 +13303,10 @@
           "kind": "int"
         },
         {
+          "name": "reference_number",
+          "kind": "string"
+        },
+        {
           "name": "run_id",
           "kind": "id"
         },
@@ -13398,6 +13402,10 @@
           "name": "issuer",
           "kind": "string",
           "text_reason": "the creditor identifier of the issuer, or traeger for the Träger"
+        },
+        {
+          "name": "reference_number",
+          "kind": "string"
         },
         {
           "name": "run_id",
@@ -26489,6 +26497,17 @@
         "credit",
         "fee_notice",
         "invoice"
+      ]
+    },
+    {
+      "name": "JournalInvoiceStatus",
+      "values": [
+        "",
+        "cancelled",
+        "credited",
+        "nothing_due",
+        "open",
+        "partly_credited"
       ]
     },
     {
@@ -72561,7 +72580,8 @@
         {
           "name": "status",
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "JournalInvoiceStatus"
           }
         },
         {

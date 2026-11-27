@@ -73,19 +73,20 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { labelOf } from "~/lib/label-of";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
-import type { BillingInvoiceStatus } from "~/lib/traeger-billing-families-api";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type InvoiceJournalFilter,
   type InvoiceJournalPage,
   type JournalDocument,
   type JournalDocumentType,
+  type JournalInvoiceState,
   type JournalNumberGap,
   type JournalOrder,
   type JournalRangeFilter,
   type JournalSort,
   downloadInvoiceJournal,
   fetchInvoiceJournal,
+  JOURNAL_INVOICE_STATES,
 } from "~/lib/traeger-invoice-journal-api";
 
 const logger = createLogger({ component: "TraegerInvoiceJournalPage" });
@@ -278,7 +279,7 @@ function journalColumns({
         variant="link"
         size="compact"
         className="whitespace-nowrap"
-        tooltip="Sucht diese Nummer in allen Dokumenten. Andere Filter werden geleert."
+        tooltip="Zeigt das Dokument mit dieser Nummer und die Dokumente, die darauf verweisen. Andere Filter werden geleert."
         onClick={() => onShowReference(document.reference?.number ?? "")}
       >
         {journalReferenceWord(document.reference)}{" "}
@@ -689,7 +690,10 @@ export default function TraegerInvoiceJournalPage() {
   // The page stays open across midnight: presets and the latest day follow.
   const today = useBerlinToday();
   const [range, setRange] = useState<DateRange | undefined>(undefined);
-  const [search, setSearch] = useState("");
+  const [{ text: search, exactNumber: isReferenceJump }, setSearch] = useState({
+    text: "",
+    exactNumber: false,
+  });
   const [issuerKey, setIssuerKey] = useState<string | null>(null);
   const [numberRange, setNumberRange] = useState<JournalRangeFilter | null>(
     null,
@@ -698,7 +702,7 @@ export default function TraegerInvoiceJournalPage() {
     "",
   );
   const [run, setRun] = useState<InvoiceJournalFilter["run"]>(null);
-  const [status, setStatus] = useState<BillingInvoiceStatus | "">("");
+  const [status, setStatus] = useState<JournalInvoiceState | "">("");
   const [sort, setSort] = useState<{
     key: string;
     direction: "asc" | "desc";
@@ -719,9 +723,20 @@ export default function TraegerInvoiceJournalPage() {
       documentType,
       run,
       status,
-      search,
+      search: isReferenceJump ? "" : search,
+      referenceNumber: isReferenceJump ? search : "",
     }),
-    [from, to, issuerKey, numberRange, documentType, run, status, search],
+    [
+      from,
+      to,
+      issuerKey,
+      numberRange,
+      documentType,
+      run,
+      status,
+      search,
+      isReferenceJump,
+    ],
   );
   // Only a chosen column orders the list; without one the book keeps its
   // own order: the newest first, a number range by number.
@@ -864,13 +879,17 @@ export default function TraegerInvoiceJournalPage() {
       label: "Stand",
       type: "dropdown",
       value: status,
-      onChange: (value) => setStatus(value as BillingInvoiceStatus | ""),
+      onChange: (value) =>
+        setStatus(
+          JOURNAL_INVOICE_STATES.find((state) => state === value) ?? "",
+        ),
       options: [
         { value: "", label: "Jeder Stand" },
-        ...Object.entries(INVOICE_STATUS_LABELS).map(([value, label]) => ({
-          value,
-          label,
-        })),
+        ...Object.entries(INVOICE_STATUS_LABELS)
+          .filter(([value]) =>
+            JOURNAL_INVOICE_STATES.some((state) => state === value),
+          )
+          .map(([value, label]) => ({ value, label })),
       ],
     },
     {
@@ -1032,7 +1051,7 @@ export default function TraegerInvoiceJournalPage() {
     setIssuerKey(null);
   };
   const resetAll = () => {
-    setSearch("");
+    setSearch({ text: "", exactNumber: false });
     clearFilters();
   };
   // A jump shows its target whatever was filtered before: the document a
@@ -1045,7 +1064,7 @@ export default function TraegerInvoiceJournalPage() {
     setNumberRange(null);
     setRun(null);
     setIssuerKey(null);
-    setSearch(number);
+    setSearch({ text: number, exactNumber: true });
   }, []);
   const showRange = (next: JournalRangeFilter) => {
     setJumps((count) => count + 1);
@@ -1079,6 +1098,7 @@ export default function TraegerInvoiceJournalPage() {
     [showIssuer, gapAt, showReference],
   );
   const totalCount = first?.totalCount ?? 0;
+  const showMobileSort = (first ?? (loading ? latest : null))?.totalCount;
 
   const exportItems = useTraegerListExportItems({
     download: (format) => downloadInvoiceJournal(filter, format),
@@ -1098,7 +1118,7 @@ export default function TraegerInvoiceJournalPage() {
       overflowMenu={exportItems}
       search={{
         value: search,
-        onChange: setSearch,
+        onChange: (text) => setSearch({ text, exactNumber: false }),
         placeholder: "Nummer, Name oder Kind",
         debounceMs: SEARCH_PAUSE_MS,
         resetKey: jumps,
@@ -1121,32 +1141,34 @@ export default function TraegerInvoiceJournalPage() {
       {first && totalCount > 0 ? (
         <JournalTotals page={first} allCount={allCount} scope={scope} />
       ) : null}
-      <div className="md:hidden">
-        <CustomSelect
-          label="Sortieren nach"
-          className="w-full"
-          value={sortColumn ? `${sortColumn}:${sort.direction}` : ""}
-          options={[
-            {
-              value: "",
-              label: numberRange
-                ? "Standard: Nummer absteigend"
-                : "Standard: neueste zuerst",
-            },
-            ...SORT_OPTIONS,
-          ]}
-          onChange={(value) => {
-            const option = SORT_OPTIONS.find(
-              (option) => option.value === value,
-            );
-            setSort(
-              option
-                ? { key: option.key, direction: option.direction }
-                : NO_SORT,
-            );
-          }}
-        />
-      </div>
+      {showMobileSort ? (
+        <div className="md:hidden">
+          <CustomSelect
+            label="Sortieren nach"
+            className="w-full"
+            value={sortColumn ? `${sortColumn}:${sort.direction}` : ""}
+            options={[
+              {
+                value: "",
+                label: numberRange
+                  ? "Standard: Nummer absteigend"
+                  : "Standard: neueste zuerst",
+              },
+              ...SORT_OPTIONS,
+            ]}
+            onChange={(value) => {
+              const option = SORT_OPTIONS.find(
+                (option) => option.value === value,
+              );
+              setSort(
+                option
+                  ? { key: option.key, direction: option.direction }
+                  : NO_SORT,
+              );
+            }}
+          />
+        </div>
+      ) : null}
       <DataTable
         columns={columns}
         rows={documents}

@@ -140,6 +140,7 @@ const journalTailSQL = `, source, id) AS position
 	WHERE (?1::date IS NULL OR issued_on >= ?1::date) AND (?2::date IS NULL OR issued_on <= ?2::date)
 		AND (?3 OR issuer_key = ?4) AND (?5 = '' OR service = ?5) AND (?6 OR number_year = ?7)
 		AND (?8 = '' OR document_type = ?8) AND (?9 = '' OR run_kind = ?9) AND (?10 = 0 OR run_id = ?10)
+		AND (?18 = '' OR number = ?18 OR reference_number = ?18)
 		AND (?11 = '' OR position(lower(?11) IN lower(number)) > 0 OR position(lower(?11) IN lower(reference_number)) > 0
 			OR position(lower(?11) IN lower(recipient_first_name || ' ' || recipient_last_name)) > 0
 			OR position(lower(?11) IN lower(debtor_number)) > 0
@@ -338,7 +339,7 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 	}
 	args := []any{organizationID, filter.From, filter.Until, filter.AnyIssuer, filter.Issuer, filter.Service, filter.AnyYear, filter.Year,
 		filter.DocumentType, filter.RunKind, filter.RunID, filter.Search, 0, 0, accountRef(accountID),
-		filter.Status, filter.Sort, filter.Descending}
+		filter.Status, filter.Sort, filter.Descending, filter.ReferenceNumber}
 	query := db.NewRaw(journalFileSQL, args...)
 	if filter.Page > 0 {
 		args[12], args[13] = parentbilling.InvoiceJournalPageSize, (filter.Page-1)*parentbilling.InvoiceJournalPageSize

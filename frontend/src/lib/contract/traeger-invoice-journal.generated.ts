@@ -20,6 +20,9 @@ import {
 export const JOURNAL_DOCUMENT_TYPE_VALUES = ["cancellation", "confirmation", "credit", "fee_notice", "invoice"] as const;
 export type JournalDocumentType = (typeof JOURNAL_DOCUMENT_TYPE_VALUES)[number];
 
+export const JOURNAL_INVOICE_STATUS_VALUES = ["", "cancelled", "credited", "nothing_due", "open", "partly_credited"] as const;
+export type JournalInvoiceStatus = (typeof JOURNAL_INVOICE_STATUS_VALUES)[number];
+
 export const JOURNAL_REFERENCE_KIND_VALUES = ["amends", "cancels", "credits", "replaces"] as const;
 export type JournalReferenceKind = (typeof JOURNAL_REFERENCE_KIND_VALUES)[number];
 
@@ -72,7 +75,7 @@ export interface JournalDocument {
   tax_cents: number;
   net_cents: number;
   reference: JournalReference | null;
-  status: string;
+  status: OpenEnum<JournalInvoiceStatus>;
   open_cents: number;
   child_names: string[] | null;
   debtor_number: string;
@@ -188,6 +191,7 @@ export const routes = {
       "issuer": { kind: "string" },
       "order": { kind: "string", values: ["asc", "desc"] },
       "page": { kind: "int" },
+      "reference_number": { kind: "string" },
       "run_id": { kind: "id" },
       "run_kind": { kind: "string", values: ["care", "care_notice", "holiday"] },
       "search": { kind: "string" },
@@ -208,6 +212,7 @@ export const routes = {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
       "from": { kind: "date" },
       "issuer": { kind: "string" },
+      "reference_number": { kind: "string" },
       "run_id": { kind: "id" },
       "run_kind": { kind: "string", values: ["care", "care_notice", "holiday"] },
       "search": { kind: "string" },

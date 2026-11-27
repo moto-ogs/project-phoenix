@@ -26,7 +26,7 @@ import {
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
 const PAYMENT_KIND_VALUES = ["family", "cost_bearer", "exempt"] as const;
-export const INVOICE_STATUS_VALUES = [
+const INVOICE_STATUS_VALUES = [
   "open",
   "partly_credited",
   "credited",

@@ -32,6 +32,7 @@ func (f *BillingFamilies) InvoiceJournal(ctx context.Context, reviewer parentbil
 		return parentbilling.InvoiceJournalPage{}, err
 	}
 	filter.Search = strings.TrimSpace(filter.Search)
+	filter.ReferenceNumber = strings.TrimSpace(filter.ReferenceNumber)
 	if errs := journalFilterErrors(filter); len(errs) > 0 {
 		return parentbilling.InvoiceJournalPage{}, errs
 	}
@@ -83,6 +84,9 @@ func journalFilterErrors(filter parentbilling.InvoiceJournalFilter) validation.E
 // journalViewErrors adds what the state filter and the order of a page
 // cannot ask for (#8138).
 func journalViewErrors(filter parentbilling.InvoiceJournalFilter, errs validation.Errors) {
+	if utf8.RuneCountInString(filter.ReferenceNumber) > parentbilling.MaxInvoiceJournalSearchLength {
+		errs["reference_number"] = errors.New("is too long")
+	}
 	if filter.Status != "" && !slices.Contains(parentbilling.JournalInvoiceStates, filter.Status) {
 		errs["status"] = errors.New("is no state of an invoice")
 	}

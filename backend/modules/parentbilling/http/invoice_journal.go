@@ -66,6 +66,7 @@ var journalFilter = []common.QueryParam{
 	{Name: "run_kind", Kind: common.QueryString, Values: capability.JournalRunKinds},
 	{Name: "run_id", Kind: common.QueryID},
 	{Name: "search", Kind: common.QueryString},
+	{Name: "reference_number", Kind: common.QueryString},
 	{Name: "status", Kind: common.QueryString, Values: capability.JournalInvoiceStates},
 }
 
@@ -91,6 +92,7 @@ func InvoiceJournalRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: page, Paginated: true, Response: capability.InvoiceJournalPage{},
 			Enums: []common.EnumContract{
 				{Name: "JournalDocumentType", Fields: []string{"JournalDocument.document_type"}, Values: capability.JournalDocumentTypes},
+				{Name: "JournalInvoiceStatus", Fields: []string{"JournalDocument.status"}, Values: append([]string{""}, capability.JournalInvoiceStates...)},
 				{Name: "JournalRunKind", Fields: []string{"JournalRun.kind"}, Values: capability.JournalRunKinds},
 				{Name: "JournalReferenceKind", Fields: []string{"JournalReference.kind"}, Values: capability.JournalReferenceKinds},
 			}},
@@ -177,7 +179,7 @@ func journalFilterOf(r *http.Request) (capability.InvoiceJournalFilter, error) {
 	query := r.URL.Query()
 	filter := capability.InvoiceJournalFilter{
 		Service: query.Get("service"), DocumentType: query.Get("document_type"), RunKind: query.Get("run_kind"), Search: query.Get("search"),
-		Status:    query.Get("status"),
+		Status: query.Get("status"), ReferenceNumber: query.Get("reference_number"),
 		AnyIssuer: true, AnyYear: true,
 	}
 	var err error
@@ -324,6 +326,9 @@ func journalFilterTexts(filter capability.InvoiceJournalFilter, page capability.
 	}
 	if filter.Search != "" {
 		texts = append(texts, "Suche: "+strings.TrimSpace(filter.Search))
+	}
+	if filter.ReferenceNumber != "" {
+		texts = append(texts, "Belegnummer: "+filter.ReferenceNumber)
 	}
 	for _, gap := range page.Gaps {
 		texts = append(texts, journalGapText(gap))

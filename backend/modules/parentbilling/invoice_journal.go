@@ -125,6 +125,9 @@ type InvoiceJournalFilter struct {
 	// Search matches a part of the number, of the number of the document it
 	// refers to or of the recipient's name.
 	Search string
+	// ReferenceNumber matches an entire document number or reference, not
+	// the other fields of a text search.
+	ReferenceNumber string
 	// Status keeps the invoices in one state of JournalInvoiceStates (#8138).
 	Status string
 	// Sort names the column of JournalSorts that orders a page, Descending
