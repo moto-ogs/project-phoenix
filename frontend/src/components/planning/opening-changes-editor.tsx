@@ -210,7 +210,9 @@ export function OpeningChangesEditor() {
     );
 
   const reloadEditing = useCallback(async () => {
-    const found = (await mutate())?.find((change) => change.id === editingId);
+    const found = (await mutate())?.find(
+      (change) => !change.fromTraeger && change.id === editingId,
+    );
     if (!found) throw new Error("opening change is gone");
     return found;
   }, [mutate, editingId]);

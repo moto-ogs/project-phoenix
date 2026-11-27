@@ -194,11 +194,16 @@ describe("OpeningChangesEditor", () => {
   });
 
   it("zeigt nach einer Änderung von anderer Seite den gespeicherten Tag (ADR 0311)", async () => {
-    mockList
-      .mockResolvedValueOnce([makeChange()])
-      .mockResolvedValue([
-        makeChange({ reason: "Elternabend", version: "v2" }),
-      ]);
+    mockList.mockResolvedValueOnce([makeChange()]).mockResolvedValue([
+      // The Träger and school sequences are independent, so this matching
+      // ID must not replace the school day being edited.
+      makeChange({
+        reason: "Personalversammlung",
+        version: "traeger-v2",
+        fromTraeger: true,
+      }),
+      makeChange({ reason: "Elternabend", version: "v2" }),
+    ]);
     mockUpdate.mockRejectedValue(
       new ApiError("changed", 409, { code: "general.changed_since_read" }),
     );

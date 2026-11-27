@@ -58,9 +58,8 @@ type traegerOpeningFixture struct {
 // newTraegerOpeningFixture builds a Träger with a named and an unnamed
 // school and another Träger with its own school, behind the Träger routes
 // and the school's own routes.
-func newTraegerOpeningFixture(t *testing.T) traegerOpeningFixture {
+func newTraegerOpeningFixture(t *testing.T, db *bun.DB) traegerOpeningFixture {
 	t.Helper()
-	db := testpkg.SetupTestDB(t)
 	organization := func(name string) int64 {
 		id := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: name, Slug: fmt.Sprintf("oeffnung-%d", testpkg.UniqueTestTenantID(t))}).ID
 		testpkg.OwnTraegerOpeningChanges(t, db, id)
@@ -139,7 +138,7 @@ func (f traegerOpeningFixture) schoolList(t *testing.T, school int64) []traegerO
 // keeps operations.session_end_time, and nobody outside the Träger reaches it.
 func TestTraegerOpeningChangeReachesOnlyTheNamedSchool(t *testing.T) {
 	t.Parallel()
-	f := newTraegerOpeningFixture(t)
+	f := newTraegerOpeningFixture(t, testpkg.SetupTestDB(t))
 	admin := f.office(f.traeger, identityaccess.TraegerRoleAdministration)
 
 	rec := f.send(t, f.office(f.traeger, identityaccess.TraegerRoleReadOnly), http.MethodPost, traegerOpeningChangesPath, traegerShortDay("Zeugnisausgabe", f.named))
@@ -220,7 +219,7 @@ func TestTraegerOpeningChangeReachesOnlyTheNamedSchool(t *testing.T) {
 func TestTraegerOpeningChangeListQueryBudgetStaysFlat(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
-	f := newTraegerOpeningFixture(t)
+	f := newTraegerOpeningFixture(t, db)
 	inner := chi.NewRouter()
 	inner.Mount("/opening-changes", traegerOpeningChangeRoutes(db))
 	router := testpkg.MountedQueryBudgetRouter("/traeger", inner)
