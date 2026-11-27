@@ -1182,10 +1182,6 @@ function BlockRow({
           data-tagesplan-row={instance.id}
           className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums"
         >
-          {openEnd ? (
-            // Ein spontaner Block hat noch kein Ende: „seit 00:03“.
-            <span className="block text-gray-600">seit</span>
-          ) : null}
           <span
             className={cn(
               "block font-semibold",
@@ -1194,9 +1190,11 @@ function BlockRow({
           >
             {instance.startTime}
           </span>
-          {openEnd ? null : (
-            <span className="block text-gray-600">{instance.endTime}</span>
-          )}
+          {/* Beginn und Ende wie jede Zeile; ein spontaner Block hat noch
+              kein Ende („offen“, wie auf der Startseite). */}
+          <span className="block text-gray-600">
+            {openEnd ? "offen" : instance.endTime}
+          </span>
         </span>
       }
       title={
