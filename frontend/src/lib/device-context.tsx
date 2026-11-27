@@ -86,9 +86,13 @@ export function useDeviceContext(): DeviceContextValue {
   };
 }
 
-/** `true` nur, wenn sicher die App-Oberfläche gilt. */
+/**
+ * `true` nur, wenn sicher die App-Oberfläche gilt. Liest nur die eine
+ * Abfrage: Kit-Bausteine wie `SlideOver` fragen das bei jedem Rendern und
+ * brauchen weder Layout noch Eingabeart.
+ */
 export function useIsApp(): boolean {
-  return useDeviceContext().isApp;
+  return useResolvedMediaQuery(APP_QUERY) === true;
 }
 
 /**

@@ -7,6 +7,7 @@ import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { formatTime } from "~/lib/date-helpers";
 import { useCheckInOpensAt } from "~/lib/hooks/check-in-lock";
+import "~/lib/hooks/check-in-lock-session";
 import { useOptimisticStamp } from "~/lib/hooks/use-optimistic-stamp";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";

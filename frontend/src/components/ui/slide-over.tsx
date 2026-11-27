@@ -73,7 +73,7 @@ import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
-import { APP_QUERY, useIsApp } from "~/lib/device-context";
+import { useIsApp } from "~/lib/device-context";
 import {
   SheetSessionProvider,
   useParentSheetId,
@@ -109,9 +109,9 @@ function useSlideOverDirection(): {
   const belowSm = useResolvedMediaQuery(BELOW_SM);
   // In der App (auch iPad hoch und quer) ist das Panel das eine Blatt der
   // App: von unten, am iPad als Karte (#8070). Der Desktop behält die Seite.
-  const app = useResolvedMediaQuery(APP_QUERY);
+  const app = useIsApp();
   return {
-    direction: belowSm === true || app === true ? "bottom" : "right",
+    direction: belowSm === true || app ? "bottom" : "right",
     isResolved: belowSm !== null,
   };
 }

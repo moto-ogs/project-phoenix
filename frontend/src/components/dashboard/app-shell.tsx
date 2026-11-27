@@ -16,6 +16,8 @@ import { Sidebar } from "./sidebar";
 import { StaffSettingsReturnPathMemory } from "./staff-settings-nav";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { MobilePageHelpPortal } from "~/components/help/mobile-page-help-portal";
+// Sitzungsgrenze für die Sperre „Einstempeln erst ab …“ (#8070).
+import "~/lib/hooks/check-in-lock-session";
 
 interface AppShellProps {
   readonly children: React.ReactNode;

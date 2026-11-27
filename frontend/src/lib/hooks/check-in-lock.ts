@@ -4,7 +4,6 @@ import { useSyncExternalStore } from "react";
 
 import { ApiError } from "~/lib/api-error";
 import { PlannedStartDetailsSchema } from "~/lib/contract/problem-details.generated";
-import { onSWRScopeReset } from "~/lib/swr";
 import { PLANNED_START_NOT_REACHED_CODE } from "~/lib/time-tracking-api";
 
 /**
@@ -20,7 +19,7 @@ import { PLANNED_START_NOT_REACHED_CODE } from "~/lib/time-tracking-api";
  * zu holen.
  *
  * Nur im Speicher dieses Tabs; jede Sitzungsgrenze (Abmelden, anderes Konto)
- * räumt den Eintrag mit dem SWR-Cache ab.
+ * räumt den Eintrag mit dem SWR-Cache ab (`check-in-lock-session`).
  */
 interface CheckInLock {
   readonly date: string;
@@ -36,7 +35,15 @@ function emit(next: CheckInLock | null) {
   for (const listener of listeners) listener();
 }
 
-onSWRScopeReset(() => emit(null));
+/**
+ * Räumt die Sperre ab. An jeder Sitzungsgrenze ruft das
+ * `check-in-lock-session` (von der Shell geladen); hier selbst hängt das
+ * Modul nicht am SWR-Cache, damit Seiten mit einem Test-Ersatz für
+ * `~/lib/swr` es laden können.
+ */
+export function clearCheckInLock(): void {
+  emit(null);
+}
 
 /** Merkt die Ablehnung, wenn `error` die Schichtbeginn-Sperre ist. */
 export function noteCheckInRefusal(error: unknown, date: string): void {

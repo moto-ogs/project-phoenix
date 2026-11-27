@@ -13,6 +13,8 @@ import {
   noteCheckInRefusal,
   useCheckInOpensAt,
 } from "./check-in-lock";
+// The shell binds the lock to the session boundary.
+import "./check-in-lock-session";
 
 const tooEarly = (opensAt: unknown) =>
   new ApiError("planned start not reached", 422, {
