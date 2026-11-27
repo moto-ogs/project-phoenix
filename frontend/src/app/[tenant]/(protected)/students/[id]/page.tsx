@@ -2327,18 +2327,27 @@ function AppStudentCompactStatus({
   plannedArrival?: string;
   plannedPickup?: string;
 }>) {
-  const { late, pickupLate } = useAppStudentDay(
+  const { late, pickupLate, arrived, pickedUp } = useAppStudentDay(
     student,
     plannedArrival,
     plannedPickup,
   );
   // Mit roter Zeit nur sie, kurz mit dem Wort „überfällig“ (eine Uhrzeit
   // allein sagte nicht, was mit ihr ist): Der Name braucht den Platz, der
-  // volle Satz steht im Kopf darüber.
+  // volle Satz steht im Kopf darüber. Sonst genau ein Kurzstatus wie auf
+  // jeder Seite (Runde 21): die nächste Zeit des Tages („Geht 16:00“), ohne
+  // sie der Ort. Beides zusammen kürzte am iPhone SE den Namen; der Ort
+  // steht im Kopf darüber.
+  let nextTime: string | null = null;
+  if (!late && !arrived && plannedArrival) nextTime = `Kommt ${plannedArrival}`;
+  else if (!late && !pickedUp && plannedPickup)
+    nextTime = `Geht ${plannedPickup}`;
   return (
     <span className="flex max-w-44 min-w-0 items-center gap-1.5 overflow-hidden [&_*]:whitespace-nowrap">
       {late ? (
         <AppStudentLateBadge late={late} pickup={late === pickupLate} short />
+      ) : nextTime ? (
+        <TenantPageStats items={[{ label: nextTime }]} />
       ) : (
         location
       )}
