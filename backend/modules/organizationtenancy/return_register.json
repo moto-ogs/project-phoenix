@@ -14454,6 +14454,24 @@
           "type": "text",
           "udt": "text",
           "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "included_in_fee",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "created_by_school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [

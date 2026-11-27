@@ -49,6 +49,7 @@ import { routes as files } from "./files.generated";
 import { routes as groups } from "./groups.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as holidayExtraDays } from "./holiday-extra-days.generated";
 import { routes as holidayGuests } from "./holiday-guests.generated";
 import { routes as holidayWeeks } from "./holiday-weeks.generated";
 import { routes as importRoutes } from "./import.generated";
@@ -1271,6 +1272,11 @@ export const portalRoutes = {
     guardians["PUT /api/guardians/{id}/phone-numbers/{phoneId}"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    holidayExtraDays["GET /api/holiday-extra-days/"],
+    holidayExtraDays["GET /api/holiday-extra-days/{id}"],
+    holidayExtraDays["POST /api/holiday-extra-days/"],
+    holidayExtraDays["POST /api/holiday-extra-days/{id}/publish"],
+    holidayExtraDays["PUT /api/holiday-extra-days/{id}"],
     holidayGuests["GET /api/holiday-guests/"],
     holidayGuests["GET /api/holiday-guests/groups"],
     holidayGuests["GET /api/holiday-guests/{studentId}"],

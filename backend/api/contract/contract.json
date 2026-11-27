@@ -3693,6 +3693,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayPeriod"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-extra-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/holiday-guests/",
       "portals": [
         "tenant"
@@ -12909,6 +12934,14 @@
             "pdf",
             "xlsx"
           ]
+        },
+        {
+          "name": "kind",
+          "kind": "string",
+          "values": [
+            "extra_day",
+            "holiday"
+          ]
         }
       ],
       "file": true
@@ -15653,6 +15686,32 @@
       "response": {
         "kind": "ref",
         "ref": "NoticeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-extra-days/{id}/publish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
       }
     },
     {
@@ -22822,6 +22881,21 @@
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/holiday-extra-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
       }
     },
     {
@@ -67254,6 +67328,25 @@
           }
         },
         {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_by_school_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
           "name": "registration_opens_on",
           "schema": {
             "kind": "date",
@@ -67474,6 +67567,20 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -68482,6 +68589,12 @@
               "kind": "ref",
               "ref": "HolidayRegistrationProof"
             }
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -70483,6 +70596,12 @@
           "name": "lunch_booked",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "placed",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -89378,6 +89497,18 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {

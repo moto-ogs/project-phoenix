@@ -741,6 +741,7 @@ func tenantEnrollmentContractMounts() []contractMount {
 		{"/api/enrollment", enrollmentHTTP.AdminRequestRouteContracts()},
 		{"/api/enrollment", enrollmentHTTP.AdminReviewRouteContracts()},
 		{"/api/holiday-weeks", enrollmentHTTP.HolidayHostRouteContracts()},
+		{"/api/holiday-extra-days", enrollmentHTTP.SchoolExtraDayRouteContracts()},
 		{"/api/holiday-guests", enrollmentHTTP.HolidayGuestRouteContracts()},
 		// People Directory's http role may not import the contract types;
 		// both decisions answer no data.

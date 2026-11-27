@@ -49,6 +49,7 @@
     "forChildren": "Für {names}",
     "offeredByTraeger": "Angebot von {traeger}",
     "careLine": "Betreuung {from} bis {to}",
+    "careDayLine": "Betreuung am {date}",
     "registrationLine": "Anmeldung bis {date}",
     "registrationRangeLine": "Anmeldung {from} bis {to}",
     "registerTooltip": "Öffnet die Anmeldung zu diesem Ferienangebot."

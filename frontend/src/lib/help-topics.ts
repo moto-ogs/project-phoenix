@@ -179,6 +179,7 @@ export const HELP_TOPICS = {
   careTimeComparison: "soll-und-ist",
   leadHolidayWeeks: "ferienwochen-teilnehmer-ansehen",
   leadHolidayGuestGroup: "feriengruppe-waehlen",
+  leadExtraCareDay: "zusatztag-fuer-die-ogs-anlegen",
   leadHolidayHomeSchoolChildren: "ferienkinder-bei-anderen-ogs",
   leadExports: "liste-exportieren",
   leadPayroll: "abrechnung-vorbereiten",
@@ -240,6 +241,7 @@ export const HELP_TOPICS = {
   traegerSchoolRoles: "rollen-fuer-alle-schulen-des-traegers",
   traegerProfile: "traeger-eigenen-namen-aendern",
   traegerHolidayPeriod: "traeger-ferienzeitraum",
+  traegerExtraCareDay: "traeger-zusatztag",
   traegerClosingDays: "traeger-schliesstage",
   traegerNotificationFeed: "traeger-hinweise-in-der-glocke",
   traegerHolidayRegistration: "traeger-ferienanmeldung-teilen",
@@ -407,6 +409,7 @@ const PREFIX_HELP_TOPICS: ReadonlyArray<
   ["/wochenprotokolle", HELP_TOPICS.weekProtocol],
   // Der erste Treffer gewinnt, nicht der längste: die Unterbereiche der
   // Datenverwaltung müssen vor `/database` stehen.
+  ["/ferienwochen/zusatztage", HELP_TOPICS.leadExtraCareDay],
   ["/database/students/class-list", HELP_TOPICS.leadClassListEntries],
   ["/database/students/import", HELP_TOPICS.leadCreateStudent],
   ["/database/personal", HELP_TOPICS.leadInviteStaff],

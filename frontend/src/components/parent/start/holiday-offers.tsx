@@ -224,10 +224,13 @@ function HolidayOfferFacts({
     <dl className="grid min-w-0 flex-1 grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-3">
       {offer.first_day && offer.last_day ? (
         <DataField label={t("holiday.care")}>
-          {t("holiday.range", {
-            from: date(offer.first_day),
-            to: date(offer.last_day),
-          })}
+          {/* One day, such as an extra care day (#4817), is named once. */}
+          {offer.first_day === offer.last_day
+            ? date(offer.first_day)
+            : t("holiday.range", {
+                from: date(offer.first_day),
+                to: date(offer.last_day),
+              })}
         </DataField>
       ) : null}
       <DataField label={t("holiday.registration")}>
@@ -279,10 +282,12 @@ function HolidayOfferLine({
     <p className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm leading-6 text-gray-600">
       {offer.first_day && offer.last_day ? (
         <span>
-          {t("holiday.careLine", {
-            from: date(offer.first_day),
-            to: date(offer.last_day),
-          })}
+          {offer.first_day === offer.last_day
+            ? t("holiday.careDayLine", { date: date(offer.first_day) })
+            : t("holiday.careLine", {
+                from: date(offer.first_day),
+                to: date(offer.last_day),
+              })}
         </span>
       ) : null}
       <span>

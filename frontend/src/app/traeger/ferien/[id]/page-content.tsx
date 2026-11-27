@@ -12,6 +12,8 @@ import {
   holidayPeriodStats,
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
+import { ExtraDayForm } from "~/components/traeger/extra-day-form";
+import { ExtraDaySchoolFigures } from "~/components/traeger/extra-day-school-figures";
 import { HolidayPeriodForm } from "~/components/traeger/holiday-period-form";
 import { useHolidayEditorCalendar } from "~/components/traeger/use-week-no-care-days";
 import {
@@ -25,12 +27,18 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
+import { holidayListBack } from "~/components/traeger/holiday-period-format";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTenantMutateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { traegerPath } from "~/lib/traeger-url";
+
+/** Dasselbe für einen Zusatztag (#4817). */
+const EXTRA_DAY_INFO =
+  "Hier planst du den Zusatztag: den Tag, die Schulen, die Betreuungszeit und den Beitrag. Eltern melden ihr Kind erst an, wenn du den Zusatztag veröffentlicht hast. Im Reiter „Plätze“ begrenzt du die Plätze pro Schule.";
 
 /** Was die Seite ist und was man dort zuerst tut (#7595). */
 const PERIOD_INFO =
@@ -59,7 +67,8 @@ export default function TraegerHolidayPeriodPage() {
     error: schoolsError,
     fetchError: schoolsFailure,
   } = useTraegerSchools();
-  const listHref = traegerPath("/traeger/ferien");
+  const extraDay = period?.kind === "extra_day";
+  const listHref = traegerPath(holidayListBack(period?.kind).path);
   const criteriaRead = useTraegerHolidayCriteria().data;
   const criteria = criteriaRead?.criteria;
 
@@ -81,11 +90,11 @@ export default function TraegerHolidayPeriodPage() {
 
   return (
     <TenantPage
-      info={PERIOD_INFO}
+      info={extraDay ? EXTRA_DAY_INFO : PERIOD_INFO}
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
-      backHref={listHref}
-      backLabel="Zurück zu den Ferien"
+      backHref={traegerPath(holidayListBack(period?.kind).path)}
+      backLabel={holidayListBack(period?.kind).label}
       stats={
         period ? <TenantPageStats items={holidayPeriodStats(period)} /> : null
       }
@@ -95,6 +104,7 @@ export default function TraegerHolidayPeriodPage() {
         "planung",
         period?.registrationCount,
         period?.allocationMode,
+        period?.kind,
       )}
       overflowMenu={
         billingHref
@@ -111,6 +121,9 @@ export default function TraegerHolidayPeriodPage() {
       actions={
         period ? (
           <>
+            {period.createdBySchoolId ? (
+              <StatusBadge label="Von der Schule angelegt" tone="outline" />
+            ) : null}
             <HolidayPeriodStatusBadge period={period} />
             <HolidayPeriodPublishButton
               period={period}
@@ -126,18 +139,34 @@ export default function TraegerHolidayPeriodPage() {
       {period && schools ? (
         <>
           <HolidayPeriodPublishCard period={period} unsavedChanges={dirty} />
-          <HolidayPeriodForm
-            calendar={holidayCalendar}
-            key={period.id}
-            period={period}
-            schools={schools}
-            criteria={criteria}
-            criteriaRanking={criteriaRead?.ranking}
-            onDirtyChange={setDirty}
-            onCancel={() => router.push(listHref)}
-            onSaved={saved}
-            reload={reloadOrThrow}
-          />
+          {extraDay ? (
+            <>
+              <ExtraDaySchoolFigures period={period} schools={schools} />
+              <ExtraDayForm
+                calendar={holidayCalendar}
+                key={period.id}
+                period={period}
+                schools={schools}
+                onDirtyChange={setDirty}
+                onCancel={() => router.push(listHref)}
+                onSaved={saved}
+                reload={reloadOrThrow}
+              />
+            </>
+          ) : (
+            <HolidayPeriodForm
+              calendar={holidayCalendar}
+              key={period.id}
+              period={period}
+              schools={schools}
+              criteria={criteria}
+              criteriaRanking={criteriaRead?.ranking}
+              onDirtyChange={setDirty}
+              onCancel={() => router.push(listHref)}
+              onSaved={saved}
+              reload={reloadOrThrow}
+            />
+          )}
         </>
       ) : null}
     </TenantPage>

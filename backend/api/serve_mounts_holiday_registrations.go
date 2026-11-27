@@ -78,6 +78,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	}
 	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, traegerModules, accountLinks, viper.GetString("app_env"), logger, now).Router())
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, now)
+	mountSchoolExtraDayRoutes(tenant, organizations, holidayCalendar, now)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, traegerModules, today, now, logger)
 	signingLink := root
 	if limit := careContractSigningRateLimit(limiters.enabled(), demoLoopbackExempt(), limiters.newLimiter); limit != nil {

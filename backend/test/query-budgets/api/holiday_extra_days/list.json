@@ -1,0 +1,7 @@
+{
+  "scenario": "api.holiday_extra_days.list",
+  "max": 6,
+  "exact": true,
+  "description": "modules/enrollment — GET /api/holiday-extra-days (#4817, ADR 0329): the\nschool's unit that names its Träger, then in the Träger transaction the\nperiods of the Träger, their weeks and their time models. Flat in the\nnumber of days.",
+  "route": "GET /api/holiday-extra-days/"
+}

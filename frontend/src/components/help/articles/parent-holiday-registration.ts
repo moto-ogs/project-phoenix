@@ -49,6 +49,7 @@ export function parentHolidayRegistrationTopic(): HelpTopic {
     result:
       "Du bekommst eine E-Mail: Die Anmeldung ist eingegangen. Das ist noch keine Zusage. Der Träger schreibt dir, ob dein Kind einen Platz bekommt. In der E-Mail steht auch `Deine Erklärung` mit dem genauen Text. Hebe die E-Mail auf. Mit `Stand ansehen` in der E-Mail siehst du jederzeit, wie weit deine Anmeldung ist. In der Eltern-App siehst du den Stand unter `Ferienanmeldungen`.",
     notes: [
+      "Der Träger kann auch einen einzelnen `Zusatztag` anbieten, zum Beispiel einen Brückentag. Du meldest dein Kind genauso an. Statt `Wochen` steht dort `Zusatztag` mit dem Tag. Ist der Tag im Monatsbeitrag enthalten, siehst du keinen Preis und keinen `Beitrag`.",
       "Achtet der Träger auf den Ferienwunsch aus der Anmeldung für das Schuljahr, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in dieser Anmeldung steht.",
       "Ein Elternkonto brauchst du nicht. Mit Konto siehst du in der Eltern-App den Stand der Anmeldung, die Bestätigung und die Rechnung.",
       "Hast du bei `Möchtest du ein Elternkonto anlegen?` `Ja` gewählt? Dann bekommst du eine zweite E-Mail. Öffne den Link darin. Lege zweimal dein Passwort fest und wähle `Konto anlegen`. Danach wählst du `Anmelden`.",

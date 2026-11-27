@@ -413,6 +413,10 @@ type HolidayRegistrationDetail struct {
 	CustodyConfirmedAt *time.Time                 `json:"custody_confirmed_at"`
 	DeclarationName    string                     `json:"declaration_name"`
 	BenefitsProofs     []HolidayRegistrationProof `json:"benefits_proofs"`
+	// IncludedInFee is that of the registration's period: an extra care day
+	// the monthly contribution covers (#4817). Such a registration is never
+	// billed, so its confirmation needs no debtor number.
+	IncludedInFee bool `json:"included_in_fee"`
 	// BenefitsProofAttached reports a proof without reading its list; the
 	// recipients of the Elternabrechnung carry it (#5627), no answer does.
 	BenefitsProofAttached bool                       `json:"-"`

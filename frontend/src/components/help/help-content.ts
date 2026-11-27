@@ -176,6 +176,7 @@ function leadTopics(
     articles.holidayWeeksTopic(),
     articles.holidayGuestGroupTopic(),
     articles.holidayHomeSchoolChildrenTopic(),
+    articles.schoolExtraCareDayTopic(),
     articles.exportsTopic(),
 
     // --- Einstellungen und Geräte ---
@@ -266,6 +267,7 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerHolidayWishTopic(),
   articles.traegerHolidayAllocationTopic(),
   articles.traegerHolidayContributionTopic(),
+  articles.traegerExtraCareDayTopic(),
   articles.traegerCatalogPhasesTopic(),
   articles.traegerCareContractsTopic(),
   articles.traegerBillingRunTopic(),

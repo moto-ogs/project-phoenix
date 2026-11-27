@@ -49,6 +49,7 @@
     "forChildren": "Для: {names}",
     "offeredByTraeger": "Организатор: {traeger}",
     "careLine": "Присмотр {from} – {to}",
+    "careDayLine": "Присмотр {date}",
     "registrationLine": "Запись до {date}",
     "registrationRangeLine": "Запись {from} – {to}",
     "registerTooltip": "Открывает запись на это каникулярное предложение."

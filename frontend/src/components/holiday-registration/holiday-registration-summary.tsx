@@ -294,15 +294,19 @@ export function HolidayRegistrationSummary({
           </DataGrid>
         </SectionCard>
       ) : null}
-      <EnrollmentUploadScope target={uploadTarget}>
-        <HolidayRegistrationContribution
-          token={token}
-          draft={draft}
-          offer={offer}
-          onBenefitsDeclaredChange={onBenefitsDeclaredChange}
-          onBenefitsProofsChange={onBenefitsProofsChange}
-        />
-      </EnrollmentUploadScope>
+      {/* A day the monthly fee covers costs nothing: no contribution to
+          show, no benefit to declare (#4817). */}
+      {offer.includedInFee ? null : (
+        <EnrollmentUploadScope target={uploadTarget}>
+          <HolidayRegistrationContribution
+            token={token}
+            draft={draft}
+            offer={offer}
+            onBenefitsDeclaredChange={onBenefitsDeclaredChange}
+            onBenefitsProofsChange={onBenefitsProofsChange}
+          />
+        </EnrollmentUploadScope>
+      )}
 
       {pendingUploads > 0 ? (
         <p className="text-sm text-gray-700" role="status">

@@ -213,7 +213,9 @@ export function HolidayRegistrationContribution({
   return (
     <SectionCard title={t("contributionTitle")} headingLevel={3}>
       <div className="space-y-4 text-sm text-gray-700">
-        <p>{t("contributionText")}</p>
+        <p>
+          {t(offer.extraDay ? "contributionTextExtraDay" : "contributionText")}
+        </p>
         {/* The Träger keeps the number of the family for later
             registrations (#6692); the parents learn it where they see the
             contribution. */}

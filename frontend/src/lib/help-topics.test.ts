@@ -637,7 +637,7 @@ describe("getParentHelpTopicForPath", () => {
     // 109 seit #4813: Elternbrief mit den Angaben jedes Kindes.
     // 110 seit #4709: Springer des Trägers blocken.
     // 113 seit #7568: Dein Profil, Übergaben von heute, Erinnerungen ansehen.
-    expect(leadTopics).toHaveLength(113);
+    expect(leadTopics).toHaveLength(114);
     expect(
       leadTopics.every(
         (topic) =>
@@ -776,6 +776,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerHolidayWish,
       HELP_TOPICS.traegerHolidayAllocation,
       HELP_TOPICS.traegerHolidayContribution,
+      HELP_TOPICS.traegerExtraCareDay,
       HELP_TOPICS.traegerCatalogPhases,
       HELP_TOPICS.traegerCareContracts,
       HELP_TOPICS.traegerBillingRun,
