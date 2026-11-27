@@ -37,6 +37,9 @@ function school(
     city: "",
     closingDays: [],
     cancelledBlocks: 0,
+    openingChanges: [],
+    mealCancelled: false,
+    closedRooms: 0,
     ...changes,
   };
 }
@@ -61,7 +64,7 @@ function renderCard() {
   );
 }
 
-describe("TraegerDayChangesCard (#7672)", () => {
+describe("TraegerDayChangesCard (#7672, #8146)", () => {
   beforeEach(() => {
     mockFetchDayChanges.mockReset();
     mockUseSession.mockReturnValue({
@@ -126,5 +129,52 @@ describe("TraegerDayChangesCard (#7672)", () => {
     expect(
       screen.queryByText("Heute läuft an allen Schulen alles wie geplant."),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the changed opening hours, the cancelled lunch and the closed rooms of a school (#8146)", async () => {
+    mockFetchDayChanges.mockResolvedValue(
+      answer([
+        school("21", "OGS Kurzer Tag", {
+          openingChanges: [
+            {
+              opensAt: "08:00",
+              closesAt: "12:30",
+              since: "2026-07-09",
+              until: "2026-07-11",
+            },
+          ],
+        }),
+        school("22", "OGS Ohne Essen", { mealCancelled: true }),
+        school("23", "OGS Räume zu", { closedRooms: 2 }),
+        school("24", "OGS Ein Raum", { closedRooms: 1 }),
+      ]),
+    );
+    renderCard();
+
+    expect(await screen.findByText("4 Schulen")).toBeInTheDocument();
+    expect(screen.getByText("Geänderte Öffnungszeit:")).toBeInTheDocument();
+    expect(
+      screen.getByText("8:00 bis 12:30 Uhr, seit 9.7., bis 11.7."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Mittagessen:")).toBeInTheDocument();
+    expect(screen.getByText("fällt heute aus")).toBeInTheDocument();
+    expect(screen.getByText("2 Räume gesperrt")).toBeInTheDocument();
+    expect(screen.getByText("1 Raum gesperrt")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Zur Schule: OGS Ohne Essen" }),
+    ).toHaveAttribute("href", "/traeger/schulen/22");
+  });
+
+  it("leaves out a school whose answer has no change", async () => {
+    mockFetchDayChanges.mockResolvedValue(
+      answer([
+        school("31", "OGS Ruhig", {}),
+        school("32", "OGS Ohne Essen", { mealCancelled: true }),
+      ]),
+    );
+    renderCard();
+
+    expect(await screen.findByText("1 Schule")).toBeInTheDocument();
+    expect(screen.queryByText("OGS Ruhig")).not.toBeInTheDocument();
   });
 });

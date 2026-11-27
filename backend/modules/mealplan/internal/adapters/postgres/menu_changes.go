@@ -10,14 +10,19 @@ import (
 )
 
 // MenuChanges reads the change mark (#7666) and the cancellation (#7656) of
-// a day in one statement.
-type MenuChanges struct{ database Database }
+// a day in one statement, and the schools of a Träger without lunch on a day
+// (#8146) on the caller's administrative transaction.
+type MenuChanges struct {
+	database    Database
+	transaction func(context.Context) (any, bool)
+	admin       func(context.Context) bool
+}
 
-func NewMenuChanges(database Database) *MenuChanges {
-	if database == nil {
-		panic("meal plan postgres: database runtime is required")
+func NewMenuChanges(database Database, transaction func(context.Context) (any, bool), admin func(context.Context) bool) *MenuChanges {
+	if database == nil || transaction == nil || admin == nil {
+		panic("meal plan postgres: the tenant database, the transaction and the administrative check are required")
 	}
-	return &MenuChanges{database: database}
+	return &MenuChanges{database: database, transaction: transaction, admin: admin}
 }
 
 const menuDaySQL = `SELECT
