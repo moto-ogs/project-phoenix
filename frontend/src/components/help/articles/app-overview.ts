@@ -103,6 +103,8 @@ export function appOverviewTopic(): HelpTopic {
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
           // Gesperrte Räume in „Heute anders" (#8161), api/day_changes_room_closures.go.
           "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
+          // #8234: eigener Termin im gesperrten Raum.
+          "Hast du heute einen Termin in dem gesperrten Raum, steht die Sperre unter `Betrifft dich`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           // Vorschau auf morgen (#7657), components/home/day-switch.tsx.

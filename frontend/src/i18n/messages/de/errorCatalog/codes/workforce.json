@@ -132,5 +132,5 @@
   "traeger_payroll_employer_invalid": "Die Nummern des Arbeitgebers konnten nicht gespeichert werden. Prüfe die markierten Felder.",
   "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
   "traeger_staff_employer_changed": "An dieser Schule stellt inzwischen eine andere Stelle das Personal an. Lade die Seite neu und prüfe die Angaben.",
-  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung."
+  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team."
 }

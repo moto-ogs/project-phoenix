@@ -1,8 +1,11 @@
 package api
 
 import (
+	"context"
+
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -58,4 +61,10 @@ func buildFacilitiesPresence(
 	return facilitiesRooms,
 		owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today),
 		owners.NewGroupSupervisionRecords(presence.SessionRecords, groups), nil
+}
+
+// roomClosureActor names the account of the request that closes a room, so
+// its notice leaves that person out (#8234).
+func roomClosureActor(ctx context.Context) int64 {
+	return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
 }

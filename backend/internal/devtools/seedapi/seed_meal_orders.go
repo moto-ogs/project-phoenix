@@ -13,6 +13,9 @@ import (
 // of the eighty to ninety children in care on a full day.
 const mealOrderChildren = 60
 
+// mealOrderDayKey carries the chosen open order day to the booking seed.
+const mealOrderDayKey = "meal-order-day"
+
 // mealOrderLateAdds and mealOrderLateCancels are the school's changes after
 // the deadline: the Nachmeldungen the order week shows on the fixed day.
 const (
@@ -55,11 +58,11 @@ func (s seedMealOrdersStep) Run(ctx context.Context, rt *Runtime) error {
 }
 
 func seedMealOrders(ctx context.Context, rt *Runtime, readMailLink MailLinkReader, today seedDate) error {
-	day, leadDays := mealOrderSeedDay(today)
-	list, err := readMealDay(rt, day)
+	day, leadDays, list, err := openMealOrderDay(rt, today)
 	if err != nil {
 		return err
 	}
+	rt.Values[mealOrderDayKey] = day
 	added, err := registerMealChildren(rt, day, &list, mealOrderChildren-len(list.participants))
 	if err != nil {
 		return err
@@ -72,6 +75,24 @@ func seedMealOrders(ctx context.Context, rt *Runtime, readMailLink MailLinkReade
 	return seedMealCaterer(ctx, rt, readMailLink, day)
 }
 
+// openMealOrderDay skips closed weekdays. The seed of tomorrow's day changes
+// can cancel lunch before this step runs; a school cannot fix an order there.
+func openMealOrderDay(rt *Runtime, today seedDate) (seedDate, int, mealDay, error) {
+	day, leadDays := mealOrderSeedDay(today)
+	for range 31 {
+		list, err := readMealDay(rt, day)
+		if err != nil {
+			return seedDate{}, 0, mealDay{}, err
+		}
+		if !list.closed {
+			return day, leadDays, list, nil
+		}
+		day = seedWeekdayOnOrAfter(day.AddDays(1))
+		leadDays = mealOrderLeadDays(today, day)
+	}
+	return seedDate{}, 0, mealDay{}, fmt.Errorf("find an open meal day after %s", today)
+}
+
 // mealOrderSeedDay is the first weekday after today and the number of lead
 // days that put its deadline before today, whatever the time of day. Today
 // itself never is the order day: past the day's cutoff (09:00 by default)
@@ -79,7 +100,11 @@ func seedMealOrders(ctx context.Context, rt *Runtime, readMailLink MailLinkReade
 // anyone, and that order stays without lines.
 func mealOrderSeedDay(today seedDate) (seedDate, int) {
 	day := seedWeekdayOnOrAfter(today.AddDays(1))
-	return day, int(day.Sub(today.Time).Hours()/24) + 1
+	return day, mealOrderLeadDays(today, day)
+}
+
+func mealOrderLeadDays(today, day seedDate) int {
+	return today.CalendarDate().DaysUntil(day.CalendarDate()) + 1
 }
 
 // mealChild is a child of the school's day list.
@@ -92,6 +117,7 @@ type mealChild struct {
 type mealDay struct {
 	participants []mealChild
 	others       []mealChild
+	closed       bool
 }
 
 func readMealDay(rt *Runtime, day seedDate) (mealDay, error) {
@@ -107,6 +133,7 @@ func readMealDay(rt *Runtime, day seedDate) (mealDay, error) {
 		Data struct {
 			Participants []child `json:"participants"`
 			Others       []child `json:"others"`
+			Closed       bool    `json:"closed"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {
@@ -128,7 +155,7 @@ func readMealDay(rt *Runtime, day seedDate) (mealDay, error) {
 		return mealDay{}, err
 	}
 	others, err := convert(response.Data.Others)
-	return mealDay{participants: participants, others: others}, err
+	return mealDay{participants: participants, others: others, closed: response.Data.Closed}, err
 }
 
 // registerMealChildren gives up to count children of other classes regular
@@ -204,7 +231,9 @@ func pickAcrossClasses(children []mealChild, count int) []mealChild {
 }
 
 // fixMealOrderDay makes the day due, records the late changes (the first
-// one fixes the order) and restores the deadline, also after a failure.
+// one fixes the order) and restores the deadline, also after a failure. A
+// small profile can lack both a cancellable participant and a late addition;
+// then writing the kept child's unchanged participation fixes the due order.
 // The kept child is never cancelled: the parents portal shows the first
 // parent's child with lunch.
 func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept int64) (err error) {
@@ -216,6 +245,11 @@ func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept
 			err = restoreErr
 		}
 	}()
+	return applyLateMealChanges(rt, day, list, kept)
+}
+
+func applyLateMealChanges(rt *Runtime, day seedDate, list mealDay, kept int64) error {
+	changed := false
 	cancelled := 0
 	for _, child := range list.participants {
 		if cancelled < mealOrderLateCancels && child.id != kept {
@@ -223,10 +257,17 @@ func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept
 				return err
 			}
 			cancelled++
+			changed = true
 		}
 	}
 	for _, child := range pickAcrossClasses(list.others, mealOrderLateAdds) {
 		if err := setMealDay(rt, child.id, day, true); err != nil {
+			return err
+		}
+		changed = true
+	}
+	if !changed {
+		if err := setMealDay(rt, kept, day, true); err != nil {
 			return err
 		}
 	}

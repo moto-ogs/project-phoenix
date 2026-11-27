@@ -15,9 +15,11 @@ import (
 // Closures owns the room closures (#7653) in the caller's tenant
 // transaction, like every room operation of the Service.
 type Closures struct {
-	service *Service
-	store   ports.ClosureStore
-	today   func() calendar.Date
+	service     *Service
+	store       ports.ClosureStore
+	today       func() calendar.Date
+	notices     facilities.ClosureNotices
+	noticeToday func() calendar.Date
 }
 
 // NewClosures wires the closures beside the room service; today is the
@@ -27,6 +29,12 @@ func NewClosures(service *Service, store ports.ClosureStore, today func() calend
 		panic("facilities application: all closure dependencies are required")
 	}
 	return &Closures{service: service, store: store, today: today}
+}
+
+func (c *Closures) withNotices(notices facilities.ClosureNotices, today func() calendar.Date) *Closures {
+	configured := *c
+	configured.notices, configured.noticeToday = notices, today
+	return &configured
 }
 
 // CloseRoom closes a room of the school for the days StartDate through
@@ -55,7 +63,17 @@ func (c *Closures) CloseRoom(ctx context.Context, input facilities.CloseRoom) (r
 		}
 		result, queryStats, err = c.store.InsertClosure(txCtx, input)
 		stats.Add(queryStats)
-		return err
+		// The notice of the closure names the room (#8234).
+		result.RoomName = room.Name
+		if err != nil {
+			return err
+		}
+		if c.notices != nil {
+			if err := c.notices.NotifyRoomClosed(txCtx, roomClosureNotice(result, c.noticeToday())); err != nil {
+				return fmt.Errorf("facilities: notify room closure: %w", err)
+			}
+		}
+		return nil
 	})
 	return result, err
 }

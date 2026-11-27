@@ -134,14 +134,17 @@ interface DienstplanResourceGridProps {
   /** The logged-in user's own staff id (int64 as string), or null when it
    *  cannot be resolved. Drives the "Zeiterfassung öffnen" target. */
   readonly currentStaffId?: string | null;
-  readonly onCellClick: (
+  /** Opens the shift editor. Without it the grid is a display only: no
+   *  create surface, no clickable block, no move menu (#7351). */
+  readonly onCellClick?: (
     staff: StaffScheduleStaff,
     date: string,
     shift: StaffShift | null,
   ) => void;
-  /** Opens the "Krank melden" flow (#1843). Set only when the caller has
-   *  `time_tracking:manage`; the menu item is hidden otherwise. */
+  /** Opens the "Krank melden" flow (#1843). */
   readonly onSickReport?: (staff: StaffScheduleStaff) => void;
+  /** Allows absence-writing actions from the row menu. */
+  readonly canWriteAbsences?: boolean;
   /** Öffnet das Viertelstunden-Wochenraster dieser Person (#3818). */
   readonly onOpenPersonWeek?: (staff: StaffScheduleStaff) => void;
 }
@@ -344,6 +347,7 @@ export function DienstplanResourceGrid({
   reloadShifts,
   onCellClick,
   onSickReport,
+  canWriteAbsences = false,
   onOpenPersonWeek,
 }: DienstplanResourceGridProps) {
   const router = useTenantRouter();
@@ -358,11 +362,13 @@ export function DienstplanResourceGrid({
     reason: string;
   } | null>(null);
 
+  const readOnly = onCellClick === undefined;
   const openCell = (
     member: StaffScheduleStaff,
     date: string,
     shift: StaffShift | null,
   ) => {
+    if (!onCellClick) return;
     const reason = shift === null ? closingDays?.get(date) : undefined;
     if (reason !== undefined) {
       setClosingDayPrompt({ member, date, reason });
@@ -382,6 +388,15 @@ export function DienstplanResourceGrid({
     shift: StaffShift;
   } | null>(null);
   const refreshAfterMove = useTenantMutateMatching(PLAN_CACHE_KEY_PREFIXES);
+
+  // Schreibdialoge können offen sein, wenn der Nutzerkontext das fehlende
+  // Personalprofil erst nachträglich bestätigt. Dann bleibt das Raster rein
+  // lesbar und schickt keine Änderung mehr ab.
+  useEffect(() => {
+    if (!readOnly) return;
+    setMoveTarget(null);
+    setClosingDayPrompt(null);
+  }, [readOnly]);
 
   const columns: ResourceGridColumn[] = useMemo(
     () =>
@@ -484,7 +499,7 @@ export function DienstplanResourceGrid({
     // "Krank melden" (#1843) survives the reduced path — the row header there is
     // name-only otherwise, but the sick-report flow needs the same audience it
     // had before (Fertig-Kriterium 14). The navigation items are full-path only.
-    if (onSickReport) {
+    if (onSickReport && canWriteAbsences && !readOnly) {
       items.push({
         label: "Krank melden",
         icon: <MotoConceptIcon concept={sickConcept} size={18} />,
@@ -493,13 +508,15 @@ export function DienstplanResourceGrid({
       });
     }
     if (!reducedPath) {
-      items.push({
-        label: "Für heute abwesend melden",
-        icon: <MotoConceptIcon concept={notArrivalConcept} size={18} />,
-        description:
-          "Öffnet den Vertretungsplan, um eine Vertretung einzutragen.",
-        onClick: () => router.push(`/vertretung?d=${absenceEntryDate}`),
-      });
+      if (canWriteAbsences && !readOnly) {
+        items.push({
+          label: "Für heute abwesend melden",
+          icon: <MotoConceptIcon concept={notArrivalConcept} size={18} />,
+          description:
+            "Öffnet den Vertretungsplan, um eine Vertretung einzutragen.",
+          onClick: () => router.push(`/vertretung?d=${absenceEntryDate}`),
+        });
+      }
       items.push({
         label: "Zeiterfassung öffnen",
         icon: <MotoConceptIcon concept={timeTrackingConcept} size={18} />,
@@ -595,17 +612,18 @@ export function DienstplanResourceGrid({
     // The trigger is a DOM sibling of the PlanBlock, never nested inside its
     // <button> — a button inside a button is invalid HTML — and always visible
     // (no hover) so it is reachable by touch and keyboard.
-    const moveMenuItems: OverflowMenuEntry[] = shift.cancelled
-      ? []
-      : [
-          {
-            label: "Verschieben nach",
-            icon: <ArrowRightLeft className="h-4 w-4" aria-hidden />,
-            description:
-              "Legt die Schicht auf eine andere Person oder einen anderen Tag.",
-            onClick: () => setMoveTarget({ member, shift }),
-          },
-        ];
+    const moveMenuItems: OverflowMenuEntry[] =
+      shift.cancelled || readOnly
+        ? []
+        : [
+            {
+              label: "Verschieben nach",
+              icon: <ArrowRightLeft className="h-4 w-4" aria-hidden />,
+              description:
+                "Legt die Schicht auf eine andere Person oder einen anderen Tag.",
+              onClick: () => setMoveTarget({ member, shift }),
+            },
+          ];
 
     return (
       <div key={shift.id} className="space-y-0.5">
@@ -618,6 +636,7 @@ export function DienstplanResourceGrid({
               label={label}
               color={resolveShiftColor(shift, typesById)}
               statusIcon={statusIcon}
+              interactive={!readOnly}
               onClick={() => openCell(member, date, shift)}
               details={ariaParts.join(", ") || undefined}
             />
@@ -686,11 +705,13 @@ export function DienstplanResourceGrid({
             assignment={assignment}
           />
         ))}
-        <PlanAddButton
-          disabled={closingDaysLoading}
-          onClick={() => openCell(member, date, null)}
-          label={createShiftAriaLabel(member, column)}
-        />
+        {!readOnly && (
+          <PlanAddButton
+            disabled={closingDaysLoading}
+            onClick={() => openCell(member, date, null)}
+            label={createShiftAriaLabel(member, column)}
+          />
+        )}
       </div>
     );
   };
@@ -808,16 +829,21 @@ export function DienstplanResourceGrid({
                 <li key={member.id} className="px-3 py-2.5">
                   {renderRowHeader(member)}
                   <div className="mt-1.5">
-                    {renderCell(member, mobileColumn) ?? (
-                      // Leerer Tag: dieselbe Anlege-Fläche, die das Raster in
-                      // einer leeren Zelle rendert — ohne sie ließe sich mobil
-                      // keine Schicht anlegen.
-                      <PlanAddButton
-                        disabled={closingDaysLoading}
-                        onClick={() => openCell(member, mobileColumn.key, null)}
-                        label={createShiftAriaLabel(member, mobileColumn)}
-                      />
-                    )}
+                    {renderCell(member, mobileColumn) ??
+                      (readOnly ? (
+                        <p className="text-xs text-gray-600">Kein Dienst</p>
+                      ) : (
+                        // Leerer Tag: dieselbe Anlege-Fläche, die das Raster in
+                        // einer leeren Zelle rendert — ohne sie ließe sich mobil
+                        // keine Schicht anlegen.
+                        <PlanAddButton
+                          disabled={closingDaysLoading}
+                          onClick={() =>
+                            openCell(member, mobileColumn.key, null)
+                          }
+                          label={createShiftAriaLabel(member, mobileColumn)}
+                        />
+                      ))}
                   </div>
                 </li>
               ))}
@@ -857,7 +883,7 @@ export function DienstplanResourceGrid({
             scrollHintId={scrollHintId}
             emptyCellLabel={createShiftAriaLabel}
             onEmptyCellClick={
-              closingDaysLoading
+              closingDaysLoading || readOnly
                 ? undefined
                 : (member, column) => openCell(member, column.key, null)
             }
@@ -889,7 +915,7 @@ export function DienstplanResourceGrid({
         </div>
       )}
 
-      {moveTarget && (
+      {moveTarget && !readOnly && (
         <ShiftMoveDialog
           isOpen
           shift={moveTarget.shift}
@@ -904,7 +930,7 @@ export function DienstplanResourceGrid({
           reloadShifts={reloadShifts}
         />
       )}
-      {closingDayPrompt && (
+      {closingDayPrompt && !readOnly && (
         <ClosingDayConfirmModal
           dateISO={closingDayPrompt.date}
           reason={closingDayPrompt.reason}
@@ -913,7 +939,7 @@ export function DienstplanResourceGrid({
           onConfirm={() => {
             const { member, date } = closingDayPrompt;
             setClosingDayPrompt(null);
-            onCellClick(member, date, null);
+            onCellClick?.(member, date, null);
           }}
         />
       )}
