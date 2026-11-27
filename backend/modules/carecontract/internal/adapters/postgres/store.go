@@ -280,20 +280,20 @@ const summaryJoinsSQL = `
 // Bind order: today twice, then organization_id.
 const summarySQL = summaryColumnsSQL + summaryJoinsSQL + ` WHERE c.organization_id = ?`
 
-// The revision covers membership and the values that determine order,
-// including the current version selected for this day. The aggregate and
-// the page use one statement snapshot. Full summaries are read only for
+// The revision covers membership and order, including the current version
+// selected for this day, not writes such as recording a PDF download.
+// The aggregate and page use one statement snapshot. Full summaries are read only for
 // the page (including the extra row used to tell if more are available).
 // The two unnumbered arguments bind the existing version order to today.
 const contractMatchesSQL = `matching AS MATERIALIZED (
-	SELECT c.id, c.status, c.created_at, c.updated_at, v.id AS version_id,
+	SELECT c.id, c.status, c.created_at, v.id AS version_id,
 		v.effective_from, v.child_last_name, v.child_first_name, v.school_name` + summaryJoinsSQL + `
 	WHERE c.organization_id = ?2 AND (?3 = '' OR c.status = ?3) AND (?4 = 0 OR c.school_id = ?4)
 	AND (?5 = '' OR (v.child_first_name || ' ' || v.child_last_name || ' ' || COALESCE(p.first_name || ' ' || p.last_name, '')
 		|| ' ' || COALESCE(p.email, '') || ' ' || array_to_string(` + moduleNamesSQL + `, ' ')) ILIKE ?5)
 ), revision AS (
 	SELECT CASE WHEN ?11 THEN '' ELSE COALESCE(SUM(hashtextextended(ROW(
-		id, status, updated_at, version_id, effective_from, child_last_name, child_first_name, school_name)::text, 0)), 0)::text END AS value
+		id, status, created_at, version_id, effective_from, child_last_name, child_first_name, school_name)::text, 0)), 0)::text END AS value
 	FROM matching
 )`
 
@@ -313,8 +313,10 @@ const contractOrderSQL = `CASE ?6 WHEN '` + carecontract.ContractSortStart + `' 
 
 const listContractsSQL = `SELECT result.* FROM (WITH ` + contractMatchesSQL + `, page AS MATERIALIZED (
 	SELECT id, version_id, row_number() OVER (ORDER BY ` + contractOrderSQL + `) AS place
-	FROM matching ORDER BY ` + contractOrderSQL + `
-	LIMIT ?8 OFFSET (SELECT CASE WHEN ?10 <> '' AND ?10 <> value THEN 0 ELSE ?9::bigint END FROM revision)
+	FROM (
+		SELECT * FROM matching ORDER BY ` + contractOrderSQL + `
+		LIMIT ?8 OFFSET (SELECT CASE WHEN ?10 <> '' AND ?10 <> value THEN 0 ELSE ?9::bigint END FROM revision)
+	) AS selected
 ), summaries AS (
 	` + summaryColumnsSQL + `, page.place
 	FROM page

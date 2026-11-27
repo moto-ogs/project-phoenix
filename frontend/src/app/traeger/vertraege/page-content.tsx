@@ -50,6 +50,7 @@ import {
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -176,6 +177,29 @@ const SORT_OF_COLUMN: Readonly<Record<string, CareContractSort>> = {
 
 /** Without a chosen column the newest contract comes first. */
 const NO_SORT = { key: "", direction: "asc" } as const;
+
+const MOBILE_SORT_OPTIONS = [
+  { value: ":asc", label: "Neueste zuerst", sort: NO_SORT },
+  ...(
+    [
+      ["child", "Kind: A bis Z", "Kind: Z bis A"],
+      ["school", "Betreuungsort: A bis Z", "Betreuungsort: Z bis A"],
+      ["start", "Beginn: frühester zuerst", "Beginn: spätester zuerst"],
+      ["status", "Status: Entwurf zuerst", "Status: Beendet zuerst"],
+    ] as const
+  ).flatMap(([key, ascending, descending]) => [
+    {
+      value: `${key}:asc`,
+      label: ascending,
+      sort: { key, direction: "asc" as const },
+    },
+    {
+      value: `${key}:desc`,
+      label: descending,
+      sort: { key, direction: "desc" as const },
+    },
+  ]),
+];
 
 /** The child's name as the link to its contract, with the note of an import. */
 function ChildName({ contract }: Readonly<{ contract: CareContractSummary }>) {
@@ -363,10 +387,14 @@ export default function TraegerVertraegePage() {
     schoolId,
     search: term,
   });
-  const listAccess = useTraegerListRequest(traegerContractKeys.listFamily);
+  const listAccess = useTraegerListRequest(
+    traegerContractKeys.listFamily,
+    () => hasShownRows.current,
+  );
+  const fetchFirstPage = () => fetchCareContracts({ ...filter, offset: 0 });
   const firstPage = useFreshTraegerResource(
     listKey,
-    () => listAccess.read(() => fetchCareContracts({ ...filter, offset: 0 })),
+    () => listAccess.read(fetchFirstPage),
     "die Liste der Verträge",
     { refusalKey: traegerContractKeys.listFamily },
   );
@@ -438,11 +466,9 @@ export default function TraegerVertraegePage() {
     schoolList.schools,
     more,
   ]);
-  const loadError =
-    firstPage.error ??
-    candidateRead.error ??
-    modeRead.error ??
-    schoolList.error;
+  const metadataError =
+    candidateRead.error ?? modeRead.error ?? schoolList.error;
+  const loadError = firstPage.error ?? metadataError;
 
   const loadMore = async () => {
     const after = firstPage.data;
@@ -506,20 +532,43 @@ export default function TraegerVertraegePage() {
   // Reload after a send: a failure there is a load error above the
   // confirmed rows, not a failed send (#6652). The reload replaces the
   // older pages loaded below the first.
+  const refreshScope = useMemo(() => ({ listKey }), [listKey]);
+  const [failedRefresh, setFailedRefresh] = useState<{
+    scope: typeof refreshScope;
+    page: CareContractList | null;
+  } | null>(null);
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Verträge",
     async () => {
       cancelPagination();
+      let refusal: unknown;
       try {
-        await firstPage.reloadOrThrow();
+        await firstPage.reloadOrThrow({
+          fetcher: () =>
+            listAccess.read(fetchFirstPage, (error) => {
+              refusal = error;
+            }),
+        });
       } catch (error) {
+        // The refusal cleared the cache and ended this read's generation.
+        // Report this request's refusal, not a change to the tab-wide counter.
+        if (refusal !== undefined) throw refusal;
         // A newer sort or refresh taking over is not a load failure.
-        if (!isDiscardedAnswer(error)) throw error;
+        if (isDiscardedAnswer(error)) return;
+        setFailedRefresh({ scope: refreshScope, page: shownPage.current });
+        throw error;
       }
     },
   );
 
-  const loading = !loadError && !afterWrite.error && !data;
+  const refreshError =
+    failedRefresh?.scope === refreshScope &&
+    failedRefresh.page === firstPage.data
+      ? afterWrite.error
+      : null;
+  const loading = !loadError && !refreshError && !data;
+  const listError = !data ? (firstPage.error ?? refreshError) : null;
+  const showList = !firstPage.refused && (data || loading || listError);
 
   // The lists of the other filters count the written contracts too; the
   // list shown when the write ends reloads through afterWrite.
@@ -532,6 +581,7 @@ export default function TraegerVertraegePage() {
     );
 
   const contracts = useMemo(() => [...(data?.list.contracts ?? [])], [data]);
+  const hasShownRows = useLatest(contracts.length > 0);
   const schools = (data?.schools ?? []).map((school) => ({
     value: school.id,
     label: school.name,
@@ -816,7 +866,7 @@ export default function TraegerVertraegePage() {
           {createLabel}
         </Button>
       }
-      error={loadError ?? (!data ? afterWrite.error : null)}
+      error={firstPage.refused ? firstPage.error : metadataError}
       overlays={
         data ? (
           <CareContractCreateModal
@@ -830,7 +880,7 @@ export default function TraegerVertraegePage() {
     >
       <LoadErrorAlert
         error={
-          afterWrite.error ??
+          (data ? refreshError : null) ??
           (moreErrorFor === firstPage.data ? moreLoad.error : null)
         }
       />
@@ -909,7 +959,22 @@ export default function TraegerVertraegePage() {
           </ul>
         </SectionCard>
       ) : null}
-      {data || loading ? (
+      {showList ? (
+        <div className="md:hidden">
+          <CustomSelect
+            label="Sortieren nach"
+            value={`${sort.key}:${sort.direction}`}
+            options={MOBILE_SORT_OPTIONS}
+            onChange={(value) => {
+              const option = MOBILE_SORT_OPTIONS.find(
+                (entry) => entry.value === value,
+              );
+              if (option) setSort(option.sort);
+            }}
+          />
+        </div>
+      ) : null}
+      {showList ? (
         <DataTable
           columns={COLUMNS}
           rows={contracts}
@@ -957,49 +1022,53 @@ export default function TraegerVertraegePage() {
               }),
           }}
           emptyState={
-            <EmptyState
-              icon={
-                <MotoConceptIcon
-                  concept={careContractsConcept}
-                  className="h-12 w-12"
-                />
-              }
-              {...emptyText(
-                total,
-                waiting,
-                data !== null &&
-                  data.modes.length > 0 &&
-                  data.modes.every((school) => school.mode === "bei_annahme"),
-                emptySearchText(
-                  search,
-                  activeFilters.map((filter) => filter.label),
-                ).description,
-              )}
-              action={
-                total > 0 &&
-                (search.trim() !== "" || activeFilters.length > 0) ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    tooltip="Leert Suche und Filter und zeigt wieder alle Verträge."
-                    onClick={() => {
-                      setSearch("");
-                      setSearchReset((current) => current + 1);
-                      setStatus("all");
-                      setSchoolId("");
-                    }}
-                  >
-                    {
-                      emptySearchText(
-                        search,
-                        activeFilters.map((filter) => filter.label),
-                      ).actionLabel
-                    }
-                  </Button>
-                ) : undefined
-              }
-            />
+            listError ? (
+              <LoadErrorAlert error={listError} className="text-left" />
+            ) : (
+              <EmptyState
+                icon={
+                  <MotoConceptIcon
+                    concept={careContractsConcept}
+                    className="h-12 w-12"
+                  />
+                }
+                {...emptyText(
+                  total,
+                  waiting,
+                  data !== null &&
+                    data.modes.length > 0 &&
+                    data.modes.every((school) => school.mode === "bei_annahme"),
+                  emptySearchText(
+                    search,
+                    activeFilters.map((filter) => filter.label),
+                  ).description,
+                )}
+                action={
+                  total > 0 &&
+                  (search.trim() !== "" || activeFilters.length > 0) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      tooltip="Leert Suche und Filter und zeigt wieder alle Verträge."
+                      onClick={() => {
+                        setSearch("");
+                        setSearchReset((current) => current + 1);
+                        setStatus("all");
+                        setSchoolId("");
+                      }}
+                    >
+                      {
+                        emptySearchText(
+                          search,
+                          activeFilters.map((filter) => filter.label),
+                        ).actionLabel
+                      }
+                    </Button>
+                  ) : undefined
+                }
+              />
+            )
           }
         />
       ) : null}

@@ -592,6 +592,14 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 	assert.Equal(t, restarted.Revision, continued.Revision)
 	assert.False(t, continued.HasMore)
 
+	// A parent's PDF download records when they received the withdrawal notice.
+	// This touches updated_at, not the membership or order of the list.
+	_, err := f.db.ExecContext(testpkg.Ctx(t), `UPDATE care_contract.contracts SET withdrawal_informed_at = ? WHERE id = ?`, testpkg.DatabaseNow(t, f.db), continued.Contracts[0].ID)
+	require.NoError(t, err)
+	afterPDF := read("sort=status&limit=1&offset=1&revision=" + restarted.Revision)
+	require.Len(t, afterPDF.Contracts, 1)
+	assert.Equal(t, continued.Contracts[0].ID, afterPDF.Contracts[0].ID)
+	assert.Equal(t, restarted.Revision, afterPDF.Revision)
 }
 
 func TestCareContractFailedDeliveryCanUseACorrectedAddressWithItsFrozenPDF(t *testing.T) {

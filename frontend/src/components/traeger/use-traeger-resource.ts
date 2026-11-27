@@ -101,7 +101,10 @@ export function useFreshTraegerResource<T>(
  * The family itself is not a data key: ordinary list refreshes only invalidate
  * the concrete keys, while a refusal also ends requests under the family key.
  */
-export function useTraegerListRequest(family: string) {
+export function useTraegerListRequest(
+  family: string,
+  hasShownRows: () => boolean,
+) {
   const { data: session } = useSession();
   const key = session?.user.scope === "org" ? family : null;
   const cacheKey = useSWRCacheKey();
@@ -109,7 +112,11 @@ export function useTraegerListRequest(family: string) {
   const begin = useSWRRequestGuard();
   const invalidate = useInvalidateMatching();
 
-  async function run<T>(fetch: () => Promise<T>, dataKey = key) {
+  async function run<T>(
+    fetch: () => Promise<T>,
+    dataKey = key,
+    onRefusal?: (error: unknown) => void,
+  ) {
     const complete = begin(key);
     const completeData = dataKey === key ? complete : begin(dataKey);
     let result: T;
@@ -123,10 +130,9 @@ export function useTraegerListRequest(family: string) {
       // Record refusals before the opening read can discard an old sort's
       // answer. A second denial must not keep reopening the cleared list.
       complete(() => {
+        onRefusal?.(error);
         if (scoped === null || refusalFor(scoped) !== undefined) return;
-        // Clearing the family makes a post-write read look discarded to SWR.
-        // The shared refresh still needs to know that access was refused.
-        if (isAccessRefusal(error)) noteShownDataRefusal();
+        if (isAccessRefusal(error) && hasShownRows()) noteShownDataRefusal();
         markRefused(scoped, error);
         void invalidate((cached) => cached.startsWith(family), { clear: true });
       });
@@ -145,7 +151,10 @@ export function useTraegerListRequest(family: string) {
   }
 
   return {
-    read: async <T>(fetch: () => Promise<T>) => (await run(fetch)).result,
+    read: async <T>(
+      fetch: () => Promise<T>,
+      onRefusal?: (error: unknown) => void,
+    ) => (await run(fetch, key, onRefusal)).result,
     request,
   };
 }
