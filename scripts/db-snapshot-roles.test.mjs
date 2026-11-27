@@ -9,8 +9,8 @@ const source = readdirSync(migrations)
   .map(name => withoutComments(readFileSync(new URL(name, migrations), 'utf8')))
   .join('\n');
 const workflow = readFileSync(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
-const step = workflow.split('      - name: Restore database from snapshot\n')[1]
-  ?.split('      - name: Run database migrations\n')[0];
+const step = workflow.split('      - name: Start backend history and database restore\n')[1]
+  ?.split('\n      - name: ')[0];
 assert.ok(step, 'snapshot restore step must exist');
 const sql = step.match(/<<EOF\n([\s\S]*?)\n\s+EOF/)?.[1];
 assert.ok(sql, 'snapshot role SQL must be explicit and inspectable');

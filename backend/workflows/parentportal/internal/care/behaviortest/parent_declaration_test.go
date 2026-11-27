@@ -41,16 +41,16 @@ type declarationSetup struct {
 
 func newDeclarationSetup(t *testing.T, settings communication.ParentDeclarationSettings, deadline *time.Time) *declarationSetup {
 	t.Helper()
-	return newDeclarationSetupWith(t, settings, deadline, nil)
+	testpkg.OwnTenant(t)
+	return newDeclarationSetupWith(t, testpkg.SetupTestDB(t), settings, deadline, nil)
 }
 
 func newDeclarationSetupWith(
-	t *testing.T, settings communication.ParentDeclarationSettings, deadline *time.Time,
+	t *testing.T, db *bun.DB, settings communication.ParentDeclarationSettings, deadline *time.Time,
 	wrap func(parentportal.AnnouncementAccess) parentportal.AnnouncementAccess,
 ) *declarationSetup {
 	t.Helper()
-	testpkg.OwnTenant(t)
-	svc, db, repos := buildAnnouncementServiceWithAccess(t, testpkg.SetupIsolatedTestDB(t), true, nil, wrap, time.Now)
+	svc, db, repos := buildAnnouncementServiceWithAccess(t, db, true, nil, wrap, time.Now)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	setup := &declarationSetup{
 		svc: svc, db: db, repo: api.NewParentAnnouncementFixtures(repos.ParentAnnouncement), chain: chain,
@@ -338,7 +338,7 @@ func TestDeclaration_EndedActivityEnrollmentKeepsHistoryAndRevocation(t *testing
 	// The enrollment ends on the fixed day; the portal and Communication's
 	// audience read that day.
 	day := calendar.NewDate(2026, 8, 24)
-	svc, db, repos := buildAnnouncementServiceAt(t, testpkg.SetupIsolatedTestDB(t), true, fixedPortalNow)
+	svc, db, repos := buildAnnouncementServiceAt(t, testpkg.SetupTestDB(t), true, fixedPortalNow)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	seedCtx := tenant.WithTenantID(testpkg.WithTestTenantRuntime(t, context.Background()), chain.TenantID)
 	ctx := testpkg.WithTestTenantRuntime(t, context.Background())

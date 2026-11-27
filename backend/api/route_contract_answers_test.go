@@ -33,34 +33,39 @@ import (
 // A file route answers bytes, not the envelope: no decoder reads it, so no
 // answer of it can leave the contract, and it needs none here.
 // Collection never reads the file while other packages may still write it.
+// CI writes the sorted expected keys to CONTRACT_ANSWERS_REQUIRED here, then
+// compares the files after every package finishes, without rerunning ./api.
 // Ambiguous relative patterns validate schemas but do not count as
 // coverage; mount those test routers explicitly to identify their routes.
 func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 	t.Parallel()
 	doc, err := ContractDocument()
 	require.NoError(t, err)
-	registered := map[string]bool{}
-	for _, route := range doc.Routes {
-		if !route.File {
-			registered[route.Key()] = true
-		}
-	}
 	answered, err := readRouteAnswers(os.Getenv)
 	require.NoError(t, err)
-	if answered == nil {
-		// Without the collected answers there is nothing to hold: one
-		// package answers few routes.
+	requiredFile := os.Getenv("CONTRACT_ANSWERS_REQUIRED")
+	if answered == nil && requiredFile == "" {
 		return
 	}
 	existing, err := readBaseRoutes(os.Getenv)
 	require.NoError(t, err)
 	var unanswered []string
-	for key := range registered {
-		if !answered[key] && !existing[key] {
+	for _, route := range doc.Routes {
+		key := route.Key()
+		if !route.File && !answered[key] && !existing[key] {
 			unanswered = append(unanswered, key)
 		}
 	}
 	sort.Strings(unanswered)
+	if answered == nil {
+		var lines strings.Builder
+		for _, key := range unanswered {
+			lines.WriteString(key)
+			lines.WriteByte('\n')
+		}
+		require.NoError(t, os.WriteFile(requiredFile, []byte(lines.String()), 0o600))
+		return
+	}
 	assert.Emptyf(t, unanswered, "no test unambiguously answers these registered routes through a router. Mount the route's router explicitly in a test, under the route's full path:\n%s", strings.Join(unanswered, "\n"))
 }
 

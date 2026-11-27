@@ -84,7 +84,7 @@ func newParkedDeclarationSetup(t *testing.T, settings communication.ParentDeclar
 	before, after := newDeclarationPark(), newDeclarationPark()
 	t.Cleanup(before.open)
 	t.Cleanup(after.open)
-	s := newDeclarationSetupWith(t, settings, nil, func(access parentportal.AnnouncementAccess) parentportal.AnnouncementAccess {
+	s := newDeclarationSetupWith(t, testpkg.SetupIsolatedTestDB(t), settings, nil, func(access parentportal.AnnouncementAccess) parentportal.AnnouncementAccess {
 		return parkedDeclarationLock{AnnouncementAccess: access, before: before, after: after}
 	})
 	return s, before, after
