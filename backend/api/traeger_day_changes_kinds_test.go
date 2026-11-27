@@ -30,6 +30,7 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	shorter := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Kurzer Tag")
 	noLunch := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Ohne Essen")
 	rooms := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Räume zu")
+	archivedRoom := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Archivierter Raum")
 	quiet := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Ruhig Arten")
 	foreignOrganization := traegerOrganization(t, db, "Träger Fremd Arten", true)
 	foreign := testpkg.CreateTestSchoolInOrganization(t, db, foreignOrganization, "OGS Fremd Arten")
@@ -39,6 +40,8 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	insertMealCancellation(t, db, noLunch, dayChangesDay, "Caterer Muster liefert nicht")
 	insertRoomClosure(t, db, rooms, dayChangesDay, dayChangesDay, "Turnhalle Muster", "Wasserschaden bei Herrn Muster")
 	insertRoomClosure(t, db, rooms, yesterday, tomorrow, "Werkraum Muster", "Umbau")
+	archivedRoomID := insertRoomClosure(t, db, archivedRoom, dayChangesDay, dayChangesDay, "Archivierter Raum", "Altbestand")
+	archiveRoom(t, db, archivedRoom, archivedRoomID, now)
 	// Yesterday's and tomorrow's changes are no change today.
 	insertOpeningChange(t, db, quiet, yesterday, yesterday, "09:00", "12:00", "Gestern kurz")
 	insertMealCancellation(t, db, quiet, tomorrow, "Morgen kein Essen")
@@ -66,7 +69,7 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	}
 	status, body, got := read(answer.AccessToken, nil)
 	require.Equal(t, http.StatusOK, status, body)
-	require.Len(t, got.Schools, 3, "only schools with a change: "+body)
+	require.Len(t, got.Schools, 3, "only schools with a current change: "+body)
 	assert.Equal(t, []string{"OGS Kurzer Tag", "OGS Ohne Essen", "OGS Räume zu"}, []string{got.Schools[0].Name, got.Schools[1].Name, got.Schools[2].Name}, "ordered by name")
 	for _, absent := range []string{"Ruhig", "Gestern", "Morgen", "Fremd", "Muster", "Caterer", "Wasserschaden", "Umbau", "Turnhalle", "Werkraum"} {
 		assert.NotContains(t, body, absent, "no quiet school, no other day, no other Träger, no reason and no room name")

@@ -15,9 +15,11 @@ var _ facilities.TraegerRoomClosures = traegerRooms{}
 // traegerClosedRoomsSQL counts the rooms of the given schools a closure
 // closes on the day. The filter on the school set is the boundary: the
 // administrative transaction has no row security.
-const traegerClosedRoomsSQL = `SELECT tenant_id, COUNT(DISTINCT room_id) AS closed FROM facilities.room_closures
-WHERE tenant_id = ANY(?0) AND start_date <= ?1 AND end_date >= ?1
-GROUP BY tenant_id`
+const traegerClosedRoomsSQL = `SELECT closure.tenant_id, COUNT(DISTINCT closure.room_id) AS closed
+FROM facilities.room_closures AS closure
+JOIN facilities.rooms AS room ON room.tenant_id = closure.tenant_id AND room.id = closure.room_id
+WHERE closure.tenant_id = ANY(?0) AND closure.start_date <= ?1 AND closure.end_date >= ?1 AND room.archived_at IS NULL
+GROUP BY closure.tenant_id`
 
 // ClosedRoomsByTenant counts the closed rooms of the schools on the day
 // (#8146) on the caller's administrative transaction.

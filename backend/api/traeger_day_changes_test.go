@@ -68,12 +68,19 @@ func insertMealCancellation(t *testing.T, db *bun.DB, school int64, day calendar
 	require.NoError(t, err)
 }
 
-// insertRoomClosure closes a new room of school from..to.
-func insertRoomClosure(t *testing.T, db *bun.DB, school int64, from, to calendar.Date, room, reason string) {
+// insertRoomClosure closes a new room of school from..to and returns its ID.
+func insertRoomClosure(t *testing.T, db *bun.DB, school int64, from, to calendar.Date, room, reason string) int64 {
 	t.Helper()
 	created := testpkg.CreateTestRoomForTenant(t, db, school, room)
 	_, err := db.ExecContext(context.Background(), `INSERT INTO facilities.room_closures (tenant_id, room_id, start_date, end_date, reason) VALUES (?, ?, ?, ?, ?)`,
 		school, created.ID, from, to, reason)
+	require.NoError(t, err)
+	return created.ID
+}
+
+func archiveRoom(t *testing.T, db *bun.DB, school, roomID int64, archivedAt time.Time) {
+	t.Helper()
+	_, err := db.ExecContext(context.Background(), `UPDATE facilities.rooms SET archived_at = ? WHERE tenant_id = ? AND id = ?`, archivedAt, school, roomID)
 	require.NoError(t, err)
 }
 
