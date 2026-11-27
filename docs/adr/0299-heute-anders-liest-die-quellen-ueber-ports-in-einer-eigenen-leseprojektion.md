@@ -538,3 +538,20 @@ Projektion nutzt „change“.
 - **Nicht in diesem Schritt:** Elternportal (#7671) und Träger-Portal
   (#7672) haben eigene Lesewege (`ChildQuery.ChildDay`,
   `traegerview.DayChangesReport`). Sie folgen in einem eigenen Ticket.
+
+## Nachtrag 2026-11-27: Vorschau auf morgen im Eltern- und Träger-Portal (#8236)
+
+- **Elternportal.** `GET /parent/me/children/{studentId}/day-changes` nimmt
+  das optionale `date`. `daychangesview.ChildQuery.ChildDayOn` prüft den Tag
+  wie `Query.On` (heute oder morgen der Schule). Der Port
+  `care.ChildDayChanges` bekommt den Tag; der leere Tag liest heute wie
+  bisher. Die Beziehungsprüfung (`parent_portal.access`, `WithPermittedChild`)
+  läuft zuerst und in derselben Transaktion: Ein Kind ohne Recht antwortet
+  auch mit einem unzulässigen Tag mit 403/404, nie mit 400.
+- **Träger-Portal.** `GET /traeger/schools/day-changes` nimmt `date`.
+  `traegerview.DayChangesReport.SchoolsDayChanges` bekommt den Tag; erlaubt
+  sind heute und morgen in Berlin, wie die Übersicht bisher heute las. Nur
+  die Schulen des Trägers, ohne Person und ohne Grund, mit denselben
+  Statements wie für heute.
+- Andere Tage und falsche Formate antworten in beiden Portalen mit 400 und
+  `general.input`. Kein Query-Budget wächst.

@@ -7,6 +7,9 @@
 // keine Gründe. Personalmangel steht weiter unter den Auffälligkeiten.
 
 import { CheckCircleIcon } from "@phosphor-icons/react/ssr";
+import { useState } from "react";
+import type { DayChangesDay } from "~/components/home/day-changes-text";
+import { DaySwitch, nextDayISO } from "~/components/home/day-switch";
 import { ButtonLink } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -17,6 +20,7 @@ import {
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { trackEvent } from "~/lib/analytics";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
@@ -33,11 +37,30 @@ import {
   hasDayChange,
   openingChangeText,
 } from "~/lib/traeger-day-changes-text";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { traegerPath } from "~/lib/traeger-url";
 import { useTraegerDayChanges } from "./use-traeger-day-changes";
 
+// Die Sätze des gewählten Tags (#8236): morgen ist der nächste Kalendertag,
+// auch am Wochenende oder an einem Schließtag.
+const DAY_WORD: Record<DayChangesDay, { word: string; Word: string }> = {
+  today: { word: "heute", Word: "Heute" },
+  tomorrow: { word: "morgen", Word: "Morgen" },
+};
+
 export function TraegerDayChangesCard() {
-  const { changes, error, refreshFailed } = useTraegerDayChanges();
+  const [day, setDay] = useState<DayChangesDay>("today");
+  const today = useBerlinToday();
+  const tomorrow = nextDayISO(today);
+  const shown = day === "tomorrow" ? tomorrow : today;
+  const {
+    changes: anyDay,
+    error,
+    refreshFailed,
+  } = useTraegerDayChanges(day === "tomorrow" ? tomorrow : undefined);
+  // Die Antwort eines anderen Tags steht nie mit den Sätzen dieses Tags da.
+  const changes = anyDay !== null && anyDay.day === shown ? anyDay : null;
+  const { word, Word } = DAY_WORD[day];
   const schools = changes?.schools.filter(hasDayChange) ?? [];
   const quiet = changes !== null && schools.length === 0;
   return (
@@ -45,6 +68,15 @@ export function TraegerDayChangesCard() {
       title="Heute anders"
       testId="traeger-day-changes"
       loading={changes === null && !error}
+      action={
+        <DaySwitch
+          value={day}
+          onChange={(next) => {
+            if (next === "tomorrow") trackEvent("day_changes_tomorrow_shown");
+            setDay(next);
+          }}
+        />
+      }
       titleBadge={
         schools.length > 0 ? (
           <StatusBadge
@@ -53,7 +85,7 @@ export function TraegerDayChangesCard() {
           />
         ) : undefined
       }
-      description="Hier stehen die Schulen, an denen heute etwas anders läuft als geplant."
+      description={`Hier stehen die Schulen, an denen ${word} etwas anders läuft als geplant.`}
       leading={
         quiet ? (
           <CheckCircleIcon
@@ -79,7 +111,7 @@ export function TraegerDayChangesCard() {
       ) : null}
       {quiet ? (
         <p className="text-sm text-gray-900">
-          Heute läuft an allen Schulen alles wie geplant.
+          {Word} läuft an allen Schulen alles wie geplant.
         </p>
       ) : null}
       {schools.length > 0 ? (
@@ -120,7 +152,7 @@ export function TraegerDayChangesCard() {
                     <DayChangeLine
                       concept={mealPlanConcept}
                       label="Mittagessen"
-                      text="fällt heute aus"
+                      text={`fällt ${word} aus`}
                     />
                   ) : null}
                   {school.cancelledBlocks > 0 ? (
@@ -160,7 +192,7 @@ export function TraegerDayChangesCard() {
   );
 }
 
-/** Eine Zeile pro Art: Symbol, Art und was heute anders ist. */
+/** Eine Zeile pro Art: Symbol, Art und was an dem Tag anders ist. */
 function DayChangeLine({
   concept,
   label,

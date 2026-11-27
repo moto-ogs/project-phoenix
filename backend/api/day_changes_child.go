@@ -11,6 +11,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -362,8 +363,18 @@ func childDayMeals(meals dayChangesChildMeals) childDaySourceFunc {
 // childDayChangesPort serves the parents portal's port from the projection.
 type childDayChangesPort struct{ query daychangesview.ChildQuery }
 
-func (p childDayChangesPort) ChildDayChanges(ctx context.Context, studentID, accountID int64) (parentService.ChildDay, error) {
-	overview, err := p.query.ChildDay(ctx, daychangesview.ChildFilter{StudentID: ident.ID(studentID), AccountID: accountID})
+func (p childDayChangesPort) ChildDayChanges(ctx context.Context, studentID, accountID int64, on *calendar.Date) (parentService.ChildDay, error) {
+	child := daychangesview.ChildFilter{StudentID: ident.ID(studentID), AccountID: accountID}
+	var overview daychangesview.Overview
+	var err error
+	if on == nil {
+		overview, err = p.query.ChildDay(ctx, child)
+	} else {
+		overview, err = p.query.ChildDayOn(ctx, *on, child)
+	}
+	if errors.Is(err, daychangesview.ErrDayOutOfRange) {
+		return parentService.ChildDay{}, parentService.ErrDayChangesDayOutOfRange
+	}
 	if err != nil {
 		return parentService.ChildDay{}, err
 	}

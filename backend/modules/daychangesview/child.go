@@ -47,9 +47,11 @@ type ChildDependencies struct {
 	Logger *slog.Logger
 }
 
-// ChildQuery reads the day of one child.
+// ChildQuery reads the day of one child: today, or on a day that must be
+// today or tomorrow of the school (#8236, day.go).
 type ChildQuery interface {
 	ChildDay(ctx context.Context, child ChildFilter) (Overview, error)
+	ChildDayOn(ctx context.Context, day calendar.Date, child ChildFilter) (Overview, error)
 }
 
 type childView struct {
@@ -72,12 +74,23 @@ func NewChild(deps ChildDependencies) (ChildQuery, error) {
 // ChildDay reads every source for the child, with the same isolation,
 // partial failure and order as the staff overview.
 func (v *childView) ChildDay(ctx context.Context, child ChildFilter) (Overview, error) {
+	return v.read(child).Today(ctx)
+}
+
+// ChildDayOn reads the child's day on day with the same rules as today;
+// a day other than today or tomorrow is ErrDayOutOfRange (#8236).
+func (v *childView) ChildDayOn(ctx context.Context, day calendar.Date, child ChildFilter) (Overview, error) {
+	return v.read(child).On(ctx, day)
+}
+
+// read binds every source of the child's day to the child.
+func (v *childView) read(child ChildFilter) *view {
 	bind := func(source ChildChangeSource) func(context.Context, calendar.Date) ([]SourceEntry, error) {
 		return func(ctx context.Context, day calendar.Date) ([]SourceEntry, error) {
 			return source.ChildDayChanges(ctx, day, child)
 		}
 	}
-	read := &view{
+	return &view{
 		today: v.deps.Today, isolation: v.deps.Isolation, logger: v.logger,
 		sources: []sourceRead{
 			{source: SourceChildren, read: bind(v.deps.Children)},
@@ -87,5 +100,4 @@ func (v *childView) ChildDay(ctx context.Context, child ChildFilter) (Overview, 
 			{source: SourceMealPlan, read: bind(v.deps.Meals)},
 		},
 	}
-	return read.Today(ctx)
 }

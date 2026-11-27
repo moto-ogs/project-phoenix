@@ -9874,6 +9874,12 @@
       "portals": [
         "parent"
       ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "ChildDayChangesResponse"
@@ -13784,6 +13790,12 @@
       "pattern": "/traeger/schools/day-changes",
       "portals": [
         "org"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
