@@ -66,7 +66,7 @@ import {
   getStudentTimeStatus,
 } from "~/lib/student-time-status";
 
-export interface StudentListAppGroup {
+interface StudentListAppGroup {
   readonly key: string;
   readonly label: string;
   readonly items: readonly Student[];
