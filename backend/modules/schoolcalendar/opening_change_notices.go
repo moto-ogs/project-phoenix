@@ -18,6 +18,10 @@ type OpeningChangeNotice struct {
 	Previous        *OpeningChangeSpan
 	Current         *OpeningChangeSpan
 	Push            bool
+	// Traeger marks a change the school's Träger entered for it (#8231).
+	// The school reads it but cannot change it, and the feed keeps it apart
+	// from the school's own changes.
+	Traeger bool
 }
 
 // OpeningChangeSpan is the first and the last day of an opening change and

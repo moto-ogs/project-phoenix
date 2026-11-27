@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -77,4 +78,14 @@ type OpeningChanges interface {
 	// DeleteOpeningChange removes a change and returns its schools so their
 	// current views can refresh after the surrounding transaction commits.
 	DeleteOpeningChange(ctx context.Context, organizationID, id int64) (OpeningChange, error)
+}
+
+// OpeningChangeNotices is the consumer-owned port to Delivery's notification
+// feed for the opening changes of a Träger (#8231). NotifySchool tells one
+// named school of the change, with the same type, audience and push window
+// as a change the school entered itself (#8178), in a school transaction of
+// that school: its own switch notifications.opening_change_enabled decides,
+// and the person who made the change is left out.
+type OpeningChangeNotices interface {
+	NotifySchool(ctx context.Context, schoolID int64, notice schoolcalendar.OpeningChangeNotice) error
 }

@@ -147,6 +147,8 @@ export function calendarPeriodsTopic(): HelpTopic {
       "Ein Schließtag mit `Vom Träger` hat dein Träger geplant. Er gilt wie deine eigenen Schließtage. Ändern kann ihn nur das Träger-Büro.",
       // #8202: geänderte Öffnungszeiten des Trägers.
       "Einen Tag mit `Vom Träger` unter `Geänderte Öffnungszeiten` hat dein Träger geplant. Er gilt wie deine eigenen Tage. Ändern kann ihn nur das Träger-Büro.",
+      // #8231: Hinweis bei Tagen vom Träger.
+      "Auch wenn dein Träger einen solchen Tag anlegt, ändert oder löscht, bekommen Team, Eltern und Träger-Büro einen Hinweis. Dafür gilt deine Einstellung `Benachrichtigung bei geänderter Öffnungszeit` genauso.",
       "Mit `Auch in den Ferien und an Schließtagen planen` planst du auch dann Schichten.",
       "An gesetzlichen Feiertagen plant eine Serie nie Schichten.",
       "Schichten, die schon geplant waren, bleiben stehen.",

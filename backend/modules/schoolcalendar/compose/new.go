@@ -128,3 +128,8 @@ func NewHolidayClosureEvents(today func() calendar.Date) *postgres.HolidayClosur
 func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, today func() calendar.Date) schoolcalendar.HolidayClosureCareCalendar {
 	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(today), holidays)
 }
+
+// NewNoticedTraegerOpeningChanges builds a Träger's opening changes (#8202) that tell each named school of a write (#8231); today names the push window's day (YYYY-MM-DD).
+func NewNoticedTraegerOpeningChanges(schools traegercalendar.Schools, notices traegercalendar.OpeningChangeNotices, today func() string) traegercalendar.OpeningChanges {
+	return application.NewNoticedTraegerOpeningChanges(postgres.NewTraegerOpeningChangeStore(), schools, notices, today)
+}

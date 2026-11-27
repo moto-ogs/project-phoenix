@@ -33,6 +33,9 @@ type TraegerOpeningChangeStore interface {
 type TraegerOpeningChanges struct {
 	store   TraegerOpeningChangeStore
 	schools traegercalendar.Schools
+	// notices tells each named school of a write (#8231); nil tells nobody.
+	notices traegercalendar.OpeningChangeNotices
+	today   func() string
 }
 
 var _ traegercalendar.OpeningChanges = (*TraegerOpeningChanges)(nil)
@@ -84,6 +87,9 @@ func (t *TraegerOpeningChanges) CreateOpeningChange(ctx context.Context, organiz
 	}
 	result := traegerOpeningChange(change)
 	result.AffectedSchoolIDs = append([]int64(nil), change.SchoolIDs...)
+	if err := t.notify(ctx, change.ID, nil, &result); err != nil {
+		return traegercalendar.OpeningChange{}, err
+	}
 	return result, nil
 }
 
@@ -115,6 +121,9 @@ func (t *TraegerOpeningChanges) UpdateOpeningChange(ctx context.Context, organiz
 		return traegercalendar.OpeningChange{}, err
 	}
 	change.AffectedSchoolIDs = affectedSchoolIDs(previous.SchoolIDs, ident.Int64s(change.SchoolIDs))
+	if err := t.notify(ctx, id, &previous, &change); err != nil {
+		return traegercalendar.OpeningChange{}, err
+	}
 	return change, nil
 }
 
@@ -138,6 +147,9 @@ func (t *TraegerOpeningChanges) DeleteOpeningChange(ctx context.Context, organiz
 	}
 	change := traegerOpeningChange(previous)
 	change.AffectedSchoolIDs = append([]int64(nil), previous.SchoolIDs...)
+	if err := t.notify(ctx, id, &previous, nil); err != nil {
+		return traegercalendar.OpeningChange{}, err
+	}
 	return change, nil
 }
 
