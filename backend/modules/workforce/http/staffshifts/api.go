@@ -784,6 +784,9 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.invalid(w, r, err)
 		return
 	}
+	if _, ok := rs.actor(w, r); !ok {
+		return
+	}
 	if err := rs.planning.DeleteShift(r.Context(), id); err != nil {
 		rs.renderError(w, r, err)
 		return

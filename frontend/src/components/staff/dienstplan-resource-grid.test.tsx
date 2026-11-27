@@ -148,17 +148,27 @@ interface RenderOverrides {
   summaryByStaff?: Map<string, StaffWeeklySummary>;
   typesById?: Map<string, ShiftType>;
   shiftTypes?: readonly ShiftType[];
+  closingDays?: ReadonlyMap<string, string>;
   reducedPath?: boolean;
+  canWriteAbsences?: boolean;
   currentStaffId?: string | null;
   onSickReport?: (staff: StaffScheduleStaff) => void;
   onOpenPersonWeek?: (staff: StaffScheduleStaff) => void;
   weekDays?: readonly string[];
   todayIso?: string;
+  /** Without onCellClick the grid is a display only (#7351). */
+  readOnly?: boolean;
 }
 
-function renderGrid(overrides: RenderOverrides = {}) {
-  const onCellClick = vi.fn();
-  const renderResult = render(
+function gridElement(
+  overrides: RenderOverrides,
+  onCellClick: (
+    staff: StaffScheduleStaff,
+    date: string,
+    shift: StaffShift | null,
+  ) => void,
+) {
+  return (
     <DienstplanResourceGrid
       staff={overrides.staff ?? [member]}
       shiftsByStaff={overrides.shiftsByStaff ?? new Map()}
@@ -166,16 +176,28 @@ function renderGrid(overrides: RenderOverrides = {}) {
       summaryByStaff={overrides.summaryByStaff ?? new Map()}
       weekDays={overrides.weekDays ?? WEEK_DAYS}
       todayIso={overrides.todayIso ?? TODAY}
+      closingDays={overrides.closingDays}
       typesById={overrides.typesById ?? new Map()}
       shiftTypes={overrides.shiftTypes ?? []}
       reducedPath={overrides.reducedPath}
+      canWriteAbsences={overrides.canWriteAbsences ?? true}
       currentStaffId={overrides.currentStaffId}
-      onCellClick={onCellClick}
+      onCellClick={overrides.readOnly ? undefined : onCellClick}
       onSickReport={overrides.onSickReport}
       onOpenPersonWeek={overrides.onOpenPersonWeek}
-    />,
+    />
   );
-  return { onCellClick, ...renderResult };
+}
+
+function renderGrid(overrides: RenderOverrides = {}) {
+  const onCellClick = vi.fn();
+  const renderResult = render(gridElement(overrides, onCellClick));
+  return {
+    onCellClick,
+    rerenderGrid: (next: RenderOverrides) =>
+      renderResult.rerender(gridElement(next, onCellClick)),
+    ...renderResult,
+  };
 }
 
 function shiftMap(
@@ -721,6 +743,100 @@ describe("DienstplanResourceGrid reduced path", () => {
 
     fireEvent.click(screen.getByRole("menuitem", { name: "Krank melden" }));
     expect(onSickReport).toHaveBeenCalledWith(member);
+  });
+});
+
+describe("DienstplanResourceGrid read-only", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // #7351: wer nicht planen darf, sieht den Plan ohne Anlege-, Bearbeiten-
+  // und Verschieben-Flächen; ein Klick könnte nur abgelehnt werden.
+  it("shows shifts without create, edit or move controls on desktop and phone", () => {
+    for (const compact of [false, true]) {
+      mocks.useMediaQuery.mockReturnValue(compact);
+      const { unmount } = renderGrid({
+        readOnly: true,
+        shiftsByStaff: shiftMap("2026-07-06", [baseShift()]),
+      });
+
+      expect(screen.getAllByText("08:00–12:00").length).toBeGreaterThan(0);
+      expect(
+        screen.queryByRole("button", { name: /08:00–12:00/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Schicht anlegen/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Aktionen zur Schicht/ }),
+      ).not.toBeInTheDocument();
+      unmount();
+    }
+    mocks.useMediaQuery.mockReturnValue(false);
+  });
+
+  it("hides absence actions without the capability or in read-only mode", () => {
+    for (const overrides of [{ canWriteAbsences: false }, { readOnly: true }]) {
+      const { unmount } = renderGrid({
+        currentStaffId: member.id,
+        onSickReport: vi.fn(),
+        ...overrides,
+      });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Aktionen für Ada Lovelace" }),
+      );
+
+      // Anker: das geladene Menü bietet weiterhin die Leseaktion.
+      expect(
+        screen.getByRole("menuitem", { name: "Zeiterfassung öffnen" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("menuitem", { name: "Krank melden" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("menuitem", { name: "Für heute abwesend melden" }),
+      ).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("closes an open move dialog when the grid becomes read-only", () => {
+    const shifts = shiftMap("2026-07-06", [baseShift()]);
+    const { rerenderGrid } = renderGrid({ shiftsByStaff: shifts });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Aktionen zur Schicht 08:00–12:00" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Verschieben nach" }));
+    expect(screen.getByText("Schicht verschieben")).toBeInTheDocument();
+
+    rerenderGrid({ shiftsByStaff: shifts, readOnly: true });
+
+    // Anker: die Schicht bleibt im geladenen Lesemodus sichtbar.
+    expect(screen.getAllByText("08:00–12:00").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Schicht verschieben")).not.toBeInTheDocument();
+  });
+
+  it("closes an open closing-day prompt when the grid becomes read-only", () => {
+    const closingDays = new Map([[TODAY, "Fortbildung"]]);
+    const { rerenderGrid } = renderGrid({ closingDays });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Schicht anlegen, Ada Lovelace, Mo 06.07.",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "An einem Schließtag planen?" }),
+    ).toBeInTheDocument();
+
+    rerenderGrid({ closingDays, readOnly: true });
+
+    // Anker: der Plan bleibt sichtbar, die Rückfrage ist aber geschlossen.
+    expect(screen.getByText("Lovelace, Ada")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "An einem Schließtag planen?" }),
+    ).not.toBeInTheDocument();
   });
 });
 

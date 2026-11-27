@@ -233,7 +233,21 @@ func TestDienstplanRefusesAStafflessAccountOutsideATraegerSession(t *testing.T) 
 	t.Parallel()
 	d := newTraegerDienstplan(t)
 	ben := testpkg.CreateTestStaff(t, d.db, "Ben", "Ohneakte")
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, d.db, "Lea", "Planung")
+	period := testpkg.CreateTestCalendarPeriod(t, d.db, fmt.Sprintf("Ohneakte-Dienstplan-%d", testpkg.UniqueSuffix()),
+		testpkg.Date(2098, time.August, 1), testpkg.Date(2099, time.July, 31))
 	claims := d.session(testpkg.CreateTestAccount(t, d.db, "ohne-personal").ID, false)
+	planner := d.session(leadAccount.ID, false)
+	idOf := func(rec *httptest.ResponseRecorder) int64 {
+		return int64(decode[struct {
+			ID wireID `json:"id"`
+		}](t, rec).ID)
+	}
+	seriesOf := func(rec *httptest.ResponseRecorder) int64 {
+		return int64(decode[struct {
+			SeriesID wireID `json:"series_id"`
+		}](t, rec).SeriesID)
+	}
 
 	rec := d.send(claims, http.MethodPost, "/", map[string]any{
 		"staff_id": fmt.Sprint(ben.ID), "date": "2098-09-01", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
@@ -241,4 +255,27 @@ func TestDienstplanRefusesAStafflessAccountOutsideATraegerSession(t *testing.T) 
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	assert.Equal(t, "workforce.no_staff_profile", planningRefusalOf(t, rec).Code)
 	assert.Zero(t, staffSchoolValue(t, d.db, `SELECT COUNT(*) FROM schedule.staff_shifts WHERE tenant_id = ? AND staff_id = ?`, d.tenant, ben.ID))
+
+	shift := d.send(planner, http.MethodPost, "/", map[string]any{
+		"staff_id": fmt.Sprint(ben.ID), "date": "2098-09-02", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+	})
+	require.Equal(t, http.StatusCreated, shift.Code, shift.Body.String())
+	shiftID := idOf(shift)
+
+	rec = d.send(claims, http.MethodDelete, fmt.Sprintf("/%d", shiftID), nil)
+	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	assert.Equal(t, "workforce.no_staff_profile", planningRefusalOf(t, rec).Code)
+	assert.Equal(t, "1", shiftColumn(t, d.db, `SELECT COUNT(*)::text FROM schedule.staff_shifts WHERE id = ?`, shiftID))
+
+	series := d.send(planner, http.MethodPost, "/series", map[string]any{
+		"staff_id": fmt.Sprint(ben.ID), "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+		"calendar_period_id": fmt.Sprint(period.ID), "valid_from": "2098-09-01", "valid_until": "2098-09-29",
+	})
+	require.Equal(t, http.StatusCreated, series.Code, series.Body.String())
+	seriesID := seriesOf(series)
+
+	rec = d.send(claims, http.MethodDelete, fmt.Sprintf("/series/%d?from=2098-09-15", seriesID), nil)
+	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	assert.Equal(t, "workforce.no_staff_profile", planningRefusalOf(t, rec).Code)
+	assert.Equal(t, "4", shiftColumn(t, d.db, `SELECT COUNT(*)::text FROM schedule.staff_shifts WHERE series_id = ?`, seriesID))
 }

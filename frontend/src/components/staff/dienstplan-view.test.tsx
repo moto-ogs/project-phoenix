@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
   useSWRAuth: vi.fn(),
   isAdmin: vi.fn(),
+  hasEffectiveAdminScope: vi.fn(),
   hasPermission: vi.fn(),
   useBerlinToday: vi.fn(),
   refreshPlanCaches: vi.fn().mockResolvedValue(undefined),
@@ -16,6 +17,18 @@ const mocks = vi.hoisted(() => ({
   // view hands the opened dialog.
   cellShift: { value: null as unknown },
   modalReload: { value: undefined as undefined | (() => Promise<unknown>) },
+  // #7351: own staff profile in this school and a session from the Träger.
+  hasOwnStaff: { value: true },
+  viaTraeger: { value: false },
+  planGapsEnabled: { value: undefined as boolean | undefined },
+}));
+
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => mocks.hasOwnStaff.value,
+}));
+
+vi.mock("~/lib/shell-auth-context", () => ({
+  useShellAuthSafe: () => ({ isViaTraeger: mocks.viaTraeger.value }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -33,6 +46,7 @@ vi.mock("~/lib/tenant-router", () => ({
 
 vi.mock("~/lib/auth-utils", () => ({
   isAdmin: mocks.isAdmin,
+  hasEffectiveAdminScope: mocks.hasEffectiveAdminScope,
   hasPermission: mocks.hasPermission,
 }));
 
@@ -77,7 +91,10 @@ vi.mock("~/components/timetable/period-switcher-dropdown", () => ({
 
 // Eigene Tests in absence-plan-gaps.test.tsx; hier zählt nur das Raster.
 vi.mock("~/components/staff/absence-plan-gaps", () => ({
-  AbsencePlanGaps: () => null,
+  AbsencePlanGaps: ({ enabled }: { enabled: boolean }) => {
+    mocks.planGapsEnabled.value = enabled;
+    return null;
+  },
 }));
 
 vi.mock("~/components/staff/dienstplan-resource-grid", () => ({
@@ -87,6 +104,7 @@ vi.mock("~/components/staff/dienstplan-resource-grid", () => ({
     assignmentsByStaff,
     closingDaysLoading,
     onCellClick,
+    onSickReport,
   }: {
     weekDays: string[];
     todayIso: string;
@@ -95,11 +113,16 @@ vi.mock("~/components/staff/dienstplan-resource-grid", () => ({
       string,
       Map<string, Array<{ activityTitle: string }>>
     >;
-    onCellClick: (
+    onCellClick?: (
       staff: { id: string; firstName: string; lastName: string },
       date: string,
       shift: null,
     ) => void;
+    onSickReport?: (staff: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    }) => void;
   }) => (
     <div data-testid="dienstplan-grid">
       <span data-testid="dienstplan-week-days">{weekDays.join(",")}</span>
@@ -114,20 +137,43 @@ vi.mock("~/components/staff/dienstplan-resource-grid", () => ({
           .map((assignment) => assignment.activityTitle)
           .join(",")}
       </span>
-      <button
-        type="button"
-        onClick={() =>
-          onCellClick(
-            { id: "7", firstName: "Ada", lastName: "Lovelace" },
-            "2026-07-06",
-            mocks.cellShift.value as null,
-          )
-        }
-      >
-        Schicht öffnen
-      </button>
+      <span data-testid="sick-report-offered">
+        {String(onSickReport !== undefined)}
+      </span>
+      {onCellClick && (
+        <button
+          type="button"
+          onClick={() =>
+            onCellClick(
+              { id: "7", firstName: "Ada", lastName: "Lovelace" },
+              "2026-07-06",
+              mocks.cellShift.value as null,
+            )
+          }
+        >
+          Schicht öffnen
+        </button>
+      )}
+      {onSickReport && (
+        <button
+          type="button"
+          onClick={() =>
+            onSickReport({
+              id: "7",
+              firstName: "Ada",
+              lastName: "Lovelace",
+            })
+          }
+        >
+          Krank melden
+        </button>
+      )}
     </div>
   ),
+}));
+
+vi.mock("~/components/staff/sick-report-modal", () => ({
+  SickReportModal: () => <div data-testid="sick-report-modal" />,
 }));
 
 vi.mock("~/components/staff/dienstplan-halbjahr-grid", () => ({
@@ -163,16 +209,18 @@ vi.mock("~/components/staff/dienstplan-person-week-grid", () => ({
     onCreate,
   }: {
     member: { id: string; firstName: string; lastName: string };
-    onCreate: (date: string, startTime: string, endTime: string) => void;
+    onCreate?: (date: string, startTime: string, endTime: string) => void;
   }) => (
     <div data-testid="person-week-grid">
       <span data-testid="person-week-member">{member.id}</span>
-      <button
-        type="button"
-        onClick={() => onCreate("2026-07-07", "09:00", "09:45")}
-      >
-        Spanne aufziehen
-      </button>
+      {onCreate && (
+        <button
+          type="button"
+          onClick={() => onCreate("2026-07-07", "09:00", "09:45")}
+        >
+          Spanne aufziehen
+        </button>
+      )}
     </div>
   ),
 }));
@@ -243,12 +291,109 @@ describe("DienstplanView", () => {
       status: "authenticated",
     });
     mocks.isAdmin.mockReturnValue(true);
+    mocks.hasEffectiveAdminScope.mockReturnValue(true);
     mocks.hasPermission.mockReturnValue(true);
     mocks.useBerlinToday.mockReturnValue("2026-07-05");
     mocks.search.value = "";
     mocks.cellShift.value = null;
     mocks.modalReload.value = undefined;
+    mocks.hasOwnStaff.value = true;
+    mocks.viaTraeger.value = false;
+    mocks.planGapsEnabled.value = undefined;
     window.history.replaceState(null, "", "/acme/dienstplan");
+  });
+
+  // #7351: ohne eigenes Personalprofil lehnt der Server jede Planänderung
+  // mit 403 ab. Der Plan bleibt lesbar und sagt vorher, warum er sich nicht
+  // ändern lässt, statt nach dem Ausfüllen eines Dialogs abzulehnen.
+  it("shows the plan read-only with the reason to an admin without own staff profile", () => {
+    mocks.hasOwnStaff.value = false;
+    mockOverviewLoaded();
+
+    render(<DienstplanView />);
+
+    expect(screen.getByTestId("dienstplan-grid")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Du kannst den Dienstplan nur ansehen\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Schicht öffnen" }),
+    ).not.toBeInTheDocument();
+    // Krankmeldung und Übernahme von Abwesenheiten verlangen ebenfalls ein
+    // eigenes Personalprofil.
+    expect(screen.getByTestId("sick-report-offered")).toHaveTextContent(
+      "false",
+    );
+    expect(mocks.planGapsEnabled.value).toBe(false);
+  });
+
+  it("keeps the person week read-only without own staff profile", () => {
+    mocks.hasOwnStaff.value = false;
+    mocks.search.value = "view=person";
+    mockOverviewLoaded();
+
+    render(<DienstplanView />);
+
+    expect(screen.getByTestId("person-week-grid")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Spanne aufziehen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  // ADR 0084 Nachtrag (2): das Träger-Büro plant Schichten mit Vermerk,
+  // Abwesenheiten bleiben dem Personal der Schule vorbehalten.
+  it("lets a Träger session without staff profile plan shifts but not report absences", () => {
+    mocks.hasOwnStaff.value = false;
+    mocks.viaTraeger.value = true;
+    mockOverviewLoaded();
+
+    render(<DienstplanView />);
+
+    expect(
+      screen.getByRole("button", { name: "Schicht öffnen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du kannst den Dienstplan nur ansehen/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("sick-report-offered")).toHaveTextContent(
+      "false",
+    );
+    expect(mocks.planGapsEnabled.value).toBe(false);
+  });
+
+  it("keeps planning and absences for an admin with own staff profile", () => {
+    mockOverviewLoaded();
+
+    render(<DienstplanView />);
+
+    expect(
+      screen.getByRole("button", { name: "Schicht öffnen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du kannst den Dienstplan nur ansehen/),
+    ).not.toBeInTheDocument();
+    expect(mocks.planGapsEnabled.value).toBe(true);
+  });
+
+  it("closes writable dialogs when the context confirms no own staff profile", () => {
+    mockOverviewLoaded();
+
+    const { rerender } = render(<DienstplanView />);
+    fireEvent.click(screen.getByRole("button", { name: "Schicht öffnen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Krank melden" }));
+
+    expect(screen.getByTestId("shift-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("sick-report-modal")).toBeInTheDocument();
+
+    mocks.hasOwnStaff.value = false;
+    rerender(<DienstplanView />);
+
+    // Anker: der bestätigte Lesemodus der geladenen Planansicht ist sichtbar.
+    expect(
+      screen.getByText(/Du kannst den Dienstplan nur ansehen\./),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("shift-modal")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("sick-report-modal")).not.toBeInTheDocument();
   });
 
   it("shows a blocking load error instead of the editable grid", async () => {

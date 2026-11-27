@@ -158,4 +158,4 @@ export const SIMPLE_NAV_DIFFERENCE =
  * über den Träger, fehlen sie in der Navigation.
  */
 export const OWN_STAFF_PROFILE_TROUBLESHOOTING =
-  "Die Seite fehlt? Sie zeigt deine eigenen Zeiten und Termine. Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen.";
+  "Die Seite fehlt? Sie zeigt deine eigenen Zeiten und Termine. Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.";
