@@ -548,12 +548,31 @@ export function TagesplanApp(props: TagesplanAppProps) {
     else setSheetId(id);
   };
 
+  // Der früheste eigene startbereite Block: ihn startet die Leiste über
+  // der Pill (Telefon).
+  const ownStart = [...entries.values()]
+    .filter(
+      (entry) =>
+        entry.state.startable && (!showMine || entry.instance.isAssigned),
+    )
+    .sort((a, b) =>
+      a.instance.startTime.localeCompare(b.instance.startTime),
+    )[0];
+
   const renderRow = (
     cell: { instance: PlannedTimetableInstance },
     inPast = false,
   ) => {
     const entry = entries.get(cell.instance.id);
     if (!entry) return null;
+    // Erreichbarkeit (#8070): Ist ein weiterer eigener Block startbereit,
+    // steht „Starten“ wie am Desktop und auf der Startseite in seiner Zeile;
+    // die Leiste startet nur den frühesten.
+    const rowStart =
+      !isSplit &&
+      entry.state.startable &&
+      entry.instance.isAssigned &&
+      entry.instance.id !== ownStart?.instance.id;
     return (
       <BlockRow
         key={entry.instance.id}
@@ -563,6 +582,14 @@ export function TagesplanApp(props: TagesplanAppProps) {
         selected={splitId === entry.instance.id}
         inPast={inPast}
         onOpen={() => openEntry(entry.instance.id)}
+        start={
+          rowStart
+            ? {
+                busy: startBusyId === entry.instance.id,
+                onStart: () => onStart(entry.instance),
+              }
+            : null
+        }
       />
     );
   };
@@ -744,14 +771,6 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // bzw. „Startbereit“, ihr Blatt den Knopf. Der eigene startbereite Block
   // ist die häufigste Aktion der Seite und steht in der Leiste über der
   // Pill. Blöcke anderer startet man wie am Desktop, über ihr Blatt.
-  const ownStart = [...entries.values()]
-    .filter(
-      (entry) =>
-        entry.state.startable && (!showMine || entry.instance.isAssigned),
-    )
-    .sort((a, b) =>
-      a.instance.startTime.localeCompare(b.instance.startTime),
-    )[0];
 
   return (
     <>
@@ -1079,6 +1098,7 @@ function BlockRow({
   selected,
   inPast = false,
   onOpen,
+  start = null,
 }: Readonly<{
   entry: Entry;
   next: boolean;
@@ -1087,6 +1107,8 @@ function BlockRow({
   /** Steht unter „N Blöcke vorbei“: das Wort „Vorbei“ entfällt. */
   inPast?: boolean;
   onOpen: () => void;
+  /** „Starten“ in der Zeile (ein weiterer eigener startbereiter Block). */
+  start?: { busy: boolean; onStart: () => void } | null;
 }>) {
   const { instance, state } = entry;
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
@@ -1097,10 +1119,13 @@ function BlockRow({
   // hinter den Titel passt („Mit dir“ neben einem Zustand), steht als Wort
   // in der Angabenzeile; im Blatt stehen alle Abzeichen.
   const chips = blockChips(state, next, mine);
-  const rowChip = chips[0];
+  // Mit „Starten“ in der Zeile entfällt „Startbereit“ (der Knopf sagt es);
+  // „Nicht gestartet“ bleibt als Warnung stehen.
+  const startHidesChip = start != null && !state.startOverdue;
+  const rowChip = startHidesChip ? chips[1] : chips[0];
   const labels = chipLabels(state, next, mine);
-  const rowChipLabel = labels[0] ?? labels[1];
-  const mineInMeta = mine && labels[0] != null;
+  const rowChipLabel = startHidesChip ? labels[1] : (labels[0] ?? labels[1]);
+  const mineInMeta = mine && labels[0] != null && !startHidesChip;
   const children = childrenPart(entry);
   const openEnd = hasOpenEnd(instance);
   // Am iPad hoch ist die Zeile breit genug für alle Namen.
@@ -1143,12 +1168,17 @@ function BlockRow({
   push("room", state.room, false, wide ? undefined : "room");
   push("count", count, false, wide ? undefined : "count");
   // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
-  // betreut, sucht man im Plan. Gruppe und alle Namen stehen im Blatt.
+  // betreut, sucht man im Plan. Alle Namen stehen im Blatt.
   if (wide) {
     push("group", instance.groupName);
     if (!state.cancelled) push("staff", staff);
-  } else if (!state.cancelled) {
-    push("staff", blockStaffShort(instance), false, "staff");
+  } else {
+    // Erreichbarkeit (#8070): Die Gruppe steht wie am Desktop in der
+    // Zeile; die Angabenzeile bricht zwischen den Teilen um.
+    push("group", instance.groupName);
+    if (!state.cancelled) {
+      push("staff", blockStaffShort(instance), false, "staff");
+    }
   }
   // Der Bereich („Randzeiten“) steht im Blatt („Bereich“), nicht in der
   // Zeile: als Abzeichen brach er die Titelzeile um, als Wort die
@@ -1158,6 +1188,20 @@ function BlockRow({
       onClick={onOpen}
       selected={selected}
       wrap
+      action={
+        start ? (
+          <Button
+            type="button"
+            size="md"
+            variant="success"
+            disabled={start.busy}
+            onClick={start.onStart}
+            tooltip="Startet die Aufsicht für diesen Termin und öffnet sie."
+          >
+            {start.busy ? "Startet..." : "Starten"}
+          </Button>
+        ) : undefined
+      }
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
       // Sprachsteuerung den Block beim Namen findet (WCAG 2.5.3); das
       // Abzeichen hinter dem Titel gehört zum sichtbaren Namen.
