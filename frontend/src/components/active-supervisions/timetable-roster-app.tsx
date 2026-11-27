@@ -1,7 +1,12 @@
 "use client";
 
 import { AlertTriangle, CalendarX, Plus, StickyNote } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
@@ -35,6 +40,7 @@ import { useMinuteClock } from "~/lib/pickup-helpers";
 import { schoolClassName } from "~/lib/school-class-label";
 import type { Student } from "~/lib/student-helpers";
 import { getStudentTimeStatus } from "~/lib/student-time-status";
+import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import {
   canCompleteInstance,
@@ -389,6 +395,31 @@ const SHORT_PHONE_ROWS =
   "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[44px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-[3px] [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
 
 /**
+ * Zeile eines Kindes. Die blaue Zahl am Namen (neu von den Eltern) steht
+ * auch im Namen der Zeile, direkt nach dem sichtbaren Namen: Vorleseprogramme
+ * nennen sie, und Sprachsteuerung findet die Zeile beim gelesenen Text.
+ */
+function RosterChildRow({
+  studentId,
+  label,
+  ...props
+}: Readonly<
+  Pick<
+    ComponentProps<typeof CollectionRow>,
+    "onClick" | "selected" | "leading" | "title" | "subtitle" | "action"
+  > & {
+    studentId: string;
+    label: string;
+  }
+>) {
+  const attention = useStudentParentAttention(studentId);
+  const name = attention
+    ? `${label} ${attention.total} neu von den Eltern`
+    : label;
+  return <CollectionRow {...props} aria-label={`${name} öffnen`} />;
+}
+
+/**
  * Eine Angabe der zweiten Zeile. Der Punkt davor steht links außerhalb und
  * wird am Zeilenanfang abgeschnitten: Bricht die Zeile um, beginnt die neue
  * Zeile ohne „·“.
@@ -695,7 +726,9 @@ export function TimetableRosterApp({
             </>
           ) : null}
         </span>
-        <span className="flex shrink-0 pl-1 empty:hidden">
+        {/* Nur Anzeige: Die Zahl steht im Namen der Zeile (`RosterChildRow`). */}
+        {/* Leerzeichen: Klasse und Zahl bleiben im Text zwei Wörter. */}{" "}
+        <span aria-hidden="true" className="flex shrink-0 pl-1 empty:hidden">
           <RowParentAttention studentId={row.studentId} />
         </span>
       </span>
@@ -765,13 +798,16 @@ export function TimetableRosterApp({
             meta={key === leadSectionKey ? leadGroupMeta : undefined}
           >
             {rows.map((row) => (
-              <CollectionRow
+              <RosterChildRow
                 key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
+                studentId={row.studentId}
                 onClick={() => openChild(row)}
                 selected={isSplit && splitRow?.studentId === row.studentId}
                 // Beginnt mit dem sichtbaren Text (Name, Klasse), damit
                 // Sprachsteuerung die Zeile beim gelesenen Namen findet.
-                aria-label={`${[childName(row), schoolClassName(row.schoolClass ?? "")].filter(Boolean).join(" ")} öffnen`}
+                label={[childName(row), schoolClassName(row.schoolClass ?? "")]
+                  .filter(Boolean)
+                  .join(" ")}
                 leading={<Avatar name={childName(row)} size="sm" decorative />}
                 title={titleFor(row)}
                 subtitle={subtitleFor(row, key)}
