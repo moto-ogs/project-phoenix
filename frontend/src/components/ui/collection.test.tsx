@@ -43,4 +43,55 @@ describe("Collection", () => {
       "/students/2",
     );
   });
+
+  it("a collapsible group's head toggles its rows; without the prop the head stays plain text", () => {
+    const toggle = vi.fn();
+    const { rerender } = render(
+      <Collection label="Mehr">
+        <CollectionGroup
+          title="Eltern"
+          collapsible={{ expanded: true, onToggle: toggle }}
+        >
+          <CollectionRow title="Nachrichten" href="/messages" />
+        </CollectionGroup>
+        <CollectionGroup title="Konto">
+          <CollectionRow title="Profil" href="/profile" />
+        </CollectionGroup>
+      </Collection>,
+    );
+    const head = screen.getByRole("button", { name: "Eltern" });
+    expect(head).toHaveAttribute("aria-expanded", "true");
+    const rows = document.getElementById(
+      head.getAttribute("aria-controls") ?? "",
+    );
+    expect(rows).toContainElement(
+      screen.getByRole("link", { name: "Nachrichten" }),
+    );
+    expect(screen.queryByRole("button", { name: "Konto" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Konto" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(head);
+    expect(toggle).toHaveBeenCalledOnce();
+
+    rerender(
+      <Collection label="Mehr">
+        <CollectionGroup
+          title="Eltern"
+          collapsible={{
+            expanded: false,
+            onToggle: toggle,
+            collapsedBadge: <span>2 ungelesen</span>,
+          }}
+        >
+          <CollectionRow title="Nachrichten" href="/messages" />
+        </CollectionGroup>
+      </Collection>,
+    );
+    expect(
+      screen.getByRole("button", { name: "Eltern 2 ungelesen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "Nachrichten" })).toBeNull();
+  });
 });
