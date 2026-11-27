@@ -1,6 +1,6 @@
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { TEST_CLOCK_INSTANT, testClockDay } from "~/test/clock";
@@ -9,9 +9,10 @@ import type {
   TraegerSchoolsDayChanges,
 } from "~/lib/traeger-day-changes-api";
 
-const { mockFetchDayChanges, mockUseSession } = vi.hoisted(() => ({
+const { mockFetchDayChanges, mockUseSession, trackEvent } = vi.hoisted(() => ({
   mockFetchDayChanges: vi.fn(),
   mockUseSession: vi.fn(),
+  trackEvent: vi.fn(),
 }));
 
 vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
@@ -19,8 +20,10 @@ vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
 vi.mock("~/lib/traeger-day-changes-api", () => ({
-  fetchTraegerSchoolsDayChanges: () => mockFetchDayChanges(),
+  fetchTraegerSchoolsDayChanges: (...args: unknown[]) =>
+    mockFetchDayChanges(...args),
 }));
+vi.mock("~/lib/analytics", () => ({ trackEvent }));
 
 import { TraegerDayChangesCard } from "./traeger-day-changes-card";
 
@@ -46,9 +49,10 @@ function school(
 
 function answer(
   schools: readonly TraegerSchoolDayChanges[],
+  day = testClockDay(0),
 ): TraegerSchoolsDayChanges {
   return {
-    day: testClockDay(0),
+    day,
     schools,
     asOf: TEST_CLOCK_INSTANT.toISOString(),
   };
@@ -176,5 +180,71 @@ describe("TraegerDayChangesCard (#7672, #8146)", () => {
 
     expect(await screen.findByText("1 Schule")).toBeInTheDocument();
     expect(screen.queryByText("OGS Ruhig")).not.toBeInTheDocument();
+  });
+
+  it("switches to tomorrow with the same card and says „morgen“ (#8236)", async () => {
+    const tomorrow = testClockDay(1);
+    mockFetchDayChanges.mockImplementation((date?: string) =>
+      Promise.resolve(
+        date === tomorrow
+          ? answer(
+              [school("41", "OGS Morgen", { mealCancelled: true })],
+              tomorrow,
+            )
+          : answer([school("42", "OGS Heute", { cancelledBlocks: 1 })]),
+      ),
+    );
+    trackEvent.mockReset();
+    renderCard();
+
+    expect(await screen.findByText("OGS Heute")).toBeInTheDocument();
+    expect(mockFetchDayChanges).toHaveBeenLastCalledWith(undefined);
+    expect(screen.getByRole("button", { name: "Heute" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(await screen.findByText("OGS Morgen")).toBeInTheDocument();
+    expect(mockFetchDayChanges).toHaveBeenLastCalledWith(tomorrow);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_tomorrow_shown");
+    expect(screen.getByText("fällt morgen aus")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Hier stehen die Schulen, an denen morgen etwas anders läuft als geplant.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("OGS Heute")).not.toBeInTheDocument();
+  });
+
+  it("says that everything runs as planned tomorrow", async () => {
+    const tomorrow = testClockDay(1);
+    mockFetchDayChanges.mockImplementation((date?: string) =>
+      Promise.resolve(answer([], date ?? testClockDay(0))),
+    );
+    renderCard();
+    fireEvent.click(await screen.findByRole("button", { name: "Morgen" }));
+
+    expect(
+      await screen.findByText(
+        "Morgen läuft an allen Schulen alles wie geplant.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockFetchDayChanges).toHaveBeenLastCalledWith(tomorrow);
+  });
+
+  it("never shows the answer of another day under tomorrow", async () => {
+    // A stale answer of today must not stand with the sentences of tomorrow.
+    mockFetchDayChanges.mockResolvedValue(
+      answer([school("51", "OGS Nur heute", { mealCancelled: true })]),
+    );
+    renderCard();
+    expect(await screen.findByText("OGS Nur heute")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    await screen.findByRole("button", { name: "Morgen", pressed: true });
+    expect(screen.queryByText("OGS Nur heute")).not.toBeInTheDocument();
+    expect(screen.queryByText("fällt morgen aus")).not.toBeInTheDocument();
   });
 });

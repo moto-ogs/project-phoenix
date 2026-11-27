@@ -23,24 +23,40 @@ export function isOverviewOfDay(
   return overview?.date === selectedDate;
 }
 
+/** Die Beschriftung des Umschalters; das Elternportal übersetzt sie (#8236). */
+export interface DaySwitchLabels {
+  readonly label: string;
+  readonly today: string;
+  readonly tomorrow: string;
+}
+
+const GERMAN_LABELS: DaySwitchLabels = {
+  label: "Tag der Übersicht",
+  today: "Heute",
+  tomorrow: "Morgen",
+};
+
 /**
  * Umschalter „Heute / Morgen“ im Kopf von „Heute anders“ (#7657), im
- * Staff-Portal und in moto schule. Morgen ist der nächste Kalendertag, auch
- * am Wochenende oder an einem Schließtag.
+ * Staff-Portal, in moto schule, im Eltern- und im Träger-Portal (#8236).
+ * Morgen ist der nächste Kalendertag, auch am Wochenende oder an einem
+ * Schließtag.
  */
 export function DaySwitch({
   value,
   onChange,
+  labels = GERMAN_LABELS,
 }: {
   readonly value: DayChangesDay;
   readonly onChange: (next: DayChangesDay) => void;
+  readonly labels?: DaySwitchLabels;
 }) {
   return (
     <SegmentedControl<DayChangesDay>
-      ariaLabel="Tag der Übersicht"
+      ariaLabel={labels.label}
       items={[
-        { value: "today", label: "Heute" },
-        { value: "tomorrow", label: "Morgen" },
+        { value: "today", label: labels.today },
+        { value: "tomorrow", label: labels.tomorrow },
       ]}
       value={value}
       onChange={onChange}

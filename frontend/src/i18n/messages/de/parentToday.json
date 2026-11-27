@@ -67,5 +67,31 @@
     "activityReinstated": "{title} um {time} Uhr findet heute doch statt.",
     "activityRoomChanged": "{title} um {time} Uhr findet heute in {room} statt.",
     "activityLeadChanged": "{title} um {time} Uhr hat heute eine Vertretung."
+  },
+  "changesDay": {
+    "label": "Tag der Übersicht",
+    "today": "Heute",
+    "tomorrow": "Morgen"
+  },
+  "changesTomorrow": {
+    "allAsPlanned": "Morgen läuft alles wie geplant.",
+    "loadObject": "die Änderungen für morgen",
+    "sick": "{name} ist morgen krank gemeldet.",
+    "excused": "{name} ist morgen entschuldigt.",
+    "pickupAt": "{name} wird morgen um {time} Uhr abgeholt.",
+    "notComing": "{name} kommt morgen nicht.",
+    "goesAlone": "{name} geht morgen allein nach Hause.",
+    "pickupPerson": "{person} holt {name} morgen ab.",
+    "pickupPersonOneTime": "{person} holt {name} morgen ab und zeigt dabei den Ausweis.",
+    "classTrip": "Die Klasse {class} ist morgen auf Ausflug.",
+    "classTripBack": "Die Klasse {class} ist morgen auf Ausflug. Zurück um {time} Uhr.",
+    "classDismissal": "Der Unterricht der Klasse {class} endet morgen um {time} Uhr.",
+    "closingDay": "{careNomCap} ist morgen geschlossen: {name}.",
+    "openingChanged": "{careNomCap} ist morgen von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "mealCancelled": "Morgen gibt es kein Mittagessen für {name}. Es wird nicht berechnet.",
+    "activityCancelled": "{title} um {time} Uhr fällt morgen aus.",
+    "activityReinstated": "{title} um {time} Uhr findet morgen doch statt.",
+    "activityRoomChanged": "{title} um {time} Uhr findet morgen in {room} statt.",
+    "activityLeadChanged": "{title} um {time} Uhr hat morgen eine Vertretung."
   }
 }

@@ -50,9 +50,19 @@ export interface TraegerSchoolsDayChanges {
   readonly asOf: string;
 }
 
-export async function fetchTraegerSchoolsDayChanges(): Promise<TraegerSchoolsDayChanges> {
+/**
+ * Ohne `date` liest das Backend heute; `date` nennt morgen für die Vorschau
+ * (#8236), andere Tage lehnt es ab.
+ */
+export async function fetchTraegerSchoolsDayChanges(
+  date?: string,
+): Promise<TraegerSchoolsDayChanges> {
   return mapTraegerSchoolsDayChanges(
-    await bffJson("org", "GET /traeger/schools/day-changes"),
+    await bffJson(
+      "org",
+      "GET /traeger/schools/day-changes",
+      date ? { query: { date } } : {},
+    ),
   );
 }
 

@@ -1,7 +1,7 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
-/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672, #8146) und ihre Auffälligkeiten (#4675). */
+/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672, #8146, Vorschau auf morgen #8236) und ihre Auffälligkeiten (#4675). */
 export function traegerDashboardTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.traegerDashboard,
@@ -31,6 +31,9 @@ export function traegerDashboardTopic(): HelpTopic {
       "Dazu kommen eine geänderte Öffnungszeit, ein ausfallendes Mittagessen, die Zahl der abgesagten Termine und die Zahl der gesperrten Räume.",
       "Unter `Heute anders` steht kein Name und kein Grund. Nur ein Schließtag zeigt seinen Namen.",
       "Fehlt Personal, steht das unter `Auffälligkeiten` bei `Zu wenig Personal`, nicht unter `Heute anders`.",
+      // Vorschau auf morgen (#8236).
+      "Oben in `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, an welcher Schule morgen etwas anders läuft. Du siehst dort dasselbe wie für heute, nur für morgen.",
+      "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag.",
       "Du siehst nur Zahlen, keine Namen.",
       "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
       "Mit einem Klick auf eine Spaltenüberschrift sortierst du die Schulen, zum Beispiel nach `Heute krank`.",
@@ -48,7 +51,7 @@ export function traegerDashboardTopic(): HelpTopic {
       "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
       "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
       "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
-      "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann läuft heute an keiner Schule etwas anders als geplant.",
+      "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann läuft heute an keiner Schule etwas anders als geplant. Für morgen steht dort „Morgen läuft an allen Schulen alles wie geplant.“",
     ],
     related: [
       HELP_TOPICS.traegerSchoolView,

@@ -15,22 +15,31 @@ const DAY_CHANGES_REFRESH_MS = 60_000;
 /**
  * „Heute anders“ of every school of the Träger (#7672). `error` is the load
  * error card: only without confirmed changes, or on a refusal. A failed
- * refresh keeps the confirmed changes and sets `refreshFailed`.
+ * refresh keeps the confirmed changes and sets `refreshFailed`. With
+ * `tomorrow` (YYYY-MM-DD) it reads the preview on tomorrow (#8236).
  */
-export function useTraegerDayChanges() {
+export function useTraegerDayChanges(tomorrow?: string) {
   const { data: session } = useSession();
-  const key =
-    session?.user.scope === "org" ? traegerKeys.schoolsDayChanges() : null;
+  let key: string | null = null;
+  if (session?.user.scope === "org") {
+    key = tomorrow
+      ? traegerKeys.schoolsDayChangesOn(tomorrow)
+      : traegerKeys.schoolsDayChanges();
+  }
   const guard = useRefusalGuard(key);
-  const response = useSWRAuth(key, fetchTraegerSchoolsDayChanges, {
-    revalidateOnFocus: true,
-    refreshInterval: DAY_CHANGES_REFRESH_MS,
-    ...guard.callbacks,
-  });
+  const response = useSWRAuth(
+    key,
+    () => fetchTraegerSchoolsDayChanges(tomorrow),
+    {
+      revalidateOnFocus: true,
+      refreshInterval: DAY_CHANGES_REFRESH_MS,
+      ...guard.callbacks,
+    },
+  );
   const changes = useConfirmedResource(
     response,
     guard,
-    "die Änderungen von heute",
+    tomorrow ? "die Änderungen von morgen" : "die Änderungen von heute",
   );
   const confirmed = changes.data !== null;
   return {

@@ -1750,12 +1750,18 @@ export async function updateOfferingChangeRequest(
 
 /** Returns the school's courses with this child's state. */
 /** „Heute anders“ eines Kindes (#7671): was heute für das Kind anders ist. */
+/**
+ * „Heute anders“ eines Kindes (#7671). Ohne `date` liest das Backend heute;
+ * `date` nennt morgen für die Vorschau (#8236), andere Tage lehnt es ab.
+ */
 export async function getChildDayChanges(
   studentId: string,
+  date?: string,
 ): Promise<parentMeContract.ChildDayChangesResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/day-changes", {
       params: { studentId },
+      ...(date ? { query: { date } } : {}),
     }),
   );
 }
