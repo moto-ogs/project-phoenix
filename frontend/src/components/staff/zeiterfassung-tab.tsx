@@ -580,7 +580,6 @@ export function ZeiterfassungTab({
                 }
                 onRetryAccountStartDate={retryTimeTrackingConfig}
                 today={today}
-                isAdminView
                 plannedShifts={visibleShifts ?? []}
                 onBackfillAbsence={
                   canBackfill

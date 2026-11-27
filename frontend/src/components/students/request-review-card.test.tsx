@@ -5,7 +5,7 @@ import { testClockDay } from "~/test/clock";
 import { RequestReviewCard, RequestRowHeader } from "./request-review-card";
 
 describe("RequestReviewCard", () => {
-  it("keeps an open enrollment request in the four-column open grid", () => {
+  it("keeps an undated history row aligned with its visible columns", () => {
     render(
       <RequestReviewCard
         childName="Lina Beispiel"
@@ -27,9 +27,9 @@ describe("RequestReviewCard", () => {
   });
 
   it("exposes the column labels to assistive technology", () => {
-    render(<RequestRowHeader view="open" />);
+    render(<RequestRowHeader />);
 
-    const header = screen.getByText("Wartet seit").parentElement;
+    const header = screen.getByText("Entschieden").parentElement;
     expect(header).not.toHaveAttribute("aria-hidden");
   });
 
@@ -55,7 +55,6 @@ describe("RequestReviewCard", () => {
         type="excused"
         typeLabel="Krankmeldung"
         summary="29.08.2026"
-        grouped
       />,
     );
 

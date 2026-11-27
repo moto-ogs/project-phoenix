@@ -22,12 +22,8 @@ function Sentinel({
   onVisible,
   enabled = true,
 }: Readonly<{ onVisible: () => void; enabled?: boolean }>) {
-  const { ref, supported } = useOnVisible(onVisible, enabled);
-  return (
-    <div ref={ref} data-testid="sentinel">
-      {supported ? "beobachtet" : "ohne Beobachter"}
-    </div>
-  );
+  const ref = useOnVisible(onVisible, enabled);
+  return <div ref={ref} data-testid="sentinel" />;
 }
 
 afterEach(() => {
@@ -41,7 +37,7 @@ describe("useOnVisible", () => {
     const onVisible = vi.fn();
     render(<Sentinel onVisible={onVisible} />);
 
-    expect(screen.getByText("beobachtet")).toBeInTheDocument();
+    expect(observers).toHaveLength(1);
     act(() => observers[0]?.callback([{ isIntersecting: false }]));
     expect(onVisible).not.toHaveBeenCalled();
     act(() => observers[0]?.callback([{ isIntersecting: true }]));
@@ -62,11 +58,11 @@ describe("useOnVisible", () => {
     expect(observers[0]?.disconnect).toHaveBeenCalled();
   });
 
-  it("reports a missing IntersectionObserver so the caller offers a button", () => {
+  it("renders without observing when IntersectionObserver is unavailable", () => {
     vi.stubGlobal("IntersectionObserver", undefined);
-    // `in window` sees a stubbed undefined as present; remove the key itself.
-    delete (window as { IntersectionObserver?: unknown }).IntersectionObserver;
-    render(<Sentinel onVisible={vi.fn()} />);
-    expect(screen.getByText("ohne Beobachter")).toBeInTheDocument();
+    const onVisible = vi.fn();
+    render(<Sentinel onVisible={onVisible} />);
+    expect(screen.getByTestId("sentinel")).toBeInTheDocument();
+    expect(onVisible).not.toHaveBeenCalled();
   });
 });

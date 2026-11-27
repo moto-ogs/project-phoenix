@@ -91,10 +91,19 @@ func (b *batchSettings) ResolveSettingsSnapshots(_ context.Context, tenantIDs []
 }
 
 func (b *batchSettings) BindSettingsSnapshot(ctx context.Context, snapshot ports.SettingsSnapshot) (context.Context, error) {
-	if _, ok := snapshot.(string); !ok {
+	if _, ok := snapshot.(int64); !ok {
 		return ctx, errors.New("snapshot was not resolved by this source")
 	}
 	return context.WithValue(ctx, boundSnapshotKey{}, snapshot), nil
+}
+
+type scriptedBatchSettings struct {
+	ports.Settings
+	resolve func(context.Context, []int64, []string) (map[int64]ports.SettingsSnapshot, error)
+}
+
+func (s scriptedBatchSettings) ResolveSettingsSnapshots(ctx context.Context, tenantIDs []int64, keys []string) (map[int64]ports.SettingsSnapshot, error) {
+	return s.resolve(ctx, tenantIDs, keys)
 }
 
 // One scheduler minute lists the active schools and resolves their polling
@@ -130,17 +139,12 @@ func TestLoadMinuteSnapshotResolvesEverySchoolInOneBatch(t *testing.T) {
 func TestForEachTenantSettingsBindsEachSchoolsSnapshot(t *testing.T) {
 	t.Parallel()
 
-	settings := &batchSettings{}
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		settings: settings,
-		done:     make(chan struct{}),
-		logger:   slog.Default(),
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
-			return &schedulerMinuteSnapshot{
-				tenantIDs: []int64{31, 32},
-				settings:  map[int64]ports.SettingsSnapshot{31: "snapshot-31", 32: "snapshot-32"},
-			}, nil
-		}})
+		settings:   &batchSettings{},
+		schoolRepo: staticTenants(31, 32),
+		done:       make(chan struct{}),
+		logger:     slog.Default(),
+	})
 
 	bound := map[int64]any{}
 	scheduler.forEachTenantSettings(context.Background(), "bind-settings", func(ctx context.Context, tenantID int64) error {
@@ -148,23 +152,23 @@ func TestForEachTenantSettingsBindsEachSchoolsSnapshot(t *testing.T) {
 		return nil
 	})
 
-	assert.Equal(t, map[int64]any{31: "snapshot-31", 32: "snapshot-32"}, bound)
+	assert.Equal(t, map[int64]any{31: int64(31), 32: int64(32)}, bound)
 }
 
 func TestForEachTenantSettingsFailsASchoolWhoseSnapshotCannotBeBound(t *testing.T) {
 	t.Parallel()
 
-	settings := &batchSettings{}
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		settings: settings,
-		done:     make(chan struct{}),
-		logger:   slog.Default(),
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
-			return &schedulerMinuteSnapshot{
-				tenantIDs: []int64{33, 34},
-				settings:  map[int64]ports.SettingsSnapshot{33: "snapshot-33", 34: 34},
-			}, nil
-		}})
+		schoolRepo: staticTenants(33, 34),
+		settings: scriptedBatchSettings{
+			Settings: &batchSettings{},
+			resolve: func(context.Context, []int64, []string) (map[int64]ports.SettingsSnapshot, error) {
+				return map[int64]ports.SettingsSnapshot{33: int64(33), 34: "invalid snapshot"}, nil
+			},
+		},
+		done:   make(chan struct{}),
+		logger: slog.Default(),
+	})
 
 	var called []int64
 	completed := scheduler.forEachTenantSettings(context.Background(), "bind-settings", func(_ context.Context, tenantID int64) error {
@@ -184,15 +188,16 @@ func TestGetMinuteSnapshotCoalescesConcurrentLoads(t *testing.T) {
 	release := make(chan struct{})
 	var calls atomic.Int32
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		done:              make(chan struct{}),
-		minuteSnapshotNow: func() time.Time { return fixedNow },
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
+		done: make(chan struct{}),
+		now:  func() time.Time { return fixedNow },
+		schoolRepo: unitTenantDirectory{list: func(context.Context) ([]int64, error) {
 			if calls.Add(1) == 1 {
 				close(started)
 			}
 			<-release
-			return &schedulerMinuteSnapshot{tenantIDs: []int64{1, 2}}, nil
-		}})
+			return []int64{1, 2}, nil
+		}},
+	})
 
 	const callers = 32
 	results := make(chan *schedulerMinuteSnapshot, callers)
@@ -228,12 +233,16 @@ func TestGetMinuteSnapshotRetriesOnlyAfterMinuteChanges(t *testing.T) {
 	loadErr := errors.New("settings unavailable")
 	var calls atomic.Int32
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		done:              make(chan struct{}),
-		minuteSnapshotNow: func() time.Time { return current },
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
-			calls.Add(1)
-			return nil, loadErr
-		}})
+		done: make(chan struct{}),
+		now:  func() time.Time { return current },
+		settings: scriptedBatchSettings{
+			Settings: &batchSettings{},
+			resolve: func(context.Context, []int64, []string) (map[int64]ports.SettingsSnapshot, error) {
+				calls.Add(1)
+				return nil, loadErr
+			},
+		},
+	})
 
 	_, err := scheduler.getMinuteSnapshot(context.Background())
 	require.ErrorIs(t, err, loadErr)
@@ -252,12 +261,15 @@ func TestGetMinuteSnapshotBindsTenantRuntimeBeforeLoading(t *testing.T) {
 	var adminCalled bool
 	scheduler := unitScheduler(&unitSchedulerDependencies{
 		done: make(chan struct{}),
-		minuteSnapshotLoader: func(ctx context.Context) (*schedulerMinuteSnapshot, error) {
-			err := testpkg.WithinAdminTransaction(ctx, func(context.Context) error {
-				adminCalled = true
-				return nil
-			})
-			return &schedulerMinuteSnapshot{}, err
+		settings: scriptedBatchSettings{
+			Settings: &batchSettings{},
+			resolve: func(ctx context.Context, _ []int64, _ []string) (map[int64]ports.SettingsSnapshot, error) {
+				err := testpkg.WithinAdminTransaction(ctx, func(context.Context) error {
+					adminCalled = true
+					return nil
+				})
+				return nil, err
+			},
 		},
 	})
 
@@ -275,20 +287,21 @@ func TestGetMinuteSnapshotSlowPriorMinuteCannotOverwriteCurrent(t *testing.T) {
 	releaseFirst := make(chan struct{})
 	var calls atomic.Int32
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		done:              make(chan struct{}),
-		minuteSnapshotNow: func() time.Time { return current },
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
+		done: make(chan struct{}),
+		now:  func() time.Time { return current },
+		schoolRepo: unitTenantDirectory{list: func(context.Context) ([]int64, error) {
 			switch calls.Add(1) {
 			case 1:
 				close(firstStarted)
 				<-releaseFirst
-				return &schedulerMinuteSnapshot{tenantIDs: []int64{1}}, nil
+				return []int64{1}, nil
 			case 2:
-				return &schedulerMinuteSnapshot{tenantIDs: []int64{2}}, nil
+				return []int64{2}, nil
 			default:
 				return nil, errors.New("unexpected extra load")
 			}
-		}})
+		}},
+	})
 
 	firstResult := make(chan *schedulerMinuteSnapshot, 1)
 	go func() {

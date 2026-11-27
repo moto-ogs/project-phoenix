@@ -7,26 +7,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// ListDayDepartures reads the day values of the given children. A filter
-// without children is refused rather than read tenant-wide: every caller asks
-// about known children, and an unbounded read is a bug at the call site.
-func (s *pickupScheduleService) ListDayDepartures(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.DepartureException, error) {
-	filter.StudentIDs = uniquePickupStudents(filter.StudentIDs)
-	if len(filter.StudentIDs) == 0 {
-		return []careplan.DepartureException{}, nil
-	}
-	return s.dayDepartureRows(ctx, filter)
-}
-
 func (s *pickupScheduleService) GetBulkDayDepartureModesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]string, error) {
 	out := make(map[int64]string)
 	ids := uniquePickupStudents(studentIDs)
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := s.dayDepartureRows(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: careplan.Date(date)})
+	rows, err := s.departures.ListDepartureExceptions(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: careplan.Date(date)})
 	if err != nil {
-		return nil, err
+		return nil, &careplan.ScheduleError{Op: "list day departures", Err: err}
 	}
 	for _, row := range rows {
 		out[row.StudentID] = row.DepartureMode
@@ -100,13 +89,4 @@ func (s *pickupScheduleService) DeleteDayDeparture(ctx context.Context, studentI
 		return nil
 	})
 	return deleted, err
-}
-
-// dayDepartureRows is the one read both day-departure queries share.
-func (s *pickupScheduleService) dayDepartureRows(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.DepartureException, error) {
-	rows, err := s.departures.ListDepartureExceptions(ctx, filter)
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: "list day departures", Err: err}
-	}
-	return rows, nil
 }

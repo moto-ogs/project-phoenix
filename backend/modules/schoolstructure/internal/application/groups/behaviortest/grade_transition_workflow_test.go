@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -518,7 +519,7 @@ func TestGradeTransitionWorkflow_IdempotentRetryAndHistoryRetention(t *testing.T
 
 	result, err := workflow.Revert(ctx, scene.transitionID)
 	require.NoError(t, err)
-	assert.Equal(t, gradetransition.StatusReverted, result.Status)
+	assert.Equal(t, schoolstructure.TransitionStatusReverted, result.Status)
 	assert.Equal(t, 1, result.StudentsGraduated)
 	assert.Equal(t, 1, result.StudentsPromoted)
 	class, status := studentClassAndStatus(t, ctx, db, scene.graduate.ID)

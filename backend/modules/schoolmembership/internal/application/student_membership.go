@@ -62,24 +62,6 @@ func (s *Service) RenewEnrollment(ctx context.Context, input schoolmembership.St
 	return result, nil
 }
 
-func (s *Service) AssignGroup(ctx context.Context, studentID int64, groupID *int64) (result bool, err error) {
-	if studentID <= 0 || (groupID != nil && *groupID <= 0) {
-		return false, invalid("student and group IDs must be positive")
-	}
-	err = s.runWrite(ctx, "assigngroup_student", func(txCtx context.Context, stats *domain.OperationStats) error {
-		gateStats, gateErr := s.store.LockStudentClassWrites(txCtx, false)
-		stats.Add(gateStats)
-		if gateErr != nil {
-			return gateErr
-		}
-		var queryStats domain.OperationStats
-		result, queryStats, err = s.store.AssignStudentGroup(txCtx, studentID, groupID)
-		stats.Add(queryStats)
-		return err
-	})
-	return result, err
-}
-
 // MovePendingWindow moves the window of a still pending child (#6505). The
 // row lock comes first, so a status change committed meanwhile is seen and
 // the child is left alone. No class gate is taken: the move writes no class,

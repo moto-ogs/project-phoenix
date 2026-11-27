@@ -106,28 +106,3 @@ func TestStudentGuardian_Validate(t *testing.T) {
 		})
 	}
 }
-
-// GetPermissions feeds GuardianAuthorizationData; a row read without stored
-// permissions must yield an empty map the caller can write to, not nil.
-func TestStudentGuardian_GetPermissions(t *testing.T) {
-	t.Parallel()
-
-	sg := &StudentGuardian{}
-	permissions := sg.GetPermissions()
-	if permissions == nil {
-		t.Fatal("GetPermissions() = nil, want an initialised map")
-	}
-	permissions["parent_portal.access"] = true
-	if got, ok := sg.Permissions["parent_portal.access"].(bool); !ok || !got {
-		t.Errorf("GetPermissions() did not return the stored map: %v", sg.Permissions)
-	}
-
-	sg = &StudentGuardian{Permissions: map[string]interface{}{"parent_portal.sick_note.submit": true}}
-	if got := sg.GetPermissions(); len(got) != 1 || got["parent_portal.sick_note.submit"] != true {
-		t.Errorf("GetPermissions() = %v, want the stored permissions", got)
-	}
-}
-
-// Note: the permission check (formerly StudentGuardian.HasPermission) moved out
-// of the model in issue #586 (Rule 12). Its test follows the logic to:
-//   - auth/authorize/guardian_permission_test.go (TestStudentGuardianHasPermission)

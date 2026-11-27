@@ -100,7 +100,6 @@ function buildSessionLabel(
 }
 
 interface TransitStudentsSectionProps {
-  readonly onSelectionActiveChange?: (active: boolean) => void;
   /** Meldet die geladene Zahl für die Statuszeile der eigenständigen Seite. */
   readonly onTotalCountChange?: (totalCount: number | null) => void;
   /** Beschränkt die Liste auf dieselbe Tagesplanung wie den Einstieg. */
@@ -110,7 +109,6 @@ interface TransitStudentsSectionProps {
 }
 
 export function TransitStudentsSection({
-  onSelectionActiveChange,
   onTotalCountChange,
   dayStatus,
   fromReferrer: fromReferrerOverride,
@@ -320,10 +318,6 @@ export function TransitStudentsSection({
   const fromReferrer = fromReferrerOverride ?? defaultFromReferrer;
 
   useEffect(() => {
-    onSelectionActiveChange?.(selectedVisibleCount > 0);
-  }, [onSelectionActiveChange, selectedVisibleCount]);
-
-  useEffect(() => {
     onTotalCountChange?.(studentsData ? totalCount : null);
   }, [onTotalCountChange, studentsData, totalCount]);
 
@@ -518,7 +512,6 @@ export function TransitStudentsSection({
               >
                 <FormRow>
                   <DatabaseSelect
-                    id="transit-target-room"
                     name="transit-target-room"
                     label="Zielraum"
                     value={targetValue}
@@ -603,7 +596,6 @@ export function TransitStudentsSection({
                               schoolClass={student.school_class}
                               groupName={student.group_name ?? undefined}
                               photoUrl={student.photo_url ?? null}
-                              chrome="plain"
                             />
                           </label>
                         ) : (
@@ -615,7 +607,6 @@ export function TransitStudentsSection({
                               schoolClass={student.school_class}
                               groupName={student.group_name ?? undefined}
                               photoUrl={student.photo_url ?? null}
-                              chrome="plain"
                             />
                           </div>
                         )}

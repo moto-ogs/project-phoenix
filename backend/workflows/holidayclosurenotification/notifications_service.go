@@ -150,7 +150,7 @@ func (s *Service) SchoolNotices(ctx context.Context, schoolID int64) ([]ClosureN
 // click would tell, in a Träger transaction of each Träger of its own.
 func (s *Service) waitingFamilies(ctx context.Context, notices []schoolcalendar.HolidayClosureNotice) (map[int64]enrollment.HolidayClosureImpact, error) {
 	families := make(map[int64]enrollment.HolidayClosureImpact, len(notices))
-	for _, organizationID := range organizationsOf(notices, true) {
+	for _, organizationID := range organizationsWithSuggestions(notices) {
 		if err := s.Units.WithinTraeger(ctx, organizationID, func(ctx context.Context) error {
 			planned, err := s.plans(ctx, organizationID, notices)
 			maps.Copy(families, planned)
@@ -162,11 +162,11 @@ func (s *Service) waitingFamilies(ctx context.Context, notices []schoolcalendar.
 	return families, nil
 }
 
-// organizationsOf names the Träger of the notices that wait for a click.
-func organizationsOf(notices []schoolcalendar.HolidayClosureNotice, suggestedOnly bool) []int64 {
+// organizationsWithSuggestions names the Träger of the notices that wait for a click.
+func organizationsWithSuggestions(notices []schoolcalendar.HolidayClosureNotice) []int64 {
 	var ids []int64
 	for _, notice := range notices {
-		if !suggestedOnly || notice.Status == schoolcalendar.HolidayClosureSuggested {
+		if notice.Status == schoolcalendar.HolidayClosureSuggested {
 			ids = append(ids, notice.OrganizationID)
 		}
 	}

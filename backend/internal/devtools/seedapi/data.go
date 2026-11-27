@@ -33,9 +33,8 @@ type DemoStudent struct {
 
 // DemoActivity represents an activity to be created via API
 type DemoActivity struct {
-	Name         string
-	DefaultRoom  string // Name of room to assign
-	DurationMins int    // Default session duration in minutes
+	Name        string
+	DefaultRoom string // Name of room to assign
 }
 
 // DemoDevice represents an IoT device to be created via API
@@ -241,14 +240,14 @@ var DemoStudents = []DemoStudent{
 // the demo where that can be seen. The full-day simulation also runs a planned
 // block there, which gives the room page its block sections (#3281).
 var DemoActivities = []DemoActivity{
-	{Name: "Hausaufgaben", DefaultRoom: "OGS-Raum 1", DurationMins: 60},
-	{Name: "Fußball", DefaultRoom: "Sporthalle", DurationMins: 90},
-	{Name: "Basteln", DefaultRoom: "Kreativraum", DurationMins: 75},
-	{Name: "Kochen", DefaultRoom: "Mensa", DurationMins: 120},
-	{Name: "Lesen", DefaultRoom: "OGS-Raum 2", DurationMins: 45},
-	{Name: "Musik", DefaultRoom: "OGS-Raum 1", DurationMins: 60},
-	{Name: "Tanzen", DefaultRoom: "Sporthalle", DurationMins: 60},
-	{Name: "Schach", DefaultRoom: "OGS-Raum 2", DurationMins: 45},
+	{Name: "Hausaufgaben", DefaultRoom: "OGS-Raum 1"},
+	{Name: "Fußball", DefaultRoom: "Sporthalle"},
+	{Name: "Basteln", DefaultRoom: "Kreativraum"},
+	{Name: "Kochen", DefaultRoom: "Mensa"},
+	{Name: "Lesen", DefaultRoom: "OGS-Raum 2"},
+	{Name: "Musik", DefaultRoom: "OGS-Raum 1"},
+	{Name: "Tanzen", DefaultRoom: "Sporthalle"},
+	{Name: "Schach", DefaultRoom: "OGS-Raum 2"},
 }
 
 // DemoDevices defines IoT devices for check-in/check-out

@@ -15,7 +15,6 @@ import {
 export interface AccountBalance {
   /** Cumulative Saldo in minutes, or null while loading / on error. */
   readonly balanceMinutes: number | null;
-  readonly isLoading: boolean;
   readonly error: unknown;
   /** Revalidates the configuration and the current balance after a failure. */
   readonly retry: () => Promise<void>;
@@ -87,7 +86,7 @@ export function useAccountBalance(staffId: string): AccountBalance {
   // the growing Ist of an open block (#5017).
   const refreshInterval = useLiveRefreshInterval(OPEN_MONTH_REFRESH_MS);
 
-  const { data, isLoading, error, mutate } = useSWRAuth<MonthSummary>(
+  const { data, error, mutate } = useSWRAuth<MonthSummary>(
     canResolveAccount
       ? staffMonthSummaryKeys.month(staffId, year, month)
       : null,
@@ -104,7 +103,6 @@ export function useAccountBalance(staffId: string): AccountBalance {
     balanceMinutes: canResolveAccount
       ? (data?.closingBalanceMinutes ?? null)
       : null,
-    isLoading: configLoading || (canResolveAccount && isLoading),
     error: configError ?? error,
     retry,
   };

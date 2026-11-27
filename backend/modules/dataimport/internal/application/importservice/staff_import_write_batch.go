@@ -22,7 +22,7 @@ import (
 func (c *StaffImportConfig) BatchWriteConfig(ctx context.Context, rows []importModels.StaffImportRow) (ports.ImportConfig[importModels.StaffImportRow], error) {
 	c.lockedStaff, c.emailMatches, c.emailAccounts = nil, nil, nil
 	mode := importModeFromContext(ctx)
-	if c.Membership == nil || (mode != importModels.ImportModeUpdate && mode != importModels.ImportModeUpsert) {
+	if mode != importModels.ImportModeUpdate && mode != importModels.ImportModeUpsert {
 		return c, nil
 	}
 	c.emailMatches = make(map[string]staffEmailMatch)
@@ -96,7 +96,7 @@ func (c *StaffImportConfig) matchedEmail(ctx context.Context, rawEmail string) (
 // resolveBatchEmails resolves account, person and live membership sets before
 // taking staff rows. Personnel-number hits need no email lookup.
 func (c *StaffImportConfig) resolveBatchEmails(ctx context.Context, rows []importModels.StaffImportRow) error {
-	if c.FindSchoolEmailIdentities == nil || c.Persons == nil {
+	if c.FindSchoolEmailIdentities == nil {
 		return nil
 	}
 	emails := c.batchEmailCandidates(rows)

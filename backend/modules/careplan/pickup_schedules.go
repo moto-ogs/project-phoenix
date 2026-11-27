@@ -23,7 +23,6 @@ type PickupScheduleService interface {
 // the Heimweg of that day; the two values stay independent rows.
 type DayDepartures interface {
 	BulkPickupDays
-	ListDayDepartures(ctx context.Context, filter StudentScheduleFilter) ([]DepartureException, error)
 	// GetBulkDayDepartureModesForDate maps each student with a day value on
 	// date to its Abholart; a missing entry means the weekly plan applies.
 	GetBulkDayDepartureModesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]string, error)
@@ -45,24 +44,17 @@ type PickupPlans interface {
 	// GetWeeklySchedulesByStudentIDsForDate returns the full recurring pickup
 	// plan applicable on date in one batch projection.
 	GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*PickupSchedule, error)
-	GetStudentPickupScheduleForWeekday(ctx context.Context, studentID int64, weekday int) (*PickupSchedule, error)
 	HasBookedOfferingPickupForWeekday(ctx context.Context, studentID int64, weekday int) (bool, error)
 	UpsertStudentPickupSchedule(ctx context.Context, scheduleData *PickupSchedule) error
 	UpsertBulkStudentPickupSchedules(ctx context.Context, studentID int64, schedules []*PickupSchedule) error
 	UpsertBulkStudentPickupSchedulesForDate(ctx context.Context, studentID int64, date calendar.Date, schedules []*PickupSchedule) error
 	DeleteStudentPickupSchedule(ctx context.Context, scheduleID int64) error
-	DeleteAllStudentPickupSchedules(ctx context.Context, studentID int64) error
 }
 
 // PickupExceptions manages dated deviations from the weekly plan. Its
 // resolveStaffID has the contract of ArrivalExceptions.
 type PickupExceptions interface {
 	GetStudentPickupExceptionByID(ctx context.Context, exceptionID int64) (*PickupException, error)
-	GetStudentPickupExceptionForDate(ctx context.Context, studentID int64, date calendar.Date) (*PickupException, error)
-	GetStudentPickupExceptions(ctx context.Context, studentID int64) ([]*PickupException, error)
-	GetUpcomingStudentPickupExceptions(ctx context.Context, studentID int64) ([]*PickupException, error)
-	CreateStudentPickupException(ctx context.Context, exception *PickupException) error
-	UpdateStudentPickupException(ctx context.Context, exception *PickupException) error
 	DeleteStudentPickupException(ctx context.Context, exceptionID, studentID int64) error
 	CreateOrReclaimException(ctx context.Context, studentID int64, date calendar.Date, pickupTime *time.Time, reason *string, staffID int64, resolveStaffID func() (int64, error)) (*PickupException, error)
 	UpdateException(ctx context.Context, exceptionID, studentID int64, date calendar.Date, reason *string, pickupTime *time.Time, clearPickupTime bool, resolveStaffID func() (int64, error)) (*PickupException, error)
@@ -71,14 +63,11 @@ type PickupExceptions interface {
 // PickupNotes manages the notes attached to a student's care days.
 type PickupNotes interface {
 	GetStudentPickupNoteByID(ctx context.Context, noteID int64) (*PickupNote, error)
-	GetStudentPickupNotes(ctx context.Context, studentID int64) ([]*PickupNote, error)
-	GetStudentPickupNotesForDate(ctx context.Context, studentID int64, date calendar.Date) ([]*PickupNote, error)
 	CreateStudentPickupNote(ctx context.Context, note *PickupNote) error
 	// UpdateStudentPickupNote changes a note read at expectedVersion
 	// (PickupNoteVersion); a changed note is refused with readstate.ErrChanged.
 	UpdateStudentPickupNote(ctx context.Context, note *PickupNote, expectedVersion string) error
 	DeleteStudentPickupNote(ctx context.Context, noteID int64) error
-	DeleteAllStudentPickupNotes(ctx context.Context, studentID int64) error
 }
 
 // PickupTimes resolves the effective plan and its dated presentation.

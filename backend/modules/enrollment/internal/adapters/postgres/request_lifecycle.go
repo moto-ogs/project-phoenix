@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -45,28 +44,6 @@ func (r *Store) CountPhaseRequests(ctx context.Context, id int64) (int, error) {
 		return 0, fmt.Errorf("failed to count phase requests: %w", err)
 	}
 	return int(count), nil
-}
-func (r *Store) DeleteRequest(ctx context.Context, id int64) error {
-	tenantID, err := r.tenantID(ctx)
-	if err != nil {
-		return err
-	}
-	db, err := r.resolve(ctx)
-	if err != nil {
-		return err
-	}
-	result, err := db.NewDelete().TableExpr("enrollment.requests").Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delete enrollment request: %w", err)
-	}
-	count, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if count != 1 {
-		return errors.New("enrollment request not found for cleanup")
-	}
-	return nil
 }
 
 // SettledRequestsBefore lists the requests no child was created from whose

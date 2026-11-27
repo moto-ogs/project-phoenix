@@ -437,9 +437,7 @@ func autoStartFailureScheduler(t *testing.T, tenantIDs []int64, commandErr error
 		return err
 	}, func(error) bool { return false })
 	s.settings = &stubSettingsResolver{hasOverride: true, boolVal: true}
-	s.minuteSnapshotLoader = func(context.Context) (*schedulerMinuteSnapshot, error) {
-		return &schedulerMinuteSnapshot{tenantIDs: tenantIDs}, errSchedulerSettingsBatchUnsupported
-	}
+	s.schoolRepo = staticTenants(tenantIDs...)
 	s.autoStart = &fakeAutoStartService{run: func(ctx context.Context) (*ports.AutoStartRun, error) {
 		id := testpkg.TenantIDFromContext(ctx)
 		observed.called = append(observed.called, id)
@@ -803,6 +801,7 @@ func TestForEachTenantSettings_NoTenantConfig_RejectsWork(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 type stubSettingsResolver struct {
+	unitSnapshots
 	hasOverride    bool
 	hasOverrideErr error
 	stringVal      string

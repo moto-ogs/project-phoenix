@@ -4,17 +4,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestDocumentationRouterDoesNotRequireDatabase(t *testing.T) {
-	t.Parallel()
-
-	routes, err := documentationRoutes()
-	require.NoError(t, err)
-	require.NotEmpty(t, routes)
-}
 
 func TestGendocRoutesCLIWorksWithoutDatabase(t *testing.T) {
 	t.Parallel()
@@ -93,58 +86,6 @@ func TestCreateOpenAPIBaseStructure(t *testing.T) {
 	paths, ok := spec["paths"].(map[string]interface{})
 	require.True(t, ok)
 	assert.NotNil(t, paths)
-}
-
-// =============================================================================
-// extractRoutePattern Tests
-// =============================================================================
-
-func TestExtractRoutePattern_WithBackticksAndSummary(t *testing.T) {
-	t.Parallel()
-	line := "`/api/students` <summary>"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "/api/students", result)
-}
-
-func TestExtractRoutePattern_NoBackticks(t *testing.T) {
-	t.Parallel()
-	line := "/api/students <summary>"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "", result)
-}
-
-func TestExtractRoutePattern_NoSummaryTag(t *testing.T) {
-	t.Parallel()
-	line := "`/api/students`"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "", result)
-}
-
-func TestExtractRoutePattern_EmptyLine(t *testing.T) {
-	t.Parallel()
-	result := extractRoutePattern("")
-	assert.Equal(t, "", result)
-}
-
-func TestExtractRoutePattern_WildcardRoute(t *testing.T) {
-	t.Parallel()
-	line := "`*` <summary>"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "", result)
-}
-
-func TestExtractRoutePattern_EmptyBackticks(t *testing.T) {
-	t.Parallel()
-	line := "`` <summary>"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "", result)
-}
-
-func TestExtractRoutePattern_SingleBacktick(t *testing.T) {
-	t.Parallel()
-	line := "` <summary>"
-	result := extractRoutePattern(line)
-	assert.Equal(t, "", result)
 }
 
 // =============================================================================
@@ -279,198 +220,41 @@ func TestGetSettingsSchemas(t *testing.T) {
 	assert.Contains(t, reqRequired, "category")
 }
 
-// =============================================================================
-// tryAddHTTPMethod Tests
-// =============================================================================
-
-func TestTryAddHTTPMethod_EmptyCurrentRoute(t *testing.T) {
+func TestCatalogOpenAPISpecGroupsOperationsByRoute(t *testing.T) {
 	t.Parallel()
-	paths := map[string]interface{}{}
-	tryAddHTTPMethod("_GET_ /some/route", paths, "")
-	assert.Empty(t, paths)
-}
+	const path = "/api/groups/{groupId}/students/{studentId}"
+	spec := catalogOpenAPISpec([]api.Route{
+		{Method: "GET", Pattern: path},
+		{Method: "POST", Pattern: path},
+		{Method: "PUT", Pattern: path},
+		{Method: "DELETE", Pattern: path},
+		{Method: "PATCH", Pattern: path},
+		{Method: "HEAD", Pattern: "/health"},
+	})
 
-func TestTryAddHTTPMethod_GET(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
+	paths := spec["paths"].(map[string]interface{})
+	require.Len(t, paths, 2)
+	operations := paths[path].(map[string]interface{})
+	require.Len(t, operations, 5)
+	for _, method := range []string{"get", "post", "put", "delete", "patch"} {
+		assert.Contains(t, operations, method)
 	}
-	tryAddHTTPMethod("_GET_ handler", paths, "/api/test")
+	assert.Empty(t, paths["/health"])
 
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "get")
-}
-
-func TestTryAddHTTPMethod_POST(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
-	}
-	tryAddHTTPMethod("_POST_ handler", paths, "/api/test")
-
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "post")
-}
-
-func TestTryAddHTTPMethod_PUT(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
-	}
-	tryAddHTTPMethod("_PUT_ handler", paths, "/api/test")
-
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "put")
-}
-
-func TestTryAddHTTPMethod_DELETE(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
-	}
-	tryAddHTTPMethod("_DELETE_ handler", paths, "/api/test")
-
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "delete")
-}
-
-func TestTryAddHTTPMethod_PATCH(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
-	}
-	tryAddHTTPMethod("_PATCH_ handler", paths, "/api/test")
-
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "patch")
-}
-
-func TestTryAddHTTPMethod_NoMethodMarker(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/test": map[string]interface{}{},
-	}
-	tryAddHTTPMethod("some random line", paths, "/api/test")
-
-	pathInfo := paths["/api/test"].(map[string]interface{})
-	assert.Empty(t, pathInfo)
-}
-
-// =============================================================================
-// addMethod Tests
-// =============================================================================
-
-func TestAddMethod_CreatesOperation(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/students": map[string]interface{}{},
-	}
-
-	addMethod(paths, "/api/students", "GET")
-
-	pathInfo := paths["/api/students"].(map[string]interface{})
-	op, ok := pathInfo["get"].(map[string]interface{})
-	require.True(t, ok)
-	assert.Contains(t, op["summary"], "GET /api/students")
-	assert.Equal(t, []string{"Students"}, op["tags"])
-}
-
-func TestAddMethod_SkipsDuplicate(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/students": map[string]interface{}{},
-	}
-
-	addMethod(paths, "/api/students", "GET")
-	addMethod(paths, "/api/students", "GET") // should not panic or overwrite
-
-	pathInfo := paths["/api/students"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "get")
-}
-
-func TestAddMethod_WithPathParams(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/students/{id}": map[string]interface{}{},
-	}
-
-	addMethod(paths, "/api/students/{id}", "GET")
-
-	pathInfo := paths["/api/students/{id}"].(map[string]interface{})
-	op, ok := pathInfo["get"].(map[string]interface{})
-	require.True(t, ok)
-
-	params, ok := op["parameters"].([]map[string]interface{})
-	require.True(t, ok)
-	require.Len(t, params, 1)
-	assert.Equal(t, "id", params[0]["name"])
-	assert.Equal(t, "path", params[0]["in"])
-	assert.Equal(t, true, params[0]["required"])
-}
-
-func TestAddMethod_WithMultiplePathParams(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{
-		"/api/groups/{groupId}/students/{studentId}": map[string]interface{}{},
-	}
-
-	addMethod(paths, "/api/groups/{groupId}/students/{studentId}", "DELETE")
-
-	pathInfo := paths["/api/groups/{groupId}/students/{studentId}"].(map[string]interface{})
-	op, ok := pathInfo["delete"].(map[string]interface{})
-	require.True(t, ok)
-
-	params, ok := op["parameters"].([]map[string]interface{})
-	require.True(t, ok)
+	read := operations["get"].(map[string]interface{})
+	assert.Equal(t, "GET "+path, read["summary"])
+	assert.Equal(t, []string{"Groups"}, read["tags"])
+	params := read["parameters"].([]map[string]interface{})
 	require.Len(t, params, 2)
-}
-
-// =============================================================================
-// mergeSettingsSchemas Tests
-// =============================================================================
-
-func TestMergeSettingsSchemas(t *testing.T) {
-	t.Parallel()
-	spec := createOpenAPIBaseStructure()
-
-	mergeSettingsSchemas(spec)
+	assert.Equal(t, "groupId", params[0]["name"])
+	assert.Equal(t, "studentId", params[1]["name"])
+	for _, param := range params {
+		assert.Equal(t, "path", param["in"])
+		assert.Equal(t, true, param["required"])
+	}
 
 	components := spec["components"].(map[string]interface{})
 	schemas := components["schemas"].(map[string]interface{})
-
 	assert.Contains(t, schemas, "Setting")
 	assert.Contains(t, schemas, "SettingRequest")
-}
-
-// =============================================================================
-// parseRoutesFromMarkdown Tests
-// =============================================================================
-
-func TestParseRoutesFromMarkdown_Empty(t *testing.T) {
-	t.Parallel()
-	paths := map[string]interface{}{}
-	parseRoutesFromMarkdown("", paths)
-	assert.Empty(t, paths)
-}
-
-func TestParseRoutesFromMarkdown_WithRoutes(t *testing.T) {
-	t.Parallel()
-	md := "`/api/students` <summary>\n_GET_ handler\n_POST_ handler\n"
-	paths := map[string]interface{}{}
-	parseRoutesFromMarkdown(md, paths)
-
-	assert.Contains(t, paths, "/api/students")
-	pathInfo := paths["/api/students"].(map[string]interface{})
-	assert.Contains(t, pathInfo, "get")
-	assert.Contains(t, pathInfo, "post")
-}
-
-func TestParseRoutesFromMarkdown_MultipleRoutes(t *testing.T) {
-	t.Parallel()
-	md := "`/api/students` <summary>\n_GET_ handler\n`/api/groups` <summary>\n_POST_ handler\n"
-	paths := map[string]interface{}{}
-	parseRoutesFromMarkdown(md, paths)
-
-	assert.Contains(t, paths, "/api/students")
-	assert.Contains(t, paths, "/api/groups")
 }

@@ -42,6 +42,59 @@ func dbTenantRuntime(t *testing.T, db *bun.DB) ports.TenantRuntime {
 
 const schedulerUnitTenantID int64 = 1
 
+// staticTenants supplies the same tenant IDs to the active and cleanup lists.
+func staticTenants(ids ...int64) unitTenantDirectory {
+	return unitTenantDirectory{list: func(context.Context) ([]int64, error) { return ids, nil }}
+}
+
+type unitTenantDirectory struct {
+	ports.TenantDirectory
+	list func(context.Context) ([]int64, error)
+}
+
+func (d unitTenantDirectory) ListActiveTenantIDs(ctx context.Context) ([]int64, error) {
+	return d.list(ctx)
+}
+
+func (d unitTenantDirectory) ListCleanupTenantIDs(ctx context.Context) ([]int64, error) {
+	return d.list(ctx)
+}
+
+func (unitTenantDirectory) HoldLiveSchool(context.Context, int64) (bool, error) {
+	return true, nil
+}
+
+// unitSnapshots supplies opaque handles for tests concerned with a job rather
+// than how the settings source resolves or binds a snapshot.
+type unitSnapshots struct{}
+
+func (unitSnapshots) ResolveSettingsSnapshots(_ context.Context, tenantIDs []int64, _ []string) (map[int64]ports.SettingsSnapshot, error) {
+	snapshots := make(map[int64]ports.SettingsSnapshot, len(tenantIDs))
+	for _, id := range tenantIDs {
+		snapshots[id] = id
+	}
+	return snapshots, nil
+}
+
+func (unitSnapshots) BindSettingsSnapshot(ctx context.Context, _ ports.SettingsSnapshot) (context.Context, error) {
+	return ctx, nil
+}
+
+type unitSettings struct {
+	ports.SettingsResolver
+	unitSnapshots
+}
+
+func settingsForSchedulerTest(resolver ports.SettingsResolver) ports.Settings {
+	if resolver == nil {
+		resolver = registryDefaultSettings{}
+	}
+	if settings, ok := resolver.(ports.Settings); ok {
+		return settings
+	}
+	return unitSettings{SettingsResolver: resolver}
+}
+
 func testEnv(values ...string) func(string) string {
 	if len(values)%2 != 0 {
 		panic("testEnv requires key/value pairs")
@@ -96,6 +149,7 @@ func newUnitScheduler(
 		EmailChangeCleanup:        emailChangeCleaner,
 		OperatorInvitationCleanup: operatorInvitationCleaner,
 		FeedbackCleaner:           &fakeFeedbackCleaner{},
+		Settings:                  settingsForSchedulerTest(nil),
 	})
 	jobs := scheduler.jobDefinitions()
 	required := make([]ports.JobID, 0, len(jobs))
@@ -107,19 +161,14 @@ func newUnitScheduler(
 		panic(err)
 	}
 	scheduler.registry = registry
-	scheduler.minuteSnapshotLoader = func(context.Context) (*schedulerMinuteSnapshot, error) {
-		return &schedulerMinuteSnapshot{tenantIDs: []int64{schedulerUnitTenantID}}, errSchedulerSettingsBatchUnsupported
-	}
-	scheduler.allTenantIDsLoader = func(context.Context) ([]int64, error) {
-		return []int64{schedulerUnitTenantID}, nil
-	}
+	// Supply tenant discovery without adding the standalone directory jobs.
+	scheduler.schoolRepo = staticTenants(schedulerUnitTenantID)
 	return scheduler
 }
 
 // unitSchedulerDependencies are the construction inputs of a partial worker fixture.
 type unitSchedulerDependencies struct {
 	activeService                 ports.SessionMaintenance
-	allTenantIDsLoader            func(context.Context) ([]int64, error)
 	announcementReminderScannedAt map[int64]time.Time
 	announcementReminders         ports.ParentAnnouncementReminderCommand
 	appointmentReminderScannedAt  map[int64]time.Time
@@ -133,7 +182,6 @@ type unitSchedulerDependencies struct {
 	breakAutoEnder                ports.BreakAutoEnder
 	calendarFeedCleanup           ports.CalendarFeedCleaner
 	careExitEffector              ports.CareExitEffector
-	cleanupClock                  func() time.Time
 	cleanupJobs                   []CleanupJob
 	cleanupRuns                   ports.CleanupRunLedger
 	cleanupService                ports.PresenceCleanup
@@ -148,10 +196,7 @@ type unitSchedulerDependencies struct {
 	invitationCleanup             ports.InvitationCleaner
 	lifecycleCtx                  context.Context
 	logger                        *slog.Logger
-	materializationNow            func() time.Time
 	materializer                  ports.TimetableMaterializer
-	minuteSnapshotLoader          func(context.Context) (*schedulerMinuteSnapshot, error)
-	minuteSnapshotNow             func() time.Time
 	now                           func() time.Time
 	outboxWorker                  ports.OutboxWorkerRunner
 	overdueBroadcaster            ports.InstanceOverdueBroadcaster
@@ -188,13 +233,9 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 	if runtime == nil {
 		runtime = configured.tenantRuntime
 	}
-	snapshotLoader := input.minuteSnapshotLoader
-	if snapshotLoader == nil && input.schoolRepo == nil {
-		snapshotLoader = configured.minuteSnapshotLoader
-	}
-	tenantLoader := input.allTenantIDsLoader
-	if tenantLoader == nil && input.schoolRepo == nil {
-		tenantLoader = configured.allTenantIDsLoader
+	directory := input.schoolRepo
+	if directory == nil {
+		directory = configured.schoolRepo
 	}
 	registry := input.registry
 	if registry == nil {
@@ -221,7 +262,6 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 			retentionLog:        retentionLog,
 		},
 		activeService:                 input.activeService,
-		allTenantIDsLoader:            tenantLoader,
 		announcementReminderScannedAt: input.announcementReminderScannedAt,
 		announcementReminders:         input.announcementReminders,
 		appointmentReminderScannedAt:  input.appointmentReminderScannedAt,
@@ -235,7 +275,6 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 		breakAutoEnder:                input.breakAutoEnder,
 		calendarFeedCleanup:           input.calendarFeedCleanup,
 		careExitEffector:              input.careExitEffector,
-		cleanupClock:                  input.cleanupClock,
 		cleanupJobs:                   input.cleanupJobs,
 		cleanupRuns:                   input.cleanupRuns,
 		cleanupService:                input.cleanupService,
@@ -248,11 +287,7 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 		instanceStudentRepo:           input.instanceStudentRepo,
 		invitationCleanup:             input.invitationCleanup,
 		logger:                        input.logger,
-		materializationNow:            input.materializationNow,
 		materializer:                  input.materializer,
-		minuteSnapshotLoader:          snapshotLoader,
-		cleanupMinuteSnapshotLoader:   snapshotLoader,
-		minuteSnapshotNow:             input.minuteSnapshotNow,
 		now:                           now,
 		outboxWorker:                  input.outboxWorker,
 		overdueBroadcaster:            input.overdueBroadcaster,
@@ -260,8 +295,8 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 		reminderNotifications:         input.reminderNotifications,
 		retention:                     input.retention,
 		rolloverDeadlineRunner:        input.rolloverDeadlineRunner,
-		schoolRepo:                    input.schoolRepo,
-		settings:                      input.settings,
+		schoolRepo:                    directory,
+		settings:                      settingsForSchedulerTest(input.settings),
 		staffDocumentFileCleaner:      input.staffDocumentFileCleaner,
 		studentChangeLogCleanup:       input.studentChangeLogCleanup,
 		studentDocumentFileCleaner:    input.studentDocumentFileCleaner,

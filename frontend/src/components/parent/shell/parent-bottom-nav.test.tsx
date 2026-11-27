@@ -1,6 +1,7 @@
 import {
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -13,7 +14,7 @@ import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { ParentBottomNav } from "./parent-bottom-nav";
 import {
   closeNotificationsSheet,
-  isNotificationsSheetOpen,
+  useNotificationsSheetOpen,
 } from "~/components/dashboard/header/notifications-sheet-state";
 
 const pathnameMock = vi.fn(() => "/parents");
@@ -168,10 +169,12 @@ describe("ParentBottomNav", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mehr 3 Hinweise" }));
     const notices = screen.getByRole("button", { name: /Hinweise/ });
     expect(notices).toHaveTextContent("3");
-    expect(isNotificationsSheetOpen()).toBe(false);
+    const { result, unmount } = renderHook(useNotificationsSheetOpen);
+    expect(result.current).toBe(false);
 
     fireEvent.click(notices);
-    expect(isNotificationsSheetOpen()).toBe(true);
+    expect(result.current).toBe(true);
+    unmount();
     closeNotificationsSheet();
   });
 

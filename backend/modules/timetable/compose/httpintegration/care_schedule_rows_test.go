@@ -43,7 +43,6 @@ type exceptionRows[E any] interface {
 	FindUpcomingByStudentID(context.Context, int64) ([]*E, error)
 	FindByStudentIDAndDate(context.Context, int64, calendar.Date) (*E, error)
 	FindByStudentIDsAndDate(context.Context, []int64, calendar.Date) ([]*E, error)
-	DeleteByStudentID(context.Context, int64) error
 	queryListRepository[*E]
 }
 
@@ -54,7 +53,6 @@ type noteRows[N any] interface {
 	FindByStudentID(context.Context, int64) ([]*N, error)
 	FindByStudentIDAndDate(context.Context, int64, calendar.Date) ([]*N, error)
 	FindByStudentIDsAndDate(context.Context, []int64, calendar.Date) ([]*N, error)
-	DeleteByStudentID(context.Context, int64) error
 	queryListRepository[*N]
 }
 
@@ -753,22 +751,6 @@ func runExceptionRowsSuite[E any](t *testing.T, kind exceptionKind[E]) {
 		})
 	})
 
-	t.Run("DeleteByStudentID", func(t *testing.T) {
-		t.Run("deletes all exceptions for student", func(t *testing.T) {
-			student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-			for i := 0; i < 3; i++ {
-				create(t, student.ID, calendar.Date(calendar.TodayDate()).AddDays(i), "Exception")
-			}
-
-			err := repo.DeleteByStudentID(ctx, student.ID)
-
-			require.NoError(t, err)
-
-			results, err := repo.FindByStudentID(ctx, student.ID)
-			require.NoError(t, err)
-			assert.Empty(t, results)
-		})
-	})
 }
 
 func runNoteRowsSuite[N any](t *testing.T, kind noteKind[N]) {
@@ -966,26 +948,4 @@ func runNoteRowsSuite[N any](t *testing.T, kind noteKind[N]) {
 		})
 	})
 
-	t.Run("DeleteByStudentID", func(t *testing.T) {
-		t.Run("deletes all notes for student", func(t *testing.T) {
-			student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-			for i := 0; i < 3; i++ {
-				create(t, student.ID, calendar.Date(calendar.TodayDate()).AddDays(i), "Note")
-			}
-
-			err := repo.DeleteByStudentID(ctx, student.ID)
-
-			require.NoError(t, err)
-
-			results, err := repo.FindByStudentID(ctx, student.ID)
-			require.NoError(t, err)
-			assert.Empty(t, results)
-		})
-
-		t.Run("succeeds when no notes exist", func(t *testing.T) {
-			err := repo.DeleteByStudentID(ctx, int64(99999999))
-
-			require.NoError(t, err)
-		})
-	})
 }

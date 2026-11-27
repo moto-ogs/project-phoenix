@@ -18,7 +18,6 @@ type (
 	ExcusedRequestCreateInputSnapshot   = care.ExcusedRequestCreateInput
 	ExcusedRequestEditInputSnapshot     = care.ExcusedRequestEditInput
 	GuardianAbsenceReportSnapshot       = care.GuardianAbsenceReport
-	GuardianPickupChangeSnapshot        = care.GuardianPickupChange
 	NoteDataSnapshot                    = care.NoteData
 	OfferingChangeCatalogSnapshot       = care.OfferingChangeCatalog
 	OfferingChangeCatalogItemSnapshot   = care.OfferingChangeCatalogItem

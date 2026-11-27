@@ -58,7 +58,7 @@ func toBillingMonthResponse(m mealplanModule.BillingMonth) BillingMonthResponse 
 type ContractTypes struct {
 	Orders, DailyList, WeeklyList, ChildParticipation, ChildDay, ChildSchedule, ScheduleChanged any
 	BillingMonths, BillingMonth, BillingMonthRelease                                            any
-	Week, Day, Days, SaveDay, SavedDay                                                          any
+	Days, SaveDay, SavedDay                                                                     any
 	// Cancellations, Cancellation and CancelMeal are the days without lunch (#7656).
 	Cancellations, Cancellation, CancelMeal any
 }
@@ -71,8 +71,7 @@ func RouteContractTypes() ContractTypes {
 		ScheduleChanged: ScheduleChangedResponse{},
 		BillingMonths:   []mealplanModule.BillingMonthSummary{}, BillingMonth: BillingMonthResponse{},
 		BillingMonthRelease: BillingMonthReleaseRequest{},
-		Week:                []MealPlanWeekEntryResponse{}, Day: SetDayRequest{},
-		Days: []MealPlanDayResponse{}, SaveDay: SaveDayRequest{}, SavedDay: MealPlanDayResponse{},
+		Days:                []MealPlanDayResponse{}, SaveDay: SaveDayRequest{}, SavedDay: MealPlanDayResponse{},
 		Cancellations: []MealCancellationResponse{}, Cancellation: MealCancellationResponse{}, CancelMeal: MealCancellationRequest{},
 	}
 }

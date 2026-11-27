@@ -12,18 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// EditPickupChangeRequest rewrites the caller's own pending one-day pickup
-// change (#2267, story 37).
-func (s *Service) EditPickupChangeRequest(
-	ctx context.Context, accountID, studentID, requestID int64,
-	date calendar.Date, pickupTime time.Time, departureMode, reason, expectedVersion string,
-) (*carerequests.Request, error) {
-	return s.EditPickupChange(ctx, accountID, studentID, requestID, PickupChangeEdit{
-		Date: date, PickupTime: pickupTime, DepartureMode: departureMode, Reason: reason, ExpectedVersion: expectedVersion,
-		PreservePickupDeclaration: true,
-	})
-}
-
 // PickupChangeEdit is the new content of a pending one-day request. A
 // collector or walking home alone needs a fresh signature (#4780).
 type PickupChangeEdit struct {
@@ -122,16 +110,6 @@ func (s *Service) editPickupChangeInTx(txCtx context.Context, child *Child, acco
 		Reason:                    edit.Reason,
 		ReasonRequired:            reasonRequired,
 		Cutoff:                    cutoff,
-	})
-}
-
-// SubmitPickupChangeRequest asks the OGS for a different Gehzeit, a different
-// Abholart (#3945), or both, on one day. A zero pickupTime or an empty
-// departureMode leaves that leg of the day unchanged.
-func (s *Service) SubmitPickupChangeRequest(ctx context.Context, accountID, studentID int64, date calendar.Date, pickupTime time.Time, departureMode, reason string, recipientGuardianProfileIDs []int64) (*carerequests.Request, error) {
-	return s.SubmitPickupChange(ctx, accountID, studentID, PickupChangeSubmission{
-		Date: date, PickupTime: pickupTime, DepartureMode: departureMode, Reason: reason,
-		RecipientGuardianProfileIDs: recipientGuardianProfileIDs,
 	})
 }
 
@@ -261,7 +239,7 @@ func validatePickupChangeShape(pickupTime time.Time, departureMode string, picku
 func (s *Service) checkPickupChangeSubmittable(ctx context.Context, child *Child, reason string, date calendar.Date) (bool, calendar.Date, error) {
 	// Whether the reason is mandatory is a per-school setting, so it can only
 	// be decided once the child — and with it the tenant — is known (#2267,
-	// story 28). The cheap shape checks in SubmitPickupChangeRequest still run
+	// story 28). The cheap shape checks in SubmitPickupChange still run
 	// first.
 	reasonRequired := s.guardianReasonRequired(ctx, child.TenantID)
 	if reason == "" && reasonRequired {

@@ -241,7 +241,6 @@ function ActivityStammdatenTab({
           onResetForm();
         }}
         submitLabel="Speichern"
-        stickyActions
         errorPath={saveErrors}
         errorObject="die Aktivität"
       />

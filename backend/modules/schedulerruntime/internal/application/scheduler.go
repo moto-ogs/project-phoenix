@@ -36,7 +36,6 @@ type Scheduler struct {
 	autoCheckouter              ports.AutoCheckouter
 	retention                   RetentionRun
 	cleanupRuns                 ports.CleanupRunLedger
-	cleanupClock                func() time.Time
 	cleanupFailures             sync.Map // cleanupAttemptKey → cleanupFailureStreak this process last recorded
 	staffDocumentFileCleaner    ports.StaffDocumentFileCleaner
 	studentDocumentFileCleaner  ports.StudentDocumentFileCleaner
@@ -61,7 +60,7 @@ type Scheduler struct {
 	enrollmentRejectedCleanup   ports.RejectedEnrollmentCleaner
 	autoStart                   ports.InstanceAutoStart
 	autoEnd                     ports.InstanceAutoEnd
-	settings                    ports.SettingsResolver
+	settings                    ports.Settings
 	schoolRepo                  ports.TenantDirectory
 	tenantRuntime               ports.TenantRuntime
 	tenantRuntimeObserver       func(entryPoint, outcome string)
@@ -70,10 +69,6 @@ type Scheduler struct {
 	tenantBatchCursors          sync.Map // job ID → last successful tenant ID
 	minuteSnapshotMu            sync.Mutex
 	minuteSnapshotLoad          *schedulerMinuteSnapshotLoad
-	minuteSnapshotNow           func() time.Time
-	materializationNow          func() time.Time
-	minuteSnapshotLoader        func(context.Context) (*schedulerMinuteSnapshot, error)
-	allTenantIDsLoader          func(context.Context) ([]int64, error)
 	cleanupJobs                 []CleanupJob
 	registry                    *Registry
 	tasks                       map[string]*ScheduledTask
@@ -87,8 +82,7 @@ type Scheduler struct {
 	// done signals goroutines to stop when closed (replaces stored context)
 	wg sync.WaitGroup
 
-	cleanupMinuteSnapshotLoad   *schedulerMinuteSnapshotLoad
-	cleanupMinuteSnapshotLoader func(context.Context) (*schedulerMinuteSnapshot, error)
+	cleanupMinuteSnapshotLoad *schedulerMinuteSnapshotLoad
 
 	// Per-tenant tracking for minute-polling (keyed by tenant ID)
 	lastSessionEnd              sync.Map // tenant_id → time.Time

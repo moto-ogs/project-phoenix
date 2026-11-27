@@ -38,8 +38,6 @@ export interface PeriodMetrics {
   /** False when no Soll is maintained for the current month (#6887);
    *  undefined while the Monatskarte loads. */
   readonly hasTarget?: boolean;
-  /** A source failed to load; the null figures will not arrive. */
-  readonly failed?: boolean;
   /** The source error for the in-place load error display. */
   readonly error?: unknown;
   /** Revalidates the failed source. */
@@ -173,7 +171,6 @@ export function usePeriodMetrics(staffId: string): PeriodMetrics {
   // The figures stay null when a source failed; the caller must not wait for
   // them forever (#2514).
   const error = monthSummaryError ?? weekProjectionError ?? balanceError;
-  const failed = Boolean(error);
   const retry = useCallback(async () => {
     const retries: Promise<unknown>[] = [];
     if (monthSummaryError) retries.push(mutateMonthSummary());
@@ -196,7 +193,6 @@ export function usePeriodMetrics(staffId: string): PeriodMetrics {
     accountBalanceMinutes,
     hasTargetOverride,
     hasTarget: monthSummary?.hasTarget,
-    failed,
     error,
     retry,
   };

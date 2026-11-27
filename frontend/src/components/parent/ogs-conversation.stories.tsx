@@ -15,9 +15,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const WithBackAndChild: Story = {
+export const WithBack: Story = {
   args: {
     showBack: true,
-    showChild: true,
   },
 };

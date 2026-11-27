@@ -1241,13 +1241,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListEnrolledStudentIDsByNameAndBirthday(ctx context.Context, tenantID int64, firstName, lastName, birthday string) ([]int64, error) {\n\tif err := peopledirectory.ValidateStudentMatch(tenantID, firstName, lastName, birthday); err != nil {\n\t\treturn nil, err\n\t}\n\tids, err := s.students.ListEnrolledIDsByNameAndBirthday(ctx, tenantID, firstName, lastName, birthday)\n\treturn ids, MapError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/Service.ListEnrolledStudentIDsByNameAndBirthday",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ListEnrolledStudents(ctx context.Context) ([]peopledirectory.Student, error) {\n\tvalues, err := s.students.ListEnrolled(ctx)\n\treturn nonNilStudents(values), MapError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.ListEnrolledStudents",
@@ -1370,13 +1363,6 @@
       "evidence": "func (s *Service) ListStudentRoster(ctx context.Context, today string) ([]peopledirectory.StudentRosterEntry, error) {\n\tif err := peopledirectory.ValidateRosterDay(today); err != nil {\n\t\treturn nil, err\n\t}\n\tvalues, err := s.students.ListRoster(ctx, today)\n\treturn toPublicRoster(values), MapError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.ListStudentRoster",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) ListStudentRosterByGroup(ctx context.Context, groupIDs []int64, today string) ([]peopledirectory.StudentRosterEntry, error) {\n\tgroupIDs = peopledirectory.PositiveIDs(groupIDs)\n\tif len(groupIDs) == 0 {\n\t\treturn []peopledirectory.StudentRosterEntry{}, nil\n\t}\n\tif err := peopledirectory.ValidateRosterDay(today); err != nil {\n\t\treturn nil, err\n\t}\n\tvalues, err := s.students.ListRosterByGroups(ctx, groupIDs, today)\n\treturn toPublicRoster(values), MapError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/Service.ListStudentRosterByGroup",
       "owner": "modules/peopledirectory"
     },
     {

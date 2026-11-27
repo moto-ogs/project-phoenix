@@ -86,22 +86,10 @@ type Story = StoryObj<typeof DatabaseForm>;
 
 export const Default: Story = {};
 
-export const Loading: Story = {
-  args: {
-    isLoading: true,
-  },
-};
-
 export const WithError: Story = {
   args: {
     errorPath: staticErrorPath(
       "Die Änderung konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
     ),
-  },
-};
-
-export const StickyActions: Story = {
-  args: {
-    stickyActions: true,
   },
 };

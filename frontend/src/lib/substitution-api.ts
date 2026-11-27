@@ -4,10 +4,7 @@ import type { assignmentRequest } from "./contract/substitutions.generated";
 import {
   type RunningSupervision,
   type Substitution,
-  type TeacherAvailability,
-  formatDateForBackend,
   mapSubstitutionResponse,
-  mapSubstitutionsResponse,
   mapRunningSupervision,
   mapSubstitutionOverview,
   mapScheduleSubstitutionOverview,
@@ -33,7 +30,6 @@ const overview = (
   query: {
     from?: string;
     to?: string;
-    date?: string;
     active_group_id?: string;
   },
   errorMessage: string,
@@ -98,28 +94,6 @@ class SubstitutionService {
     return mapBulkSubstitution(
       substitutionAssignmentResult(answer, "schedule_substitution"),
     );
-  }
-
-  async fetchSubstitutions(date?: Date): Promise<Substitution[]> {
-    const body = await overview(
-      { date: date ? formatDateForBackend(date) : undefined },
-      "group handovers failed",
-    );
-    return mapSubstitutionsResponse(body.group_handovers);
-  }
-
-  async fetchAvailableTeachers(): Promise<TeacherAvailability[]> {
-    const body = await overview({}, "available staff failed");
-    return (body.targets ?? []).map((staff) => {
-      const [firstName = "", ...lastNameParts] = staff.full_name.split(" ");
-      return {
-        id: staff.id,
-        firstName,
-        lastName: lastNameParts.join(" "),
-        inSubstitution: false,
-        substitutionCount: 0,
-      };
-    });
   }
 
   async fetchRunningSupervision(

@@ -10,32 +10,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// roomQuery and roomCommand name the Facilities halves the adapters embed;
-// the fields stay unexported, so only the constructors bind them.
-type (
-	roomQuery   = facilities.Query
-	roomCommand = facilities.Command
-)
+type roomQuery = facilities.Query
 
-// Repository serves the retained room repository contract: the reads of its
-// Records and the writes over the Facilities capability. Only New builds it.
-type Repository struct {
-	*Records
-	roomCommand
-}
-
-// New binds the repository to rooms; a missing capability panics.
-func New(rooms facilities.Capability) *Repository {
-	if rooms == nil {
-		panic("room repository adapter: Facilities capability is required")
-	}
-	return &Repository{Records: NewRecords(rooms), roomCommand: rooms}
-}
-
-// Records serves the retained room rows the legacy readers ask for over the
-// Facilities queries alone, so a root can hand them out before the room
-// deletion exists (#4080). It writes no room; the Repository reads through
-// it. Only NewRecords builds it.
+// Records adapts Facilities queries to the retained room reads.
 type Records struct{ roomQuery }
 
 func NewRecords(rooms facilities.Query) *Records {
@@ -79,14 +56,6 @@ func (r *Records) FindByIDs(ctx context.Context, ids []int64) ([]*facilities.Roo
 
 func (r *Records) FindByIDForUpdate(ctx context.Context, id int64) (*facilities.Room, error) {
 	room, err := r.FindRoomForUpdate(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return toLegacyPointer(room), nil
-}
-
-func (r *Records) FindByName(ctx context.Context, name string) (*facilities.Room, error) {
-	room, err := r.FindRoomByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}

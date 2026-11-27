@@ -26,10 +26,8 @@ import {
   fieldLabel,
   formatValue as formatMasterDataValue,
 } from "~/components/students/master-data-review-item";
-import {
-  RequestReviewCard,
-  ReviewDiffPanel,
-} from "~/components/students/request-review-card";
+import { RequestReviewCard } from "~/components/students/request-review-card";
+import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { submitterLabel } from "~/components/students/requests/request-copy";
 
 function MasterDataHistoryCard({

@@ -61,7 +61,6 @@ type SessionReads interface {
 	// GetActiveGroupVisitsWithDisplayForGroups is the batch form: one visit
 	// query and one directory query for any number of sessions.
 	GetActiveGroupVisitsWithDisplayForGroups(ctx context.Context, activeGroupIDs []int64) ([]*VisitDisplay, error)
-	CountActiveVisitsByActiveGroupID(ctx context.Context, activeGroupID int64) (int, error)
 	// GetTrackingIndicators returns per-student match results for the given
 	// labels; each student gets a []bool aligned with the labels slice.
 	GetTrackingIndicators(ctx context.Context, studentIDs []int64, labels []string) (map[int64][]bool, error)
@@ -107,9 +106,7 @@ type SessionMaintenance interface {
 // VisitReads answers where students are right now.
 type VisitReads interface {
 	GetStudentCurrentVisit(ctx context.Context, studentID int64) (*Visit, error)
-	GetStudentCurrentVisitWithRoom(ctx context.Context, studentID int64) (*VisitWithRoom, error)
 	GetStudentsCurrentVisits(ctx context.Context, studentIDs []int64) (map[int64]*Visit, error)
-	FindVisitsByStudentID(ctx context.Context, studentID int64) ([]Visit, error)
 	ListStudentsPresentInRoom(ctx context.Context, roomID int64) ([]int64, error)
 	ListStudentsInTransit(ctx context.Context) ([]int64, error)
 	ListStudentsPresentToday(ctx context.Context) ([]int64, error)

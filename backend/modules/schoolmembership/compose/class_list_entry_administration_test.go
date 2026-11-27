@@ -106,8 +106,9 @@ func TestAdministrationRunsTheAuditedLifecycle(t *testing.T) {
 	assert.Equal(t, created.CreatedBy, revised.CreatedBy, "a revision never touches the creating account")
 
 	require.NoError(t, module.RemoveClassListEntry(ctx, schoolmembership.RemoveClassListEntry{ID: created.ID, ChangedBy: actor.ID}))
-	_, err = module.FindClassListEntry(ctx, created.ID)
-	require.ErrorIs(t, err, schoolmembership.ErrClassListEntryNotFound)
+	remaining, err := module.ListClassListEntries(ctx, schoolmembership.ClassListEntryFilter{IDs: []int64{created.ID}})
+	require.NoError(t, err)
+	require.Empty(t, remaining)
 
 	require.Len(t, trail.changes, 3)
 	assert.Equal(t, schoolmembership.ClassListEntryChange{
@@ -226,10 +227,9 @@ func TestRevisionOfAnOlderReadIsRefused(t *testing.T) {
 		require.ErrorIs(t, err, readstate.ErrChanged, name)
 		assert.Equal(t, schoolmembership.ClassListEntryFailureChanged, schoolmembership.ClassifyClassListEntryFailure(err), name)
 	}
-	stored, err := module.FindClassListEntry(ctx, created.ID)
+	stored, err := module.ListClassListEntries(ctx, schoolmembership.ClassListEntryFilter{IDs: []int64{created.ID}})
 	require.NoError(t, err)
-	assert.Equal(t, "4b", stored.SchoolClass, "a refused revision writes nothing")
-	assert.Equal(t, "Zoe", stored.FirstName)
+	require.Equal(t, []schoolmembership.ClassListEntry{moved}, stored, "a refused revision writes nothing")
 	assert.Len(t, trail.changes, 2, "a refused revision leaves no trace")
 
 	_, err = module.ReviseClassListEntry(ctx, schoolmembership.ReviseClassListEntry{
@@ -298,8 +298,9 @@ func TestResolveRequiresTheNamedStudent(t *testing.T) {
 	require.NoError(t, module.ResolveClassListEntry(ctx, schoolmembership.ResolveClassListEntry{
 		ID: created.ID, StudentID: namesake, ChangedBy: actor.ID,
 	}))
-	_, err = module.FindClassListEntry(ctx, created.ID)
-	require.ErrorIs(t, err, schoolmembership.ErrClassListEntryNotFound)
+	remaining, err := module.ListClassListEntries(ctx, schoolmembership.ClassListEntryFilter{IDs: []int64{created.ID}})
+	require.NoError(t, err)
+	require.Empty(t, remaining)
 
 	require.Len(t, trail.changes, 2)
 	assigned := trail.changes[1]
@@ -348,25 +349,14 @@ func TestDisplayOrderAndMatchHint(t *testing.T) {
 		"Ä sorts with A, and grade 2 before grade 10")
 
 	students.byName["Ben|Berg|10a"] = []int64{4711}
-	matches, err := module.MatchingStudentIDs(ctx, schoolmembership.ClassListEntryFields{
-		FirstName: berg.FirstName, LastName: berg.LastName, SchoolClass: berg.SchoolClass,
+	// A missing field matches nobody without failing the rest of the listing.
+	matches, err := module.MatchingStudentIDsForEntries(ctx, []schoolmembership.ClassListEntryFields{
+		{FirstName: berg.FirstName, LastName: berg.LastName, SchoolClass: berg.SchoolClass},
+		{FirstName: zander.FirstName, LastName: zander.LastName, SchoolClass: zander.SchoolClass},
+		{FirstName: "Ben", LastName: "Berg", SchoolClass: " "},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, []int64{4711}, matches)
-
-	none, err := module.MatchingStudentIDs(ctx, schoolmembership.ClassListEntryFields{
-		FirstName: zander.FirstName, LastName: zander.LastName, SchoolClass: zander.SchoolClass,
-	})
-	require.NoError(t, err)
-	assert.Empty(t, none, "no namesake is an empty list, never an error")
-
-	// The hint reads whatever the rows carry. A row with an empty field must
-	// match nobody, not fail the listing it is part of.
-	incomplete, err := module.MatchingStudentIDs(ctx, schoolmembership.ClassListEntryFields{
-		FirstName: "Ben", LastName: "Berg", SchoolClass: " ",
-	})
-	require.NoError(t, err)
-	assert.Empty(t, incomplete)
+	assert.Equal(t, [][]int64{{4711}, {}, {}}, matches)
 }
 
 // A module the root never handed the two ports refuses the administration
@@ -384,6 +374,6 @@ func TestUnboundAdministrationRefusesEveryCommand(t *testing.T) {
 	require.Error(t, err)
 	require.Error(t, module.RemoveClassListEntry(ctx, schoolmembership.RemoveClassListEntry{ID: 1}))
 	require.Error(t, module.ResolveClassListEntry(ctx, schoolmembership.ResolveClassListEntry{ID: 1, StudentID: 2}))
-	_, err = module.MatchingStudentIDs(ctx, fields)
+	_, err = module.MatchingStudentIDsForEntries(ctx, []schoolmembership.ClassListEntryFields{fields})
 	require.Error(t, err)
 }

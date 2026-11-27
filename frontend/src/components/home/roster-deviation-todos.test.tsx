@@ -60,7 +60,7 @@ describe("RosterDeviationTodos (#5103)", () => {
 
   it("names how many Regeltermine to check and links to „Zu prüfen“", () => {
     state.deviations = [deviation("1"), deviation("2")];
-    render(<RosterDeviationTodos enabled />);
+    render(<RosterDeviationTodos />);
 
     expect(state.keys).toContain("roster-deviations-4-count");
     expect(
@@ -76,12 +76,8 @@ describe("RosterDeviationTodos (#5103)", () => {
     );
   });
 
-  it("stays away without deviations or without planning rights", () => {
-    const { container, rerender } = render(<RosterDeviationTodos enabled />);
-    expect(container).toBeEmptyDOMElement();
-
-    state.deviations = [deviation("1")];
-    rerender(<RosterDeviationTodos enabled={false} />);
+  it("stays away without deviations", () => {
+    const { container } = render(<RosterDeviationTodos />);
     expect(container).toBeEmptyDOMElement();
   });
 });

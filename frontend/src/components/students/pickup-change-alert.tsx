@@ -16,19 +16,15 @@ import { studentKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "PickupChangeAlert" });
 
-const NO_FRESH_CHANGES: readonly PickupChangeNotice[] = [];
-
 /** One revision of a change: a later edit of the same request is new again. */
 function revisionKey(notice: PickupChangeNotice): string {
   return `${notice.requestId}@${notice.informedAt}`;
 }
 
-export interface PickupChange {
+interface PickupChange {
   readonly date: string;
   /** The time that applies; empty when the regular time applies again. */
   readonly time: string;
-  /** The reader has not seen this change yet (#6855). */
-  readonly isNew?: boolean;
 }
 
 interface PickupPersonChange {
@@ -39,39 +35,27 @@ interface PickupPersonChange {
   readonly withdrawn: boolean;
 }
 
-/**
- * Die Tage ab heute mit einer geänderten Abholzeit (#6855). Eine von den
- * Eltern angefragte Zeit wird mit der Freigabe zur Ausnahme der OGS; die
- * Herkunft trägt die Ausnahme danach nicht mehr. Der Hinweis zeigt deshalb
- * jede Tagesausnahme mit Uhrzeit. Eine Ausnahme gibt es je Kind und Tag nur
- * einmal: gezeigt wird immer der aktuelle Stand. Zurückgenommene Ausnahmen
- * sind gelöscht und fehlen, vergangene Tage fallen heraus.
- *
- * `fresh` sind die ungelesenen Zeitänderungen: ein Tag mit Ausnahme trägt
- * „Neu“, eine zurückgenommene Zeitänderung ohne Ausnahme steht als „wieder
- * normale Abholzeit“ mit „Neu“ dabei.
- */
-export function upcomingPickupChanges(
+/** Show the current time for a new notice, or the regular time if withdrawn. */
+function upcomingPickupChanges(
   exceptions: readonly PickupException[],
   today: string,
-  fresh: readonly PickupChangeNotice[] = [],
+  fresh: readonly PickupChangeNotice[],
 ): PickupChange[] {
   const freshDays = new Set(
     fresh
       .filter((notice) => !notice.withdrawn && notice.pickupTime !== "")
       .map((notice) => notice.date),
   );
-  const changes: PickupChange[] = exceptions
-    .filter(
-      (exception) =>
-        Boolean(exception.pickupTime) && exception.exceptionDate >= today,
-    )
-    .map((exception) => ({
-      date: exception.exceptionDate,
-      time: formatPickupTime(exception.pickupTime ?? ""),
-      ...(freshDays.has(exception.exceptionDate) ? { isNew: true } : {}),
-    }));
-  const changedDays = new Set(changes.map((change) => change.date));
+  const changes: PickupChange[] = [];
+  const changedDays = new Set<string>();
+  for (const { exceptionDate: date, pickupTime } of exceptions) {
+    if (!pickupTime || date < today) continue;
+    // Even a time not shown in the banner prevents a "regular time" notice.
+    changedDays.add(date);
+    if (freshDays.has(date)) {
+      changes.push({ date, time: formatPickupTime(pickupTime) });
+    }
+  }
   for (const notice of fresh) {
     if (
       notice.withdrawn &&
@@ -80,7 +64,7 @@ export function upcomingPickupChanges(
       !changedDays.has(notice.date)
     ) {
       changedDays.add(notice.date);
-      changes.push({ date: notice.date, time: "", isNew: true });
+      changes.push({ date: notice.date, time: "" });
     }
   }
   return changes.sort((a, b) => a.date.localeCompare(b.date));
@@ -115,14 +99,12 @@ function ChangeLine({
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       {changeLine(change, today)}
-      {change.isNew ? (
-        <StatusBadge
-          compact
-          tone="red"
-          label="Neu"
-          accessibleLabel="Neu: Diese Änderung hast du noch nicht gesehen."
-        />
-      ) : null}
+      <StatusBadge
+        compact
+        tone="red"
+        label="Neu"
+        accessibleLabel="Neu: Diese Änderung hast du noch nicht gesehen."
+      />
     </span>
   );
 }
@@ -154,20 +136,18 @@ function PickupPersonChangeLine({
  * Änderungen und lässt sich per X schließen. Der dauerhafte Stand steht in
  * den Betreuungszeiten; wer das Banner schließt, verliert also nichts.
  */
-export function PickupChangeAlert({
+function PickupChangeAlert({
   exceptions,
   today,
-  fresh = NO_FRESH_CHANGES,
+  fresh,
   onDismiss,
 }: Readonly<{
   exceptions: readonly PickupException[] | undefined;
   today: string;
-  fresh?: readonly PickupChangeNotice[];
-  onDismiss?: () => void;
+  fresh: readonly PickupChangeNotice[];
+  onDismiss: () => void;
 }>) {
-  const changes = upcomingPickupChanges(exceptions ?? [], today, fresh).filter(
-    (change) => change.isNew,
-  );
+  const changes = upcomingPickupChanges(exceptions ?? [], today, fresh);
   const personChanges = upcomingPickupPersonChanges(fresh, today);
   const count = changes.length + personChanges.length;
   if (count === 0) return null;

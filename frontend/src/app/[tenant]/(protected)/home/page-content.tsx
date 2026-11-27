@@ -536,22 +536,13 @@ function HomeContent() {
         />
       ) : null}
 
-      {/* Regeltermine, die von den Anmeldungen abweichen (#5103): eine
-          Aufgabe für Planende, deshalb fest über dem Brett. */}
+      {/* Aufgaben für Planende, fest über dem Brett (#5103, #5345, #5102). */}
       {!editing && timetableEnabled && access.has("schedules:manage") ? (
-        <RosterDeviationTodos enabled />
-      ) : null}
-
-      {/* Regeltermine in den nächsten Schulferien (#5345): eine Aufgabe für
-          Planende, deshalb fest über dem Brett. */}
-      {!editing && timetableEnabled && access.has("schedules:manage") ? (
-        <SchoolVacationHintsCore enabled />
-      ) : null}
-
-      {/* Kinder, die eine Buchungsänderung von Hand eingeplant zurückließ
-          (#5102): dieselbe Aufgabe für Planende. */}
-      {!editing && timetableEnabled && access.has("schedules:manage") ? (
-        <BookingLeftoverTodos enabled />
+        <>
+          <RosterDeviationTodos />
+          <SchoolVacationHintsCore enabled />
+          <BookingLeftoverTodos />
+        </>
       ) : null}
 
       {/* Die Jetzt-Zone steht fest über dem Brett und ist kein Baustein: die

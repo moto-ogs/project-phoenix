@@ -107,7 +107,6 @@ function Modal({
 }) {
   return (
     <ShiftEditModal
-      isOpen
       mode="edit"
       staffId="7"
       staffName="Ada Lovelace"

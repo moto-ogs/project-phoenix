@@ -34,8 +34,6 @@ vi.mock("posthog-js", () => ({
   },
 }));
 
-const IPHONE_UA =
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const ANDROID_UA =
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.71 Mobile Safari/537.36";
 const SAMSUNG_INTERNET_UA =
@@ -44,7 +42,7 @@ const SAMSUNG_INTERNET_UA =
 function stubDevice(userAgent: string) {
   vi.stubGlobal("navigator", {
     userAgent,
-    platform: userAgent === IPHONE_UA ? "iPhone" : "Linux armv81",
+    platform: "Linux armv81",
     maxTouchPoints: 5,
   });
   vi.stubGlobal(
@@ -105,7 +103,7 @@ describe("PwaInstallHint analytics", () => {
   it("reports the Samsung hint as its own surface: shown, accepted, dismissed", async () => {
     stubDevice(SAMSUNG_INTERNET_UA);
     const { PwaInstallHint } = await setup(true);
-    render(<PwaInstallHint samsungOnly />);
+    render(<PwaInstallHint />);
 
     await waitFor(() => {
       expect(mocks.capture).toHaveBeenCalledWith("onboarding_surface_shown", {
@@ -128,49 +126,17 @@ describe("PwaInstallHint analytics", () => {
     );
   });
 
-  it("reports the install hint on iOS and Android as install_hint", async () => {
-    stubDevice(IPHONE_UA);
-    const { PwaInstallHint } = await setup(true);
-    render(<PwaInstallHint />);
-
-    await waitFor(() => {
-      expect(mocks.capture).toHaveBeenCalledWith("onboarding_surface_shown", {
-        onboarding_surface: "install_hint",
-      });
-    });
-    fireEvent.click(screen.getByLabelText("Hinweis schließen"));
-    expect(mocks.capture).toHaveBeenCalledWith("onboarding_surface_dismissed", {
-      onboarding_surface: "install_hint",
-    });
-    expect(surfaceEvents()).toHaveLength(2);
-  });
-
-  it("reports a tap on one-tap install as accepted", async () => {
+  it("reports browser installation even when the Samsung hint is not shown", async () => {
     stubDevice(ANDROID_UA);
     const { PwaInstallHint } = await setup(true);
-    const prompt = vi.fn().mockResolvedValue(undefined);
-    window.dispatchEvent(
-      Object.assign(new Event("beforeinstallprompt"), {
-        prompt,
-        userChoice: Promise.resolve({ outcome: "dismissed" }),
-      }),
-    );
     render(<PwaInstallHint />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "App installieren" }),
-    );
-    expect(mocks.capture).toHaveBeenCalledWith("onboarding_surface_accepted", {
-      onboarding_surface: "install_hint",
-    });
-    // Die Antwort im Browser-Dialog bleibt beim bisherigen Ereignis.
+    fireEvent(window, new Event("appinstalled"));
+
     await waitFor(() => {
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "pwa_install_prompt_dismissed",
-        undefined,
-      );
+      expect(mocks.capture).toHaveBeenCalledWith("pwa_installed", undefined);
     });
-    expect(surfaceEvents()).toHaveLength(2);
+    expect(surfaceEvents()).toHaveLength(0);
   });
 
   it.each([false, undefined])(
@@ -178,7 +144,7 @@ describe("PwaInstallHint analytics", () => {
     async (consent) => {
       stubDevice(SAMSUNG_INTERNET_UA);
       const { PwaInstallHint } = await setup(consent);
-      render(<PwaInstallHint samsungOnly />);
+      render(<PwaInstallHint />);
 
       // Anker: die Karte steht da und wird bedient.
       fireEvent.click(screen.getByRole("link", { name: "In Chrome öffnen" }));

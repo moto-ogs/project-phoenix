@@ -758,17 +758,6 @@
       "same_owner": true
     },
     {
-      "id": "owner-compose.domain.compose",
-      "description": "ADR 0053 point 3: the composition of a domain owner imports its own compose role.",
-      "scopes": [
-        "production"
-      ],
-      "source_owner_kind": "domain",
-      "source_role": "compose",
-      "target_role": "compose",
-      "same_owner": true
-    },
-    {
       "id": "owner-compose.domain.contract",
       "description": "ADR 0053 point 3: the composition of a domain owner imports its own contract role.",
       "scopes": [

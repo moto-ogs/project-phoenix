@@ -293,18 +293,16 @@ vi.mock("./guardian-form-modal", () => ({
     ) : null,
 }));
 
-// Mock the inline existing-guardian picker panel. It's mounted only while the
+// Mock the existing-guardian picker panel. It's mounted only while the
 // picker is open, so it renders here whenever present and exposes one button
 // that fires onSelect with a canned EXISTING guardian + relationship (the shape
 // the real panel emits). This exercises the manager's link-existing wiring
-// without driving the real search UI. A second button exercises onCancel.
+// without driving the real search UI.
 vi.mock("./guardian-picker-panel", () => ({
   default: ({
     onSelect,
-    onCancel,
   }: {
     onSelect: (guardian: unknown, relationship: unknown) => void;
-    onCancel: () => void;
     excludeProfileIds?: readonly string[];
   }) => (
     <div data-testid="guardian-picker-panel">
@@ -334,9 +332,6 @@ vi.mock("./guardian-picker-panel", () => ({
         }
       >
         MockPickExisting
-      </button>
-      <button type="button" data-testid="picker-cancel" onClick={onCancel}>
-        MockCancelPicker
       </button>
     </div>
   ),
@@ -1463,7 +1458,7 @@ describe("StudentGuardianManager", () => {
       );
       expect(screen.getByTestId("guardian-picker-panel")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByTestId("picker-cancel"));
+      fireEvent.click(screen.getByRole("button", { name: "Modal schließen" }));
 
       await waitFor(() => {
         expect(

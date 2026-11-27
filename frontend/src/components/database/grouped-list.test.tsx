@@ -35,20 +35,6 @@ describe("GroupedList", () => {
     expect(screen.getByText("Gamma")).toBeInTheDocument();
   });
 
-  it("respects defaultOpenIds for initial state", () => {
-    render(
-      <GroupedList
-        groups={groups()}
-        renderItem={(item) => <span>{item.name}</span>}
-        keyFor={(item) => item.id}
-        defaultOpenIds={["g1"]}
-      />,
-    );
-
-    expect(screen.getByText("Alpha")).toBeInTheDocument();
-    expect(screen.queryByText("Gamma")).not.toBeInTheDocument();
-  });
-
   it("toggles a group when its header is clicked", () => {
     render(
       <GroupedList
@@ -86,19 +72,6 @@ describe("GroupedList", () => {
     );
 
     expect(screen.getByTestId("empty")).toBeInTheDocument();
-  });
-
-  it("applies custom className to outer container", () => {
-    const { container } = render(
-      <GroupedList
-        groups={groups()}
-        renderItem={(item) => <span>{item.name}</span>}
-        keyFor={(item) => item.id}
-        className="custom-class"
-      />,
-    );
-
-    expect(container.firstChild).toHaveClass("custom-class");
   });
 
   it("uses provided keyFor for list keys", () => {

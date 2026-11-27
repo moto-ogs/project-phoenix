@@ -8,12 +8,6 @@ describe("DetailPanel", () => {
     return [
       { id: "one", label: "One", content: <div>Content One</div> },
       { id: "two", label: "Two", content: <div>Content Two</div> },
-      {
-        id: "three",
-        label: "Three",
-        content: <div>Three</div>,
-        disabled: true,
-      },
     ];
   }
 
@@ -30,7 +24,6 @@ describe("DetailPanel", () => {
     expect(screen.getByText("Header")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "One" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Two" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Three" })).toBeInTheDocument();
   });
 
   it("shows content of the active tab", () => {
@@ -64,31 +57,5 @@ describe("DetailPanel", () => {
     fireEvent.keyDown(tab, { key: "Enter" });
 
     expect(onTabChange).toHaveBeenCalledWith("two");
-  });
-
-  it("disables tabs marked disabled", () => {
-    render(
-      <DetailPanel
-        header={null}
-        tabs={tabs()}
-        activeTab="one"
-        onTabChange={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("tab", { name: "Three" })).toBeDisabled();
-  });
-
-  it("applies custom className to root", () => {
-    const { container } = render(
-      <DetailPanel
-        header={null}
-        tabs={tabs()}
-        activeTab="one"
-        onTabChange={vi.fn()}
-        className="custom"
-      />,
-    );
-    expect(container.firstChild).toHaveClass("custom");
   });
 });

@@ -390,7 +390,7 @@ func TestGetRejectsGroupsOutsideTheVisibleSet(t *testing.T) {
 	assert.Empty(t, f.participantsCalled, "no roster is loaded for a forbidden group")
 }
 
-func TestGetSelectsPersonalGroupFirstInDirectoryOrder(t *testing.T) {
+func TestGetSelectsPersonalGroupBeforeTheFirstSortedGroup(t *testing.T) {
 	t.Parallel()
 
 	f := &fakes{
@@ -417,7 +417,7 @@ func TestGetSelectsPersonalGroupFirstInDirectoryOrder(t *testing.T) {
 	assert.Equal(t, []NavigationGroup{
 		{ID: 1, Name: "Äpfel", RoomID: (*ident.ID)(new(ident.ID(31))), RoomName: "Raum A"},
 		{ID: 2, Name: "Zebra", ViaSubstitution: true, IsPersonal: true},
-	}, got.Groups, "groups keep the directory order and carry rooms, substitution, and personal flags")
+	}, got.Groups, "groups are sorted and carry rooms, substitution, and personal flags")
 	assert.Equal(t, 1, f.tenantGroupsCalls)
 }
 
@@ -986,18 +986,14 @@ func TestNavigationContextNamesTheGroupLeadership(t *testing.T) {
 		},
 	}
 
-	got, err := New(Dependencies{
-		Access: f, Groups: f, Roster: f, Presence: f, Planning: f, Transfers: f,
-		Settings: f, Calendar: f, Collate: strings.Compare,
-	}).NavigationContext(context.Background())
+	got, err := newService(f).NavigationContext(context.Background())
 	require.NoError(t, err)
 	require.Len(t, got.Groups, 2)
-	assert.Equal(t, [][]int64{{2, 1}}, f.leaderCalls, "one bulk lookup for every listed group")
-	// strings.Compare puts "Zebra" (2) ahead of "Äpfel" (1).
-	assert.Nil(t, got.Groups[0].Leaders, "a group without Gruppenleitung names nobody")
-	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got.Groups[1].Leaders, "names follow the collation")
+	assert.Equal(t, [][]int64{{1, 2}}, f.leaderCalls, "one bulk lookup for every listed group")
+	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got.Groups[0].Leaders, "names follow the collation")
+	assert.Nil(t, got.Groups[1].Leaders, "a group without Gruppenleitung names nobody")
 
-	raw, err := json.Marshal(got.Groups[0])
+	raw, err := json.Marshal(got.Groups[1])
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "leaders", "an empty leadership stays off the wire")
 }
@@ -1015,10 +1011,7 @@ func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
 	assert.Empty(t, f.leaderCalls, "the live view keeps its query budget; only the navigation names the leadership")
 }
 
-// TestNavigationContextSortsWithTheInjectedCollation pins that the projection, not
-// the directory, orders the visible groups: bytewise comparison puts "Zebra"
-// ahead of "Äpfel", so the directory order cannot pass for the sorted one.
-func TestNavigationContextSortsWithTheInjectedCollation(t *testing.T) {
+func TestNavigationContextSortsGroupsInGermanDictionaryOrder(t *testing.T) {
 	t.Parallel()
 
 	names := func(groups []NavigationGroup) []string {
@@ -1028,29 +1021,24 @@ func TestNavigationContextSortsWithTheInjectedCollation(t *testing.T) {
 		}
 		return result
 	}
-	withCollation := func(f *fakes) Query {
-		return New(Dependencies{
-			Access: f, Groups: f, Roster: f, Presence: f, Planning: f, Transfers: f,
-			Settings: f, Calendar: f, ExcusedRequests: f, Collate: strings.Compare,
-		})
+	unsorted := func(context.Context) ([]GroupRecord, error) {
+		return []GroupRecord{{ID: zebraGroupID, Name: "Zebra"}, {ID: appleGroupID, Name: "Äpfel"}, {ID: 3, Name: "apfel"}}, nil
 	}
 
-	supervised := &fakes{caller: fullCaller, supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil }}
-	got, err := withCollation(supervised).NavigationContext(context.Background())
+	supervised := &fakes{caller: fullCaller, supervisedGroups: unsorted}
+	got, err := newService(supervised).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Zebra", "Äpfel"}, names(got.Groups), "the supervised groups follow the collation")
+	assert.Equal(t, []string{"apfel", "Äpfel", "Zebra"}, names(got.Groups), "the supervised groups follow the collation")
 
 	overview := &fakes{
 		caller: func(context.Context) (Caller, error) {
 			return Caller{CanReadGroups: true, OperationalOverview: true}, nil
 		},
-		tenantGroups: func(context.Context) ([]GroupRecord, error) {
-			return append(twoGroups(), GroupRecord{ID: 3, Name: "Mitte"}), nil
-		},
+		tenantGroups: unsorted,
 	}
-	got, err = withCollation(overview).NavigationContext(context.Background())
+	got, err = newService(overview).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Mitte", "Zebra", "Äpfel"}, names(got.Groups), "the tenant groups follow the collation")
+	assert.Equal(t, []string{"apfel", "Äpfel", "Zebra"}, names(got.Groups), "the tenant groups follow the collation")
 }
 
 func TestNewRejectsIncompleteWiring(t *testing.T) {

@@ -741,7 +741,7 @@ describe("DevicesPage", () => {
 
   it("calls delete service after confirming deletion from the detail panel", async () => {
     setSelectedDevice("1");
-    mockRemove.mockResolvedValueOnce(true);
+    mockRemove.mockResolvedValueOnce(undefined);
 
     render(<DevicesPage />);
 

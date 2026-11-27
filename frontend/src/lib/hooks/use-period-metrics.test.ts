@@ -235,7 +235,6 @@ describe("usePeriodMetrics", () => {
 
     expect(result.current.week).toBeNull();
     expect(result.current.error).toBe(error);
-    expect(result.current.failed).toBe(true);
     await result.current.retry();
     expect(
       swr.mutates.get("staff-schedule-targets-42-2026-08-03-2026-08-09"),
@@ -253,7 +252,6 @@ describe("usePeriodMetrics", () => {
 
     expect(result.current.month).toBeNull();
     expect(result.current.error).toBe(error);
-    expect(result.current.failed).toBe(true);
     await result.current.retry();
     expect(
       swr.mutates.get("staff-month-summary-42-2026-8"),

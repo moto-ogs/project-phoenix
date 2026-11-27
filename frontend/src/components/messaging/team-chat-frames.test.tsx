@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { TeamChatInboxParts } from "~/components/messaging/team-chat-inbox";
-import type { TeamChatThreadParts } from "~/components/messaging/team-chat-thread";
+import type {
+  TeamChatInboxParts,
+  TeamChatThreadParts,
+} from "./team-chat-frame-parts";
 import { renderInboxFrame, renderThreadFrame } from "./team-chat-frames";
 
 function inboxParts(
@@ -45,7 +47,6 @@ function threadParts(
     state: "ready",
     empty: { icon: null, title: "", description: "" },
     error: null,
-    loading: false,
     back: { href: "/team-chat", label: "Zurück zum Team-Chat" },
     containerRef: { current: null },
     body: null,

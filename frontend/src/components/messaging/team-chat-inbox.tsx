@@ -3,13 +3,7 @@
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { messageKeys } from "~/lib/swr/portal-keys";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSWRAuth } from "~/lib/swr";
 import { MessagesSquare, UsersRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -43,16 +37,7 @@ const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
   "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
-export type { TeamChatInboxParts } from "~/components/messaging/team-chat-frame-parts";
-
-export function TeamChatInbox({
-  portal,
-  frame = renderInboxFrame,
-}: {
-  readonly portal: TeamChatPortal;
-  /** Das Gerüst um die Teile; nur Tests reichen ein eigenes herein. */
-  readonly frame?: (parts: TeamChatInboxParts) => ReactNode;
-}) {
+export function TeamChatInbox({ portal }: { readonly portal: TeamChatPortal }) {
   const { api, navigate, threadHref } = portal;
   // The school can switch the internal chat off. The sidebar hides the entry
   // then, but a bookmarked URL still lands here — so the page has to say why it
@@ -345,7 +330,7 @@ export function TeamChatInbox({
     overlays,
   };
 
-  return frame(parts);
+  return renderInboxFrame(parts);
 }
 
 /** Name in der Liste: das Gegenüber, bei einer Gruppe ihr Name (#4776). */

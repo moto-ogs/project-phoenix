@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -63,7 +62,8 @@ func TestRejectedEnrollmentCleanup_ConcurrentReopenPreservesRequestAndOutbox(t *
 	db := testpkg.SetupTestDB(t)
 	scope := testpkg.NewTenantScope(t, db)
 	ctx := scope.Context()
-	repos, _, _, _, _, _ := flowRepositories(t, db)
+	repos, care, audit, _, _, _ := flowRepositories(t, db)
+	fixture := deletionTestFixture{t: t, db: db, repos: repos, reposCare: care, reposAudit: audit}
 
 	phase := &capability.Phase{
 		Name:             fmt.Sprintf("cleanup-concurrency-%d", scope.TenantID),
@@ -133,13 +133,10 @@ func TestRejectedEnrollmentCleanup_ConcurrentReopenPreservesRequestAndOutbox(t *
 		targetRequestID:         request.ID,
 		lockStarted:             lockStarted,
 	}
-	cleaner := api.NewEnrollmentDeletionModule(api.EnrollmentDeletionSources{
-		Owner:    requestRepo,
-		Delivery: newTestEnrollmentDelivery(t, db),
-		Settings: cleanupRetentionSettings{days: 30},
-		Logger:   slog.New(slog.DiscardHandler),
-		Now:      func() time.Time { return cleanupConcurrencyNow },
-	}).Cleanup
+	sources := fixture.sources(nil, requestRepo)
+	sources.Settings = cleanupRetentionSettings{days: 30}
+	sources.Now = func() time.Time { return cleanupConcurrencyNow }
+	cleaner := api.NewEnrollmentDeletionModule(sources).Cleanup
 
 	type cleanupOutcome struct {
 		result capability.RejectedEnrollmentCleanupResult
@@ -181,7 +178,8 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 	testpkg.SetupIsolatedTestDB(t)
 	db := testpkg.SetupTestDB(t)
 	scope := testpkg.NewTenantScope(t, db)
-	repos, _, _, _, _, _ := flowRepositories(t, db)
+	repos, care, audit, _, _, _ := flowRepositories(t, db)
+	fixture := deletionTestFixture{t: t, db: db, repos: repos, reposCare: care, reposAudit: audit}
 	creator := testpkg.CreateTestAccount(t, db, "rejected-cleanup-late-invite")
 	var _, requestID, outboxID, linkedInviteID, unrelatedInviteID int64
 	deliveryPort := newTestEnrollmentDelivery(t, db)
@@ -272,13 +270,11 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 		return nil
 	}))
 
-	cleaner := api.NewEnrollmentDeletionModule(api.EnrollmentDeletionSources{
-		Owner:    repos.Enrollment(),
-		Delivery: deliveryPort,
-		Settings: cleanupRetentionSettings{days: 30},
-		Logger:   slog.New(slog.DiscardHandler),
-		Now:      func() time.Time { return cleanupConcurrencyNow },
-	}).Cleanup
+	sources := fixture.sources(nil, nil)
+	sources.Delivery = deliveryPort
+	sources.Settings = cleanupRetentionSettings{days: 30}
+	sources.Now = func() time.Time { return cleanupConcurrencyNow }
+	cleaner := api.NewEnrollmentDeletionModule(sources).Cleanup
 	var result capability.RejectedEnrollmentCleanupResult
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, scope.TenantID, func(ctx context.Context, _ bun.Tx) error {
 		var cleanupErr error

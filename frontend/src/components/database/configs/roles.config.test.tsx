@@ -2,27 +2,13 @@
  * Tests for Roles Configuration
  * Tests role config structure and response mapping
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   roleEditSections,
   rolesConfig,
   toCreateRoleRequest,
   toUpdateRoleRequest,
 } from "./roles.config";
-import type { Role } from "@/lib/auth-helpers";
-
-// Mock auth-helpers
-vi.mock("@/lib/auth-helpers", () => ({
-  mapRoleResponse: vi.fn((data: unknown) => data),
-  getRoleDisplayName: vi.fn((name: string) => name),
-  getRoleDisplayDescription: vi.fn((_name: string, desc: string) => desc),
-  getBaseRoleLabel: vi.fn((role?: string) => role ?? "Keine Zuordnung"),
-  BASE_ROLE_LABELS: {
-    admin: "Verwaltung",
-    user: "Betreuung",
-    guardian: "Eltern",
-  },
-}));
 
 describe("rolesConfig", () => {
   it("exports a valid entity config", () => {
@@ -96,44 +82,5 @@ describe("rolesConfig", () => {
       base_role: "admin",
       expected_version: "v1",
     });
-  });
-
-  it("has detail header configuration", () => {
-    const mockRole: Role = {
-      id: "1",
-      name: "admin",
-      description: "Administrator role",
-      isSystem: false,
-      permissionNames: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    expect(rolesConfig.detail.header?.title(mockRole)).toBe("admin");
-  });
-
-  it("has list configuration", () => {
-    expect(rolesConfig.list.title).toBe("Rollen verwalten");
-    expect(rolesConfig.list.searchStrategy).toBe("frontend");
-  });
-
-  it("displays role in list", () => {
-    const mockRole: Role = {
-      id: "1",
-      name: "admin",
-      description: "Administrator role",
-      isSystem: false,
-      permissionNames: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const title = rolesConfig.list.item.title(mockRole);
-    expect(title).toBe("admin");
-  });
-
-  it("has custom labels", () => {
-    expect(rolesConfig.labels?.createButton).toBe("Neue Rolle erstellen");
-    expect(rolesConfig.labels?.deleteConfirmation).toContain("löschen");
   });
 });

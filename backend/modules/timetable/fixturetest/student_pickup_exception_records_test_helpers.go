@@ -11,7 +11,6 @@ import (
 
 type StudentPickupExceptionRecords interface {
 	Create(arg0 context.Context, arg1 *StudentPickupException) error
-	DeleteByStudentID(arg0 context.Context, arg1 int64) error
 	FindByID(arg0 context.Context, arg1 int64) (*StudentPickupException, error)
 	FindByStudentID(arg0 context.Context, arg1 int64) ([]*StudentPickupException, error)
 	FindByStudentIDAndDate(arg0 context.Context, arg1 int64, arg2 calendar.Date) (*StudentPickupException, error)
@@ -33,11 +32,6 @@ func FromStudentPickupExceptionRecords(value ports.StudentPickupExceptionRecords
 
 func (adapter fromStudentPickupExceptionRecords) Create(arg0 context.Context, arg1 *StudentPickupException) error {
 	result0 := adapter.value.Create(arg0, toNative16(arg1))
-	return result0
-}
-
-func (adapter fromStudentPickupExceptionRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {
-	result0 := adapter.value.DeleteByStudentID(arg0, arg1)
 	return result0
 }
 

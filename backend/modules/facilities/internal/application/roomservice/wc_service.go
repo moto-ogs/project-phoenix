@@ -82,7 +82,7 @@ func (s *wcService) ensureRoom(ctx context.Context) (*facilitiesModule.Room, err
 	if err == nil {
 		return room, nil
 	}
-	if !errors.Is(err, ErrRoomNotFound) {
+	if !errors.Is(err, facilitiesModule.ErrRoomNotFound) {
 		return nil, fmt.Errorf("failed to look up WC room: %w", err)
 	}
 	room = &facilitiesModule.Room{

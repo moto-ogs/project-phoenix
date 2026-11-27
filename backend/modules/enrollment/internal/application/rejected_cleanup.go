@@ -17,7 +17,6 @@ type RejectedRequestCleaner interface {
 	FullyRejectedRequestsBefore(ctx context.Context, cutoff time.Time) ([]int64, error)
 	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error)
 	RequestByID(context.Context, int64, bool) (*enrollmentNative.Request, error)
-	DeleteRequest(ctx context.Context, requestID int64) error
 }
 
 // RejectedChildren locks the children of a request.
@@ -25,10 +24,8 @@ type RejectedChildren interface {
 	ChildrenForRequest(ctx context.Context, requestID int64, forUpdate bool) ([]*enrollmentNative.RequestChild, error)
 }
 
-// UsedLateInviteCleaner deletes the late invites a request used, and the
-// invitations settled before a cutoff.
+// UsedLateInviteCleaner deletes standalone late invites settled before a cutoff.
 type UsedLateInviteCleaner interface {
-	DeleteLateInvitesByUsedRequestID(ctx context.Context, requestID int64) (int64, error)
 	DeleteLateInvitesSettledBefore(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
@@ -41,9 +38,7 @@ type RetentionSettings interface {
 
 // RejectedCleanupDependencies bind the retention worker to its owners.
 // Preview and Audit connect it to the same impact calculation and
-// append-only audit trail as the manual deletion; they are optional for
-// focused unit tests of the historical path, the production composition
-// always supplies both.
+// append-only audit trail as the manual deletion.
 type RejectedCleanupDependencies struct {
 	Requests    RejectedRequestCleaner
 	Children    RejectedChildren
@@ -92,11 +87,18 @@ func (s *RejectedCleanup) runInTx(ctx context.Context, fn func(context.Context) 
 	return s.deps.Runtime.WithinCurrentTenant(ctx, fn)
 }
 
+func (s *RejectedCleanup) configured() bool {
+	d := s.deps
+	return d.Requests != nil && d.Children != nil && d.LateInvites != nil &&
+		d.Delivery != nil && d.Settings != nil && d.Preview != nil &&
+		d.Audit != nil && d.Runtime.InTransaction != nil
+}
+
 // CleanupRejectedEnrollments deletes every request whose children were all
 // rejected before the retention cutoff.
 func (s *RejectedCleanup) CleanupRejectedEnrollments(ctx context.Context) (enrollmentNative.RejectedEnrollmentCleanupResult, error) {
 	d := s.deps
-	if d.Requests == nil || d.Children == nil || d.LateInvites == nil || d.Delivery == nil || d.Settings == nil || d.Runtime.InTransaction == nil {
+	if !s.configured() {
 		return enrollmentNative.RejectedEnrollmentCleanupResult{}, errors.New("rejected enrollment cleanup is not configured")
 	}
 	days, err := d.Settings.RejectedRetentionDays(ctx)
@@ -153,12 +155,6 @@ func (s *RejectedCleanup) cleanupRequest(ctx context.Context, requestID int64, s
 	if err != nil {
 		return fmt.Errorf("count rejected enrollment delivery rows: %w", err)
 	}
-	if d.Preview == nil && d.Audit == nil {
-		return s.deleteUnaudited(ctx, requestID, result)
-	}
-	if d.Preview == nil || d.Audit == nil {
-		return errors.New("rejected enrollment cleanup audit dependencies are incomplete")
-	}
 	impact, err := d.Preview.PreviewRequest(ctx, requestID)
 	if err != nil {
 		return fmt.Errorf("preview rejected enrollment cleanup: %w", err)
@@ -198,27 +194,6 @@ func (s *RejectedCleanup) deleteAudited(ctx context.Context, requestID int64, im
 		return fmt.Errorf("audit rejected enrollment cleanup: %w", err)
 	}
 	result.DeletedLateInvites += int64(impact.Counts.LateInvites)
-	result.DeletedOutboxRows += cancelled
-	result.DeletedRequests++
-	return nil
-}
-
-// deleteUnaudited is the compatibility path for focused unit tests that
-// compose the worker without the production audit dependencies.
-func (s *RejectedCleanup) deleteUnaudited(ctx context.Context, requestID int64, result *enrollmentNative.RejectedEnrollmentCleanupResult) error {
-	d := s.deps
-	deletedLateInvites, err := d.LateInvites.DeleteLateInvitesByUsedRequestID(ctx, requestID)
-	if err != nil {
-		return fmt.Errorf("delete used enrollment late invites: %w", err)
-	}
-	cancelled, err := d.Delivery.CancelRelatedEmails(ctx, enrollmentRequestDeliveryType, requestID, "related enrollment data deleted")
-	if err != nil {
-		return fmt.Errorf("cancel rejected enrollment delivery rows: %w", err)
-	}
-	if err := d.Requests.DeleteRequest(ctx, requestID); err != nil {
-		return fmt.Errorf("delete rejected enrollment request: %w", err)
-	}
-	result.DeletedLateInvites += deletedLateInvites
 	result.DeletedOutboxRows += cancelled
 	result.DeletedRequests++
 	return nil

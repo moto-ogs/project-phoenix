@@ -56,16 +56,11 @@ func (s *Service) FindVisit(ctx context.Context, id int64) (*studentpresence.Vis
 
 func (s *Service) ListVisits(ctx context.Context, filter studentpresence.VisitFilter) ([]studentpresence.Visit, error) {
 	var rows []*studentpresence.Visit
-	err := s.runQuery(ctx, filter.ForUpdate, "list_visits", func(ctx context.Context) (ports.Stats, error) {
+	err := s.runWrite(ctx, "list_visits", func(ctx context.Context) (ports.Stats, error) {
 		// Unknown IDs, including nonpositive legacy sentinels, simply do not
 		// match rows. They must not suppress valid IDs in the same bulk query.
 		if filter.Limit < 0 || filter.Offset < 0 {
 			return ports.Stats{}, errors.New("student presence: invalid visit filter")
-		}
-		if filter.ForUpdate {
-			if err := s.tx.Require(ctx); err != nil {
-				return ports.Stats{}, err
-			}
 		}
 		var stats ports.Stats
 		var err error

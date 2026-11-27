@@ -870,21 +870,6 @@ describe("DatabaseForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("disables buttons when isLoading is true", () => {
-    render(<DatabaseForm {...defaultProps} isLoading={true} />);
-
-    expect(
-      screen.getByRole("button", { name: /wird gespeichert/i }),
-    ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
-  });
-
-  it("shows loading text on submit button when isLoading", () => {
-    render(<DatabaseForm {...defaultProps} isLoading={true} />);
-
-    expect(screen.getByText("Wird gespeichert...")).toBeInTheDocument();
-  });
-
   it("renders checkbox fields correctly", () => {
     const sectionsWithCheckbox: FormSection[] = [
       {
@@ -1192,11 +1177,11 @@ describe("DatabaseForm", () => {
     consoleSpy.mockRestore();
   });
 
-  it("renders sticky action bar when stickyActions is true", () => {
-    render(<DatabaseForm {...defaultProps} stickyActions={true} />);
+  it("keeps the submit action in the sticky action bar", () => {
+    render(<DatabaseForm {...defaultProps} />);
 
-    const stickyContainer = document.querySelector(".sticky");
-    expect(stickyContainer).toBeInTheDocument();
+    const submitButton = screen.getByRole("button", { name: "Speichern" });
+    expect(submitButton.closest(".sticky")).toBeInTheDocument();
   });
 
   describe("double-submit prevention", () => {
@@ -1229,11 +1214,18 @@ describe("DatabaseForm", () => {
 
       // Button should show loading state
       await waitFor(() => {
-        expect(screen.getByText("Wird gespeichert...")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Wird gespeichert..." }),
+        ).toBeDisabled();
+        expect(
+          screen.getByRole("button", { name: "Abbrechen" }),
+        ).toBeDisabled();
       });
 
-      // Click again while submitting
-      fireEvent.click(screen.getByText("Wird gespeichert..."));
+      // A second submit can reach the form even without clicking its button.
+      const form = submitButton.closest("form");
+      expect(form).toBeInstanceOf(HTMLFormElement);
+      fireEvent.submit(form!);
 
       // onSubmit should only have been called once
       expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -1325,38 +1317,6 @@ describe("DatabaseForm", () => {
       });
 
       consoleSpy.mockRestore();
-    });
-
-    it("prevents submit while parent isLoading is true", () => {
-      const onSubmit = vi.fn();
-
-      const sectionsOptional: FormSection[] = [
-        {
-          title: "Test",
-          fields: [{ name: "field", label: "Field", type: "text" }],
-        },
-      ];
-
-      render(
-        <DatabaseForm
-          {...defaultProps}
-          sections={sectionsOptional}
-          onSubmit={onSubmit}
-          isLoading={true}
-        />,
-      );
-
-      // Button should be disabled
-      const submitButton = screen.getByRole("button", {
-        name: /wird gespeichert/i,
-      });
-      expect(submitButton).toBeDisabled();
-
-      // Try to click (should be blocked)
-      fireEvent.click(submitButton);
-
-      // onSubmit should not have been called
-      expect(onSubmit).not.toHaveBeenCalled();
     });
 
     it("highlights the failing field with red border and label on validation error", async () => {

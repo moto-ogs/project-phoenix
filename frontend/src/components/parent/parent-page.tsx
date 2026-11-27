@@ -42,9 +42,7 @@ export function ParentPage({
   loadingLabel,
   error,
   empty,
-  overlays,
   children,
-  className = "",
 }: Readonly<{
   /** Der Seitenkopf, meist `ParentPageHeader`. */
   header?: React.ReactNode;
@@ -54,14 +52,11 @@ export function ParentPage({
   loadingLabel?: string;
   error?: PageBodyError;
   empty?: PageBodyEmpty;
-  /** Dialoge der Seite; sie bleiben in jedem Zustand gemountet. */
-  overlays?: React.ReactNode;
   children?: React.ReactNode;
-  className?: string;
 }>) {
   const hasState = Boolean(loading) || Boolean(error) || Boolean(empty);
   return (
-    <div className={`w-full space-y-5 ${className}`}>
+    <div className="w-full space-y-5">
       {header}
       {hasState ? (
         <ParentPageState
@@ -75,7 +70,6 @@ export function ParentPage({
       ) : (
         children
       )}
-      {overlays}
     </div>
   );
 }

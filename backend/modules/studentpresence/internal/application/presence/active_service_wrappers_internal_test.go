@@ -14,18 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type roomRepoForActiveWrapperTest struct {
-	AttendanceRooms
-	rooms  []*SessionRoom
-	err    error
-	gotIDs []int64
-}
-
-func (r *roomRepoForActiveWrapperTest) FindByIDs(_ context.Context, ids []int64) ([]*SessionRoom, error) {
-	r.gotIDs = append([]int64(nil), ids...)
-	return r.rooms, r.err
-}
-
 type visitRepoForActiveWrapperTest struct {
 	StudentPresence
 	rows             []*VisitWithStudentDisplay

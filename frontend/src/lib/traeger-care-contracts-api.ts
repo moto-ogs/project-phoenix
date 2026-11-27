@@ -306,6 +306,7 @@ export interface CareContractList {
   readonly contracts: readonly CareContractSummary[];
   readonly counts: Readonly<Partial<Record<CareContractStatus, number>>>;
   readonly hasMore: boolean;
+  readonly revision: string;
 }
 
 /** "unknown" also stands for a state this build does not know. */
@@ -710,12 +711,19 @@ function keyToBackend(key: CandidateKey) {
   };
 }
 
+/** The columns the backend orders the list of contracts by (#8138). */
+export type CareContractSort = "child" | "school" | "start" | "status";
+
 export async function fetchCareContracts(
   filter: {
     status?: CareContractStatus;
     schoolId?: string;
     search?: string;
     offset?: number;
+    revision?: string;
+    /** The column the database orders every contract of the filter by. */
+    sort?: CareContractSort;
+    order?: "asc" | "desc";
   } = {},
 ): Promise<CareContractList> {
   const body = await bffJson("org", "GET /traeger/contracts/", {
@@ -724,6 +732,9 @@ export async function fetchCareContracts(
       school_id: filter.schoolId || undefined,
       search: filter.search || undefined,
       offset: filter.offset || undefined,
+      revision: filter.revision || undefined,
+      sort: filter.sort ?? undefined,
+      order: filter.sort ? (filter.order ?? undefined) : undefined,
     },
   });
   const counts: Partial<Record<CareContractStatus, number>> = {};
@@ -735,6 +746,7 @@ export async function fetchCareContracts(
     contracts: (body.contracts ?? []).map(summaryFromBackend),
     counts,
     hasMore: body.has_more,
+    revision: body.revision,
   };
 }
 

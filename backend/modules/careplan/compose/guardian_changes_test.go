@@ -215,13 +215,6 @@ type recordingExcusal struct {
 	careplan.PickupAutoExcusal
 	module careplan.Owner
 	calls  []string
-	synced []int64
-}
-
-func (r *recordingExcusal) Sync(_ context.Context, id int64) (bool, error) {
-	r.calls = append(r.calls, "sync")
-	r.synced = append(r.synced, id)
-	return true, nil
 }
 
 func (r *recordingExcusal) ReleaseBeforeDelete(ctx context.Context, row *careplan.PickupException) error {
@@ -233,70 +226,14 @@ func (r *recordingExcusal) ReleaseBeforeDelete(ctx context.Context, row *carepla
 	return nil
 }
 
-func (f guardianFixture) change(date careplan.Date, pickup *time.Time, reason string) careplan.GuardianPickupChange {
-	return careplan.GuardianPickupChange{
-		TenantID: tenant.FromContext(f.ctx), StudentID: f.studentID, GuardianAccountID: f.accountID,
-		Date: date, PickupTime: pickup, Reason: &reason,
-	}
-}
-
-func TestGuardianPickupExceptionCreatesUpdatesAndClearsTheGuardianLeg(t *testing.T) {
-	t.Parallel()
-	f := newGuardianFixture(t)
-	excusal := &recordingExcusal{module: f.module}
-	pickups, err := NewGuardianPickupExceptions(f.module, excusal)
-	require.NoError(t, err)
-
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(14, 0), "Arzt")))
-	rows := f.pickupRows(t, guardianMonday)
-	require.Len(t, rows, 1)
-	created := rows[0]
-	assert.Equal(t, careplan.ExceptionSourceGuardian, created.Source)
-	assert.Zero(t, created.CreatedBy)
-	require.NotNil(t, created.CreatedByGuardian)
-	assert.Equal(t, f.accountID, *created.CreatedByGuardian)
-	assert.Equal(t, "14:00", created.PickupTime.Format("15:04"))
-	assert.Equal(t, "Arzt", *created.Reason)
-	assert.Equal(t, []int64{created.ID}, excusal.synced)
-
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(13, 30), "Oma")))
-	rows = f.pickupRows(t, guardianMonday)
-	require.Len(t, rows, 1)
-	assert.Equal(t, created.ID, rows[0].ID, "the guardian row is updated in place")
-	assert.Equal(t, "13:30", rows[0].PickupTime.Format("15:04"))
-	assert.Equal(t, "Oma", *rows[0].Reason)
-	assert.Equal(t, []int64{created.ID, created.ID}, excusal.synced)
-
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, nil, "")))
-	assert.Empty(t, f.pickupRows(t, guardianMonday))
-	assert.Equal(t, []string{"sync", "sync", "release"}, excusal.calls, "a removed row is released first and not synced")
-
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianTuesday, nil, "")))
-	assert.Equal(t, []string{"sync", "sync", "release"}, excusal.calls, "clearing a missing row does nothing")
-}
-
-func TestGuardianPickupExceptionNeverTouchesStaffRows(t *testing.T) {
-	t.Parallel()
-	f := newGuardianFixture(t)
-	excusal := &recordingExcusal{module: f.module}
-	pickups, err := NewGuardianPickupExceptions(f.module, excusal)
-	require.NoError(t, err)
-	staff, err := f.module.CreatePickupException(f.ctx, careplan.PickupException{
-		StudentID: f.studentID, ExceptionDate: guardianMonday, PickupTime: wallClock(15, 0),
-		Source: careplan.ExceptionSourceStaff, CreatedBy: f.staffID,
+func (f guardianFixture) seedPickup(t *testing.T) careplan.PickupException {
+	t.Helper()
+	pickup, err := f.module.CreatePickupException(f.ctx, careplan.PickupException{
+		StudentID: f.studentID, ExceptionDate: guardianMonday, PickupTime: wallClock(14, 0),
+		Source: careplan.ExceptionSourceGuardian, CreatedByGuardian: &f.accountID,
 	})
 	require.NoError(t, err)
-
-	for _, pickup := range []*time.Time{wallClock(14, 0), nil} {
-		err = pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, pickup, "Arzt"))
-		require.ErrorIs(t, err, careplan.ErrPickupExceptionStaffOwned)
-	}
-	rows := f.pickupRows(t, guardianMonday)
-	require.Len(t, rows, 1)
-	assert.Equal(t, staff.ID, rows[0].ID)
-	assert.Equal(t, careplan.ExceptionSourceStaff, rows[0].Source)
-	assert.Equal(t, "15:00", rows[0].PickupTime.Format("15:04"))
-	assert.Empty(t, excusal.calls)
+	return pickup
 }
 
 func TestGuardianPickupExceptionWithoutExcusalCoupling(t *testing.T) {
@@ -305,10 +242,7 @@ func TestGuardianPickupExceptionWithoutExcusalCoupling(t *testing.T) {
 	pickups, err := NewGuardianPickupExceptions(f.module, nil)
 	require.NoError(t, err)
 
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(14, 0), "Arzt")))
-	rows := f.pickupRows(t, guardianMonday)
-	require.Len(t, rows, 1)
-	require.NoError(t, pickups.WithdrawGuardianPickupException(f.ctx, rows[0]))
+	require.NoError(t, pickups.WithdrawGuardianPickupException(f.ctx, f.seedPickup(t)))
 	assert.Empty(t, f.pickupRows(t, guardianMonday))
 	_, err = NewGuardianPickupExceptions(nil, nil)
 	require.Error(t, err)
@@ -320,96 +254,29 @@ func TestGuardianPickupExceptionWithdrawReleasesBeforeDelete(t *testing.T) {
 	excusal := &recordingExcusal{module: f.module}
 	pickups, err := NewGuardianPickupExceptions(f.module, excusal)
 	require.NoError(t, err)
-	require.NoError(t, pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(14, 0), "Arzt")))
-	rows := f.pickupRows(t, guardianMonday)
-	require.Len(t, rows, 1)
 
-	require.NoError(t, pickups.WithdrawGuardianPickupException(f.ctx, rows[0]))
+	require.NoError(t, pickups.WithdrawGuardianPickupException(f.ctx, f.seedPickup(t)))
 	assert.Empty(t, f.pickupRows(t, guardianMonday))
-	assert.Equal(t, []string{"sync", "release"}, excusal.calls)
+	assert.Equal(t, []string{"release"}, excusal.calls)
 }
 
-func TestGuardianPickupExceptionJoinsCallerTransaction(t *testing.T) {
+func TestGuardianPickupExceptionWithdrawJoinsCallerTransaction(t *testing.T) {
 	t.Parallel()
 	f := newGuardianFixture(t)
 	pickups, err := NewGuardianPickupExceptions(f.module, &recordingExcusal{module: f.module})
 	require.NoError(t, err)
-	rollback := errors.New("roll back the pickup change")
+	seeded := f.seedPickup(t)
+	rollback := errors.New("roll back the pickup withdrawal")
 
 	err = tenant.WithinCurrentTenant(f.ctx, func(txCtx context.Context) error {
-		require.NoError(t, pickups.ApplyGuardianPickupException(txCtx, f.change(guardianMonday, wallClock(14, 0), "Arzt")))
+		require.NoError(t, pickups.WithdrawGuardianPickupException(txCtx, seeded))
 		rows, listErr := f.module.ListPickupExceptions(txCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{f.studentID}, Date: guardianMonday})
 		require.NoError(t, listErr)
-		require.Len(t, rows, 1)
-		require.NoError(t, pickups.WithdrawGuardianPickupException(txCtx, rows[0]))
-		require.NoError(t, pickups.ApplyGuardianPickupException(txCtx, f.change(guardianTuesday, wallClock(14, 0), "Arzt")))
+		require.Empty(t, rows)
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)
-	assert.Empty(t, f.pickupRows(t, guardianMonday))
-	assert.Empty(t, f.pickupRows(t, guardianTuesday))
-}
-
-// hiddenPickupRows hides existing pickup exceptions from the command, so the
-// apply takes the create path while the row already exists: the same state a
-// concurrent guardian write produces between the read and the insert.
-type hiddenPickupRows struct{ careplan.Owner }
-
-func (hiddenPickupRows) ListPickupExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupException, error) {
-	return nil, nil
-}
-
-type failingSync struct {
-	careplan.PickupAutoExcusal
-	err error
-}
-
-func (s failingSync) Sync(context.Context, int64) (bool, error) { return false, s.err }
-
-func TestGuardianPickupExceptionClassifiesConcurrentWritesAsRaced(t *testing.T) {
-	t.Parallel()
-	f := newGuardianFixture(t)
-	visible, err := NewGuardianPickupExceptions(f.module, nil)
-	require.NoError(t, err)
-	require.NoError(t, visible.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(14, 0), "Arzt")))
-
-	// The raw driver error of a real duplicate insert, reused below as the
-	// failure of the excusal sync.
-	var duplicate driverError
-	t.Run("insert against an existing row", func(t *testing.T) {
-		racing, err := NewGuardianPickupExceptions(hiddenPickupRows{f.module}, nil)
-		require.NoError(t, err)
-		err = racing.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(13, 0), "Oma"))
-		require.ErrorIs(t, err, careplan.ErrGuardianPickupExceptionRaced)
-		var raw driverError
-		require.True(t, errors.As(err, &raw), "the raw database error stays in the chain")
-		assert.Equal(t, "23505", raw.Field('C'))
-		duplicate = raw
-	})
-	t.Run("excusal sync", func(t *testing.T) {
-		require.NotNil(t, duplicate, "the insert subtest provides a real unique violation")
-		pickups, err := NewGuardianPickupExceptions(f.module, failingSync{err: duplicate})
-		require.NoError(t, err)
-		err = pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(13, 0), "Oma"))
-		require.ErrorIs(t, err, careplan.ErrGuardianPickupExceptionRaced)
-		var raw driverError
-		require.True(t, errors.As(err, &raw), "the raw database error stays in the chain")
-		assert.Equal(t, "23505", raw.Field('C'))
-	})
-	t.Run("other failures stay unclassified", func(t *testing.T) {
-		syncErr := errors.New("sync unavailable")
-		pickups, err := NewGuardianPickupExceptions(f.module, failingSync{err: syncErr})
-		require.NoError(t, err)
-		err = pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianMonday, wallClock(13, 0), "Oma"))
-		require.ErrorIs(t, err, syncErr)
-		assert.NotErrorIs(t, err, careplan.ErrGuardianPickupExceptionRaced)
-		_, err = f.module.CreatePickupException(f.ctx, careplan.PickupException{
-			StudentID: f.studentID, ExceptionDate: guardianTuesday, PickupTime: wallClock(15, 0),
-			Source: careplan.ExceptionSourceStaff, CreatedBy: f.staffID,
-		})
-		require.NoError(t, err)
-		err = pickups.ApplyGuardianPickupException(f.ctx, f.change(guardianTuesday, wallClock(13, 0), "Oma"))
-		require.ErrorIs(t, err, careplan.ErrPickupExceptionStaffOwned)
-		assert.NotErrorIs(t, err, careplan.ErrGuardianPickupExceptionRaced)
-	})
+	rows := f.pickupRows(t, guardianMonday)
+	require.Len(t, rows, 1)
+	assert.Equal(t, seeded.ID, rows[0].ID)
 }

@@ -553,32 +553,6 @@ func TestGuardianComposition_EntryWritesNothingOnARefusedPhone(t *testing.T) {
 	assert.Equal(t, "Guardian", ctx.entryRow(t, studentID, guardianID).Guardian.FirstName, "the profile write rolls back with the refused phone")
 }
 
-// The single-field edits the staff form used before ADR 0311 carry no read
-// state: they answer the read-state refusal and write nothing, so a tab from
-// before the release reloads (#7953 removes them).
-func TestGuardianComposition_DeprecatedSingleEditsAreRefused(t *testing.T) {
-	t.Parallel()
-	ctx := setupGuardiansCompositionRoute(t)
-	admin := testutil.AdminTestClaims(999)
-	guardianID, phoneID, _ := ctx.createGuardianWithPhones(t)
-	studentID, _ := ctx.createStudent("Deprecated", "Edits", "1a")
-	linkID := ctx.link(studentID, guardianID, "pickup_only")
-	before := ctx.entryRow(t, studentID, guardianID)
-
-	for _, tc := range []struct{ method, path string }{
-		{http.MethodPut, fmt.Sprintf("/%d", guardianID)},
-		{http.MethodPut, fmt.Sprintf("/relationships/%d", linkID)},
-		{http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID)},
-		{http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID)},
-		{http.MethodPost, fmt.Sprintf("/%d/phone-numbers/%d/set-primary", guardianID, phoneID)},
-	} {
-		rr := ctx.do(t, admin, tc.method, tc.path, map[string]any{"first_name": "Alt", "guardian_role": "primary_guardian", "phone_number": "+49 1 2345"})
-		require.Equal(t, http.StatusConflict, rr.Code, "%s %s: %s", tc.method, tc.path, rr.Body.String())
-		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
-	}
-	assert.Equal(t, before.Version, ctx.entryRow(t, studentID, guardianID).Version, "no refused edit wrote anything")
-}
-
 // Staff remove a wrong address by emptying the field (#7770): the profile
 // stores NULL, so a second cleared profile does not collide on the
 // tenant-unique e-mail index.

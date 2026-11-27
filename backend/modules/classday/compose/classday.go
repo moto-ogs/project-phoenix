@@ -65,7 +65,7 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 		StudentNoteDependencies: deps.StudentNoteDependencies, HintScope: deps.WriteScope,
 	}
 	if deps.PickupTimes != nil && deps.ArrivalTimes != nil {
-		app.Times = application.DayTimeBinding{ClassDayPickupReader: deps.PickupTimes, Pickups: deps.PickupTimes, Arrivals: deps.ArrivalTimes}
+		app.Times = application.DayTimeBinding{ClassDayPickupReader: deps.PickupTimes, Arrivals: deps.ArrivalTimes}
 	}
 	if deps.CareDays != nil {
 		app.CareDays = application.CareDayBinding{Resolver: deps.CareDays}

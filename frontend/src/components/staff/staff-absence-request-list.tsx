@@ -302,7 +302,7 @@ export function StaffAbsenceRequestList({
       <>
         {revalidationError}
         <SectionCard padding="none">
-          <RequestRowHeader view="history" />
+          <RequestRowHeader />
           {rows.map((row) => (
             <RequestReviewCard
               key={row.id}

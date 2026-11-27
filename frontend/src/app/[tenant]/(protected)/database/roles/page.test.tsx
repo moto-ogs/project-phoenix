@@ -910,7 +910,7 @@ describe("RolesPage", () => {
 
   it("calls delete service after confirming deletion from the detail panel", async () => {
     setSelectedRole("1");
-    mockRemove.mockResolvedValueOnce(true);
+    mockRemove.mockResolvedValueOnce(undefined);
 
     render(<RolesPage />);
 
@@ -1025,7 +1025,7 @@ describe("RolesPage", () => {
 
     it("keeps a deleted role deleted when the reload fails", async () => {
       setSelectedRole("1");
-      mockRemove.mockResolvedValueOnce(true);
+      mockRemove.mockResolvedValueOnce(undefined);
       render(<RolesPage />);
       await screen.findByTestId("role-detail-panel");
       mockGetList.mockClear();

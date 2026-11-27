@@ -163,22 +163,6 @@ func (l *Local) RemoveObject(_ context.Context, key string) error {
 	return nil
 }
 
-// Stat returns the stored size in bytes.
-func (l *Local) ObjectSize(_ context.Context, key string) (int64, error) {
-	full, err := l.resolve(key)
-	if err != nil {
-		return 0, err
-	}
-	info, err := os.Stat(full)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, ErrNotFound
-		}
-		return 0, errors.New("storage: failed to stat object")
-	}
-	return info.Size(), nil
-}
-
 // replacementPrefix names the temporary files ReplaceObject stages next to
 // an object. The tenant export skips them; RemoveStaleReplacements clears
 // those an interrupted replacement left behind.

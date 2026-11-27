@@ -100,13 +100,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromActivityInstanceRecords) DeletePlannedNonSpontaneousInWindow(arg0 context.Context, arg1 calendar.Date, arg2 *calendar.Date, arg3 *int64, arg4 bool) (int64, error) {\n\tresult0, result1 := adapter.value.DeletePlannedNonSpontaneousInWindow(arg0, arg1, arg2, arg3, arg4)\n\treturn result0, result1\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromActivityInstanceRecords.DeletePlannedNonSpontaneousInWindow",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromActivityInstanceRecords) FindByActiveGroupID(arg0 context.Context, arg1 int64) (*ActivityInstance, error) {\n\tresult0, result1 := adapter.value.FindByActiveGroupID(arg0, arg1)\n\treturn fromNative2(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromActivityInstanceRecords.FindByActiveGroupID",
@@ -786,13 +779,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromStudentArrivalExceptionRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {\n\tresult0 := adapter.value.DeleteByStudentID(arg0, arg1)\n\treturn result0\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromStudentArrivalExceptionRecords.DeleteByStudentID",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromStudentArrivalExceptionRecords) FindByID(arg0 context.Context, arg1 int64) (*StudentArrivalException, error) {\n\tresult0, result1 := adapter.value.FindByID(arg0, arg1)\n\treturn fromNative12(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromStudentArrivalExceptionRecords.FindByID",
@@ -838,13 +824,6 @@
       "evidence": "func (adapter fromStudentArrivalNoteRecords) Create(arg0 context.Context, arg1 *StudentArrivalNote) error {\n\tresult0 := adapter.value.Create(arg0, toNative41(arg1))\n\treturn result0\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromStudentArrivalNoteRecords.Create",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (adapter fromStudentArrivalNoteRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {\n\tresult0 := adapter.value.DeleteByStudentID(arg0, arg1)\n\treturn result0\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromStudentArrivalNoteRecords.DeleteByStudentID",
       "owner": "modules/timetable"
     },
     {
@@ -947,13 +926,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromStudentPickupExceptionRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {\n\tresult0 := adapter.value.DeleteByStudentID(arg0, arg1)\n\treturn result0\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromStudentPickupExceptionRecords.DeleteByStudentID",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromStudentPickupExceptionRecords) FindByID(arg0 context.Context, arg1 int64) (*StudentPickupException, error) {\n\tresult0, result1 := adapter.value.FindByID(arg0, arg1)\n\treturn fromNative16(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromStudentPickupExceptionRecords.FindByID",
@@ -999,13 +971,6 @@
       "evidence": "func (adapter fromStudentPickupNoteRecords) Create(arg0 context.Context, arg1 *StudentPickupNote) error {\n\tresult0 := adapter.value.Create(arg0, toNative18(arg1))\n\treturn result0\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromStudentPickupNoteRecords.Create",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (adapter fromStudentPickupNoteRecords) DeleteByStudentID(arg0 context.Context, arg1 int64) error {\n\tresult0 := adapter.value.DeleteByStudentID(arg0, arg1)\n\treturn result0\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromStudentPickupNoteRecords.DeleteByStudentID",
       "owner": "modules/timetable"
     },
     {

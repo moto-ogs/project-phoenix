@@ -211,9 +211,6 @@ export interface ClassDayClassProps {
 
   /** Erklärung der Seite hinter dem Info-Knopf am Titel (#7567). */
   readonly info?: ReactNode;
-
-  /** Nur für Tests: fixiert den Vergleichstag für "Heute gemeldet". */
-  readonly now?: Date;
 }
 
 type HandoverChoice = "present" | "absent";
@@ -228,12 +225,9 @@ export function ClassDayClass({
   handOverClass,
   withdrawClassHandover,
   info,
-  now,
 }: ClassDayClassProps) {
-  // Kein Default-Prop: eine `new Date()` in der Signatur bricht die
-  // referenzielle Gleichheit bei jedem Render.
   const today = useBerlinToday();
-  const at = now ?? new Date();
+  const at = new Date();
   const searchParams = useSearchParams();
   const dateISO = classDayDateParam(searchParams.get("tag"));
   const openList = schoolDayListParam(searchParams.get("liste"));

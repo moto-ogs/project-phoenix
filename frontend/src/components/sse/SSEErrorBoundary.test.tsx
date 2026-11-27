@@ -72,18 +72,6 @@ describe("SSEErrorBoundary", () => {
     ]);
   });
 
-  it("renders custom fallback when provided", () => {
-    const customFallback = <div>Custom error message</div>;
-
-    render(
-      <SSEErrorBoundary fallback={customFallback}>
-        <ThrowError />
-      </SSEErrorBoundary>,
-    );
-
-    expect(screen.getByText("Custom error message")).toBeInTheDocument();
-  });
-
   it("applies correct styling to default fallback", () => {
     const { container } = render(
       <SSEErrorBoundary>

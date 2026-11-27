@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
@@ -66,21 +67,16 @@ func (s *service) attachLeaders(ctx context.Context, groups []NavigationGroup) e
 		if len(names) == 0 {
 			continue
 		}
-		if s.deps.Collate != nil {
-			slices.SortStableFunc(names, s.deps.Collate)
-		}
+		slices.SortStableFunc(names, collation.CompareGerman)
 		groups[i].Leaders = names
 	}
 	return nil
 }
 
-// sortGroups orders groups by name with the injected collation; the sort is
-// stable, so groups with equal names keep the directory order.
-func (s *service) sortGroups(groups []GroupRecord) {
-	if s.deps.Collate == nil {
-		return
-	}
-	slices.SortStableFunc(groups, func(a, b GroupRecord) int { return s.deps.Collate(a.Name, b.Name) })
+// sortGroups orders groups by German dictionary order. Equal names keep
+// their directory order.
+func sortGroups(groups []GroupRecord) {
+	slices.SortStableFunc(groups, func(a, b GroupRecord) int { return collation.CompareGerman(a.Name, b.Name) })
 }
 
 func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGroupID int64) ([]NavigationGroup, *GroupRecord, error) {
@@ -129,14 +125,14 @@ func (s *service) loadVisibleGroups(ctx context.Context, caller Caller, loadPers
 		if err != nil {
 			return nil, nil, fmt.Errorf("load tenant groups: %w", err)
 		}
-		s.sortGroups(groups)
+		sortGroups(groups)
 		return groups, personalIDs, nil
 	}
 	myGroups, err := loadPersonal(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load supervised groups: %w", err)
 	}
-	s.sortGroups(myGroups)
+	sortGroups(myGroups)
 	personalIDs := make(map[int64]bool, len(myGroups))
 	for _, group := range myGroups {
 		personalIDs[group.ID] = true

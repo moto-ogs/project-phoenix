@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { cn } from "~/lib/utils";
 import { GroupHeader, type GroupHeaderVariant } from "./group-header";
 
 export interface GroupDefinition<T> {
@@ -18,32 +17,23 @@ interface GroupedListProps<T> {
   groups: GroupDefinition<T>[];
   renderItem: (item: T) => ReactNode;
   keyFor: (item: T) => string;
-  defaultOpenIds?: string[];
   emptyState?: ReactNode;
-  className?: string;
 }
 
 export function GroupedList<T>({
   groups,
   renderItem,
   keyFor,
-  defaultOpenIds,
   emptyState,
-  className,
 }: GroupedListProps<T>) {
-  const initialOpen = useMemo(() => {
-    if (defaultOpenIds) return new Set(defaultOpenIds);
-    return new Set(groups.map((g) => g.id));
-  }, [defaultOpenIds, groups]);
-
-  const [openIds, setOpenIds] = useState<Set<string>>(initialOpen);
+  const [openIds, setOpenIds] = useState(
+    () => new Set(groups.map((g) => g.id)),
+  );
 
   // Track every group id we've ever seen so we can default *newly introduced*
   // groups to "open" without re-opening ones the user has explicitly collapsed.
   // This kicks in when the grouping mode flips (e.g. flat -> by-floor) and a
-  // brand new set of group ids appears. Seed with every id present at mount —
-  // not just the initially-open ones — so groups that were closed at mount
-  // don't get treated as "new" on first effect run.
+  // brand new set of group ids appears.
   const knownIdsRef = useRef<Set<string>>(new Set(groups.map((g) => g.id)));
 
   useEffect(() => {
@@ -81,7 +71,7 @@ export function GroupedList<T>({
   }
 
   return (
-    <div className={cn("flex-1 overflow-auto", className)}>
+    <div className="flex-1 overflow-auto">
       {groups.map((group) => {
         const isOpen = openIds.has(group.id);
         return (

@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
@@ -202,24 +201,6 @@ func (s *Service) FindOrganizationForMutation(ctx context.Context, id int64) (re
 		var found bool
 		var queryStats domain.OperationStats
 		result, found, queryStats, err = s.store.FindByID(txCtx, id, "UPDATE")
-		stats.Add(queryStats)
-		if err == nil && !found {
-			return organizationtenancy.ErrOrganizationNotFound
-		}
-		return err
-	})
-	return result, err
-}
-
-func (s *Service) FindOrganizationBySlug(ctx context.Context, slug string) (result organizationtenancy.Organization, err error) {
-	slug = strings.TrimSpace(strings.ToLower(slug))
-	if err := organizationtenancy.ValidateSlug(slug); err != nil {
-		return organizationtenancy.Organization{}, err
-	}
-	err = s.run(ctx, "find_organization_by_slug", func(txCtx context.Context, stats *domain.OperationStats) error {
-		var found bool
-		var queryStats domain.OperationStats
-		result, found, queryStats, err = s.store.FindBySlug(txCtx, slug)
 		stats.Add(queryStats)
 		if err == nil && !found {
 			return organizationtenancy.ErrOrganizationNotFound

@@ -217,16 +217,10 @@ type StudentRosterQuery interface {
 	// ListStudentRoster is the school's live roster on the given day: the
 	// children it currently cares for, with the identity each renders under.
 	ListStudentRoster(context.Context, string) ([]StudentRosterEntry, error)
-	// ListStudentRosterByGroup narrows the same roster to the given groups.
-	ListStudentRosterByGroup(context.Context, []int64, string) ([]StudentRosterEntry, error)
 	// ListStudentRosterOverlapping returns the children enrolled on at least
 	// one day of a window. Unlike the live roster it keeps children whose care
 	// has since ended and omits later enrolments.
 	ListStudentRosterOverlapping(context.Context, string, string, string) ([]StudentRosterEntry, error)
-	// ListEnrolledStudentIDsByNameAndBirthday resolves already-enrolled
-	// children by name and birthday. The tenant is explicit because the parent
-	// submit path runs outside a tenant transaction.
-	ListEnrolledStudentIDsByNameAndBirthday(context.Context, int64, string, string, string) ([]int64, error)
 }
 
 // StudentDirectoryCommand holds the owned rows a caller is about to write.

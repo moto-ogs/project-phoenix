@@ -110,7 +110,6 @@ describe("useChangeRequestsPending", () => {
       "messages-unread-refresh",
       "change-requests-refresh",
     ]);
-    expect(opts.refetchOnFocus).toBe(true);
   });
 
   // useSWRAuth prefixes school and account (no cross-tenant leak); the key

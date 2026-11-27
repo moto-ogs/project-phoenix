@@ -33,9 +33,6 @@ func (c *StaffImportConfig) PreloadReferenceData(ctx context.Context) error {
 
 	c.staffByPersonnelNumber = make(map[string]*indexedStaff)
 	c.staffByName = make(map[string][]*indexedStaff)
-	if c.Membership == nil || c.Persons == nil {
-		return nil
-	}
 	existing, err := c.Membership.ListStaff(ctx, ports.StaffFilter{})
 	if err != nil {
 		return fmt.Errorf("preload staff: %w", err)
@@ -115,12 +112,6 @@ func (c *StaffImportConfig) findStaffByLoginEmail(ctx context.Context, rawEmail 
 		return c.findStaffByPendingInvitation(ctx, email)
 	}
 
-	if c.Persons == nil || c.Membership == nil {
-		// Legacy wiring without the Stammdaten owners: the account itself is
-		// the duplicate marker, as before #2600.
-		id := accountID
-		return &id, nil
-	}
 	person, err := c.Persons.FindPersonByAccount(ctx, accountID)
 	if err != nil {
 		if errors.Is(err, ports.ErrPersonNotFound) {
@@ -152,7 +143,7 @@ func (c *StaffImportConfig) liveStaffIDByPerson(ctx context.Context, personID in
 // linked to an account. The invitation stores the imported person ID until it
 // is accepted, so e-mail remains a stable update key in that interval.
 func (c *StaffImportConfig) findStaffByPendingInvitation(ctx context.Context, email string) (*int64, error) {
-	if c.FindInvitedPeople == nil || c.Membership == nil {
+	if c.FindInvitedPeople == nil {
 		return nil, nil
 	}
 	people, err := c.FindInvitedPeople(ctx, email)
@@ -182,9 +173,6 @@ func (c *StaffImportConfig) findStaffByPendingInvitation(ctx context.Context, em
 // a failing row leaves nothing behind while the surrounding import
 // transaction keeps the other rows.
 func (c *StaffImportConfig) Create(ctx context.Context, row importModels.StaffImportRow) (int64, error) {
-	if c.Persons == nil || c.Membership == nil {
-		return 0, errors.New("staff import: Stammdaten owners are not wired")
-	}
 	var staffID int64
 	err := c.Transactions.Savepoint(ctx, func(ctx context.Context) error {
 		id, err := c.createRecords(ctx, row)
@@ -378,9 +366,6 @@ func (c *StaffImportConfig) writeQualifications(ctx context.Context, staffID int
 // value untouched. The role and the login are not touched — role changes and
 // invitations for existing people belong to the Personalverwaltung.
 func (c *StaffImportConfig) Update(ctx context.Context, staffID int64, row importModels.StaffImportRow) error {
-	if c.Persons == nil || c.Membership == nil {
-		return errors.New("staff import: Stammdaten owners are not wired")
-	}
 	if err := c.lockStaffPersonMerge(ctx); err != nil {
 		return err
 	}

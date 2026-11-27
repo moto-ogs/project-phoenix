@@ -474,14 +474,6 @@ func (s *Store) DeleteArrivalNote(ctx context.Context, id int64) (domain.Operati
 	}
 	return execAny(ctx, db.NewDelete().TableExpr(`schedule.student_arrival_notes AS "student_arrival_note"`).Where(`"student_arrival_note".id = ?`, id).Where(`"student_arrival_note".tenant_id = ?`, tid), "delete arrival note")
 }
-func (s *Store) DeleteArrivalNotesByStudent(ctx context.Context, id int64) (domain.OperationStats, error) {
-	db, tid, err := s.databaseForWrite(ctx, "delete arrival notes by student")
-	if err != nil {
-		return domain.OperationStats{}, err
-	}
-	return execAny(ctx, db.NewDelete().TableExpr(`schedule.student_arrival_notes AS "student_arrival_note"`).Where(`"student_arrival_note".tenant_id = ?`, tid).Where(`"student_arrival_note".student_id = ?`, id), "delete arrival notes by student")
-}
-
 func (s *Store) FindPickupSchedule(ctx context.Context, id int64) (careplan.PickupSchedule, bool, domain.OperationStats, error) {
 	db, tid, err := s.database(ctx)
 	if err != nil {

@@ -16,9 +16,7 @@ import {
   formatPickupTime,
   mergeSchedulesWithTemplate,
   formatWeekRange,
-  isSameDay,
   getWeekdayFromDate,
-  formatDateISO,
   getDayData,
   pickupScheduleSourceLabel,
 } from "./pickup-schedule-helpers";
@@ -494,29 +492,6 @@ describe("formatWeekRange", () => {
   });
 });
 
-describe("isSameDay", () => {
-  it("returns true for same day", () => {
-    const date1 = new Date("2024-01-15T10:00:00Z");
-    const date2 = new Date("2024-01-15T18:00:00Z");
-
-    expect(isSameDay(date1, date2)).toBe(true);
-  });
-
-  it("returns false for different days", () => {
-    const date1 = new Date("2024-01-15T10:00:00Z");
-    const date2 = new Date("2024-01-16T10:00:00Z");
-
-    expect(isSameDay(date1, date2)).toBe(false);
-  });
-
-  it("returns false for different months", () => {
-    const date1 = new Date("2024-01-15T10:00:00Z");
-    const date2 = new Date("2024-02-15T10:00:00Z");
-
-    expect(isSameDay(date1, date2)).toBe(false);
-  });
-});
-
 describe("getWeekdayFromDate", () => {
   it("returns 1 for Monday", () => {
     const monday = new Date("2024-01-15T12:00:00Z");
@@ -536,29 +511,6 @@ describe("getWeekdayFromDate", () => {
   it("returns null for Sunday", () => {
     const sunday = new Date("2024-01-21T12:00:00Z");
     expect(getWeekdayFromDate(sunday)).toBeNull();
-  });
-});
-
-describe("formatDateISO", () => {
-  it("formats date as YYYY-MM-DD", () => {
-    const date = new Date("2024-01-15T12:00:00Z");
-    const result = formatDateISO(date);
-
-    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  });
-
-  it("pads single-digit months", () => {
-    const date = new Date("2024-03-15T12:00:00Z");
-    const result = formatDateISO(date);
-
-    expect(result).toContain("-03-");
-  });
-
-  it("pads single-digit days", () => {
-    const date = new Date("2024-01-05T12:00:00Z");
-    const result = formatDateISO(date);
-
-    expect(result).toContain("-05");
   });
 });
 

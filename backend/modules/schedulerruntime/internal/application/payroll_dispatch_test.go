@@ -15,8 +15,8 @@ func TestPayrollDispatchTenantFailureIsReportedToTheScheduler(t *testing.T) {
 
 	failure := errors.New("payroll dispatch unavailable")
 	scheduler := unitScheduler(&unitSchedulerDependencies{
-		allTenantIDsLoader: func(context.Context) ([]int64, error) { return []int64{42}, nil },
-		logger:             slog.Default(),
+		schoolRepo: staticTenants(42),
+		logger:     slog.Default(),
 	})
 	scheduler.payrollDispatch = func(context.Context) (int, error) { return 0, failure }
 

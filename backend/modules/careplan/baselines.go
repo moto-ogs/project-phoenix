@@ -156,7 +156,6 @@ func (p *PickupBaselineProjection) OfferingWeeklyForDate(studentID int64, date c
 // care_offering rows are ignored.
 type PickupBaselineReader interface {
 	Project(ctx context.Context, studentIDs []int64, from, to calendar.Date) (*PickupBaselineProjection, error)
-	OfferingPickupForDate(ctx context.Context, studentID int64, date calendar.Date) (*PickupSchedule, error)
 	HasBookedOfferingPickupForWeekday(ctx context.Context, studentID int64, weekday int) (bool, error)
 }
 

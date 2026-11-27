@@ -78,11 +78,6 @@ export function openNotificationsSheet() {
   setSheetOpen(true);
 }
 
-/** Ob das Blatt offen ist, außerhalb von React (Tests, Auslöser). */
-export function isNotificationsSheetOpen(): boolean {
-  return sheetOpen;
-}
-
 export function closeNotificationsSheet() {
   setSheetOpen(false);
 }

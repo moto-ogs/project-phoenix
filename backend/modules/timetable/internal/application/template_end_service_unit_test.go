@@ -144,12 +144,8 @@ func TestTemplateEndFromDate_ReturnsSummaryAndDeletesOpenEndedWindow(t *testing.
 	assert.Equal(t, group.ID, supervisorRepo.groupID)
 	require.NotNil(t, instanceRepo.activityGroupID)
 	assert.Equal(t, group.ID, *instanceRepo.activityGroupID)
-	assert.Equal(t, calendar.Date(future), instanceRepo.from)
+	assert.Equal(t, future.String(), instanceRepo.from)
 	assert.Nil(t, instanceRepo.to)
-	// #1840: ending a series is destructive — it must hard-delete deviated
-	// rows too, so preservation is OFF.
-	assert.False(t, instanceRepo.preserveDeviations,
-		"template end must NOT preserve deviations (destructive series delete)")
 }
 
 func TestTemplateEndFromDate_ErrorBranches(t *testing.T) {
@@ -251,7 +247,7 @@ func templateEndUnitService(
 			ScheduleRepo:   scheduleRepo,
 			EnrollmentRepo: enrollmentRepo,
 			SupervisorRepo: supervisorRepo,
-			InstanceRepo:   fakeInstanceRows(instanceRepo),
+			InstanceRepo:   ports.InstanceRows{Plans: instanceRepo},
 			Today:          func() calendar.Date { return templateEndUnitToday },
 			Logger:         slog.New(slog.DiscardHandler),
 		},
@@ -362,25 +358,20 @@ func (r *templateEndUnitSupervisorRepo) CapActivePlannedSupervisors(_ context.Co
 }
 
 type templateEndUnitInstanceRepo struct {
-	deleted            int64
-	err                error
-	from               calendar.Date
-	to                 *calendar.Date
-	activityGroupID    *int64
-	preserveDeviations bool
+	timetable.ActivityInstanceCapability
+	deleted         int64
+	err             error
+	from            string
+	to              *string
+	activityGroupID *int64
 }
 
-func (r *templateEndUnitInstanceRepo) DeletePlannedNonSpontaneousInWindow(_ context.Context, from calendar.Date, to *calendar.Date, activityGroupID *int64, preserveDeviations bool) (int64, error) {
+func (r *templateEndUnitInstanceRepo) DeletePlannedActivityInstances(_ context.Context, from string, to *string, activityGroupID *int64) (int64, error) {
 	r.from = from
 	r.to = to
 	r.activityGroupID = activityGroupID
-	r.preserveDeviations = preserveDeviations
 	if r.err != nil {
 		return 0, r.err
 	}
 	return r.deleted, nil
-}
-
-func (r *templateEndUnitInstanceRepo) PropagateListKindToFutureInstances(context.Context, int64, *string, *string, calendar.Date) (int64, error) {
-	return 0, nil
 }

@@ -186,7 +186,6 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
 interface RoomDetailContentProps {
   readonly room: Room;
   readonly history: readonly RoomHistoryEntry[];
-  readonly onSelectionActiveChange?: (active: boolean) => void;
   // When true, the tenant has gdpr.attendance_log_enabled = false and the
   // "Belegungshistorie" section must be hidden deliberately (issue #1425).
   // Without this flag the section already collapses when `history` is
@@ -203,7 +202,6 @@ interface RoomDetailContentProps {
 export function RoomDetailContent({
   room,
   history,
-  onSelectionActiveChange,
   historyDisabled = false,
   historyError = null,
   showOccupancy = true,
@@ -282,11 +280,7 @@ export function RoomDetailContent({
       </SectionCard>
 
       {showOccupancy ? (
-        <StudentsInRoomSection
-          roomId={room.id}
-          roomName={room.name}
-          onSelectionActiveChange={onSelectionActiveChange}
-        />
+        <StudentsInRoomSection roomId={room.id} roomName={room.name} />
       ) : null}
 
       {showOccupancy ? <LoadErrorAlert error={historyError} /> : null}

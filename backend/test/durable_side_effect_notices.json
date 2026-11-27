@@ -207,10 +207,6 @@
     "fingerprint": "3d79e06dc114db3c08b02ba709d51ff3",
     "reason": "Transaction-hook forwarder for replayable session/device cleanup wakes only. Revocation markers and token deletion commit first; existing pending-wipe and orphan-subscription reconcilers recover missed wakes."
   },
-  "modules/identityaccess/internal/application/account_administration.go:AccountAdministration.clearPendingWipe:RegisterAfterCommit@3e43feb5149476fc4fbacac8a094a852#1": {
-    "fingerprint": "3e43feb5149476fc4fbacac8a094a852",
-    "reason": "Optional settlement of a prior durable deactivation-wipe marker after reactivation. The reconciler rechecks account.Active and marks that intent complete without revoking new sessions; losing this fast path is harmless."
-  },
   "modules/identityaccess/internal/application/operator_account_access.go:OperatorAccountAccess.activateAccount:RegisterAfterCommit@7acfe03a1eafa61dba6dfcf7f10ef621#1": {
     "fingerprint": "7acfe03a1eafa61dba6dfcf7f10ef621",
     "reason": "Optional settlement of a prior durable deactivation-wipe marker after reactivation. The reconciler rechecks account.Active and marks that intent complete without revoking new sessions; losing this fast path is harmless."
@@ -412,10 +408,6 @@
     "reason": "Realtime child/message/profile read-model invalidation only. Domain changes and timeline/message/read markers commit in the transaction; reconnect/refetch reads them if this wake is lost."
   },
   "workflows/parentportal/internal/care/care_exception_writes.go:Service.withdrawCareException:RegisterAfterCommit@ff1b15a90c0dc0c250da5d4c1b0cf3ab#1": {
-    "fingerprint": "ff1b15a90c0dc0c250da5d4c1b0cf3ab",
-    "reason": "Realtime child/message/profile read-model invalidation only. Domain changes and timeline/message/read markers commit in the transaction; reconnect/refetch reads them if this wake is lost."
-  },
-  "workflows/parentportal/internal/care/care_exception_writes.go:Service.writeCareException:RegisterAfterCommit@ff1b15a90c0dc0c250da5d4c1b0cf3ab#1": {
     "fingerprint": "ff1b15a90c0dc0c250da5d4c1b0cf3ab",
     "reason": "Realtime child/message/profile read-model invalidation only. Domain changes and timeline/message/read markers commit in the transaction; reconnect/refetch reads them if this wake is lost."
   },

@@ -67,11 +67,7 @@ func checkMealPlanStaleSave(t *testing.T, api *goldenRuntime) {
 	status, body = send(http.MethodPut, path, `{"dishes":[{"dish":"Nudeln"}],"expected_version":"`+saved.Data.Version+`"}`)
 	require.Equal(t, http.StatusOK, status, "the answered version saves the same day again: %s", body)
 
-	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}],"expected":[{"dish":"Suppe"}]}`)
-	require.Equal(t, http.StatusConflict, status, "the deprecated save checks the day as read: %s", body)
-	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}]}`)
-	require.Equal(t, http.StatusConflict, status, "the deprecated save without the day as read is refused: %s", body)
-	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}],"expected":[{"dish":" Nudeln "},{"dish":""}]}`)
-	require.Equal(t, http.StatusOK, status, "the deprecated day as read compares in stored form: %s", body)
-	assert.Equal(t, "Eintopf", read().Dishes[0].Dish)
+	status, body = send(http.MethodPut, path, `{"dishes":[],"expected_version":"`+read().Version+`"}`)
+	require.Equal(t, http.StatusOK, status, "an empty list clears the day against its current version: %s", body)
+	assert.Empty(t, read().Dishes)
 }

@@ -9,8 +9,3 @@ type Reference struct {
 }
 
 type ReferenceLookup func(context.Context) ([]Reference, error)
-
-type References struct {
-	Groups ReferenceLookup
-	Rooms  ReferenceLookup
-}

@@ -150,8 +150,8 @@ export function useShiftEditDraft({
   seed,
   reloadShift,
 }: {
-  /** One dialog opening; null while closed. */
-  readonly opening: string | null;
+  /** Identifies the stored shift or the new shift being edited. */
+  readonly opening: string;
   /** The stored shift being edited; null when creating. */
   readonly stored: StoredShift | null;
   /** The fields a new shift starts with. */
@@ -223,10 +223,7 @@ export function useShiftEditDraft({
     string,
     SeriesResult
   >({
-    key:
-      opening !== null && seriesId !== null
-        ? staffTimeKeys.shiftSeries(seriesId)
-        : null,
+    key: seriesId !== null ? staffTimeKeys.shiftSeries(seriesId) : null,
     fetcher: () => staffShiftSeriesService.getSeries(seriesId ?? ""),
     token: (rule) => rule.version,
     toDraft: seriesEditorFields,

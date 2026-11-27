@@ -11,7 +11,7 @@ import type { DeviceSpec } from "./devices";
 /** Web-Größen, in denen jedes Bild zusätzlich als WebP entsteht. */
 export const WEBP_WIDTHS = [640, 960, 1280, 1600, 2400, 3200] as const;
 
-export const BEZEL_DIR = join(import.meta.dirname, "bezels");
+const BEZEL_DIR = join(import.meta.dirname, "bezels");
 
 /**
  * Rahmt ein Rohbild. Das Rohbild liegt unter dem Bezel: dessen Bildschirm ist
@@ -21,10 +21,9 @@ export const BEZEL_DIR = join(import.meta.dirname, "bezels");
 export async function frameMockup(
   raw: Buffer,
   device: DeviceSpec,
-  bezelDir: string = BEZEL_DIR,
 ): Promise<Buffer> {
   const { file, width, height, screen } = device.bezel;
-  const bezel = await readFile(join(bezelDir, file));
+  const bezel = await readFile(join(BEZEL_DIR, file));
   const meta = await sharp(bezel).metadata();
   if (meta.width !== width || meta.height !== height) {
     throw new Error(

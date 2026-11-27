@@ -1073,22 +1073,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "binding_digest": "6573758712041ce49c12b19ae2952063",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "binding_digest": "2d6e4d75a085a2c2b64dd6e0450f48de",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CountActiveVisitsByActiveGroupID",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.CreateActiveGroup",
       "binding_digest": "1a94065c46062ce2cd53e404d4422462",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.CreateActiveGroup",
@@ -1249,22 +1233,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "binding_digest": "5ae8117fbe07f7be4603d1a2ac0853cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "binding_digest": "3aaed5969ebdc6bc8cbdf3597cf60837",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.FindVisitsByStudentID",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ForceStartActivitySessionWithSupervisors",
       "binding_digest": "35a2f9b87a8786aebe3d81b9877a2dbf",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ForceStartActivitySessionWithSupervisors",
@@ -1422,22 +1390,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisit",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisit",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "binding_digest": "1625dfa5d92436dc5dd28150fcc4dc64",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentCurrentVisitWithRoom",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "binding_digest": "cfbe4e20cc6755447f57dfb23bcdf5dc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentCurrentVisitWithRoom",
       "target_owner": "student-presence"
     },
     {

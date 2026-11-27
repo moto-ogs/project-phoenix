@@ -72,7 +72,7 @@ func TestVisitFacadeRollbackRetryAndCompletedHistory(t *testing.T) {
 	assert.NotNil(t, rows[1].ExitTime)
 }
 
-func TestVisitFacadeCannotReadLockOrModifyAnotherTenant(t *testing.T) {
+func TestVisitFacadeCannotReadOrModifyAnotherTenant(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
@@ -93,7 +93,7 @@ func TestVisitFacadeCannotReadLockOrModifyAnotherTenant(t *testing.T) {
 	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
 		_, err := module.FindVisit(txCtx, foreign.ID)
 		require.ErrorIs(t, err, studentpresence.ErrVisitNotFound)
-		rows, err := module.ListVisits(txCtx, studentpresence.VisitFilter{IDs: []int64{foreign.ID}, ForUpdate: true})
+		rows, err := module.ListVisits(txCtx, studentpresence.VisitFilter{IDs: []int64{foreign.ID}})
 		require.NoError(t, err)
 		assert.Empty(t, rows)
 		locations, err := module.ListVisitLocations(txCtx, studentpresence.VisitLocationFilter{VisitFilter: studentpresence.VisitFilter{IDs: []int64{foreign.ID}}})
@@ -113,8 +113,6 @@ func TestVisitFacadeCannotReadLockOrModifyAnotherTenant(t *testing.T) {
 	stored, err := module.FindVisit(foreignCtx, foreign.ID)
 	require.NoError(t, err)
 	assert.Nil(t, stored.ExitTime)
-	_, err = module.ListVisits(ctx, studentpresence.VisitFilter{ForUpdate: true})
-	require.Error(t, err, "locks require a surrounding transaction")
 	_, err = module.ListVisits(context.Background(), studentpresence.VisitFilter{})
 	require.Error(t, err, "missing tenant cannot become an unscoped query")
 }

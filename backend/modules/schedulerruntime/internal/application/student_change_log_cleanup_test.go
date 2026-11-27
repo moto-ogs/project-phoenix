@@ -28,7 +28,7 @@ func TestStudentChangeLogCleanup_DeleteFailureRollsBackDeletionAudit(t *testing.
 		studentChangeLogCleanup: func(context.Context) (ports.StudentChangeLogCleanupResult, error) {
 			return ports.StudentChangeLogCleanupResult{}, deleteErr
 		},
-		cleanupClock: func() time.Time { return scheduleNow },
+		now: func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingDataCleanupEnabled: true,
@@ -49,7 +49,7 @@ func TestStudentChangeLogCleanup_DeleteFailureRollsBackDeletionAudit(t *testing.
 
 	s.checkAndRunStudentChangeLogCleanup(context.Background(), &ScheduledTask{Name: "student-change-log-cleanup"})
 
-	require.Equal(t, []string{"rollback"}, results, "the failed sweep rolls its tenant transaction back")
+	require.Equal(t, []string{"commit", "rollback"}, results, "tenant discovery commits, but the failed sweep rolls its tenant transaction back")
 	_, ranToday := s.lastStudentChangeLogCleanup.Load(schedulerUnitTenantID)
 	assert.False(t, ranToday, "failed cleanup must remain eligible for retry")
 }
@@ -65,7 +65,7 @@ func TestStudentChangeLogCleanup_CommitsAndMarksTheDay(t *testing.T) {
 			calls++
 			return ports.StudentChangeLogCleanupResult{EditsDeleted: 2, StudentsAffected: 1, RetentionDays: 90}, nil
 		},
-		cleanupClock: func() time.Time { return scheduleNow },
+		now: func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			boolValues:   map[string]bool{settingDataCleanupEnabled: true},
 			stringValues: map[string]string{settingDataCleanupTime: scheduleNow.Format("15:04")},

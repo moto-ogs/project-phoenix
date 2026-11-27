@@ -40,12 +40,12 @@ import { useLatest } from "~/lib/hooks/use-latest";
  * keeps the protective guard unless it explicitly opts out.
  *
  * Missed-event recovery (`refetchOnFocus`): the SSE bridge stops reconnecting
- * after maxReconnectAttempts and stays "failed". If that happens while the tab is
- * backgrounded, a message arriving in that window dispatches NO window event, so a
+ * after five reconnect attempts and stays "failed". If the tab is backgrounded,
+ * a message arriving in that window dispatches NO window event, so a
  * consumer whose ONLY refresh path is this hook (the staff thread page, the parent
  * conversation view) never learns about it — returning to the tab shows a lit
  * unread badge while the open conversation stays stale until a manual reload. The
- * unread badges already heal via useUnreadCount's `refetchOnFocus`; passing
+ * unread badges already refetch on focus through useUnreadCount; passing
  * `refetchOnFocus: true` here refetches the active conversation on the SAME window
  * `focus` event so the open chat recovers in lockstep with its badge.
  */

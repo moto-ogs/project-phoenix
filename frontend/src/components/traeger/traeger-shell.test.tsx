@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
 import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { TraegerShellProvider } from "~/lib/shell-auth-context";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 const { mockPathname, sessionUser } = vi.hoisted(() => ({
   mockPathname: vi.fn(() => "/"),
@@ -98,14 +97,12 @@ describe("TraegerShell", () => {
     vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
     // The test page counts as the Träger host.
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
   });
 
   it("leads the logo to the start: dashboard with its right, else the school list (#7646)", () => {

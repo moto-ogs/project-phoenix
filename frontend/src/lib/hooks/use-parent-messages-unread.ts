@@ -20,7 +20,6 @@ export function useParentMessagesUnread(enabled: boolean) {
       enabled,
       fetcher: fetchMessagesUnreadCount,
       eventNames: ["parent-messages-unread-refresh"],
-      refetchOnFocus: true,
       // Collapse a burst of parent-message events into one count refetch.
       eventDebounceMs: 500,
     },

@@ -3,8 +3,7 @@ package facilities
 import (
 	"context"
 	"errors"
-	"maps"
-	"slices"
+	"fmt"
 	"time"
 
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -37,21 +36,6 @@ func NewServiceWithConfig(config ServiceConfig) Service {
 	return &service{OccupancyProjection: config.Occupancy, config: config}
 }
 
-func (s *service) GetRoomWithOccupancy(ctx context.Context, id int64) (RoomWithOccupancy, error) {
-	room, err := s.config.Rooms.FindRoom(ctx, id)
-	if err != nil {
-		return RoomWithOccupancy{}, wrap("get room with occupancy", err)
-	}
-	rows, err := s.config.Occupancy(ctx, []facilitiesModule.Room{room})
-	if err != nil {
-		return RoomWithOccupancy{}, wrap("get room with occupancy", err)
-	}
-	if len(rows) != 1 {
-		return RoomWithOccupancy{}, wrap("get room with occupancy", errors.New("occupancy projection returned an invalid result"))
-	}
-	return rows[0], nil
-}
-
 func (s *service) CreateRoom(ctx context.Context, room *facilitiesModule.Room) error {
 	if room == nil {
 		return wrap("create room", errors.New("room cannot be nil"))
@@ -82,7 +66,7 @@ func (s *service) FindRoomByName(ctx context.Context, name string) (*facilitiesM
 	if err != nil {
 		return nil, wrap("find room by name", err)
 	}
-	return roomPointer(room), nil
+	return &room, nil
 }
 
 func (s *service) FindToiletRoom(ctx context.Context, exclude int64) (*facilitiesModule.Room, error) {
@@ -90,7 +74,7 @@ func (s *service) FindToiletRoom(ctx context.Context, exclude int64) (*facilitie
 	if err != nil {
 		return nil, wrap("find toilet room", err)
 	}
-	return roomPointer(room), nil
+	return &room, nil
 }
 
 func (s *service) GetAvailableRoomsWithOccupancy(ctx context.Context, capacity int) ([]RoomWithOccupancy, error) {
@@ -104,34 +88,6 @@ func (s *service) GetAvailableRoomsWithOccupancy(ctx context.Context, capacity i
 	return rows, wrap("get available rooms with occupancy", err)
 }
 
-func (s *service) GetBuildingList(ctx context.Context) ([]string, error) {
-	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{})
-	if err != nil {
-		return nil, wrap("get building list", err)
-	}
-	values := make(map[string]struct{})
-	for _, room := range rooms {
-		if room.Building != "" {
-			values[room.Building] = struct{}{}
-		}
-	}
-	return slices.Sorted(maps.Keys(values)), nil
-}
-
-func (s *service) GetCategoryList(ctx context.Context) ([]string, error) {
-	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{})
-	if err != nil {
-		return nil, wrap("get category list", err)
-	}
-	values := make(map[string]struct{})
-	for _, room := range rooms {
-		if room.Category != nil && *room.Category != "" {
-			values[*room.Category] = struct{}{}
-		}
-	}
-	return slices.Sorted(maps.Keys(values)), nil
-}
-
 func (s *service) GetRoomHistory(ctx context.Context, roomID int64, start, end time.Time, staffID *int64) ([]facilitiesModule.RoomSessionEntry, error) {
 	if _, err := s.config.Rooms.FindRoom(ctx, roomID); err != nil {
 		return nil, wrap("get room history", err)
@@ -140,13 +96,11 @@ func (s *service) GetRoomHistory(ctx context.Context, roomID int64, start, end t
 	return rows, wrap("get room history", err)
 }
 
-func roomPointer(room facilitiesModule.Room) *facilitiesModule.Room { return &room }
-
 func wrap(operation string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &FacilitiesError{Op: operation, Err: err}
+	return fmt.Errorf("facilities error during %s: %w", operation, err)
 }
 
 // ProjectRoomOccupancy lets the immutable projection implement its read port

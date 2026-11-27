@@ -29,7 +29,6 @@ type NativeInstanceRecords interface {
 	MaxID(ctx context.Context) (int64, error)
 	MarkCompleted(ctx context.Context, instanceID int64, completedAt time.Time) error
 	CompleteActiveByActiveGroupIDs(ctx context.Context, activeGroupIDs []int64, completedAt time.Time) (int64, error)
-	DeletePlannedNonSpontaneousInWindow(ctx context.Context, from calendar.Date, to *calendar.Date, activityGroupID *int64, preserveDeviations bool) (int64, error)
 	PropagateListKindToFutureInstances(ctx context.Context, activityGroupID int64, previousKind, newKind *string, after calendar.Date) (int64, error)
 	UpdateColumns(ctx context.Context, instance *schedulerecords.ActivityInstance, columns ...string) (int64, error)
 	OldestBefore(ctx context.Context, dateColumn string, cutoff *calendar.Date) (*calendar.Date, error)

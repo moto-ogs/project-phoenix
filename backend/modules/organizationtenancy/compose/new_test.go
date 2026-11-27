@@ -193,14 +193,16 @@ func TestModuleCommandRollsBackWithOuterUnitOfWork(t *testing.T) {
 	slug := fmt.Sprintf("rollback-organization-%d", time.Now().UnixNano())
 	wantErr := errors.New("abort outer command")
 
+	var created organizationtenancy.Organization
 	err := tenant.WithinAdmin(ctx, func(txCtx context.Context) error {
-		_, createErr := module.CreateOrganization(txCtx, organizationtenancy.CreateOrganization{Name: "Rollback", Slug: slug, Active: true})
+		var createErr error
+		created, createErr = module.CreateOrganization(txCtx, organizationtenancy.CreateOrganization{Name: "Rollback", Slug: slug, Active: true})
 		require.NoError(t, createErr)
 		return wantErr
 	})
 	require.ErrorIs(t, err, wantErr)
 
-	_, err = module.FindOrganizationBySlug(ctx, slug)
+	_, err = module.FindOrganization(ctx, created.ID.Int64())
 	assert.ErrorIs(t, err, organizationtenancy.ErrOrganizationNotFound)
 }
 

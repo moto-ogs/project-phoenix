@@ -4,10 +4,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
 
-import {
-  RequestReviewCard,
-  ReviewDiffPanel,
-} from "~/components/students/request-review-card";
+import { RequestReviewCard } from "~/components/students/request-review-card";
+import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -98,7 +96,6 @@ function currentStatusLabel(status: string | undefined): string {
 export function ExcusedRequestReviewItem({
   row,
   onDecided,
-  grouped = false,
   expectedVersion,
   onStale,
   currentStatusByDate,
@@ -108,7 +105,6 @@ export function ExcusedRequestReviewItem({
 }: Readonly<{
   row: StaffExcusedRequest;
   onDecided: (notice: string) => void;
-  grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
@@ -184,7 +180,6 @@ export function ExcusedRequestReviewItem({
     <RequestReviewCard
       type="excused"
       childName={`${row.first_name} ${row.last_name}`}
-      grouped={grouped}
       typeLabel={absenceLabel(row)}
       summary={datesSummary(row.dates)}
       submittedAt={row.created_at}
@@ -193,7 +188,6 @@ export function ExcusedRequestReviewItem({
         setReason(value);
         setReasonError(false);
       }}
-      reasonPlaceholder="Begründung (Pflicht bei Ablehnung)"
       reasonError={
         reasonError
           ? "Für eine Ablehnung ist eine Begründung erforderlich."

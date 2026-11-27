@@ -25,9 +25,9 @@ type AccountAdministrationStore interface {
 	// FindManageableAccountRecord reads one account within the caller's
 	// visibility.
 	FindManageableAccountRecord(ctx context.Context, id int64, visibility domain.AccountVisibility) (domain.ManagedAccountRecord, bool, domain.OperationStats, error)
-	// SetManageableAccountActive flips the active flag within the caller's
+	// DeactivateManageableAccount clears the active flag within the caller's
 	// visibility. found=false when the predicate matched no row.
-	SetManageableAccountActive(ctx context.Context, id int64, active bool, visibility domain.AccountVisibility) (bool, domain.OperationStats, error)
+	DeactivateManageableAccount(ctx context.Context, id int64, visibility domain.AccountVisibility) (bool, domain.OperationStats, error)
 	// WriteAccountCredential is the one credential writer (#6289): it moves
 	// the credential generation on with every write; see the adapter.
 	WriteAccountCredential(ctx context.Context, accountID int64, write domain.CredentialWrite) (bool, domain.OperationStats, error)

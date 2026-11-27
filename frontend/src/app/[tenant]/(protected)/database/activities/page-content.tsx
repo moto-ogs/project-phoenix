@@ -242,10 +242,7 @@ function ActivitiesPageContent() {
   const handleCreateActivity = useCallback(
     async (data: Partial<Activity>) => {
       // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath.
-      const payload = activitiesConfig.form.transformBeforeSubmit
-        ? activitiesConfig.form.transformBeforeSubmit(data)
-        : data;
-      const created = await service.create(payload);
+      const created = await service.create(data);
       toastSuccess(`Die Aktivität „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
       await tenantMutate(tenantAdminKeys.activities());
@@ -257,12 +254,9 @@ function ActivitiesPageContent() {
     async (data: Partial<Activity>) => {
       if (!selectedActivity) return;
       // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
-      const payload = activitiesConfig.form.transformBeforeSubmit
-        ? activitiesConfig.form.transformBeforeSubmit(data)
-        : data;
       let saved: Activity | null;
       try {
-        saved = await service.update(selectedActivity.id, payload);
+        saved = await service.update(selectedActivity.id, data);
       } catch (err) {
         // Jemand hat die Aktivität seit dem Lesen geändert: das Formular
         // zeigt den gespeicherten Stand, sobald er gelesen ist (ADR 0311).
@@ -287,8 +281,7 @@ function ActivitiesPageContent() {
     setDeletePending(true);
     deleteErrors.clear();
     try {
-      const deleted = await service.remove(selectedActivity.id);
-      if (!deleted) return;
+      await service.remove(selectedActivity.id);
       toastSuccess(`Die Aktivität „${selectedActivity.name}“ ist gelöscht.`);
       handleDeleteCancel();
       setFormResetCounter(0);
@@ -354,7 +347,7 @@ function ActivitiesPageContent() {
           <DatabaseFormModal<Activity>
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
-            mode="create"
+
             config={activitiesConfig}
             onSubmit={handleCreateActivity}
             errorPath={createErrors}

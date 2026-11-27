@@ -4,11 +4,6 @@ import (
 	"strings"
 )
 
-type studentGuardianRecord interface {
-	GuardianAuthorizationData() (relationshipType, role string, primary, emergency, pickup bool, permissions map[string]interface{})
-	SetGuardianAuthorizationData(role string, permissions map[string]interface{})
-}
-
 const (
 	GuardianPermissionPortalAccess     = "parent_portal.access"
 	GuardianPermissionSickNoteSubmit   = "parent_portal.sick_note.submit"
@@ -173,22 +168,4 @@ func StudentGuardianPermissionSet(role string) map[string]interface{} {
 		}
 	}
 	return perms
-}
-
-// StudentGuardianHasPermission reports whether the student-guardian relationship
-// grants the named permission. A boolean value is returned directly; any other
-// non-nil value is treated as granted, matching the prior model behavior.
-func StudentGuardianHasPermission(sg studentGuardianRecord, permission string) bool {
-	if sg == nil {
-		return false
-	}
-	_, _, _, _, _, permissions := sg.GuardianAuthorizationData()
-	value, exists := permissions[permission]
-	if !exists {
-		return false
-	}
-	if boolValue, ok := value.(bool); ok {
-		return boolValue
-	}
-	return value != nil
 }

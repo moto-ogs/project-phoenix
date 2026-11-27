@@ -216,7 +216,7 @@ func TestEmailSubscriptionOwnDecision(t *testing.T) {
 	_, err = svc.EmailSubscribed(emailCtx(), emailAccountA, granted, notifications.TypePickupUpcoming)
 	require.ErrorIs(t, err, notifications.ErrUnknownNotificationType, "push decisions stay on the profile page")
 	require.ErrorIs(t, svc.SetEmailSubscribed(emailCtx(), emailAccountA, granted, notifications.TypePickupUpcoming, true), notifications.ErrUnknownNotificationType)
-	require.ErrorIs(t, svc.SetForAccount(emailCtx(), emailAccountA, testEmailType, true), notifications.ErrUnknownNotificationType,
+	require.ErrorIs(t, svc.SetForPortalAccount(emailCtx(), emailAccountA, notifications.PortalStaff, testEmailType, true), notifications.ErrUnknownNotificationType,
 		"the profile page cannot switch an e-mail type on past its permission check")
 	assert.Len(t, repo.upserted, 1)
 }

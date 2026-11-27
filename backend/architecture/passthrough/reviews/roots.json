@@ -3412,27 +3412,7 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalExceptionsByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalNotesByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/carePlanRecords.DeleteArrivalSchedulesByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeletePickupExceptionsByStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/carePlanRecords.DeletePickupNotesByStudent",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

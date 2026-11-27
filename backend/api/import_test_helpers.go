@@ -19,7 +19,6 @@ import (
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
-	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -171,10 +170,6 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 	if err != nil {
 		return ImportTestModule{}, nil, nil, err
 	}
-	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
-	if err != nil {
-		return ImportTestModule{}, nil, nil, err
-	}
 	organizations, err := owners.NewOrganizationTenancy(db)
 	if err != nil {
 		return ImportTestModule{}, nil, nil, err
@@ -195,7 +190,7 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 	}
 	dataImports := imports{
 		Student: newStudentImport(
-			runtime, rfid, groups, rooms, persons, wrapPersonBatches(personBatches(persons), options.WrapPersonBatches),
+			runtime, rfid, groups, persons, wrapPersonBatches(personBatches(persons), options.WrapPersonBatches),
 			studentGuardians, students.CarePlan, NewStudentPresenceForTests(db), auditCompose.NewConsentRecorder(command), options.Today, importTestCohorts(db, options),
 		),
 		Staff:     newStaffImport(runtime, rfid, auth.Invitation, organizations, persons, membership, workTime),
@@ -207,7 +202,7 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 	}
 	module, err := importTestModuleOf(dataImports, observations,
 		func() (importModels.ClassListConverter, error) {
-			return composeClassListConversion(runtime, command, rfid, groups, rooms, persons, students.CarePlan, NewStudentPresenceForTests(db), membership)
+			return composeClassListConversion(runtime, command, rfid, groups, persons, students.CarePlan, NewStudentPresenceForTests(db), membership)
 		})
 	return module, persons, membership, err
 }

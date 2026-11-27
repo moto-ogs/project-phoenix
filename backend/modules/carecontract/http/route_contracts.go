@@ -14,7 +14,14 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 func ContractRouteContracts() []common.RouteContract {
 	school := common.QueryParam{Name: "school_id", Kind: common.QueryID}
 	filter := []common.QueryParam{{Name: "status", Kind: common.QueryString}, school, {Name: "search", Kind: common.QueryString}}
-	list := append([]common.QueryParam{{Name: "offset", Kind: common.QueryInt}, {Name: "limit", Kind: common.QueryInt}}, filter...)
+	// The column and the direction of the order, for the list and its file.
+	filter = append(filter, common.QueryParam{Name: "sort", Kind: common.QueryString, Values: carecontract.ContractSorts},
+		common.QueryParam{Name: "order", Kind: common.QueryString, Values: []string{contractOrderAscending, contractOrderDescending}})
+	list := append([]common.QueryParam{
+		{Name: "offset", Kind: common.QueryInt},
+		{Name: "limit", Kind: common.QueryInt},
+		{Name: "revision", Kind: common.QueryString},
+	}, filter...)
 	export := append([]common.QueryParam{common.ListFormatQuery}, filter...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: list, Response: carecontract.ContractList{}},

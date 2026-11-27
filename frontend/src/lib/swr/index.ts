@@ -43,7 +43,6 @@ export { stampSWRSeeds, writeSWRSeeds, useSWRSeedFrom } from "./seed";
 export { IsolatedSWRCache, SWRSeedBoundary } from "./config-boundaries";
 export { SWRScopeBoundary } from "./scope-boundary";
 export {
-  LIVE_FALLBACK_INTERVAL_MS,
   LIVE_RECONCILE_INTERVAL_MS,
   useLiveEventScope,
   useLiveRefreshInterval,

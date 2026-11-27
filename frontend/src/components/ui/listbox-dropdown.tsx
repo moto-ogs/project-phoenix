@@ -237,12 +237,6 @@ interface ListboxDropdownProps<K extends string> {
     selectedLabel: string;
     open: boolean;
   }) => ReactNode;
-  /**
-   * Controlled open state. Omit to let the listbox own it; pass it when the
-   * caller has to close the menu itself after an action of its own (adding an
-   * entry, saving a name).
-   */
-  readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
   /**
    * Renders a filter field at the top of the menu. The caller owns the text
@@ -413,7 +407,6 @@ export function ListboxDropdown<K extends string>({
   triggerRole = "button",
   testId,
   renderTrigger,
-  open: openProp,
   onOpenChange,
   searchValue,
   onSearchChange,
@@ -460,14 +453,14 @@ export function ListboxDropdown<K extends string>({
   const lastScrollFocusIndexRef = useRef<number | null>(null);
   const lastScrollMenuStyleRef = useRef<CSSProperties | null>(null);
   const wasDisabledRef = useRef(disabled);
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const open = !disabled && (openProp ?? uncontrolledOpen);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const open = !disabled && menuOpen;
   const setOpen = useCallback(
     (next: boolean) => {
-      if (openProp === undefined) setUncontrolledOpen(next);
+      setMenuOpen(next);
       onOpenChange?.(next);
     },
-    [onOpenChange, openProp],
+    [onOpenChange],
   );
   const searchable = onSearchChange !== undefined;
   const searchRef = useRef<HTMLInputElement>(null);

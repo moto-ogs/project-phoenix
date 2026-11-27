@@ -83,7 +83,6 @@
     "loadError": "The currently saved times could not be loaded. Please reload the page and try again.",
     "errorDisabled": "Changing the pickup time is not enabled for this {careTerm}.",
     "errorStaffConflict": "The school has already set a special pick-up time for this day. Please contact the team.",
-    "errorRaced": "This day was just changed. Please reload the page and try again.",
     "errorPastDate": "Changes cannot be saved for days in the past.",
     "errorTooFar": "That day is too far in the future. Please pick a day within the next two months.",
     "staffSet": "The school has already set a special pick-up time for this day: {pickup}.",

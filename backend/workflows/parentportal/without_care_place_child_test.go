@@ -153,8 +153,8 @@ func TestParentPortal_ChildWithoutCarePlace(t *testing.T) {
 
 	t.Run("OGS writes are refused with their own error", func(t *testing.T) {
 		pickup := time.Date(2026, 8, 25, 15, 0, 0, 0, time.UTC)
-		_, err := svc.SubmitCareExceptionWithReason(ctx, without.AccountID, without.StudentID,
-			careFixtureToday().AddDays(1), &pickup, "Arzttermin")
+		_, err := svc.SubmitPickupChange(ctx, without.AccountID, without.StudentID,
+			parentService.PickupChangeSubmission{Date: careFixtureToday().AddDays(1), PickupTime: pickup, Reason: "Arzttermin"})
 		require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace)
 
 		_, err = svc.PostChildMessage(ctx, without.AccountID, without.StudentID, "Hallo")
@@ -164,8 +164,7 @@ func TestParentPortal_ChildWithoutCarePlace(t *testing.T) {
 			careFixtureToday().AddDays(1), true)
 		require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace)
 
-		_, err = svc.CreateCareScheduleRequest(ctx, without.AccountID, without.StudentID,
-			map[string]any{"note": "Montag früher"})
+		_, err = svc.CreateSignedCareScheduleRequest(ctx, without.AccountID, without.StudentID, map[string]any{"note": "Montag früher"}, nil)
 		require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace)
 
 		// A pickup note alone asks for OGS pickup too.

@@ -44,7 +44,6 @@ type Store interface {
 	UsableLateInvite(context.Context, string, int64, time.Time, bool) (*enrollment.LateInvite, error)
 	LateInviteByUsedRequestID(context.Context, int64) (*enrollment.LateInvite, error)
 	MarkLateInviteUsed(context.Context, int64, int64, time.Time) error
-	DeleteLateInvitesByUsedRequestID(context.Context, int64) (int64, error)
 	DeleteLateInvitesSettledBefore(context.Context, time.Time) (int64, error)
 	PhaseExpirySnapshots(context.Context, enrollment.PhaseExpiryInput) ([]*enrollment.PhaseExpirySnapshot, error)
 	InsertChild(ctx context.Context, child *enrollment.RequestChild) error
@@ -87,7 +86,6 @@ type Store interface {
 	CountPhaseRequests(context.Context, int64) (int, error)
 	FullyRejectedRequestsBefore(context.Context, time.Time) ([]int64, error)
 	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error)
-	DeleteRequest(context.Context, int64) error
 	CreateRequestGuardian(context.Context, *enrollment.RequestGuardian) error
 	RequestGuardians(context.Context, []int64) ([]*enrollment.RequestGuardian, error)
 	DeleteRequestGuardians(context.Context, int64) error

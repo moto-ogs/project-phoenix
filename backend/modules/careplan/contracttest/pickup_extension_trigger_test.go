@@ -169,6 +169,6 @@ func TestPickupExtension_LaterWeekdayOpensTask(t *testing.T) {
 		StudentID: h.student, Weekday: timetable.WeekdayMonday, PickupTime: *wallClockAt(16, 15), CreatedBy: h.staff,
 	}))
 	require.Len(t, h.rows(t), 1)
-	require.NoError(t, h.svc.DeleteAllStudentPickupSchedules(h.ctx, h.student))
+	require.NoError(t, h.svc.UpsertBulkStudentPickupSchedules(h.ctx, h.student, nil))
 	assert.Empty(t, h.rows(t), "a removed weekday closes its task")
 }

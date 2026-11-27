@@ -83,8 +83,6 @@ func TestReminderNotificationTickHonoursRegistryDefault(t *testing.T) {
 	t.Run("no tenant override runs the tick", func(t *testing.T) {
 		sched, tick := reminderTickScheduler(registryDefaultSettings{bools: map[string]bool{settingNotificationsDispatchEnabled: true, settingNotificationsOnDutyOnly: false}})
 
-		// No db/schoolRepo wired, so forEachTenantSettings runs the body once
-		// without tenant context, which is enough to exercise the gate.
 		sched.checkAndRunReminderNotifications(context.Background(), &ScheduledTask{Name: "reminder-notifications"})
 
 		require.Len(t, tick.calls, 1,

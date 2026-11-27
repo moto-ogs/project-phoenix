@@ -12,10 +12,6 @@ func (PickupTimeDomain) Name() string {
 	return "pickup"
 }
 
-func (PickupTimeDomain) CollisionPolicy() domain.ExceptionCollisionPolicy {
-	return domain.ExceptionCollisionUpdate
-}
-
 func (PickupTimeDomain) ScheduleFields(row *careplan.PickupSchedule) domain.EffectiveScheduleFields {
 	return domain.EffectiveScheduleFields{
 		StudentID: row.StudentID,
@@ -80,13 +76,6 @@ func (PickupTimeDomain) NewException(fields domain.EffectiveExceptionFields) *ca
 	row.CreatedAt = fields.CreatedAt
 	row.SetTenantID(fields.TenantID)
 	return row
-}
-
-func (PickupTimeDomain) AssignException(
-	target *careplan.PickupException,
-	source *careplan.PickupException,
-) {
-	*target = *source
 }
 
 func (PickupTimeDomain) NoteFields(row *careplan.PickupNote) domain.EffectiveNoteFields {

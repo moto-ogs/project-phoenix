@@ -27,11 +27,9 @@ type ArrivalPlans interface {
 	// GetWeeklySchedulesByStudentIDsForDate returns the full recurring arrival
 	// plan applicable on date in one batch projection.
 	GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*ArrivalSchedule, error)
-	GetStudentArrivalScheduleForWeekday(ctx context.Context, studentID int64, weekday int) (*ArrivalSchedule, error)
 	UpsertStudentArrivalSchedule(ctx context.Context, scheduleData *ArrivalSchedule) error
 	UpsertBulkStudentArrivalSchedules(ctx context.Context, studentID int64, schedules []*ArrivalSchedule) error
 	DeleteStudentArrivalSchedule(ctx context.Context, scheduleID int64) error
-	DeleteAllStudentArrivalSchedules(ctx context.Context, studentID int64) error
 }
 
 // ArrivalExceptions manages dated deviations from the weekly plan.
@@ -48,10 +46,6 @@ type ArrivalExceptions interface {
 	// children on date in one statement, keyed by child; a child without one
 	// has no entry.
 	GetStudentArrivalExceptionsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*ArrivalException, error)
-	GetStudentArrivalExceptions(ctx context.Context, studentID int64) ([]*ArrivalException, error)
-	GetUpcomingStudentArrivalExceptions(ctx context.Context, studentID int64) ([]*ArrivalException, error)
-	CreateStudentArrivalException(ctx context.Context, exception *ArrivalException) error
-	UpdateStudentArrivalException(ctx context.Context, exception *ArrivalException) error
 	DeleteStudentArrivalException(ctx context.Context, exceptionID, studentID int64) error
 	// CreateOrReclaimExceptionForClass rechecks membership under the student lock
 	// before writing a per-child exception on behalf of a school class.
@@ -67,14 +61,11 @@ type ArrivalExceptions interface {
 // ArrivalNotes manages the notes attached to a student's care days.
 type ArrivalNotes interface {
 	GetStudentArrivalNoteByID(ctx context.Context, noteID int64) (*ArrivalNote, error)
-	GetStudentArrivalNotes(ctx context.Context, studentID int64) ([]*ArrivalNote, error)
-	GetStudentArrivalNotesForDate(ctx context.Context, studentID int64, date calendar.Date) ([]*ArrivalNote, error)
 	CreateStudentArrivalNote(ctx context.Context, note *ArrivalNote) error
 	// UpdateStudentArrivalNote changes a note read at expectedVersion
 	// (ArrivalNoteVersion); a changed note is refused with readstate.ErrChanged.
 	UpdateStudentArrivalNote(ctx context.Context, note *ArrivalNote, expectedVersion string) error
 	DeleteStudentArrivalNote(ctx context.Context, noteID int64) error
-	DeleteAllStudentArrivalNotes(ctx context.Context, studentID int64) error
 }
 
 // ArrivalTimes resolves the effective plan and its dated presentation.
@@ -84,7 +75,6 @@ type ArrivalTimes interface {
 	GetStudentArrivalDataForDate(ctx context.Context, studentID int64, date calendar.Date) (*StudentArrivalData, error)
 	GetStudentArrivalDataForDateRange(ctx context.Context, studentID int64, from, to calendar.Date) (*StudentArrivalData, error)
 	GetStudentsWithStoredArrivalSchedules(ctx context.Context, studentIDs []int64) (map[int64]bool, error)
-	GetEffectiveArrivalTimeForDate(ctx context.Context, studentID int64, date calendar.Date) (*EffectiveArrivalTime, error)
 }
 
 // BulkArrivalTimes is the tenant-scoped effective-time projection used by dashboards.

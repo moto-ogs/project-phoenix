@@ -19,8 +19,7 @@ var (
 	errRuleConflict = errors.New("thing conflicts")
 )
 
-// fakeDomainError mirrors the domain wrapper shape (EducationError,
-// FacilitiesError, ...) used by the typed-unwrap packages.
+// fakeDomainError mirrors the domain wrapper shape used by the typed-unwrap packages.
 type fakeDomainError struct {
 	Op  string
 	Err error

@@ -270,9 +270,7 @@ type ClassListImportDeps struct {
 // RelationshipResolver preloads and resolves the names in an upload.
 type RelationshipResolver interface {
 	PreloadReferenceData(context.Context) error
-	PreloadRooms(context.Context) error
 	ResolveGroup(context.Context, string) (*int64, []importModels.ValidationError)
-	ResolveRoom(context.Context, string) (*int64, []importModels.ValidationError)
 }
 
 // GuardianPortDecorator binds a recording or failing owner port in tests.

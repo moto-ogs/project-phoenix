@@ -186,7 +186,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
   it("loads available staff and excludes the current caregiver from replacements", async () => {
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activitySupervisions: [
             {
@@ -219,7 +218,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
       new ApiError("invalid data", 503, { code: "general.unavailable" }),
     );
 
-    render(<CaregiverBlockerResolutionPanel active state={createState()} />);
+    render(<CaregiverBlockerResolutionPanel state={createState()} />);
 
     expect(
       await screen.findByText(
@@ -233,7 +232,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activeSupervisions: [
             { id: "7", groupName: "Gruppe Blau", startDate: "2026-04-05" },
@@ -271,7 +269,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activeSubstitutions: [
             {
@@ -309,7 +306,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activitySupervisions: [
             {
@@ -360,7 +356,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activitySupervisions: [
             {
@@ -405,7 +400,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           activitySupervisions: [
             {
@@ -438,7 +432,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           groupAssignments: [
             {
@@ -490,7 +483,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           groupAssignments: [
             {
@@ -549,7 +541,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           groupAssignments: [
             {
@@ -635,7 +626,6 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           groupAssignments: [
             {
@@ -707,13 +697,13 @@ describe("CaregiverBlockerResolutionPanel", () => {
       return Promise.resolve({
         ok: false,
         status: 409,
-        text: async () => JSON.stringify({ code: "general.changed_since_read" }),
+        text: async () =>
+          JSON.stringify({ code: "general.changed_since_read" }),
       });
     });
 
     render(
       <CaregiverBlockerResolutionPanel
-        active
         state={createState({
           groupAssignments: [
             {
@@ -751,7 +741,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("weist auf den Rückweg hin, sobald nichts mehr offen ist", () => {
-    render(<CaregiverBlockerResolutionPanel active state={createState()} />);
+    render(<CaregiverBlockerResolutionPanel state={createState()} />);
 
     expect(
       screen.getByText(

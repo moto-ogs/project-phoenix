@@ -765,7 +765,7 @@ function MeinRaumPageContent() {
       dashboard.isWaitingForUrlRoomSelection ||
       roster.isWaitingForTimetableRoster
     ) {
-      return <ActiveSupervisionLoadingView withHeader={false} />;
+      return <ActiveSupervisionLoadingView />;
     }
 
     if (openRoomLayout) {

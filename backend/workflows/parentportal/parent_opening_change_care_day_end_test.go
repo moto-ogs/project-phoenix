@@ -41,12 +41,18 @@ func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, features.PickupChangeCareDayEnded, "the changed closing time switches the hint on")
 
-	_, err = service(11, 59).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+	_, err = service(11, 59).SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.NoError(t, err, "before the changed closing time today stays open")
 
-	_, err = service(12, 0).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+	_, err = service(12, 0).SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded, "the changed closing time ends today's pickup changes")
-	_, err = service(12, 0).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday.AddDays(1), cutoffPickupTime(), "", "Arzttermin", nil)
+	_, err = service(12, 0).SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday.AddDays(1), PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.NoError(t, err, "a later day keeps its regular hours")
 
 	t.Run("andere Schule ohne geänderte Öffnungszeit", func(t *testing.T) {
@@ -56,9 +62,13 @@ func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 		features, err := service(12, 0).ChildFeatures(ctx, other.AccountID, other.StudentID)
 		require.NoError(t, err)
 		require.False(t, features.PickupChangeCareDayEnded, "another school's hint keeps operations.session_end_time")
-		_, err = service(12, 0).SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+		_, err = service(12, 0).SubmitPickupChange(ctx, other.AccountID, other.StudentID, parentService.PickupChangeSubmission{
+			Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+		})
 		require.NoError(t, err, "the change of one school never closes another")
-		_, err = service(16, 0).SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+		_, err = service(16, 0).SubmitPickupChange(ctx, other.AccountID, other.StudentID, parentService.PickupChangeSubmission{
+			Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+		})
 		require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded, "there operations.session_end_time still holds")
 	})
 }

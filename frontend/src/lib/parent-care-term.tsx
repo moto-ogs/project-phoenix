@@ -3,7 +3,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import {
   CareFacilityTermScope,
-  normalizeCareFacilityTerm,
   useCareTermValues,
 } from "~/lib/care-facility-term";
 import {
@@ -18,43 +17,7 @@ import {
   useParentFeatures,
 } from "~/lib/hooks/use-parent-resources";
 
-/**
- * The term texts without a child use (#6082): one account can have children
- * at schools with different terms. One term when all schools share it,
- * otherwise every term once, in the order of the child list („OGS/GTS“), so
- * no family reads a name that is wrong for one of its schools. Undefined
- * while no term is known; the texts then say „OGS“.
- */
-export function accountCareTerm(
-  terms: readonly (string | undefined)[],
-): string | undefined {
-  const distinct = [
-    ...new Set(
-      terms
-        .filter((term): term is string => term !== undefined)
-        .map(normalizeCareFacilityTerm),
-    ),
-  ];
-  return distinct.length > 0 ? distinct.join("/") : undefined;
-}
-
 interface ParentCareTerms {
-  /** The term for texts without a child. */
-  readonly account: string | undefined;
-  /** The term of one child's school, else the account's term. */
-  readonly forChild: (studentId: string | undefined) => string | undefined;
-  /**
-   * The term of the account's children at one school, else the account's
-   * term: for a text that names a school, not a child (a parent letter).
-   */
-  readonly forSchool: (schoolName: string | undefined) => string | undefined;
-  /** The `{careTerm}` value for one child's row in a list of children. */
-  readonly termOf: (studentId: string | undefined) => string;
-  /**
-   * The `{careTerm}` value for a row that names a school, not a child (a
-   * group message): the term of the account's children at that school.
-   */
-  readonly termOfSchool: (schoolName: string | undefined) => string;
   /** The declined term for texts without a child (#8136). */
   readonly accountCare: CareTermValues | undefined;
   /** The declined term of one child's school, else the account's. */
@@ -75,11 +38,6 @@ const DEFAULT_CARE = careTermValuesOf(undefined);
 
 /** Outside the parents shell no school is known: every text says „OGS“. */
 const NO_TERMS: ParentCareTerms = {
-  account: undefined,
-  forChild: () => undefined,
-  forSchool: () => undefined,
-  termOf: () => normalizeCareFacilityTerm(undefined),
-  termOfSchool: () => normalizeCareFacilityTerm(undefined),
   accountCare: undefined,
   careForChild: () => undefined,
   careForSchool: () => undefined,
@@ -123,11 +81,6 @@ function useLoadedParentCareTerms(enabled: boolean): ParentCareTerms {
     const valuesOfSchool = (schoolName: string | undefined) =>
       careForSchool(schoolName) ?? DEFAULT_CARE;
     return {
-      account: accountCare?.careTerm,
-      forChild: (studentId) => careForChild(studentId)?.careTerm,
-      forSchool: (schoolName) => careForSchool(schoolName)?.careTerm,
-      termOf: (studentId) => valuesOf(studentId).careTerm,
-      termOfSchool: (schoolName) => valuesOfSchool(schoolName).careTerm,
       accountCare,
       careForChild,
       careForSchool,

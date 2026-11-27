@@ -12,10 +12,6 @@ func (ArrivalTimeDomain) Name() string {
 	return "arrival"
 }
 
-func (ArrivalTimeDomain) CollisionPolicy() domain.ExceptionCollisionPolicy {
-	return domain.ExceptionCollisionReject
-}
-
 func (ArrivalTimeDomain) ScheduleFields(row *careplan.ArrivalSchedule) domain.EffectiveScheduleFields {
 	return domain.EffectiveScheduleFields{
 		StudentID: row.StudentID,
@@ -60,13 +56,6 @@ func (ArrivalTimeDomain) NewException(fields domain.EffectiveExceptionFields) *c
 	row.CreatedAt = fields.CreatedAt
 	row.SetTenantID(fields.TenantID)
 	return row
-}
-
-func (ArrivalTimeDomain) AssignException(
-	target *careplan.ArrivalException,
-	source *careplan.ArrivalException,
-) {
-	*target = *source
 }
 
 func (ArrivalTimeDomain) NoteFields(row *careplan.ArrivalNote) domain.EffectiveNoteFields {

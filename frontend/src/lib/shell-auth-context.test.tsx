@@ -69,7 +69,6 @@ vi.mock("~/lib/operator-url", () => ({
 }));
 
 vi.mock("~/lib/school-url", () => ({
-  schoolAbsoluteUrl: (path: string) => path,
   schoolPath: (path: string) => path,
   schoolPortalLoginUrl: mockSchoolPortalLoginUrl,
 }));
@@ -89,12 +88,10 @@ vi.mock("~/lib/swr", () => ({
 }));
 
 vi.mock("~/lib/parent-url", () => ({
-  parentAbsoluteUrl: (path: string) => path,
   parentPath: (path: string) => path,
 }));
 
 vi.mock("~/lib/caterer-url", () => ({
-  catererAbsoluteUrl: (path: string) => path,
   catererPath: (path: string) => path,
 }));
 

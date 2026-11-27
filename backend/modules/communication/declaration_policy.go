@@ -18,7 +18,3 @@ func (DeclarationPolicy) AllowedActions(deadline *time.Time, canSubmit bool, lat
 func (DeclarationPolicy) OwesAction(deadline *time.Time, canSubmit bool, latest, state string, now time.Time) bool {
 	return DeclarationOwesAction(DeclarationRules{Deadline: deadline}, canSubmit, latest, state, now)
 }
-
-func (DeclarationPolicy) ActionAllowed(deadline *time.Time, canSubmit bool, latest, action string, now time.Time) bool {
-	return DeclarationActionAllowed(DeclarationRules{Deadline: deadline}, canSubmit, latest, action, now)
-}

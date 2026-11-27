@@ -45,8 +45,9 @@ func TestCompatibilityServiceDelegatesWritesToOwner(t *testing.T) {
 
 	roomID := time.Now().UnixNano()
 	owner := &ownerStub{room: facilitiesModule.Room{ID: roomID, Name: "Igelraum"}}
-	service := newRetainedServiceWithConfig(ServiceConfig{
+	service := NewServiceWithConfig(ServiceConfig{
 		Rooms: owner,
+		Today: fixedServiceToday,
 		Occupancy: func(_ context.Context, rooms []facilitiesModule.Room) ([]RoomWithOccupancy, error) {
 			return []RoomWithOccupancy{{Room: &rooms[0]}}, nil
 		},
@@ -68,18 +69,20 @@ func TestCompatibilityServiceDelegatesWritesToOwner(t *testing.T) {
 func TestCompatibilityLookupsReturnNilOnOwnerFailure(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("database unavailable")
-	service := newRetainedServiceWithConfig(ServiceConfig{
+	service := NewServiceWithConfig(ServiceConfig{
 		Rooms:     &ownerStub{err: failure},
+		Today:     fixedServiceToday,
 		Occupancy: func(context.Context, []facilitiesModule.Room) ([]RoomWithOccupancy, error) { return nil, nil },
 		History: func(context.Context, int64, time.Time, time.Time, *int64) ([]facilitiesModule.RoomSessionEntry, error) {
 			return nil, nil
 		},
 	})
 
-	room, err := service.GetRoom(context.Background(), time.Now().UnixNano())
-	require.Nil(t, room)
+	history, err := service.GetRoomHistory(context.Background(), 41, time.Time{}, time.Time{}, nil)
+	require.Nil(t, history)
 	require.ErrorIs(t, err, failure)
-	room, err = service.FindRoomByName(context.Background(), "Igelraum")
+	require.EqualError(t, err, "facilities error during get room history: database unavailable")
+	room, err := service.FindRoomByName(context.Background(), "Igelraum")
 	require.Nil(t, room)
 	require.ErrorIs(t, err, failure)
 	room, err = service.FindToiletRoom(context.Background(), 0)
@@ -90,18 +93,20 @@ func TestCompatibilityLookupsReturnNilOnOwnerFailure(t *testing.T) {
 func TestCompatibilityListsReturnNilOnOwnerFailure(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("database unavailable")
-	service := newRetainedServiceWithConfig(ServiceConfig{
+	service := NewServiceWithConfig(ServiceConfig{
 		Rooms:     &ownerStub{err: failure},
+		Today:     fixedServiceToday,
 		Occupancy: func(context.Context, []facilitiesModule.Room) ([]RoomWithOccupancy, error) { return nil, nil },
 		History: func(context.Context, int64, time.Time, time.Time, *int64) ([]facilitiesModule.RoomSessionEntry, error) {
 			return nil, nil
 		},
 	})
 
-	rooms, err := service.FindRoomsByCategory(context.Background(), "Gruppenraum")
+	rooms, err := service.ListRooms(context.Background())
 	require.Nil(t, rooms)
 	require.ErrorIs(t, err, failure)
-	rooms, err = service.GetAvailableRooms(context.Background(), 10)
+	require.EqualError(t, err, "facilities error during list rooms: database unavailable")
+	rooms, err = service.GetAvailableRoomsWithOccupancy(context.Background(), 10)
 	require.Nil(t, rooms)
 	require.ErrorIs(t, err, failure)
 }
@@ -115,14 +120,14 @@ type roomServiceStub struct {
 
 func (s *roomServiceStub) FindToiletRoom(context.Context, int64) (*facilitiesModule.Room, error) {
 	if s.toilet == nil {
-		return nil, ErrRoomNotFound
+		return nil, facilitiesModule.ErrRoomNotFound
 	}
 	return s.toilet, nil
 }
 
 func (s *roomServiceStub) FindRoomByName(context.Context, string) (*facilitiesModule.Room, error) {
 	if s.schulhof == nil {
-		return nil, ErrRoomNotFound
+		return nil, facilitiesModule.ErrRoomNotFound
 	}
 	return s.schulhof, nil
 }
@@ -217,45 +222,6 @@ func TestSchulhofStatusPrefersCallersSupervisedGroup(t *testing.T) {
 	require.True(t, status.IsUserSupervising)
 	require.Equal(t, 1, status.StudentCount)
 	require.Equal(t, "Ada Lovelace", status.Supervisors[0].Name)
-}
-
-// The retired read conveniences have no runtime consumers. This test-only
-// adapter keeps their existing assertions over the native Catalog boundary.
-func newRetainedServiceWithConfig(config ServiceConfig) *service {
-	config.Today = fixedServiceToday
-	return NewServiceWithConfig(config).(*service)
-}
-
-func (s *service) GetRoom(ctx context.Context, id int64) (*facilitiesModule.Room, error) {
-	room, err := s.config.Rooms.FindRoom(ctx, id)
-	if err != nil {
-		return nil, wrap("get room", err)
-	}
-	return roomPointer(room), nil
-}
-
-func (s *service) FindRoomsByCategory(ctx context.Context, category string) ([]*facilitiesModule.Room, error) {
-	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{Category: &category})
-	if err != nil {
-		return nil, wrap("find rooms by category", err)
-	}
-	return roomPointers(rooms), nil
-}
-
-func (s *service) GetAvailableRooms(ctx context.Context, capacity int) ([]*facilitiesModule.Room, error) {
-	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{MinimumCapacity: &capacity})
-	if err != nil {
-		return nil, wrap("get available rooms", err)
-	}
-	return roomPointers(rooms), nil
-}
-
-func roomPointers(rooms []facilitiesModule.Room) []*facilitiesModule.Room {
-	result := make([]*facilitiesModule.Room, len(rooms))
-	for index := range rooms {
-		result[index] = &rooms[index]
-	}
-	return result
 }
 
 // fixedServiceToday is the school day these tests run on.

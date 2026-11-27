@@ -160,6 +160,3 @@ func (r CarePickupExceptionRows) list(ctx context.Context, filter ports.CareSche
 	}
 	return mapRows(values, pickupExceptionToLegacy), nil
 }
-func (r CarePickupExceptionRows) DeleteByStudentID(ctx context.Context, id int64) error {
-	return r.rows.ScheduleError("delete by student id", r.rows.Records.DeletePickupExceptionsByStudent(ctx, id))
-}

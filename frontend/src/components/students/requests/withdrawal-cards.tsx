@@ -9,7 +9,6 @@
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
-import { StatusBadge } from "~/components/ui/status-badge";
 import { CareExitModal } from "~/components/students/care-exit-modal";
 import { StudentDeletionModal } from "~/components/students/student-deletion-modal";
 import { RequestReviewCard } from "~/components/students/request-review-card";
@@ -19,69 +18,19 @@ import { formatDate } from "~/lib/date-helpers";
 
 export function OpenWithdrawalCard({
   row,
-  grouped = false,
   position,
   total,
   finish,
   remove: openDeletionDialog,
 }: Readonly<{
   row: CareWithdrawalCompletion;
-  grouped?: boolean;
-  position?: number;
-  total?: number;
+  position: number;
+  total: number;
   finish: (row: CareWithdrawalCompletion) => void;
   remove: (row: CareWithdrawalCompletion) => void;
 }>) {
   const name = `${row.firstName} ${row.lastName}`.trim();
   const overdue = row.urgency === "overdue";
-  const card = (
-    <RequestReviewCard
-      type="care_withdrawal"
-      typeLabel="Abmeldung"
-      childName={name}
-      grouped={grouped}
-      summary={`Keine Betreuungstage ab ${formatDate(row.firstBookinglessDay)}`}
-      badge={
-        <StatusBadge
-          tone={overdue ? "red" : "warning"}
-          label={overdue ? "Überfällig" : "Geplant"}
-        />
-      }
-      history={{
-        kind: "readonly",
-        label: overdue ? "Überfällig" : "Geplant",
-        tone: overdue ? "red" : "warning",
-      }}
-      action={
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            tooltip="Beendet die Betreuung des Kindes, moto fragt vorher nach."
-            onClick={() => finish(row)}
-          >
-            Betreuung beenden
-          </Button>
-          <Button
-            type="button"
-            variant="outline_danger"
-            size="md"
-            tooltip="Löscht das Kind samt Eltern-Zugang zu ihm, moto fragt vorher nach."
-            onClick={() => openDeletionDialog(row)}
-          >
-            Kind sofort löschen
-          </Button>
-        </div>
-      }
-    >
-      <p className="text-sm text-gray-600">
-        {careWithdrawalNotice(row)} Trage das Ende jetzt mit „Betreuung beenden“
-        ein.
-      </p>
-    </RequestReviewCard>
-  );
-  if (!grouped || position === undefined || total === undefined) return card;
   return (
     <div className="border-t border-gray-100 first:border-t-0">
       <div className="flex items-center justify-between gap-2 px-4 pt-3 sm:px-5">
@@ -90,7 +39,45 @@ export function OpenWithdrawalCard({
         </p>
         <p className="text-xs text-gray-600">Nur einzeln entscheiden</p>
       </div>
-      {card}
+      <RequestReviewCard
+        type="care_withdrawal"
+        typeLabel="Abmeldung"
+        childName={name}
+        grouped
+        summary={`Keine Betreuungstage ab ${formatDate(row.firstBookinglessDay)}`}
+        history={{
+          kind: "readonly",
+          label: overdue ? "Überfällig" : "Geplant",
+          tone: overdue ? "red" : "warning",
+        }}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              tooltip="Beendet die Betreuung des Kindes, moto fragt vorher nach."
+              onClick={() => finish(row)}
+            >
+              Betreuung beenden
+            </Button>
+            <Button
+              type="button"
+              variant="outline_danger"
+              size="md"
+              tooltip="Löscht das Kind samt Eltern-Zugang zu ihm, moto fragt vorher nach."
+              onClick={() => openDeletionDialog(row)}
+            >
+              Kind sofort löschen
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          {careWithdrawalNotice(row)} Trage das Ende jetzt mit „Betreuung
+          beenden“ ein.
+        </p>
+      </RequestReviewCard>
     </div>
   );
 }
@@ -109,12 +96,6 @@ export function HistoryWithdrawalCard({
       typeLabel="Abmeldung"
       childName={childName}
       summary={deleted ? "Kind sofort gelöscht" : "Betreuung beendet"}
-      badge={
-        <StatusBadge
-          tone="gray"
-          label={deleted ? "Gelöscht" : "Abgeschlossen"}
-        />
-      }
       history={{
         kind: "readonly",
         label: deleted ? "Gelöscht" : "Abgeschlossen",

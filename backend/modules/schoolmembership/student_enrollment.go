@@ -16,7 +16,6 @@ type StudentEnrollmentCommands interface {
 	SetStatus(context.Context, int64, string) (bool, error)
 	Enroll(context.Context, StudentEnrollment) (int64, error)
 	RenewEnrollment(context.Context, StudentEnrollment) (int64, error)
-	AssignGroup(context.Context, int64, *int64) (bool, error)
 	LockStudentClassWrites(context.Context, bool) error
 	EndCare(context.Context, []int64, string) (int64, error)
 	ResumeCare(context.Context, int64, string, string, string) (bool, error)

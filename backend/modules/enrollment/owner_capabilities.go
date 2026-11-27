@@ -85,7 +85,6 @@ type RequestCommands interface {
 	InsertRequest(ctx context.Context, req *Request) error
 	UpdateRequestGuardian(ctx context.Context, req *Request, includeEmail bool) error
 	SetRequestWithdrawal(ctx context.Context, id int64, at *time.Time) error
-	DeleteRequest(ctx context.Context, id int64) error
 	AcquireSubmissionDedupLock(ctx context.Context, phaseID int64, emailHash uint64) error
 	AcquireExistingStudentMatchLock(ctx context.Context, phaseID int64) error
 	AcquireChildIdentityLock(ctx context.Context, firstName, lastName string, birthday calendar.Date) error
@@ -168,7 +167,6 @@ type LateInvitationRecords interface {
 	LateInviteByUsedRequestID(ctx context.Context, requestID int64) (*LateInvite, error)
 	MarkLateInviteUsed(ctx context.Context, inviteID, requestID int64, at time.Time) error
 	DeleteLateInvitesSettledBefore(ctx context.Context, cutoff time.Time) (int64, error)
-	DeleteLateInvitesByUsedRequestID(ctx context.Context, requestID int64) (int64, error)
 }
 
 // RequestGuardianRecords writes and reads the guardians declared in a submission.

@@ -23,14 +23,13 @@ const REFRESH_MIN_GAP_MS = 5000;
 
 interface ProfileContextType {
   profile: Profile | null;
-  isLoading: boolean;
-  refreshProfile: (silent?: boolean) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   /**
    * Reads the profile again and rejects when the read fails (ADR 0311,
    * rule 6): for the profile edit after a refusal.
    */
   reloadProfile: () => Promise<Profile>;
-  updateProfileData: (data: Partial<Profile>) => void;
+  updateProfileData: (data: Profile) => void;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -84,51 +83,39 @@ export function ProfileProvider({
   const profile = error === undefined ? (data ?? null) : null;
   const profileRef = useLatest(profile);
 
-  const [visibleRefresh, setVisibleRefresh] = useState(false);
   const refreshingRef = useRef(false);
   const lastRefreshRef = useRef(0);
 
-  const refreshProfile = useCallback(
-    async (silent = false) => {
-      const now = Date.now();
-      if (now - lastRefreshRef.current < REFRESH_MIN_GAP_MS) return;
-      if (refreshingRef.current) return;
-      lastRefreshRef.current = now;
-      refreshingRef.current = true;
-      if (!silent) setVisibleRefresh(true);
-      try {
-        await mutate();
-      } finally {
-        refreshingRef.current = false;
-        if (!silent) setVisibleRefresh(false);
-      }
-    },
-    [mutate],
-  );
+  const refreshProfile = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastRefreshRef.current < REFRESH_MIN_GAP_MS) return;
+    if (refreshingRef.current) return;
+    lastRefreshRef.current = now;
+    refreshingRef.current = true;
+    try {
+      await mutate();
+    } finally {
+      refreshingRef.current = false;
+    }
+  }, [mutate]);
 
   // Optimistic local update after a save; the following refresh confirms it.
   const updateProfileData = useCallback(
-    (patch: Partial<Profile>) => {
-      const shown = profileRef.current;
-      if (!shown) return;
-      void mutate({ ...shown, ...patch }, { revalidate: false });
+    (saved: Profile) => {
+      if (!profileRef.current) return;
+      void mutate(saved, { revalidate: false });
     },
     [mutate, profileRef],
   );
 
-  const isLoading =
-    visibleRefresh ||
-    (sessionKey !== null && data === undefined && error === undefined);
-
   const contextValue = useMemo(
     () => ({
       profile,
-      isLoading,
       refreshProfile,
       reloadProfile,
       updateProfileData,
     }),
-    [profile, isLoading, refreshProfile, reloadProfile, updateProfileData],
+    [profile, refreshProfile, reloadProfile, updateProfileData],
   );
 
   return (

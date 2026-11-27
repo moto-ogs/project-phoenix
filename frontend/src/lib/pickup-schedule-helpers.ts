@@ -350,17 +350,6 @@ export function formatWeekRange(start: Date, end: Date): string {
 }
 
 /**
- * Check if two dates are the same day
- */
-export function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-/**
  * Get weekday number (1=Mon, 5=Fri) from Date
  * Returns null for weekend days
  */
@@ -369,11 +358,6 @@ export function getWeekdayFromDate(date: Date): number | null {
   if (jsDay === 0 || jsDay === 6) return null; // Weekend
   return jsDay; // 1-5 for Mon-Fri
 }
-
-/**
- * Format date as ISO string (YYYY-MM-DD) for comparison with exceptions
- */
-export { formatDateISO };
 
 /**
  * Data for a single day in the week view

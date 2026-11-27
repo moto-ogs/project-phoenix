@@ -17,65 +17,9 @@ const (
 // staff row or a day Enrollment planned from a holiday booking (ADR 0120).
 func schoolOwned(source string) bool { return source != exceptionSourceGuardian }
 
-// loadCareException merges the pickup and arrival exceptions for one date into
-// the parent-facing projection. Returns nil if neither leg has a row.
-func (s *Service) loadCareException(ctx context.Context, studentID int64, date calendar.Date) (*CareException, error) {
-	pickup, err := s.pickupExceptionForDate(ctx, studentID, calendar.Date(date))
-	if err != nil {
-		return nil, err
-	}
-	arrival, err := s.arrivalExceptionForDate(ctx, studentID, calendar.Date(date))
-	if err != nil {
-		return nil, err
-	}
-	if pickup == nil && arrival == nil {
-		return nil, nil
-	}
-	out := &CareException{Date: date, Source: exceptionSourceGuardian}
-	// Any staff-authored leg makes the day staff-owned for display purposes —
-	// the portal then shows it read-only rather than as a parent change.
-	pickupStaffOwned := applyDatePickupLeg(out, pickup)
-	arrivalStaffOwned := applyDateArrivalLeg(out, arrival)
-	if pickupStaffOwned || arrivalStaffOwned {
-		out.Source = exceptionSourceStaff
-	}
-	return out, nil
-}
-
-// applyDatePickupLeg copies the pickup leg of one date into out and reports
-// whether the leg is staff-authored. A nil leg changes nothing.
-func applyDatePickupLeg(out *CareException, pickup *PickupException) bool {
-	if pickup == nil {
-		return false
-	}
-	out.PickupTime = pickup.PickupTime
-	out.PickupSource = pickup.Source
-	if pickup.Source == exceptionSourceGuardian {
-		out.Reason = pickup.Reason
-	}
-	out.UpdatedAt = pickup.UpdatedAt
-	return schoolOwned(pickup.Source)
-}
-
-// applyDateArrivalLeg copies the arrival leg of one date into out and reports
-// whether the leg is staff-authored. A nil leg changes nothing.
-func applyDateArrivalLeg(out *CareException, arrival *ArrivalException) bool {
-	if arrival == nil {
-		return false
-	}
-	out.ArrivalTime = arrival.ExpectedArrival
-	if out.Reason == nil && arrival.Source == exceptionSourceGuardian {
-		out.Reason = arrival.Reason
-	}
-	if arrival.UpdatedAt.After(out.UpdatedAt) {
-		out.UpdatedAt = arrival.UpdatedAt
-	}
-	return schoolOwned(arrival.Source)
-}
-
 // ListCareExceptions returns the merged pickup/arrival exceptions for the child
-// in [from, to], staff- and guardian-authored alike. Unlike SubmitCareException
-// this is not gated by parent_pickup_change_enabled: a parent may always see and
+// in [from, to], staff- and guardian-authored alike, even when pickup changes are disabled.
+// A parent may always see and
 // (via DeleteCareException) clear overrides they created, even after the school
 // switches the feature off, so existing entries never become stuck.
 func (s *Service) ListCareExceptions(ctx context.Context, accountID, studentID int64, from, to calendar.Date) ([]*CareException, error) {

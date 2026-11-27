@@ -1,11 +1,10 @@
 // Activity Entity Configuration
 
-import { defineEntityConfig } from "@/lib/database/types";
+import type { EntityConfig, EntityFormConfig } from "@/lib/database/types";
 import {
   mapActivityResponse,
   mapSupervisorOption,
   type Activity,
-  type ActivitySupervisor,
 } from "@/lib/activity-helpers";
 import type {
   ActivityRequest,
@@ -14,87 +13,6 @@ import type {
 import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
-
-// Emoji mapping rules: [emoji, ...keywords]
-// Rules are checked in order; first match wins
-type EmojiRule = readonly [emoji: string, ...keywords: string[]];
-
-const NAME_EMOJI_RULES: readonly EmojiRule[] = [
-  // Sports
-  ["⚽", "fußball", "fussball"],
-  ["🏀", "basketball"],
-  ["🏐", "volleyball"],
-  ["🎾", "tennis"],
-  ["🏊", "schwimm"],
-  ["🏃", "lauf", "athletik", "sport"],
-  ["🤸", "turnen", "gym"],
-  // Creative
-  ["🎨", "kunst", "mal", "zeich"],
-  ["🎵", "musik", "chor", "band"],
-  ["🎭", "theater", "drama"],
-  ["💃", "tanz", "dance"],
-  ["📸", "foto", "photo"],
-  ["🎬", "film", "video"],
-  // Academic
-  ["🔢", "mathematik", "mathe"],
-  ["🔬", "physik", "chemie", "labor"],
-  ["🌿", "biologie", "natur"],
-  ["💻", "computer", "informatik", "coding"],
-  ["🤖", "robotik", "technik"],
-  ["🗣️", "sprach", "english", "französisch"],
-  ["📚", "lesen", "buch", "literatur"],
-  ["✍️", "schreib", "journal"],
-  // Practical
-  ["🍳", "koch", "küche", "back"],
-  ["🌱", "garten", "pflanzen"],
-  ["🔨", "werk", "holz", "handwerk"],
-  ["🧵", "näh", "textil", "schneid"],
-  // Games
-  ["♟️", "schach"],
-  ["🎲", "spiel", "game"],
-  ["🧩", "puzzle", "rätsel"],
-  // Other
-  ["🧘", "meditation", "yoga", "entspann"],
-  ["🚑", "erste hilfe", "sanitäter"],
-  ["♻️", "umwelt", "recycl", "nachhaltig"],
-  ["🔥", "feuer", "pfadfinder"],
-  // Meals
-  ["🍽️", "mensa", "essen", "mittag"],
-] as const;
-
-const CATEGORY_EMOJI_RULES: readonly EmojiRule[] = [
-  ["🏃", "sport"],
-  ["🍽️", "mensa"],
-  ["🌳", "draußen"],
-  ["🏠", "gruppenraum"],
-  ["📖", "lernen"],
-  ["🎨", "kreativ"],
-  ["📝", "hausaufgaben"],
-] as const;
-
-function matchEmojiRule(
-  text: string | undefined,
-  rules: readonly EmojiRule[],
-): string | null {
-  if (!text) return null;
-  for (const [emoji, ...keywords] of rules) {
-    if (keywords.some((keyword) => text.includes(keyword))) {
-      return emoji;
-    }
-  }
-  return null;
-}
-
-function getActivityEmoji(activity: Activity): string {
-  const name = activity.name?.toLowerCase();
-  const category = activity.category_name?.toLowerCase();
-
-  return (
-    matchEmojiRule(name, NAME_EMOJI_RULES) ??
-    matchEmojiRule(category, CATEGORY_EMOJI_RULES) ??
-    (activity.name ? activity.name.substring(0, 2).toUpperCase() : "AG")
-  );
-}
 
 // The available supervisors as select options. A failure rejects with the
 // catalog error; an empty list would look like a school without supervisors
@@ -155,15 +73,11 @@ export function toActivityUpdateRequest(
   return request;
 }
 
-export const activitiesConfig = defineEntityConfig<Activity>({
+export const activitiesConfig = {
   name: {
     singular: "Aktivität",
     plural: "Aktivitäten",
   },
-
-  concept: activitiesConcept,
-
-  backUrl: "/database",
 
   api: {
     list: async () =>
@@ -263,136 +177,5 @@ export const activitiesConfig = defineEntityConfig<Activity>({
     },
   },
 
-  detail: {
-    header: {
-      title: (activity) => activity.name,
-      subtitle: (activity) => activity.category_name ?? "Keine Kategorie",
-      avatar: {
-        text: getActivityEmoji,
-        size: "lg",
-      },
-    },
-
-    sections: [
-      {
-        title: "Grundinformationen",
-        items: [
-          {
-            label: "Name",
-            value: (activity) => activity.name,
-          },
-          {
-            label: "Kategorie",
-            value: (activity) => activity.category_name ?? "Keine Kategorie",
-          },
-          {
-            label: "Beschreibung",
-            value: (_activity) => "Keine Beschreibung",
-          },
-          {
-            label: "Maximale Teilnehmer",
-            value: (activity: Activity) =>
-              activity.max_participant?.toString() ?? "Unbegrenzt",
-          },
-          {
-            label: "Aktuelle Teilnehmer",
-            value: (activity: Activity) =>
-              String(activity.participant_count ?? 0),
-          },
-        ],
-      },
-      {
-        title: "Betreuer",
-        items: [
-          {
-            label: "Hauptbetreuung",
-            value: (activity: Activity) => {
-              const primary = activity.supervisors?.find(
-                (s: ActivitySupervisor) => s.is_primary,
-              );
-              return primary
-                ? `${primary.first_name ?? ""} ${primary.last_name ?? ""}`.trim()
-                : "Keine Hauptbetreuung eingetragen";
-            },
-          },
-          {
-            label: "Weitere Betreuer",
-            value: (activity: Activity) => {
-              const secondary =
-                activity.supervisors?.filter(
-                  (s: ActivitySupervisor) => !s.is_primary,
-                ) ?? [];
-              return secondary.length > 0
-                ? secondary
-                    .map((s: ActivitySupervisor) =>
-                      `${s.first_name ?? ""} ${s.last_name ?? ""}`.trim(),
-                    )
-                    .join(", ")
-                : "Keine weiteren Betreuer";
-            },
-          },
-        ],
-      },
-    ],
-
-    actions: {
-      edit: true,
-      delete: true,
-    },
-  },
-
-  list: {
-    title: "Aktivität auswählen",
-    description: "Verwalte Aktivitäten und deren Teilnehmer",
-    searchPlaceholder: "Aktivität suchen…",
-
-    // Frontend search for better UX
-    searchStrategy: "frontend",
-    searchableFields: ["name", "category_name", "description"],
-    minSearchLength: 0,
-
-    filters: [
-      {
-        id: "ag_category_id",
-        label: "Kategorie",
-        type: "select",
-        options: "dynamic", // Will be extracted from the loaded data
-      },
-      {
-        id: "supervisor_id",
-        label: "Betreuer",
-        type: "select",
-        loadOptions: loadSupervisorOptions,
-      },
-    ],
-
-    item: {
-      title: (activity: Activity) => activity.name,
-      subtitle: (activity: Activity) => {
-        const primary = activity.supervisors?.find(
-          (s: ActivitySupervisor) => s.is_primary,
-        );
-        return primary
-          ? `${primary.first_name ?? ""} ${primary.last_name ?? ""}`.trim()
-          : "Keine Hauptbetreuung";
-      },
-      description: (activity: Activity) => {
-        if (activity.is_open_ags) {
-          return "Anmeldung offen";
-        }
-        return "Anmeldung geschlossen";
-      },
-      avatar: {
-        text: getActivityEmoji,
-      },
-    },
-  },
-
-  labels: {
-    createButton: "Neue Aktivität erstellen",
-    createModalTitle: "Neue Aktivität",
-    detailModalTitle: "Aktivitätsdetails",
-    deleteConfirmation:
-      "Bist du sicher, dass du diese Aktivität löschen möchtest?",
-  },
-});
+  createTitle: "Neue Aktivität",
+} satisfies EntityConfig<Activity> & EntityFormConfig<Activity>;

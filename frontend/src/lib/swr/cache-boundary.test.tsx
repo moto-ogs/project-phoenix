@@ -93,7 +93,6 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
 const REVIEWED_EXPORTS: Record<string, string[]> = {
   index: [
     "IsolatedSWRCache",
-    "LIVE_FALLBACK_INTERVAL_MS",
     "LIVE_RECONCILE_INTERVAL_MS",
     "SWRScopeBoundary",
     "SWRSeedBoundary",
@@ -131,6 +130,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
+    "isDiscardedAnswer",
     "revalidateOrThrow",
     "useDiscardRefusedEntity",
     "useImmutableSWR",
@@ -152,9 +152,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   "course-waitlist-keys": ["activityWaitlistKeys", "courseWaitlistKeys"],
   "portal-keys": [
     "STUDENT_KEY_FAMILIES",
-    "announcementKeys",
     "catererKeys",
-    "dashboardKeys",
     "databaseKeys",
     "devicePinKeys",
     "displayKeys",
@@ -169,7 +167,6 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "operatorInvitationKeys",
     "operatorProvisioningKeys",
     "parentAnnouncementKeys",
-    "parentKeys",
     "payrollKeys",
     "requestFeedKeys",
     "schoolPortalKeys",

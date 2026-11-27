@@ -60,11 +60,6 @@ type RouteContract struct {
 	Enums []EnumContract
 	// Deprecated announces the removal of the route one release ahead.
 	Deprecated bool
-	// Refuses says why a Deprecated route answers every request with a
-	// refusal: an old write kept for its release (ADR 0270) that carries no
-	// read state, so a tab from before the release reloads (ADR 0311). It
-	// has no success answer; a test that sees its refusal answers it.
-	Refuses string
 	// DeprecatedFields announces the removal of fields one release ahead, as
 	// "GoType.json_name".
 	DeprecatedFields []string

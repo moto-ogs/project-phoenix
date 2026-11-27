@@ -6,16 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-func (s *service) FindVisitsByStudentID(ctx context.Context, studentID int64) ([]studentpresence.Visit, error) {
-	visits, err := s.SchoolPresence.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{studentID}, OpenOnly: true})
-	if err != nil {
-		return nil, &ActiveError{Op: "FindVisitsByStudentID", Err: ErrDatabaseOperation}
-	}
-	return visits, nil
-}
 
 func (s *service) GetStudentCurrentVisit(ctx context.Context, studentID int64) (*studentpresence.Visit, error) {
 	visits, err := s.SchoolPresence.ListVisits(ctx, studentpresence.VisitFilter{
@@ -30,53 +21,12 @@ func (s *service) GetStudentCurrentVisit(ctx context.Context, studentID int64) (
 	return &visits[0], nil
 }
 
-func (s *service) GetStudentCurrentVisitWithRoom(ctx context.Context, studentID int64) (*VisitWithRoom, error) {
-	locations, err := s.SchoolPresence.ListVisitLocations(ctx, studentpresence.VisitLocationFilter{VisitFilter: studentpresence.VisitFilter{
-		StudentIDs: []int64{studentID}, OpenOnly: true, NewestFirst: true, Limit: 1,
-	}})
-	if err != nil {
-		return nil, &ActiveError{Op: "GetStudentCurrentVisitWithRoom", Err: ErrDatabaseOperation}
-	}
-	if len(locations) == 0 {
-		return nil, &ActiveError{Op: "GetStudentCurrentVisitWithRoom", Err: ErrVisitNotFound}
-	}
-	visit := &VisitWithRoom{Visit: locations[0].Visit}
-	group := locations[0].Group
-	if group == nil {
-		return visit, nil
-	}
-	visit.ActiveGroup = &VisitRoomGroup{
-		ID: group.ID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
-		RoomID: group.RoomID, StartTime: group.StartTime, EndTime: group.EndTime,
-		LastActivity: group.LastActivity, GroupID: group.TemplateID, DeviceID: group.DeviceID, TimeoutMinutes: group.TimeoutMinutes,
-	}
-	rooms, err := s.RoomRepo.FindByIDs(ctx, []int64{group.RoomID})
-	if err != nil {
-		return nil, &ActiveError{Op: "GetStudentCurrentVisitWithRoom", Err: ErrDatabaseOperation}
-	}
-	for _, room := range rooms {
-		if room.ID == ident.ID(group.RoomID) {
-			visit.ActiveGroup.Room = &VisitRoom{ID: room.ID.Int64(), CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt, Name: room.Name}
-			break
-		}
-	}
-	return visit, nil
-}
-
 func (s *service) GetStudentsCurrentVisits(ctx context.Context, studentIDs []int64) (map[int64]*studentpresence.Visit, error) {
-	visits, err := s.currentPresenceVisits(ctx, studentIDs, false)
+	visits, err := s.currentPresenceVisits(ctx, studentIDs)
 	if err != nil {
 		return nil, &ActiveError{Op: "GetStudentsCurrentVisits", Err: ErrDatabaseOperation}
 	}
 	return visits, nil
-}
-
-func (s *service) CountActiveVisitsByActiveGroupID(ctx context.Context, activeGroupID int64) (int, error) {
-	count, err := s.SchoolPresence.CountOpenVisitsInGroup(ctx, activeGroupID)
-	if err != nil {
-		return 0, &ActiveError{Op: "CountActiveVisitsByActiveGroupID", Err: ErrDatabaseOperation}
-	}
-	return count, nil
 }
 
 // ListStudentsPresentInRoom returns the IDs of students currently checked-in

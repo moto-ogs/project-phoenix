@@ -33,7 +33,6 @@ export function ClosingDayChip({
   reason,
   label = "Schließtag",
   text,
-  wrap = false,
   className,
 }: {
   /** Grund des Schließtags; in der Halbjahres-Spalte die Liste der Tage. */
@@ -42,8 +41,6 @@ export function ClosingDayChip({
   readonly label?: string;
   /** Sichtbarer Kurztext statt „Label · Grund“, z. B. die Anzahl. */
   readonly text?: string;
-  /** Text umbrechen statt kürzen, für schmale Spalten mit Platz nach unten. */
-  readonly wrap?: boolean;
   readonly className?: string;
 }) {
   const title = `${label}: ${reason}`;
@@ -58,8 +55,7 @@ export function ClosingDayChip({
         tone="gray"
         size="xs"
         icon={<MotoConceptIcon concept={closingDaysConcept} size={14} />}
-        truncate={!wrap}
-        wrap={wrap}
+        truncate
       />
       {text === undefined ? null : <span className="sr-only">{title}</span>}
     </>

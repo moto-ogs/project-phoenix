@@ -51,16 +51,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.AssignGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.AssignGroup",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.AssignGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.BindSchedule",
       "classification": "query",
       "effect": "query",
@@ -236,26 +226,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.Enroll",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.Enroll. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.FindClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntryForMutation",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.FindClassListEntryForMutation. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -546,16 +516,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.UpdateClassAssignment",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.UpdateClassAssignment. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.UpdateClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.UpdateClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1058,16 +1018,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.AssignGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.AssignGroup",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.AssignGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.BindSchedule",
       "classification": "query",
       "effect": "query",
@@ -1253,26 +1203,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.Enroll",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.Enroll. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.FindClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.FindClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.FindClassListEntryForMutation",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.FindClassListEntryForMutation. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1568,16 +1498,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.UpdateClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.UpdateClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.UpdateEmploymentDetails",
       "classification": "query",
       "effect": "query",
@@ -1633,46 +1553,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.PendingWindows.MovePendingWindow",
       "reason": "Read-only target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership/internal/application.Service.MovePendingWindow. No persistent, lock or scope effect; the tenant scopes the pending-window move of #6505 (ADR 0202).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Capability.FindClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntry",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.FindClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindClassListEntryForMutation",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntryForMutation",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Capability.FindClassListEntryForMutation. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindClassListEntryForMutation",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindClassListEntryForMutation",
-      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.FindClassListEntryForMutation. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -2127,16 +2007,6 @@
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ChildQuotaLimits.ChildQuotaLimit",
       "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.AssignStudentGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.AssignStudentGroup",
-      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership/internal/adapters/postgres.Store.AssignStudentGroup. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.ChangeStudentClass",

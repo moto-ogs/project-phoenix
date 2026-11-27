@@ -53,7 +53,6 @@ func TestAccountAdministrationIgnoresErasedAccounts(t *testing.T) {
 
 	_, err = administration.FindManageableAccount(ctx, account.ID)
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-	require.ErrorIs(t, administration.ActivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.DeactivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.ChangeAccountPassword(ctx, identityaccess.OwnPasswordChange{AccountID: account.ID, CurrentPassword: testPassword, NewPassword: testNewPassword}), identityaccess.ErrAccountNotFound)
 

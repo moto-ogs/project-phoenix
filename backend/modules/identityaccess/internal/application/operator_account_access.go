@@ -402,7 +402,7 @@ func (s *OperatorAccountAccess) rolesAtTenant(ctx context.Context, accountID, sc
 }
 
 // activateAccount restores a deactivated account and closes the pending
-// account-wide wipe its deactivation recorded, on the same transaction.
+// account-wide wipe its deactivation recorded.
 func (s *OperatorAccountAccess) activateAccount(adminCtx context.Context, accountID int64) error {
 	if _, err := s.access.SetAccountActive(adminCtx, accountID, true); err != nil {
 		return err
@@ -414,10 +414,9 @@ func (s *OperatorAccountAccess) activateAccount(adminCtx context.Context, accoun
 				slog.Any("error", err))
 		}
 	}
-	// As the retained reactivation did: once the grant commits, the pending
-	// wipe is cleared in its own administrative transaction, so a failed
-	// cleanup cannot abort the grant. Without after-commit hooks it runs
-	// inside the caller's administrative transaction.
+	// After commit, clear the wipe in a separate administrative transaction
+	// so a cleanup failure cannot abort the grant. Without after-commit
+	// hooks, the cleanup runs inside the caller's administrative transaction.
 	if s.runtime.HasAfterCommitHooks(adminCtx) {
 		detached := s.runtime.Detach(adminCtx)
 		s.runtime.RegisterAfterCommit(adminCtx, func() {

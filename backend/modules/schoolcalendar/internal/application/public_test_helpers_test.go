@@ -27,12 +27,6 @@ type seamRecorder interface {
 	UpdateDateframe(context.Context, schoolcalendar.UpdateDateframe) (schoolcalendar.Dateframe, error)
 	DeleteDateframe(context.Context, int64) error
 
-	ValidHolidayRegion(string) bool
-	ListHolidays(context.Context, string, string, string) ([]schoolcalendar.Holiday, error)
-	HolidayDates(context.Context, string, string, string) (map[string]bool, error)
-	RenderCalendar(context.Context, string, []schoolcalendar.CalendarEvent) (string, error)
-	RenderCalendarObject(context.Context, schoolcalendar.CalendarEvent) (string, error)
-
 	// FederalState resolves the caller's tenant federal-state ISO code; the
 	// composition binds it to the settings platform.
 	FederalState(context.Context) (string, error)
@@ -44,11 +38,8 @@ type seamStore struct {
 }
 
 func newTestModule(e seamRecorder) *Service {
-	if e == nil {
-		return New(nil, func(ports.Observation) {}, Administration{}, e)
-	}
 	store := &seamStore{e: e}
-	return New(store, func(ports.Observation) {}, Administration{Transaction: func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }, RecurrenceGate: func(context.Context) error { store.administrating = true; return nil }, Today: func() string { return "2030-09-01" }, FederalState: e.FederalState}, e)
+	return New(store, func(ports.Observation) {}, Administration{Transaction: func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }, RecurrenceGate: func(context.Context) error { store.administrating = true; return nil }, Today: func() string { return "2030-09-01" }, FederalState: e.FederalState})
 }
 func (s *seamStore) FindCalendarPeriod(ctx context.Context, id int64) (schoolcalendar.CalendarPeriod, bool, domain.OperationStats, error) {
 	v, err := s.e.FindCalendarPeriod(ctx, id)

@@ -145,7 +145,6 @@ export function ModalActions({
   onCancel,
   onConfirm,
   confirmLabel,
-  cancelLabel = "Abbrechen",
   confirmTooltip,
   confirmDisabled = false,
   confirmDisabledReason,
@@ -154,7 +153,6 @@ export function ModalActions({
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
   readonly confirmLabel: string;
-  readonly cancelLabel?: string;
   /** What confirming does, in one sentence (#6643). */
   readonly confirmTooltip: string;
   readonly confirmDisabled?: boolean;
@@ -173,7 +171,7 @@ export function ModalActions({
         noTooltip="Schließt nur das Fenster, ohne etwas zu speichern."
         className="flex-1"
       >
-        {cancelLabel}
+        Abbrechen
       </Button>
       <Button
         type="button"

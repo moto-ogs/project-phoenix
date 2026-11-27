@@ -55,7 +55,7 @@ func (s *schulhofService) getLogger() *slog.Logger { return loggerOrDefault(s.lo
 func (s *schulhofService) GetSchulhofStatus(ctx context.Context, staffID int64) (*SchulhofStatus, error) {
 	status := &SchulhofStatus{RoomName: facilitiesModule.SchulhofRoomName, Supervisors: []SupervisorInfo{}}
 	room, err := FindCanonicalSchulhofRoom(ctx, s.rooms)
-	if errors.Is(err, ErrRoomNotFound) {
+	if errors.Is(err, facilitiesModule.ErrRoomNotFound) {
 		return status, nil
 	}
 	if err != nil {
@@ -217,7 +217,7 @@ func (s *schulhofService) ensureRoom(ctx context.Context) (*facilitiesModule.Roo
 	if err == nil {
 		return room, nil
 	}
-	if !errors.Is(err, ErrRoomNotFound) {
+	if !errors.Is(err, facilitiesModule.ErrRoomNotFound) {
 		return nil, err
 	}
 	// Released at creation: this path runs only when a school switches on the

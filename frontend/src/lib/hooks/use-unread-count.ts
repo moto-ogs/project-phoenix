@@ -32,8 +32,6 @@ interface BaseOptions<T> {
    * message tenant-wide. Omit (or 0) to revalidate on every event.
    */
   eventDebounceMs?: number;
-  /** Also revalidate when the window regains focus. */
-  refetchOnFocus?: boolean;
   /** Error handler; by default the shared reader logs the failure. */
   onError?: (error: unknown) => void;
 }
@@ -81,14 +79,7 @@ export function useUnreadCount<T = number>(
   key: string | null,
   options: UseUnreadCountOptions<T>,
 ): UnreadCountReader {
-  const {
-    enabled,
-    fetcher,
-    eventNames,
-    eventDebounceMs,
-    refetchOnFocus = false,
-    onError,
-  } = options;
+  const { enabled, fetcher, eventNames, eventDebounceMs, onError } = options;
   const count = (options as { count?: (data: T) => number }).count;
   const readKey = enabled ? key : null;
   const cacheKey = useSWRCacheKey();
@@ -105,7 +96,8 @@ export function useUnreadCount<T = number>(
     fetcher,
     {
       revalidateIfStale: !trustsCache,
-      revalidateOnFocus: refetchOnFocus,
+      // Recover badges that missed events while the browser was backgrounded.
+      revalidateOnFocus: true,
       // After a switch of account or school, never the previous key's count,
       // not even until the first answer.
       keepPreviousData: false,

@@ -125,21 +125,11 @@ describe("TodayNoticeList", () => {
     expect(acknowledge).toHaveBeenCalledTimes(1);
   });
 
-  // #4365: auf der Seite Tagesinformationen füllen die Hinweise die Breite
-  // als Raster; Startseite und moto schule behalten die gestapelte Liste.
-  it("lays the notices out as a grid only when asked to", () => {
-    const { rerender } = render(
-      <Providers>
-        <TodayNoticeList notices={[notice]} onChanged={vi.fn()} />
-      </Providers>,
-    );
-    expect(screen.getByRole("list").className).not.toContain("grid");
-
-    rerender(
-      <Providers>
-        <TodayNoticeList notices={[notice]} onChanged={vi.fn()} layout="grid" />
-      </Providers>,
-    );
+  it("lays the notices out as a grid", () => {
+    render(<TodayNoticeList notices={[notice]} onChanged={vi.fn()} />, {
+      wrapper: Providers,
+    });
     expect(screen.getByRole("list").className).toContain("grid");
+    expect(screen.getByRole("listitem")).toHaveTextContent(notice.title);
   });
 });

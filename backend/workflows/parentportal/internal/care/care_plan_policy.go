@@ -13,8 +13,6 @@ const (
 	CarePlanOfferingChangeDisabled         CarePlanError = "OfferingChangeDisabled"
 	CarePlanManualPartialAbsenceConflict   CarePlanError = "ManualPartialAbsenceConflict"
 	CarePlanSchoolStatusDayConflict        CarePlanError = "SchoolStatusDayConflict"
-	CarePlanGuardianPickupExceptionRaced   CarePlanError = "GuardianPickupExceptionRaced"
-	CarePlanPickupExceptionStaffOwned      CarePlanError = "PickupExceptionStaffOwned"
 	CarePlanStudentDataRequestFieldPending CarePlanError = "StudentDataRequestFieldPending"
 )
 

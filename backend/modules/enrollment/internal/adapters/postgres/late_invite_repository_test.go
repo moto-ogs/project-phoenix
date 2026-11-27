@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testing.T) {
+func TestLateInviteOwner_DeleteRequestTree_DeletesOnlyLinkedInvite(t *testing.T) {
 	t.Parallel()
 
 	// setupRequestRepoTest owns the package's testpkg.SetupTestDB lifecycle and
@@ -72,13 +72,9 @@ func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testin
 	assert.Equal(t, inviteA.ID, linked.ID)
 	assert.Equal(t, "a@example.test", linked.GuardianEmail)
 
-	var deleted int64
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		var err error
-		deleted, err = lateInviteRepo.DeleteLateInvitesByUsedRequestID(ctx, requestA.ID)
-		return err
+		return requestRepo.DeleteRequestTree(ctx, requestA.ID)
 	}))
-	assert.EqualValues(t, 1, deleted)
 
 	var remainingA, remainingB int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM enrollment.late_invites WHERE id = ?`, inviteA.ID).Scan(context.Background(), &remainingA))

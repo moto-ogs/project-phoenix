@@ -79,7 +79,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/auth_test_helpers.go:NewAuthTestModule":                  161,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
 	"api/guardians_composition.go:NewGuardiansResource":           91,
-	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,
+	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    76,
 	"api/iot/compose/compose.go:(*Resource).Router":               104,
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
@@ -565,7 +565,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 118,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 129,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 128,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStudents": 119,
 	// ADR 0087.

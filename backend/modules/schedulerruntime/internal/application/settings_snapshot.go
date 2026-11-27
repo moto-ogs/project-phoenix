@@ -2,14 +2,11 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 )
-
-var errSchedulerSettingsBatchUnsupported = errors.New("scheduler settings resolver does not support batch snapshots")
 
 type schedulerMinuteSnapshot struct {
 	tenantIDs []int64
@@ -93,32 +90,19 @@ var schedulerPollingSettingKeys = []string{
 // getMinuteSnapshot coalesces concurrent scheduler goroutines into one active
 // tenant query and one config.setting_values batch query per wall-clock minute.
 func (s *Scheduler) getMinuteSnapshot(ctx context.Context) (*schedulerMinuteSnapshot, error) {
-	loader := func(ctx context.Context) (*schedulerMinuteSnapshot, error) { return s.loadMinuteSnapshot(ctx, false) }
-	if s.minuteSnapshotLoader != nil {
-		loader = s.minuteSnapshotLoader
-	}
-	return s.getSettingsMinuteSnapshot(ctx, &s.minuteSnapshotLoad, loader)
+	return s.getSettingsMinuteSnapshot(ctx, &s.minuteSnapshotLoad, false)
 }
 
 // Cleanup has its own minute snapshot: extending its school list must never
 // activate reminders, session maintenance or other active-school jobs.
 func (s *Scheduler) getCleanupMinuteSnapshot(ctx context.Context) (*schedulerMinuteSnapshot, error) {
-	loader := func(ctx context.Context) (*schedulerMinuteSnapshot, error) { return s.loadMinuteSnapshot(ctx, true) }
-	if s.cleanupMinuteSnapshotLoader != nil {
-		loader = s.cleanupMinuteSnapshotLoader
-	}
-	return s.getSettingsMinuteSnapshot(ctx, &s.cleanupMinuteSnapshotLoad, loader)
+	return s.getSettingsMinuteSnapshot(ctx, &s.cleanupMinuteSnapshotLoad, true)
 }
 
-func (s *Scheduler) getSettingsMinuteSnapshot(ctx context.Context, slot **schedulerMinuteSnapshotLoad, loader func(context.Context) (*schedulerMinuteSnapshot, error)) (*schedulerMinuteSnapshot, error) {
-	ctx = s.withUnitOfWork(ctx)
-	now := s.clock
-	if s.minuteSnapshotNow != nil {
-		now = s.minuteSnapshotNow
-	}
+func (s *Scheduler) getSettingsMinuteSnapshot(ctx context.Context, slot **schedulerMinuteSnapshotLoad, cleanup bool) (*schedulerMinuteSnapshot, error) {
 	// This bucket only coalesces work within one minute; it does not model a
 	// Berlin calendar date or wall-clock business time.
-	bucket := now().Truncate(time.Minute) //nolint:forbidigo
+	bucket := s.clock().Truncate(time.Minute) //nolint:forbidigo
 
 	s.minuteSnapshotMu.Lock()
 	if load := *slot; load != nil && load.bucket.Equal(bucket) {
@@ -140,7 +124,7 @@ func (s *Scheduler) getSettingsMinuteSnapshot(ctx context.Context, slot **schedu
 	*slot = load
 	s.minuteSnapshotMu.Unlock()
 
-	load.snapshot, load.err = loader(ctx)
+	load.snapshot, load.err = s.loadMinuteSnapshot(ctx, cleanup)
 
 	s.minuteSnapshotMu.Lock()
 	close(load.ready)
@@ -170,11 +154,7 @@ func (s *Scheduler) loadMinuteSnapshot(ctx context.Context, cleanup bool) (*sche
 		return result, fmt.Errorf("list scheduler tenants: %w", err)
 	}
 
-	batch, ok := s.settings.(ports.SettingsSnapshotSource)
-	if !ok {
-		return result, errSchedulerSettingsBatchUnsupported
-	}
-	result.settings, err = batch.ResolveSettingsSnapshots(ctx, result.tenantIDs, schedulerPollingSettingKeys)
+	result.settings, err = s.settings.ResolveSettingsSnapshots(ctx, result.tenantIDs, schedulerPollingSettingKeys)
 	if err != nil {
 		return result, fmt.Errorf("load tenant settings: %w", err)
 	}

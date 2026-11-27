@@ -1,5 +1,6 @@
 import { Alert } from "~/components/ui/alert";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Input } from "~/components/ui/input";
@@ -16,7 +17,7 @@ import { getRoleDisplayName, isAssignableStaffRole } from "~/lib/auth-helpers";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
 import { operatorKeys } from "~/lib/swr/operator-keys";
-import { FormField, SelectWithChevron } from "./provisioning-shared";
+import { FormField, POSITION_OPTIONS } from "./provisioning-shared";
 
 const logger = createLogger({ component: "CreateAccountModal" });
 
@@ -303,25 +304,25 @@ export function CreateAccountModal({
             required
             error={formErrors.fieldError("role_id")}
           >
-            <SelectWithChevron
+            <CustomSelect
               id="create-account-role"
               name="role_id"
+              ariaLabelledBy="create-account-role-label"
               value={roleId ?? ""}
-              onChange={(e) =>
-                setRoleId(e.target.value === "" ? undefined : e.target.value)
-              }
+              options={[
+                {
+                  value: "",
+                  label: isLoadingRoles
+                    ? "Lade Rollen..."
+                    : "Rolle auswählen...",
+                  disabled: true,
+                },
+                ...roles.map((role) => ({ value: role.id, label: role.label })),
+              ]}
+              onChange={(value) => setRoleId(value === "" ? undefined : value)}
               disabled={isLoadingRoles}
               required
-            >
-              <option value="" disabled>
-                {isLoadingRoles ? "Lade Rollen..." : "Rolle auswählen..."}
-              </option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.label}
-                </option>
-              ))}
-            </SelectWithChevron>
+            />
           </FormField>
           {showCaregiverToggle && (
             <ChoiceTile
@@ -387,19 +388,14 @@ export function CreateAccountModal({
             htmlFor="create-account-position"
             error={formErrors.fieldError("position")}
           >
-            <SelectWithChevron
+            <CustomSelect
               id="create-account-position"
               name="position"
+              ariaLabelledBy="create-account-position-label"
               value={position}
-              onChange={(e) => setPosition(e.target.value)}
-            >
-              <option value="">Position auswählen...</option>
-              <option value="Pädagogische Fachkraft">
-                Pädagogische Fachkraft
-              </option>
-              <option value="OGS-Büro">OGS-Büro</option>
-              <option value="Extern">Extern</option>
-            </SelectWithChevron>
+              options={POSITION_OPTIONS}
+              onChange={setPosition}
+            />
           </FormField>
         </form>
       )}

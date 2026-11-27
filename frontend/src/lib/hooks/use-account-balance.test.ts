@@ -88,7 +88,6 @@ describe("useAccountBalance", () => {
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.balanceMinutes).toBeNull();
-    expect(result.current.isLoading).toBe(false);
   });
 
   it("resolves from the start day on", () => {
@@ -117,7 +116,6 @@ describe("useAccountBalance", () => {
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.balanceMinutes).toBeNull();
-    expect(result.current.isLoading).toBe(false);
   });
 
   it("surfaces a config read failure instead of guessing an anchor", () => {
@@ -140,7 +138,6 @@ describe("useAccountBalance", () => {
     const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBeNull();
-    expect(result.current.isLoading).toBe(true);
     expect(result.current.balanceMinutes).toBeNull();
   });
 });

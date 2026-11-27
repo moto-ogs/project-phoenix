@@ -112,7 +112,7 @@ func scanAdministeredAccount(ctx context.Context, query *bun.SelectQuery, operat
 	return rows[0].toDomain(), true, stats, nil
 }
 
-func (s *Store) SetManageableAccountActive(ctx context.Context, id int64, active bool, visibility domain.AccountVisibility) (bool, domain.OperationStats, error) {
+func (s *Store) DeactivateManageableAccount(ctx context.Context, id int64, visibility domain.AccountVisibility) (bool, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return false, domain.OperationStats{}, err
@@ -120,18 +120,14 @@ func (s *Store) SetManageableAccountActive(ctx context.Context, id int64, active
 	query := db.NewUpdate().
 		Model((*administeredAccountRow)(nil)).
 		ModelTableExpr(`auth.accounts AS "account"`).
-		Set(`active = ?`, active).
+		Set(`active = FALSE`).
 		Where(`"account".id = ?`, id).
 		Where(liveAccountSQL)
-	return execManageableAccountWrite(ctx, scopeAccounts(query, visibility), "set manageable account active")
-}
-
-func execManageableAccountWrite(ctx context.Context, query *bun.UpdateQuery, operation string) (bool, domain.OperationStats, error) {
 	started := time.Now()
-	result, err := query.Exec(ctx)
+	result, err := scopeAccounts(query, visibility).Exec(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
-		return false, stats, fmt.Errorf("identity access postgres: %s: %w", operation, err)
+		return false, stats, fmt.Errorf("identity access postgres: deactivate manageable account: %w", err)
 	}
 	stats.Rows, _ = result.RowsAffected()
 	return stats.Rows > 0, stats, nil

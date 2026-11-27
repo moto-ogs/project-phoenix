@@ -28,18 +28,6 @@ describe("DatabaseListLayout", () => {
     expect(root.querySelector(".moto-content-surface")).not.toBeNull();
   });
 
-  it("applies a custom className to the root", () => {
-    render(
-      <DatabaseListLayout className="custom-list">
-        <div>Inhalt</div>
-      </DatabaseListLayout>,
-    );
-
-    expect(screen.getByTestId("database-list-layout")).toHaveClass(
-      "custom-list",
-    );
-  });
-
   // #3330: Am Computer setzt useFillHeight die Höhe und die Liste scrollt in
   // der Karte. Den Browser-Nachbau prüft e2e/layout/database-layouts.spec.ts.
   it("takes the card out of the grow rule on a computer", () => {

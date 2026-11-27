@@ -86,9 +86,7 @@ type (
 )
 
 const (
-	StatusDraft    = schoolstructure.TransitionStatusDraft
-	StatusApplied  = schoolstructure.TransitionStatusApplied
-	StatusReverted = schoolstructure.TransitionStatusReverted
+	StatusDraft = schoolstructure.TransitionStatusDraft
 
 	ActionPromoted  = schoolstructure.TransitionActionPromoted
 	ActionGraduated = schoolstructure.TransitionActionGraduated

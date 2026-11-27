@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -68,30 +67,6 @@ func (c *effectiveTimeCore[S, E, N, D]) loadSchedules(
 	return rows, nil
 }
 
-func (c *effectiveTimeCore[S, E, N, D]) scheduleForWeekday(
-	ctx context.Context,
-	studentID int64,
-	weekday int,
-) (S, error) {
-	if weekday < 1 || weekday > 5 {
-		var zero S
-		return zero, &careplan.ScheduleError{
-			Op:  c.operation("get student %s schedule for weekday"),
-			Err: errors.New("invalid weekday"),
-		}
-	}
-
-	row, err := c.schedules.FindByStudentIDAndWeekday(ctx, studentID, weekday)
-	if err != nil {
-		var zero S
-		return zero, &careplan.ScheduleError{
-			Op:  c.operation("get student %s schedule for weekday"),
-			Err: err,
-		}
-	}
-	return row, nil
-}
-
 func (c *effectiveTimeCore[S, E, N, D]) upsertSchedule(
 	ctx context.Context,
 	row S,
@@ -154,19 +129,6 @@ func (c *effectiveTimeCore[S, E, N, D]) deleteSchedule(
 	return nil
 }
 
-func (c *effectiveTimeCore[S, E, N, D]) deleteAllSchedules(
-	ctx context.Context,
-	studentID int64,
-) error {
-	if err := c.schedules.DeleteByStudentID(ctx, studentID); err != nil {
-		return &careplan.ScheduleError{
-			Op:  c.operation("delete all student %s schedules"),
-			Err: err,
-		}
-	}
-	return nil
-}
-
 func (c *effectiveTimeCore[S, E, N, D]) noteByID(
 	ctx context.Context,
 	noteID int64,
@@ -180,35 +142,6 @@ func (c *effectiveTimeCore[S, E, N, D]) noteByID(
 		}
 	}
 	return row, nil
-}
-
-func (c *effectiveTimeCore[S, E, N, D]) loadNotes(
-	ctx context.Context,
-	studentID int64,
-) ([]N, error) {
-	rows, err := c.notes.FindByStudentID(ctx, studentID)
-	if err != nil {
-		return nil, &careplan.ScheduleError{
-			Op:  c.operation("get student %s notes"),
-			Err: err,
-		}
-	}
-	return rows, nil
-}
-
-func (c *effectiveTimeCore[S, E, N, D]) notesForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) ([]N, error) {
-	rows, err := c.notes.FindByStudentIDAndDate(ctx, studentID, calendar.Date(date))
-	if err != nil {
-		return nil, &careplan.ScheduleError{
-			Op:  c.operation("get student %s notes for date"),
-			Err: err,
-		}
-	}
-	return rows, nil
 }
 
 func (c *effectiveTimeCore[S, E, N, D]) createNote(
@@ -253,19 +186,6 @@ func (c *effectiveTimeCore[S, E, N, D]) deleteNote(
 	return nil
 }
 
-func (c *effectiveTimeCore[S, E, N, D]) deleteAllNotes(
-	ctx context.Context,
-	studentID int64,
-) error {
-	if err := c.notes.DeleteByStudentID(ctx, studentID); err != nil {
-		return &careplan.ScheduleError{
-			Op:  c.operation("delete all student %s notes"),
-			Err: err,
-		}
-	}
-	return nil
-}
-
 func (c *effectiveTimeCore[S, E, N, D]) data(
 	ctx context.Context,
 	studentID int64,
@@ -298,62 +218,6 @@ func (c *effectiveTimeCore[S, E, N, D]) dataWithSchedules(ctx context.Context, s
 		Exceptions: exceptions,
 		Notes:      notes,
 	}, nil
-}
-
-func (c *effectiveTimeCore[S, E, N, D]) effectiveTimeForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) (*domain.EffectiveTimeResult, error) {
-	weekday, err := calendar.PlanWeekday(ctx, date)
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: c.operation("get effective %s time"), Err: err}
-	}
-	var row S
-	if weekday <= 5 {
-		row, err = c.schedules.FindByStudentIDAndWeekday(ctx, studentID, weekday)
-		if err != nil {
-			return nil, &careplan.ScheduleError{Op: c.operation("get effective %s time"), Err: err}
-		}
-	}
-	return c.effectiveTimeForDateWithSchedule(ctx, studentID, date, row)
-}
-
-// EffectiveTimeForDateWithSchedule applies the shared exception/note merge to
-// a caller-provided recurring row. Pickup planning uses it with the
-// date-aware booking projection; arrival planning keeps using the stored row.
-func (c *effectiveTimeCore[S, E, N, D]) effectiveTimeForDateWithSchedule(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-	scheduleRow S,
-) (*domain.EffectiveTimeResult, error) {
-	weekday := domain.ISOWeekday(date)
-	result := &domain.EffectiveTimeResult{
-		Date:        date,
-		WeekdayName: domain.WeekdayName(weekday),
-	}
-	op := c.operation("get effective %s time")
-	careDay, err := calendar.IsCareWeekday(ctx, date)
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: op, Err: err}
-	}
-	if !careDay {
-		return result, nil
-	}
-
-	exception, err := c.exceptions.FindByStudentIDAndDate(ctx, studentID, calendar.Date(date))
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: op, Err: err}
-	}
-	c.applyScheduleAndException(result, scheduleRow, exception)
-
-	notes, err := c.notes.FindByStudentIDAndDate(ctx, studentID, calendar.Date(date))
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: op, Err: err}
-	}
-	c.appendDayNotes(result, notes)
-	return result, nil
 }
 
 func (c *effectiveTimeCore[S, E, N, D]) applyScheduleAndException(
@@ -428,8 +292,8 @@ func (c *effectiveTimeCore[S, E, N, D]) bulkEffectiveTimesForDate(
 	return c.bulkEffectiveTimesForDateWithSchedules(ctx, studentIDs, date, scheduleMap)
 }
 
-// BulkEffectiveTimesForDateWithSchedules is the batched counterpart of
-// EffectiveTimeForDateWithSchedule.
+// bulkEffectiveTimesForDateWithSchedules resolves the effective time of each
+// student for date from the weekly schedules already loaded.
 func (c *effectiveTimeCore[S, E, N, D]) bulkEffectiveTimesForDateWithSchedules(
 	ctx context.Context,
 	studentIDs []int64,

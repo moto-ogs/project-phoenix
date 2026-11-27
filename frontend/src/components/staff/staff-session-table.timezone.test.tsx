@@ -63,7 +63,6 @@ describe("StaffSessionTable in a browser outside Germany (#6293)", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={new Date(2026, 10, 9)}
-        isAdminView
       />,
     );
 
@@ -102,7 +101,6 @@ describe("StaffSessionTable across the March clock change", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={new Date(2026, 3, 15)}
-        isAdminView
       />,
     );
 

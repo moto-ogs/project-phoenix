@@ -121,11 +121,10 @@ describe("useStaffAbsencesPending", () => {
     await expect(opts.fetcher()).resolves.toBe(0);
   });
 
-  it("wires the absence refresh event and focus refetch", () => {
+  it("wires the absence refresh event", () => {
     mockIsAdmin.mockReturnValue(true);
     const opts = capturedOptions();
     expect(opts.eventNames).toEqual(["staff-absences-refresh"]);
-    expect(opts.refetchOnFocus).toBe(true);
   });
 
   // useSWRAuth prefixes school and account; the key carries the account.

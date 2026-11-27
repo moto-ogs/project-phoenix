@@ -15,7 +15,6 @@ import (
 	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
 	dataImportRetained "github.com/moto-ogs/project-phoenix/modules/dataimport/compose/imports"
 	importPorts "github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
-	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -95,13 +94,13 @@ func newImportRuntime(audit auditModels.Command, observe func(importModels.Impor
 // Directory's guardian port; a suite may decorate it to observe an owner
 // failure mid-batch.
 func newStudentImport(
-	runtime importPorts.ImportRuntime, identity importIdentity, groups schoolstructure.GroupListing, rooms facilities.Query,
+	runtime importPorts.ImportRuntime, identity importIdentity, groups schoolstructure.GroupListing,
 	persons peopledirectory.Capability, personBatches importPorts.PersonBatches, guardians importPorts.GuardianDirectory,
 	carePlan careplan.Capability, presence studentpresence.Capability, consentHistory consents.ConsentTransitions,
 	today func() timezone.Date, cohorts importCohorts,
 ) importModels.RowImporter[importModels.StudentImportRow] {
 	return dataImportRetained.NewImportService(dataImportRetained.NewStudentImportConfig(
-		newStudentImportDeps(runtime, identity, groups, rooms, persons, personBatches, guardians, carePlan, presence, consentHistory, today, cohorts),
+		newStudentImportDeps(runtime, identity, groups, persons, personBatches, guardians, carePlan, presence, consentHistory, today, cohorts),
 	), runtime)
 }
 
@@ -109,13 +108,12 @@ func newStudentImport(
 // conversion of class-list entries (#4803) reuses them for its batch
 // creation.
 func newStudentImportDeps(
-	runtime importPorts.ImportRuntime, identity importIdentity, groups schoolstructure.GroupListing, rooms facilities.Query,
+	runtime importPorts.ImportRuntime, identity importIdentity, groups schoolstructure.GroupListing,
 	persons peopledirectory.Capability, personBatches importPorts.PersonBatches, guardians importPorts.GuardianDirectory,
 	carePlan careplan.Capability, presence studentpresence.Capability, consentHistory consents.ConsentTransitions,
 	today func() timezone.Date, cohorts importCohorts,
 ) importPorts.StudentImportDeps {
-	references := owners.NewReferences(groups, rooms)
-	resolver := dataImportRetained.NewRelationshipResolver(references.Groups, references.Rooms)
+	resolver := dataImportRetained.NewRelationshipResolver(owners.NewGroupReferenceReader(groups))
 	return importPorts.StudentImportDeps{
 		Transactions:    runtime.Transactions,
 		Persons:         persons,
@@ -289,7 +287,7 @@ func newOpeningBalanceImport(
 // newServeImports builds the import services the server root mounts over
 // the owners it composed (#2708, #4013).
 func newServeImports(
-	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
+	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner, organizations organizationtenancy.Capability,
 	membership schoolmembership.Capability, workTime workforceModule.Capability, workforce owners.WorkforcePlanning,
 	cohorts importCohorts, now func() time.Time, settings interface {
@@ -297,11 +295,11 @@ func newServeImports(
 	},
 ) imports {
 	runtime := newImportRuntime(audit.Command, observeDataImport, now)
-	converter := newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, now)
+	converter := newClassListConversion(audit, identity, groups, persons, carePlan, presence, membership, now)
 	return imports{
 		ClassListConversion: converter,
 		Student: newStudentImport(
-			runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence.Presence,
+			runtime, identity, groups, persons, personBatches(persons), persons, carePlan, presence.Presence,
 			auditCompose.NewConsentRecorder(audit.Command), nil, cohorts,
 		),
 		Staff:     newStaffImport(runtime, identity, identity, organizations, persons, membership, workTime),
@@ -320,12 +318,12 @@ func newServeImports(
 // and Student Presence's mark transfer. A missing slice is a composition
 // error.
 func newClassListConversion(
-	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
+	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner,
 	membership schoolmembership.Capability, now func() time.Time,
 ) importModels.ClassListConverter {
 	converter, err := composeClassListConversion(newImportRuntime(audit.Command, observeDataImport, now), audit.Command, identity,
-		groups, rooms, persons, carePlan, presence.Presence, membership)
+		groups, persons, carePlan, presence.Presence, membership)
 	if err != nil {
 		// Like the other batch slices: without them the conversion refuses
 		// on use instead of the root failing to start.
@@ -346,7 +344,7 @@ func (u unboundClassListConversion) ConvertClassListEntries(context.Context, *in
 // runtime of the caller's, so a suite composes the same conversion.
 func composeClassListConversion(
 	runtime importPorts.ImportRuntime, audit auditModels.Command, identity importIdentity, groups schoolstructure.GroupListing,
-	rooms facilities.Query, persons peopledirectory.Capability, carePlan careplan.Capability, presence studentpresence.Capability,
+	persons peopledirectory.Capability, carePlan careplan.Capability, presence studentpresence.Capability,
 	membership schoolmembership.Capability,
 ) (importModels.ClassListConverter, error) {
 	removal, ok := membership.(importPorts.ClassListEntryRemoval)
@@ -358,7 +356,7 @@ func composeClassListConversion(
 		return nil, errors.New("class list conversion: student presence has no transfer of morning marks")
 	}
 	students := newStudentImportDeps(
-		runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence,
+		runtime, identity, groups, persons, personBatches(persons), persons, carePlan, presence,
 		// The conversion only creates, so the cohort follow-up of updates does
 		// not apply.
 		auditCompose.NewConsentRecorder(audit), nil, importCohorts{},
