@@ -30,7 +30,10 @@ Regel für alles, was moto verschickt.
    schreibt (Bestätigung, Rechnung, Gebührenbescheid, Vertragsschreiben,
    Storno, Gutschrift, Aufhebungs- und Änderungsbescheid) mit den festen
    Bausteinen, die moto einsetzt (Zahlungshinweis, Lastschrift, QR-Code,
-   Rückfragen, Notfallnummern).
+   Rückfragen, Notfallnummern). Dazu gehören die Standardtexte der Bestätigungen
+   und Mitteilungen zum Betreuungsvertrag (Kündigung, Widerruf, Vertragsende),
+   auch wo die Eltern-App dasselbe Schreiben zeigt: Es ist Korrespondenz,
+   kein Portaltext.
 2. **Auch Personal bekommt „Sie“.** Einladungen, Passwort-Reset,
    Anmeldecodes, Abwesenheitsanträge, Nachweis-Erinnerungen und
    Lohnexport-Mails an Schul- und Träger-Personal, Caterer und Operator stehen
