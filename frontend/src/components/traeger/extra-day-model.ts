@@ -226,9 +226,6 @@ function checkFee(draft: ExtraDayDraft, errors: Record<string, string>) {
   if (lunch === null || lunch > MAX_PRICE_CENTS) {
     errors.lunch_price =
       "Bitte gib einen Preis in Euro ein, zum Beispiel 4,30.";
-  } else if (lunch === 0) {
-    // Parents read that lunch on a day at a price costs extra.
-    errors.lunch_price = "Bitte gib einen Preis für das Essen ein.";
   }
 }
 

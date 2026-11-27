@@ -245,7 +245,7 @@
   "extraDayPriceText": "The price is for this day and per child, without any discount or exemption. You can see your fee in the summary.",
   "parallelDayHint": "This day is offered at several schools. Choose one school.",
   "contributionTextExtraDay": "This is what the extra day costs. The fee applies once the provider confirms the registration.",
-  "extraDayLunchText": "You can add lunch. It costs extra.",
+  "extraDayLunchText": "You can add lunch. The price is shown next to it.",
   "extraDayLunchIncludedText": "You can add lunch. It is included in the monthly fee.",
   "lunchHintIncluded": "Included in the monthly fee."
 }

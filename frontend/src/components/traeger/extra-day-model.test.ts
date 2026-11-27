@@ -163,6 +163,7 @@ describe("extra day model", () => {
         lunchOffered: true,
       }).lunch_price,
     ).toBe("Bitte gib einen Preis in Euro ein, zum Beispiel 4,30.");
+    // A lunch at no charge is valid on a day at a price too.
     expect(
       validateExtraDay({
         ...bridgeDay(),
@@ -170,8 +171,8 @@ describe("extra day model", () => {
         price: "18",
         lunchOffered: true,
         lunchPrice: "0",
-      }).lunch_price,
-    ).toBe("Bitte gib einen Preis für das Essen ein.");
+      }),
+    ).toEqual({});
   });
 
   it("accepts a complete day", () => {
