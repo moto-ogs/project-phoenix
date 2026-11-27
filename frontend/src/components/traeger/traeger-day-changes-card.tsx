@@ -1,9 +1,10 @@
 "use client";
 
-// „Heute anders“ auf dem Start des Träger-Portals (#7672): pro Schule die
-// Schließtage von heute und die Zahl der abgesagten Termine. Nur Schulen mit
-// Eintrag, jeweils mit Link in die Schulansicht. Keine Personen, keine
-// Gründe. Personalmangel steht weiter unter den Auffälligkeiten.
+// „Heute anders“ auf dem Start des Träger-Portals (#7672, #8146): pro Schule
+// die Schließtage von heute, die geänderte Öffnungszeit, ein ausfallendes
+// Mittagessen, die Zahl der abgesagten Termine und der gesperrten Räume. Nur
+// Schulen mit Eintrag, jeweils mit Link in die Schulansicht. Keine Personen,
+// keine Gründe. Personalmangel steht weiter unter den Auffälligkeiten.
 
 import { CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import { ButtonLink } from "~/components/ui/button";
@@ -17,14 +18,20 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { activitiesConcept } from "~/lib/concepts/activities";
+import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
+import { mealPlanConcept } from "~/lib/concepts/mealPlan";
+import { roomsConcept } from "~/lib/concepts/rooms";
+import type { MotoConcept } from "~/lib/moto-concepts";
 import { schoolCountLabel } from "~/lib/traeger-alerts";
 import {
   cancelledBlocksText,
+  closedRoomsText,
   closingDayLabel,
   closingDayText,
   hasDayChange,
+  openingChangeText,
 } from "~/lib/traeger-day-changes-text";
 import { traegerPath } from "~/lib/traeger-url";
 import { useTraegerDayChanges } from "./use-traeger-day-changes";
@@ -91,40 +98,46 @@ export function TraegerDayChangesCard() {
                 </p>
                 <ul className="mt-1.5 flex flex-col gap-1.5">
                   {school.closingDays.map((closing, index) => (
-                    <li
+                    <DayChangeLine
                       // A school can have its own and a Träger closing day.
                       key={`closing-${index}`}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <MotoConceptIcon
-                        concept={closingDaysConcept}
-                        className="mt-0.5 size-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 text-gray-600">
-                        <span className="font-medium text-gray-900">
-                          {closingDayLabel(closing)}:
-                        </span>{" "}
-                        {closingDayText(closing)}
-                      </span>
-                    </li>
+                      concept={closingDaysConcept}
+                      label={closingDayLabel(closing)}
+                      text={closingDayText(closing)}
+                    />
                   ))}
+                  {school.openingChanges.map((opening, index) => (
+                    <DayChangeLine
+                      // Overlapping changes of the hours are allowed.
+                      key={`opening-${index}`}
+                      concept={careTimesConcept}
+                      label="Geänderte Öffnungszeit"
+                      text={openingChangeText(opening)}
+                      numeric
+                    />
+                  ))}
+                  {school.mealCancelled ? (
+                    <DayChangeLine
+                      concept={mealPlanConcept}
+                      label="Mittagessen"
+                      text="fällt heute aus"
+                    />
+                  ) : null}
                   {school.cancelledBlocks > 0 ? (
-                    <li className="flex items-start gap-2 text-sm">
-                      <MotoConceptIcon
-                        concept={activitiesConcept}
-                        className="mt-0.5 size-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 text-gray-600">
-                        <span className="font-medium text-gray-900">
-                          Stundenplan:
-                        </span>{" "}
-                        <span className="tabular-nums">
-                          {cancelledBlocksText(school.cancelledBlocks)}
-                        </span>
-                      </span>
-                    </li>
+                    <DayChangeLine
+                      concept={activitiesConcept}
+                      label="Stundenplan"
+                      text={cancelledBlocksText(school.cancelledBlocks)}
+                      numeric
+                    />
+                  ) : null}
+                  {school.closedRooms > 0 ? (
+                    <DayChangeLine
+                      concept={roomsConcept}
+                      label="Räume"
+                      text={closedRoomsText(school.closedRooms)}
+                      numeric
+                    />
                   ) : null}
                 </ul>
               </div>
@@ -144,5 +157,32 @@ export function TraegerDayChangesCard() {
         </ResponsiveActionList>
       ) : null}
     </SectionCard>
+  );
+}
+
+/** Eine Zeile pro Art: Symbol, Art und was heute anders ist. */
+function DayChangeLine({
+  concept,
+  label,
+  text,
+  numeric = false,
+}: {
+  readonly concept: MotoConcept;
+  readonly label: string;
+  readonly text: string;
+  readonly numeric?: boolean;
+}) {
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      <MotoConceptIcon
+        concept={concept}
+        className="mt-0.5 size-4 shrink-0"
+        aria-hidden="true"
+      />
+      <span className="min-w-0 text-gray-600">
+        <span className="font-medium text-gray-900">{label}:</span>{" "}
+        <span className={numeric ? "tabular-nums" : undefined}>{text}</span>
+      </span>
+    </li>
   );
 }

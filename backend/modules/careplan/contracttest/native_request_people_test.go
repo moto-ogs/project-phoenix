@@ -73,7 +73,7 @@ func TestRequestApprovalPreservesNativePlanAndAuditSnapshots(t *testing.T) {
 			directory := &requestPlanDirectory{RequestPeople: f.persons, student: student}
 			audit := &requestPlanAudit{}
 			service := api.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-				f.reposCare.CarePlan(), directory, f.schedules.Arrivals, f.schedules.Pickups,
+				api.CarePlanRequestRecords(f.reposCare.CarePlan()), directory, f.schedules.Arrivals, f.schedules.Pickups,
 				nil, f.autoExcusal, nil, f.caller, nil, nil,
 				testpkg.RequestReviewPolicy[*peopledirectory.StudentState]{UserContext: f.caller}, testpkg.PermissionsFromContext, nil, slog.Default(), audit,
 				// The child is enrolled until 2026-12-31; on a live clock the

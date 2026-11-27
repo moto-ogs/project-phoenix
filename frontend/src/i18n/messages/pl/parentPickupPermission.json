@@ -35,8 +35,12 @@
   "pickupPerson": {
     "label": "Kto odbiera?",
     "none": "Jak zwykle",
-    "hint": "Tylko osoby zapisane w kontaktach.",
-    "manageLink": "Dodaj nową osobę do kontaktów"
+    "hint": "Wybierz osobę z kontaktów lub „Inna osoba”.",
+    "manageLink": "Dodaj nową osobę do kontaktów",
+    "other": "Inna osoba",
+    "otherNameLabel": "Imię i nazwisko osoby",
+    "otherNameHint": "Ta osoba pokazuje dowód osobisty przy odbiorze.",
+    "otherNameMissing": "Wpisz imię i nazwisko osoby."
   },
   "proofPdfTooltip": "Zapisuje potwierdzenie jako PDF na tym urządzeniu."
 }

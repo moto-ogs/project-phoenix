@@ -1780,6 +1780,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s traegerDayChangeSchools) TraegerSchoolsWithNames(ctx context.Context, organizationID int64) ([]traegerview.TraegerSchool, error) {\n\tschools, err := s.schools.ListTraegerSchools(ctx, organizationID)\n\tif errors.Is(err, organizationtenancy.ErrOrganizationInactive) || errors.Is(err, organizationtenancy.ErrOrganizationNotFound) {\n\t\treturn nil, traegerview.ErrTraegerUnavailable\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.TraegerSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, traegerview.TraegerSchool{ID: ident.ID(school.ID), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, City: school.City})\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerDayChangeSchools.TraegerSchoolsWithNames",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (l traegerDocumentAccessLog) RecordAccess(ctx context.Context, access organizationtenancy.TraegerDocumentAccess) error {\n\tnow := time.Now()\n\treturn l.log.Create(ctx, \u0026auditModels.DataAccessLog{ActorAccountID: access.AccountID, ActorRole: traegerAccessActorRole, ResourceType: auditModels.ResourceTypeTraegerDocumentDownload, RangeStart: now, RangeEnd: now, Metadata: map[string]any{\"channel\": \"traeger_portal\", \"organization_id\": access.OrganizationID, \"document_id\": access.DocumentID}})\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerDocumentAccessLog.RecordAccess",

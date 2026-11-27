@@ -61,4 +61,5 @@ func TestRoomClosedOnUsesRoomLockingRead(t *testing.T) {
 	assert.Equal(t, []int64{47}, store.lockedFilter.RoomIDs)
 	assert.Equal(t, day, store.lockedFilter.From)
 	assert.Equal(t, day, store.lockedFilter.Until)
+	assert.False(t, store.lockedFilter.ExcludeArchivedRooms, "room availability checks retain archived-room closure history")
 }

@@ -38,9 +38,10 @@ type TraegerClosingDayStore interface {
 	UpdateTraegerClosingDay(ctx context.Context, organizationID, id int64, input domain.TraegerClosingDayFields) (domain.TraegerClosingDay, error)
 	DeleteTraegerClosingDay(ctx context.Context, organizationID, id int64) error
 	LockTraegerClosingDay(ctx context.Context, organizationID, id int64) (domain.TraegerClosingDay, error)
-	// ListSchoolClosings reads the closing days of the schools on day in the
-	// administrative transaction of the Träger projection (#7672).
-	ListSchoolClosings(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) ([]domain.SchoolClosing, error)
+	// ListSchoolDays reads the closing days (#7672) and the opening changes
+	// (#8146) of the schools on day, in one statement, in the administrative
+	// transaction of the Träger projection.
+	ListSchoolDays(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) ([]domain.SchoolClosing, []domain.SchoolOpening, error)
 }
 
 // TraegerClosingDays serves traegercalendar.ClosingDays.

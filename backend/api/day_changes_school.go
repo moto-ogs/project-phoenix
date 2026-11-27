@@ -53,13 +53,15 @@ type SchoolDayChangesSources struct {
 	ClassArrivals timetable.ClassArrivalQuery
 	ClosingDays   dayChangesClosingDayReads
 	Appointments  dayChangesAppointmentReads
-	Today         func() calendar.Date
-	Logger        *slog.Logger
+	// RoomClosures is Facilities' read of the room closures (#8161).
+	RoomClosures dayChangesRoomClosureReads
+	Today        func() calendar.Date
+	Logger       *slog.Logger
 }
 
 // NewSchoolDayChanges binds the sources to the projection's ports.
 func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.SchoolResource, error) {
-	if sources.Caller == nil || sources.Staff == nil || sources.ClassArrivals == nil || sources.ClosingDays == nil || sources.Appointments == nil {
+	if sources.Caller == nil || sources.Staff == nil || sources.ClassArrivals == nil || sources.ClosingDays == nil || sources.Appointments == nil || sources.RoomClosures == nil {
 		return nil, fmt.Errorf("%w: school sources", daychangesview.ErrDependencies)
 	}
 	schoolDay, err := timetable.SchoolDayChangesOf(sources.ClassArrivals)
@@ -74,6 +76,7 @@ func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.Schoo
 		Classes:      schoolDayChangesClasses{day: day},
 		Supervisions: schoolDayChangesSupervisions{day: day},
 		Appointments: schoolDayChangesAppointments{caller: day.caller, reads: sources.Appointments},
+		RoomClosures: dayChangesRoomClosures{reads: sources.RoomClosures},
 		Logger:       sources.Logger,
 	})
 	if err != nil {

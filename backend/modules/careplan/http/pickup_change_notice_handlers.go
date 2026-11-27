@@ -15,13 +15,15 @@ import (
 // pickupChangeNoticeResponse is one unread marker of a changed pickup time
 // (#6855). It names the child by first name only; the link opens the child.
 type pickupChangeNoticeResponse struct {
-	RequestID        ident.ID  `json:"request_id"`
-	StudentID        ident.ID  `json:"student_id"`
-	StudentFirstName string    `json:"student_first_name"`
-	Date             string    `json:"date"`
-	PickupTime       string    `json:"pickup_time,omitempty"`
-	Withdrawn        bool      `json:"withdrawn"`
-	InformedAt       time.Time `json:"informed_at"`
+	RequestID        ident.ID `json:"request_id"`
+	StudentID        ident.ID `json:"student_id"`
+	StudentFirstName string   `json:"student_first_name"`
+	Date             string   `json:"date"`
+	PickupTime       string   `json:"pickup_time,omitempty"`
+	// PickupPerson is who the family named to collect the child (#8162).
+	PickupPerson string    `json:"pickup_person,omitempty"`
+	Withdrawn    bool      `json:"withdrawn"`
+	InformedAt   time.Time `json:"informed_at"`
 }
 
 var errPickupChangeNoticesUnbound = errors.New("pickup change notices are not configured")
@@ -87,7 +89,7 @@ func renderPickupChangeNotices(notices []careplan.PickupChangeTeamNotice) []pick
 		out = append(out, pickupChangeNoticeResponse{
 			RequestID: ident.ID(notice.RequestID), StudentID: ident.ID(notice.StudentID),
 			StudentFirstName: notice.StudentFirstName, Date: notice.Date.String(), PickupTime: notice.PickupTime,
-			Withdrawn: notice.Withdrawn, InformedAt: notice.InformedAt,
+			PickupPerson: notice.PickupPerson, Withdrawn: notice.Withdrawn, InformedAt: notice.InformedAt,
 		})
 	}
 	return out

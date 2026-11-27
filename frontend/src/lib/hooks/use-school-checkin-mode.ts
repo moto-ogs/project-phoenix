@@ -373,7 +373,8 @@ export function useSchoolCheckinMode(
       pendingClearRef.current = true;
       return;
     }
-    setSelectedIds(new Set());
+    // An empty selection stays the same Set, so clearing nothing renders nothing.
+    setSelectedIds((selected) => (selected.size === 0 ? selected : new Set()));
   }, []);
 
   // Entering, leaving, or re-entering the mode always drops selection state:

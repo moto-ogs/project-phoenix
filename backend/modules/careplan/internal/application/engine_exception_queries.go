@@ -50,6 +50,7 @@ type PickupPersonQueries interface {
 	LockGuardianPickupPermission(ctx context.Context, relationshipID int64, weekday int) (bool, domain.OperationStats, error)
 	SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (careplan.PickupPerson, domain.OperationStats, error)
 	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, domain.OperationStats, error)
+	DeletePickupPersonByID(ctx context.Context, studentID, id int64) (bool, domain.OperationStats, error)
 }
 
 // Owner reads keep transaction acquisition in the application layer. The raw

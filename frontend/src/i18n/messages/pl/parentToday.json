@@ -51,6 +51,8 @@
     "pickupAt": "Odbiór {name} dziś o {time}.",
     "notComing": "{name} dziś nie przychodzi.",
     "goesAlone": "{name} wraca dziś do domu samodzielnie.",
+    "pickupPerson": "{person} odbiera dziś {name}.",
+    "pickupPersonOneTime": "{person} odbiera dziś {name} i pokazuje dowód osobisty.",
     "classTrip": "Klasa {class} jest dziś na wycieczce.",
     "classTripBack": "Klasa {class} jest dziś na wycieczce. Powrót o {time}.",
     "classDismissal": "Lekcje klasy {class} kończą się dziś o {time}.",

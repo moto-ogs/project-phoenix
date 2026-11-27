@@ -85,7 +85,8 @@ func TestSchoolDayChanges(t *testing.T) {
 		assert.Equal(t, []string{"school Pädagogischer Tag ->school_calendar"}, closingLines(t, body))
 		assert.Equal(t, "loaded", sourceStatus(overview, "closing_days"))
 		assert.Equal(t, "loaded", sourceStatus(overview, "classes"))
-		assert.Len(t, overview.Sources, 4, "moto schule reads only its own sources")
+		// The Räume source joined in #8161.
+		assert.Len(t, overview.Sources, 5, "moto schule reads only its own sources")
 		assert.Contains(t, body, `"target":"school_class"`)
 		for _, leak := range []string{"Lehrerkonferenz", "Wandertag", "2c", "12:15", "10:00", "09:05", "Fremd"} {
 			assert.NotContains(t, body, leak, "no reason, other class, other day or other school")

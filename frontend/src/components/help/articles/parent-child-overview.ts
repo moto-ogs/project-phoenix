@@ -30,7 +30,7 @@ export function parentChildOverviewTopic(): HelpTopic {
       "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
       "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
       "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, wer dein Kind abholt, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
       // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
       "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
       // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.

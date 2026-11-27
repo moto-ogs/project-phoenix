@@ -170,7 +170,7 @@ func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity Traege
 	})
 	closingDays := mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
-	dayChanges, err := traegerDayChangePorts(closingDays, traegerTestTimetable(t, database, membership, now))
+	dayChanges, err := traegerDayChangePorts(organizations, closingDays, traegerTestTimetable(t, database, membership, now))
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, schoolSettings.Settings, testHealthCipher(), days,

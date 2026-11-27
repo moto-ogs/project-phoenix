@@ -34,6 +34,14 @@ func pickupNoteVersion(row careplan.PickupNote) string {
 		strconv.FormatInt(row.StudentID, 10), strconv.FormatInt(row.CreatedBy, 10))
 }
 
+// pickupPersonVersion covers what the staff day editor (PUT
+// /students/{id}/pickup-persons/{date}) writes: the name, the contact and
+// the author.
+func pickupPersonVersion(row careplan.PickupPerson) string {
+	return rowVersion(stamp(row.UpdatedAt), row.ExceptionDate.String(), row.Name, optionalID(row.GuardianProfileID),
+		optionalID(row.CreatedBy), optionalID(row.RequestedByGuardian))
+}
+
 // rowVersion joins the fields to one canonical text. It stays readable in the
 // ledger; a quoted list keeps any separator inside a value unambiguous.
 func rowVersion(parts ...string) string {

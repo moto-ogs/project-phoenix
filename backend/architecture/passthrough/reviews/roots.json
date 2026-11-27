@@ -1272,6 +1272,11 @@
     },
     {
       "decision": "0084",
+      "id": "api/traegerDayChangeSchools.TraegerSchoolsWithNames",
+      "reason": "ADR 0084 section 1 (#8146): Consumer-port adapter of the Träger projection's school set for „Heute anders“; it reads the Träger's schools with their names at Organisation \u0026 Tenancy in one statement, translates a deactivated, deleted or unknown Träger onto the projection's ErrTraegerUnavailable and the schools into the projection's TraegerSchool vocabulary."
+    },
+    {
+      "decision": "0084",
       "id": "api/traegerDocumentAccessLog.RecordAccess",
       "reason": "ADR 0084 (#4692): Consumer-port adapter that writes a download of the Träger-Büro into the access log of a school as audit.data_access_log entry of the Träger portal (ADR 0084 section 7)."
     },

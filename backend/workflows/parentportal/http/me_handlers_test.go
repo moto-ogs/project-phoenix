@@ -27,6 +27,8 @@ import (
 // carry behaviour; the rest satisfy the interface for the handler tests.
 type fakeParentService struct {
 	claimedEmails []string
+	// gotPickupSubmission is the last one-day request (#8162).
+	gotPickupSubmission *parentService.PickupChangeSubmission
 
 	// The room history stop (#3844).
 	roomHistoryStop    parentService.ChildRoomHistoryStop
@@ -392,6 +394,7 @@ func (f *fakeParentService) SubmitCareExceptionWithReason(_ context.Context, acc
 }
 
 func (f *fakeParentService) SubmitPickupChange(ctx context.Context, accountID, studentID int64, submission parentService.PickupChangeSubmission) (*careplan.CareScheduleChangeRequest, error) {
+	f.gotPickupSubmission = &submission
 	return f.SubmitPickupChangeRequest(ctx, accountID, studentID, submission.Date, submission.PickupTime, submission.DepartureMode, submission.Reason, submission.RecipientGuardianProfileIDs)
 }
 
@@ -592,6 +595,33 @@ func TestEditPickupChangePreservesOmittedDeclarationFields(t *testing.T) {
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	require.NotNil(t, service.gotPickupEdit)
 	assert.True(t, service.gotPickupEdit.PreservePickupDeclaration)
+}
+
+// #8162: a one-time person travels by name, trimmed, without a contact; an
+// edit that names one keeps no stored declaration.
+func TestPickupChangeCarriesAOneTimePersonByName(t *testing.T) {
+	t.Parallel()
+
+	service := &fakeParentService{}
+	rs := &Resource{ParentService: service}
+	w := httptest.NewRecorder()
+	rs.submitCareException(w, careExceptionRequest(`{"date":"2026-08-18","pickup_time":"14:30","reason":"Tante holt ab","pickup_person_name":"  Tante Frieda "}`))
+	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+	require.NotNil(t, service.gotPickupSubmission)
+	assert.Equal(t, "Tante Frieda", service.gotPickupSubmission.PickupPersonName)
+	assert.Zero(t, service.gotPickupSubmission.PickupPersonID)
+
+	req := withClaims(httptest.NewRequest(http.MethodPut,
+		"/me/children/77/pickup-change-requests/88", strings.NewReader(`{"date":"2026-11-10","reason":"Termin","pickup_person_name":"Tante Frieda"}`)), 1234)
+	route := chi.NewRouteContext()
+	route.URLParams.Add("studentId", "77")
+	route.URLParams.Add("requestId", "88")
+	response := httptest.NewRecorder()
+	rs.editPickupChangeRequest(response, req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, route)))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	require.NotNil(t, service.gotPickupEdit)
+	assert.Equal(t, "Tante Frieda", service.gotPickupEdit.PickupPersonName)
+	assert.False(t, service.gotPickupEdit.PreservePickupDeclaration)
 }
 
 func TestEditPickupChangeAcceptsExplicitDeclarationClear(t *testing.T) {

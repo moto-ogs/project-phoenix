@@ -51,6 +51,8 @@
     "pickupAt": "{name} wird heute um {time} Uhr abgeholt.",
     "notComing": "{name} kommt heute nicht.",
     "goesAlone": "{name} geht heute allein nach Hause.",
+    "pickupPerson": "{person} holt {name} heute ab.",
+    "pickupPersonOneTime": "{person} holt {name} heute ab und zeigt dabei den Ausweis.",
     "classTrip": "Die Klasse {class} ist heute auf Ausflug.",
     "classTripBack": "Die Klasse {class} ist heute auf Ausflug. Zurück um {time} Uhr.",
     "classDismissal": "Der Unterricht der Klasse {class} endet heute um {time} Uhr.",

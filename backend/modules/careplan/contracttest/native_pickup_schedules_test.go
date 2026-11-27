@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/roots/owners"
+
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -124,7 +126,7 @@ func TestNativePickupApprovalRecordsPreserveDayAndConflict(t *testing.T) {
 	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	student := testpkg.CreateTestStudent(t, db, "Approval", "Records", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Approval", "Writer")
-	records, err := compose.NewPickupApprovalExceptions(owner)
+	records, err := compose.NewPickupApprovalExceptions(owners.CarePlanRequestRecords(owner))
 	require.NoError(t, err)
 	date := decisionTestToday.AddDays(7)
 	missing, err := records.FindForDate(ctx, student.ID, date)

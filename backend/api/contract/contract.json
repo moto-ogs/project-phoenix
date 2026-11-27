@@ -25987,6 +25987,7 @@
         "child_absent",
         "child_goes_alone",
         "child_pickup_changed",
+        "child_pickup_person",
         "class_dismissal_changed",
         "class_trip",
         "closing_day",
@@ -26158,6 +26159,7 @@
         "group_substitution_count",
         "meal_cancelled",
         "meal_plan_changed",
+        "room_closed",
         "shift_cancelled",
         "shift_changed",
         "shift_replacement",
@@ -26176,6 +26178,7 @@
         "meal_plan",
         "own_absences",
         "own_shift_plan",
+        "room",
         "school_calendar",
         "school_class",
         "school_supervisions",
@@ -26327,6 +26330,7 @@
         "closing_days",
         "meal_plan",
         "notices",
+        "room_closures",
         "staff",
         "supervisions"
       ]
@@ -45461,6 +45465,19 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_person_one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "activity_title",
           "schema": {
             "kind": "string",
@@ -53965,6 +53982,18 @@
       ]
     },
     {
+      "name": "DayRoomClosure",
+      "go_type": "daychangesview.DayRoomClosure",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayRow",
       "go_type": "classday.DayRow",
       "fields": [
@@ -56129,6 +56158,14 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
           "name": "signature",
           "optional": true,
           "schema": {
@@ -57169,6 +57206,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayMealCancellation"
+          }
+        },
+        {
+          "name": "room_closure",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayRoomClosure"
           }
         }
       ]
@@ -72606,6 +72651,13 @@
           "schema": {
             "kind": "id"
           }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },
@@ -86046,6 +86098,13 @@
           }
         },
         {
+          "name": "pickup_person_one_time",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "signed",
           "schema": {
             "kind": "bool"
@@ -96482,6 +96541,29 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "opening_changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayOpening"
+            }
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -96617,6 +96699,38 @@
           "name": "traeger",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayOpening",
+      "go_type": "traegerview.SchoolDayOpening",
+      "fields": [
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -109868,6 +109982,14 @@
             "kind": "id",
             "nullable": true,
             "no_id": true
+          }
+        },
+        {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         },
         {
@@ -132998,6 +133120,13 @@
         },
         {
           "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_person",
           "optional": true,
           "schema": {
             "kind": "string"
