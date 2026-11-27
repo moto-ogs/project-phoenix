@@ -182,12 +182,16 @@ jobs:
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
+          cache: false
 
-      # setup-go's go.sum-only key is immutable. It restores dependencies but
-      # never saves later source builds on an exact hit. Keep a source-keyed
-      # build layer per shard, with the last source build as a warm fallback.
+      - name: Restore backend Go modules
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.go.outputs.GOMODCACHE }}
+          key: backend-go-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}
+
+      # Module downloads depend on the lockfiles; build outputs depend on
+      # source and shard. Do not restore a Go build cache in both archives.
       # Pull requests only restore: a cache a pull request saves is visible to
       # that pull request alone, and the 2 GB saves of every run pushed the
       # repository over its cache limit, so even development's layer was
@@ -607,16 +611,16 @@ jobs:
         run: node --test scripts/test-frontend-changed.test.mjs
 
       # Layout needs a real browser; jsdom/happy-dom compute no boxes (#3328).
-      # Systemweites Google Chrome statt des gebündelten Chromium (#5612):
-      # --force aktualisiert das veraltete Chrome des Runner-Images;
-      # frontend/scripts/secure-chrome.setup.ts lehnt ungepatchte Versionen ab.
+      # Layout uses headless system Chrome, not Xvfb or Playwright's extra font
+      # packs. The Chrome package installs its own libraries; update it even
+      # when the runner ships an older version (#5612).
       - name: Install Google Chrome
         if: ${{ matrix.project == 'node' }}
         working-directory: frontend
         run: |
           # Retry transient download failures, never the tests themselves.
           for attempt in 1 2 3; do
-            if pnpm exec playwright install --with-deps --force chrome; then
+            if pnpm exec playwright install --force chrome; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -646,8 +650,7 @@ jobs:
             test_args=()
           fi
           case "$PROJECT" in
-            # Dedicated DOM shards do not share the runner with Node subprocess tests.
-            dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2" --maxWorkers=4) ;;
+            dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2") ;;
           esac
           if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REF" ]; then
             node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"

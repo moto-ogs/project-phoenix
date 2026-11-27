@@ -225,8 +225,17 @@ assert_workflow_filter() {
 # As in paths-filter: * stays inside one path segment, ** crosses them,
 # and **/ also matches no directory at all.
 glob_matches() {
-  regex=$(printf '%s' "$1" | sed -e 's/[.%]/\\&/g' -e 's|\*\*/|(.@/)?|g' \
-    -e 's|\*\*|.@|g' -e 's|\*|[^/]*|g' -e 's|@|*|g')
+  local glob=$1 regex='' char
+  while [ -n "$glob" ]; do
+    case "$glob" in
+      '**/'*) regex+='(.*/)?'; glob=${glob:3} ;;
+      '**'*) regex+='.*'; glob=${glob:2} ;;
+      '*'*) regex+='[^/]*'; glob=${glob:1} ;;
+      *) char=${glob:0:1}; glob=${glob:1}
+         case "$char" in '.'|'+'|'?'|'^'|'$'|'|'|'('|')'|'['|']'|'{'|'}'|'\') regex+='\' ;; esac
+         regex+=$char ;;
+    esac
+  done
   [[ "$2" =~ ^${regex}$ ]]
 }
 
@@ -239,10 +248,15 @@ workflow_filter_patterns() {
 }
 
 workflow_filter_matches() {
+  local pattern included=false
   while IFS= read -r pattern; do
-    [ -n "$pattern" ] && glob_matches "$pattern" "$2" && return 0
+    if [[ "$pattern" == '!'* ]]; then
+      if glob_matches "${pattern#!}" "$2"; then return 1; fi
+    elif glob_matches "$pattern" "$2"; then
+      included=true
+    fi
   done < <(workflow_filter_patterns "$1")
-  return 1
+  [ "$included" = true ]
 }
 
 assert_workflow_output_contains() {
@@ -458,8 +472,7 @@ for path in 'scripts/test-changed.sh' 'scripts/test-changed_test.sh' 'scripts/te
 done
 assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.backend-local-test-scripts == 'true'"
 assert_workflow_output_contains toolchain-changed "steps.filter.outputs.backend-local-test-scripts == 'true'"
-# The script self-tests left the backend test job: the ratchets suite must
-# start wherever that job ran them, on every full backend suite.
+# The shell self-tests remain in selection even when the full backend job covers the Go ratchets.
 for output in run-ci-scripts toolchain-changed; do
   assert_workflow_output_contains "$output" "steps.backend-size.outputs.full == 'true'"
   assert_workflow_output_contains "$output" "steps.filter.outputs.backend-test-infra == 'true'"
@@ -467,7 +480,7 @@ for output in run-ci-scripts toolchain-changed; do
   assert_workflow_output_contains "$output" "steps.scope.outputs.release == 'true'"
 done
 grep -qF 'scripts/backend-test-matrix_test.sh' <(sed -n '/- name: Verify backend test scripts/,/^  [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml") ||
-  { echo 'the ratchets suite must run the test matrix self-test' >&2; exit 1; }
+  { echo 'the selection suite must run the test matrix self-test' >&2; exit 1; }
 for path in 'scripts/backend-source-ratchets.mjs' 'backend/test/*_test.go'; do
   assert_workflow_filter script-tests "$path" present
   # Do not buy the release-restore or extra toolchain-ratchet jobs for these.
@@ -479,6 +492,15 @@ done
 # only through the restore-suite filter; pushes and release pull requests
 # always start it.
 assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-suite == 'true'"
+assert_workflow_output_contains run-ci-scripts "steps.filter.outputs.restore-alerts == 'true'"
+for fragment in "steps.filter.outputs.restore-alerts == 'true'" "github.event_name == 'push'" "steps.scope.outputs.release == 'true'"; do
+  assert_workflow_output_contains run-restore-alerts "$fragment"
+done
+for path in scripts/daily-backup-alerts.integration.test.mjs monitoring/grafana/provisioning/alerting/daily-backup.yml docs/operations/daily-backup.md; do
+  if workflow_filter_matches restore-suite "$path"; then
+    echo "an alert-only change must not start database restore drills: $path" >&2; exit 1
+  fi
+done
 for fragment in "steps.filter.outputs.restore-suite == 'true'" "github.event_name == 'push'" \
   "steps.scope.outputs.release == 'true'"; do
   assert_workflow_output_contains restore-changed "$fragment"
@@ -489,8 +511,7 @@ if [ -z "$restore_rows" ] ||
   echo 'only restore-changed may add the restore suite to the matrix' >&2
   exit 1
 fi
-# The split suites start together: the release restore left the restore job
-# and the script self-tests left the ratchets job only to shorten both (#6962).
+# Both sets of tests are admitted before removing any duplicate matrix work.
 suite_rows=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '["unit"' || true)
 while IFS= read -r row; do
   for pair in '"restore" "release-restore"' '"ratchets" "selection"'; do
@@ -503,6 +524,10 @@ while IFS= read -r row; do
   done
 done <<<"$suite_rows"
 [ "$(grep -c . <<<"$suite_rows")" = 4 ] || { echo 'expected four suite rows in the ci-scripts matrix' >&2; exit 1; }
+# Toolchain-only changes still need their own Go ratchets; selection is never covered by go test.
+matrix_exclude=$(sed -n '/^        suite: >-$/,/^    [a-z-]*:$/p' "$repo_root/.github/workflows/main.yml" | grep -F '        exclude:')
+grep -Fq "full-backend-suite == 'true' && '[{\"suite\":\"ratchets\"}]' || '[]'" <<<"$matrix_exclude" ||
+  { echo 'only the full backend suite may replace the dedicated ratchets job' >&2; exit 1; }
 if workflow_filter_matches restore-suite scripts/posthog-dashboards.mjs; then
   echo 'a PostHog dashboard change must not start the restore suite' >&2
   exit 1
@@ -513,37 +538,43 @@ for path in .github/workflows/main.yml scripts/daily-backup.sh scripts/release-b
 done
 # Inventory: every file the restore steps name, and every file those files
 # reach by relative path, import or script directory, is in the filter.
-restore_queue=$(awk '
-  $0 == "  ci-scripts:" { job = 1; next }
-  !job { next }
-  /^      - / { if (keep) printf "%s", block; block = ""; keep = 0 }
-  /^  [a-z-]+:$/ { if (keep) printf "%s", block; exit }
-  { block = block $0 "\n" }
-  /if: matrix\.suite == .(release-)?restore.$/ { keep = 1 }
-' "$repo_root/.github/workflows/main.yml" | { grep -oE '(scripts|docs|monitoring)/[A-Za-z0-9_.@/-]+' || true; } | sort -u)
-[ -n "$restore_queue" ] || { echo 'restore suite steps missing from main.yml' >&2; exit 1; }
-restore_seen=' '
-while [ -n "$restore_queue" ]; do
-  path=${restore_queue%%$'\n'*}
-  [ "$path" = "$restore_queue" ] && restore_queue='' || restore_queue=${restore_queue#*$'\n'}
-  case "$restore_seen" in *" $path "*) continue ;; esac
-  restore_seen="$restore_seen$path "
-  [ -f "$repo_root/$path" ] || { echo "restore suite input does not exist: $path" >&2; exit 1; }
-  workflow_filter_matches restore-suite "$path" ||
-    { echo "restore suite input missing from the restore-suite filter: $path" >&2; exit 1; }
-  while IFS= read -r reference; do
-    [ -n "$reference" ] || continue
-    reference=$(printf '%s/%s\n' "${path%/*}" "$reference" |
-      sed -E -e 's#/\./#/#g' -e ':a' -e 's#[^/]+/\.\./##' -e 'ta')
-    restore_queue=$(printf '%s\n%s' "$restore_queue" "$reference")
-    restore_queue=${restore_queue#$'\n'}
-  done < <(
-    { grep -oE "(new URL\(|join\(scripts, |with_name\()'[^']+'|from '\.\.?/[^']+'" "$repo_root/$path" |
-        grep -oE "'[^']+'" | tr -d "'"
-      grep -oE '(\$script_dir|dirname -- "\$0"\))/[A-Za-z0-9_.-]+' "$repo_root/$path" | sed 's|.*/||'
-    } || true
-  )
-done
+assert_restore_inputs() {
+  local restore_queue restore_seen path reference
+  restore_queue=$(awk -v step_pattern="$2" '
+    $0 == "  ci-scripts:" { job = 1; next }
+    !job { next }
+    /^      - / { if (keep) printf "%s", block; block = ""; keep = 0 }
+    /^  [a-z-]+:$/ { if (keep) printf "%s", block; exit }
+    { block = block $0 "\n" }
+    $0 ~ step_pattern { keep = 1 }
+  ' "$repo_root/.github/workflows/main.yml" | { grep -oE '(scripts|docs|monitoring)/[A-Za-z0-9_.@/-]+' || true; } | sort -u)
+  [ -n "$restore_queue" ] || { echo "steps for the $1 filter missing from main.yml" >&2; exit 1; }
+  restore_seen=' '
+  while [ -n "$restore_queue" ]; do
+    path=${restore_queue%%$'\n'*}
+    [ "$path" = "$restore_queue" ] && restore_queue='' || restore_queue=${restore_queue#*$'\n'}
+    case "$restore_seen" in *" $path "*) continue ;; esac
+    restore_seen="$restore_seen$path "
+    [ -f "$repo_root/$path" ] || { echo "restore suite input does not exist: $path" >&2; exit 1; }
+    workflow_filter_matches "$1" "$path" ||
+      { echo "input missing from the $1 filter: $path" >&2; exit 1; }
+    while IFS= read -r reference; do
+      [ -n "$reference" ] || continue
+      reference=$(printf '%s/%s\n' "${path%/*}" "$reference" |
+        sed -E -e 's#/\./#/#g' -e ':a' -e 's#[^/]+/\.\./##' -e 'ta')
+      restore_queue=$(printf '%s\n%s' "$restore_queue" "$reference")
+      restore_queue=${restore_queue#$'\n'}
+    done < <(
+      { grep -oE "(new URL\(|join\(scripts, |with_name\()'[^']+'|from '\.\.?/[^']+'|read\('\.\.?/[^']+'" "$repo_root/$path" |
+          grep -oE "'[^']+'" | tr -d "'"
+        grep -oE '(\$script_dir|dirname -- "\$0"\))/[A-Za-z0-9_.-]+' "$repo_root/$path" | sed 's|.*/||'
+      } || true
+    )
+  done
+}
+assert_restore_inputs restore-suite 'if: matrix[.]suite == .(release-)?restore.$'
+assert_restore_inputs restore-alerts 'needs[.]detect-changes[.]outputs[.]run-restore-alerts'
+
 for filter in backend-tests backend-lint backend-architecture; do
   assert_workflow_filter "$filter" 'scripts/backend-architecture.sh' present
   assert_workflow_filter "$filter" 'scripts/backend-architecture/**' present

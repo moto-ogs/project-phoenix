@@ -5,7 +5,7 @@
 // nightly), bei einer globalen Eingabe aller Stories oder wenn die Auswahl
 // scheitert, läuft alles: die Auswahl schlägt offen fehl.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
@@ -144,54 +144,131 @@ export function shardArgs(value) {
   return [`--shard=${index}/${count}`];
 }
 
-const config = [
-  "-c",
-  "vitest.storybook.config.ts",
-  ...shardArgs(process.env.STORYBOOK_SHARD),
-];
+// One hosted shard rendered 96 files in 93–138 seconds (#8176, #8244).
+// Keep small selections on this runner instead of repeating its setup twice.
+export function planFor(files) {
+  const count = files === null ? 3 : Math.min(3, Math.ceil(files.length / 64));
+  return { files, shards: Array.from({ length: count }, (_, i) => i + 1) };
+}
 
-function run(args) {
-  const result = spawnSync("pnpm", ["exec", "vitest", ...args], {
-    stdio: "inherit",
+function changedFiles(base) {
+  if (!base) return null;
+  const options = { encoding: "utf8" };
+  if (
+    spawnSync("git", ["cat-file", "-e", `${base}^{commit}`], options).status !==
+    0
+  ) {
+    // The name-only diff below reads the two trees, not their file contents.
+    const fetched = spawnSync(
+      "git",
+      [
+        "fetch",
+        "--no-tags",
+        "--depth=1",
+        "--filter=blob:none",
+        "--no-write-fetch-head",
+        "origin",
+        base,
+      ],
+      options,
+    );
+    if (fetched.status !== 0)
+      throw new Error(fetched.stderr || "git fetch failed");
+  }
+  const diff = spawnSync(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "--relative",
+      "-z",
+      base,
+      "HEAD",
+      "--",
+      ".",
+    ],
+    options,
+  );
+  if (diff.status !== 0) throw new Error(diff.stderr || "git diff failed");
+  return diff.stdout.split("\0").filter(Boolean);
+}
+
+async function selectStories(changed) {
+  if (changed === null) return null;
+  if (!changed.length) return [];
+  if (needsFullRun(changed)) return null;
+  // Same module graph as `vitest related`, without collecting a story in the browser.
+  // The Storybook addon installs its story matcher only in Vitest's CLI environment.
+  process.env.VITEST = "true";
+  process.env.TEST = "true";
+  process.env.NODE_ENV ??= "test";
+  const { createVitest } = await import("vitest/node");
+  const vitest = await createVitest("test", {
+    config: "vitest.storybook.config.ts",
+    run: true,
+    watch: false,
+    related: changed.map((path) => resolve(frontend, path)),
   });
-  process.exit(result.status ?? 1);
+  try {
+    const stories = await vitest.globTestSpecifications();
+    if (
+      !stories.length ||
+      stories.some((spec) => !/\.stories\.tsx?$/.test(spec.moduleId))
+    )
+      throw new Error("Vitest hat keine gültige Storybook-Suite geladen");
+    const specs = await vitest.getRelevantTestSpecifications();
+    return specs.map(({ moduleId }) => relative(frontend, moduleId));
+  } finally {
+    await vitest.close();
+  }
 }
 
-function git(args) {
-  return spawnSync("git", args, { encoding: "utf8" });
+async function selection() {
+  try {
+    return await selectStories(changedFiles(process.env.BASE_SHA?.trim()));
+  } catch (error) {
+    console.warn(
+      `Story-Auswahl nicht möglich (${error.message}): alle Stories.`,
+    );
+    return null;
+  }
 }
 
-function main() {
-  const base = process.env.BASE_SHA?.trim();
-  if (!base) {
-    console.log("Kein BASE_SHA: alle Stories.");
-    run(["run", ...config]);
+async function main() {
+  if (process.argv.includes("--plan")) {
+    const { shards, files } = planFor(await selection());
+    console.log(
+      files === null
+        ? "Alle Stories."
+        : `${files.length} betroffene Story-Dateien auf ${shards.length} Runnern.`,
+    );
+    appendFileSync(
+      process.env.GITHUB_OUTPUT,
+      `count=${shards.length}\nshards=${JSON.stringify(shards)}\nfiles=${JSON.stringify(files)}\n`,
+    );
+    return;
   }
-
-  // Der Checkout ist flach: die Basis als einzelnen Commit holen. Ein
-  // Zwei-Punkt-Diff braucht keine Historie, nur beide Bäume.
-  const fetched = git(["fetch", "--no-tags", "--depth=1", "origin", base]);
-  const diff =
-    fetched.status === 0
-      ? git(["diff", "--name-only", "--relative", base, "HEAD", "--", "."])
-      : fetched;
-  if (diff.status !== 0) {
-    console.log(`Auswahl nicht möglich (${diff.stderr.trim()}): alle Stories.`);
-    run(["run", ...config]);
-  }
-
-  const changed = diff.stdout.split("\n").filter(Boolean);
-  if (changed.length === 0) {
-    console.log("Keine Änderung unter frontend/: keine Story betroffen.");
-    process.exit(0);
-  }
-  if (needsFullRun(changed)) {
-    console.log("Globale Eingabe aller Stories geändert: alle Stories.");
-    run(["run", ...config]);
-  }
-  console.log(`${changed.length} geänderte Dateien, betroffene Stories:`);
-  // --passWithNoTests: eine Änderung ohne Story im Importgraphen ist kein Fehler.
-  run(["related", "--run", "--passWithNoTests", ...config, ...changed]);
+  // In CI an omitted file list is an explicitly full run. Outside CI keep
+  // the BASE_SHA entry point used to replay a pull request locally.
+  const files = process.env.STORYBOOK_FILES
+    ? JSON.parse(process.env.STORYBOOK_FILES)
+    : await selection();
+  if (files?.length === 0) return;
+  const result = spawnSync(
+    "pnpm",
+    [
+      "exec",
+      "vitest",
+      "run",
+      "-c",
+      "vitest.storybook.config.ts",
+      ...shardArgs(process.env.STORYBOOK_SHARD),
+      ...(files ?? []),
+    ],
+    { stdio: "inherit" },
+  );
+  process.exitCode = result.status ?? 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) await main();

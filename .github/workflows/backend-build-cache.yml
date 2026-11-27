@@ -64,8 +64,21 @@ jobs:
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
+          cache: false
+
+      - name: Cache backend Go modules
+        id: modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.go.outputs.GOMODCACHE }}
+          key: backend-go-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}
+
+      # The build cache can be an exact hit even on the first module-cache run.
+      - name: Download backend Go modules on a cache miss
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: |
+          go -C backend mod download
+          go -C scripts/backend-architecture mod download
 
       - name: Compute backend build cache key
         id: build-cache-key
@@ -301,8 +314,13 @@ jobs:
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
+          cache: false
+
+      - name: Restore backend Go modules
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.go.outputs.GOMODCACHE }}
+          key: backend-go-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}
 
       - name: Compute backend lint cache key
         id: lint-cache-key
