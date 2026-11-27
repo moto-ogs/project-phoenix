@@ -60,9 +60,21 @@ func TestModulesReturnsCopies(t *testing.T) {
 			modules[i].Requires[0] = ModuleZeiterfassung
 		}
 	}
-	ferien, ok := LookupModule(ModuleFerienbetreuung)
-	require.True(t, ok)
-	assert.Equal(t, []ModuleKey{ModuleOnlineAnmeldung}, ferien.Requires)
+	lookup := func() []ModuleDefinition {
+		byKey, ok := LookupModule(ModuleFerienbetreuung)
+		require.True(t, ok)
+		bySetting, ok := ModuleForSettingKey(KeyModuleFerienbetreuung)
+		require.True(t, ok)
+		dependents := ModuleDependents(ModuleOnlineAnmeldung)
+		require.Len(t, dependents, 1)
+		return []ModuleDefinition{byKey, bySetting, dependents[0]}
+	}
+	first, second := lookup(), lookup()
+	for i, module := range first {
+		require.Equal(t, []ModuleKey{ModuleOnlineAnmeldung}, module.Requires)
+		require.Equal(t, module.Requires, second[i].Requires)
+		assert.NotSame(t, &module.Requires[0], &second[i].Requires[0])
+	}
 }
 
 func TestModuleForSettingKey(t *testing.T) {

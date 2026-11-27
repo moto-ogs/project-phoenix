@@ -357,7 +357,7 @@ func TestBillingLetterMailsNeedTheBillingRightAndStayWithTheirTraeger(t *testing
 	var sends, mails, reads int
 	require.NoError(t, f.db.NewRaw(`SELECT
 			(SELECT count(*) FROM parent_billing.document_mailings WHERE run_id = ?),
-			(SELECT count(*) FROM platform.email_outbox WHERE kind = 'parent_billing_letter' AND related_entity_id = ?),
+			(SELECT count(*) FROM platform.email_outbox WHERE kind = 'parent_billing_letter' AND related_entity_type = 'parent_billing_run' AND related_entity_id = ?),
 			(SELECT count(*) FROM parent_billing.run_events WHERE run_id = ? AND (details ? 'mail' OR details->>'letter' = 'print'))`,
 		run.ID, run.ID, run.ID).Scan(context.Background(), &sends, &mails, &reads))
 	assert.Zero(t, sends, "refused requests stored no send")

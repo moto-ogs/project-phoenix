@@ -451,6 +451,20 @@ func (r *Registry) GetDefinition(key string) *Definition {
 	return r.definitions[key]
 }
 
+// TraegerLevelKeys returns the keys whose definitions accept a Träger value.
+func (r *Registry) TraegerLevelKeys() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var keys []string
+	for key, definition := range r.definitions {
+		if definition.Levels.AtTraeger() {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
 func (r *Registry) AllDefinitions() map[string]*Definition {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
