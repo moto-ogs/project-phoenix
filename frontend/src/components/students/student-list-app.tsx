@@ -191,7 +191,10 @@ function RowLine({
   // Namen („Ben Hartm…“). Nur heute, wie die Pille selbst.
   const hint = isToday ? resolvePresence(student, BINARY_VIEW).hint : null;
   const hintNode = hint ? (
-    <span className="flex shrink-0 [&>span]:mt-0 [&>span]:text-sm">
+    // Gleiche Zeilenhöhe wie Klasse und Gruppe daneben: Mit der eigenen
+    // Zeilenhöhe von `text-sm` war die Zeile am iPhone SE 3 px höher und
+    // die Unterlängen saßen auf der Trennlinie (Runde 21).
+    <span className="flex shrink-0 [&>span]:mt-0 [&>span]:text-sm [&>span]:leading-[inherit]">
       <PresenceHint status={hint.status} title={hint.title} />
     </span>
   ) : null;
@@ -225,7 +228,9 @@ function RowLine({
  * der Ecke der Kinderkarte (#6486). In der Zeile nur Anzeige: Ein Tipp
  * öffnet das Kind-Blatt, dort steht der Knopf zu den Nachrichten.
  */
-function RowParentAttention({ studentId }: Readonly<{ studentId: string }>) {
+export function RowParentAttention({
+  studentId,
+}: Readonly<{ studentId: string }>) {
   const attention = useStudentParentAttention(studentId);
   if (!attention) return null;
   return (
