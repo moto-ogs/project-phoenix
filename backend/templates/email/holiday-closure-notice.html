@@ -1,7 +1,5 @@
 {{define "holiday-closure-notice.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{if .ContainsPastDays}}
     <h1>Hinweis zu vergangenen Schließtagen</h1>
     {{else if and .Children .ReopenedChildren}}
@@ -77,8 +75,7 @@
         {{if .KeepsContribution}}<p style="margin: 8px 0 0 0; font-size: 14px;">Der Beitrag bleibt gleich.</p>{{end}}
     </div>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}}</p>
 
 {{template "footer" .}}
 {{end}}

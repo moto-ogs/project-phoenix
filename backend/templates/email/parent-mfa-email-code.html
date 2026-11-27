@@ -1,7 +1,5 @@
 {{define "parent-mfa-email-code.html"}}
-{{template "header" .}}
-
-<div class="email-body" lang="{{.Lang}}">
+{{template "header" (or .Lang "")}}
     {{template "moto-brand" .}}
     <h1>{{.Title}}</h1>
     <p>{{.Greeting}}</p>
@@ -27,7 +25,6 @@
     {{end}}
 
     <p class="security-note">{{.Security}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

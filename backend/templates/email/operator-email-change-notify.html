@@ -1,7 +1,5 @@
 {{define "operator-email-change-notify.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>E-Mail-Änderung angefordert</h1>
     <p>Guten Tag,</p>
@@ -12,7 +10,6 @@
     </div>
 
     <p class="security-note">Diese E-Mail dient nur zur Information. Sie müssen nichts weiter tun, wenn Sie die Änderung selbst angefordert haben.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

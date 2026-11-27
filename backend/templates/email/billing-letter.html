@@ -1,7 +1,5 @@
 {{define "billing-letter.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     <h1>Ihr Bestätigungsschreiben</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -15,8 +13,7 @@
         <p style="margin: 8px 0 0 0; font-size: 14px;">Öffnen Sie das Schreiben im Anhang. Dort steht, ob und bis wann Sie etwas bezahlen müssen. Bitte geben Sie bei der Überweisung die Rechnungsnummer an.</p>
     </div>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Schreiben.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}} Die Kontaktdaten stehen im Schreiben.</p>
 
 {{template "footer" .}}
 {{end}}

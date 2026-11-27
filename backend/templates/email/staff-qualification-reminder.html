@@ -1,7 +1,5 @@
 {{define "staff-qualification-reminder.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{if .LogoURL}}
     {{template "moto-brand" .}}
     {{else}}
@@ -23,17 +21,14 @@
     {{end}}
 
     {{if .LinkURL}}
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">{{if .Own}}Profil öffnen{{else}}Person öffnen{{end}}</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
+    {{template "link-box" .LinkURL}}
     {{end}}
 
     <p>{{.SchoolName}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

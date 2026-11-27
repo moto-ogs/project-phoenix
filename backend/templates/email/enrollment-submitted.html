@@ -1,7 +1,5 @@
 {{define "enrollment-submitted.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Anmeldung eingegangen</h1>
 
@@ -22,14 +20,11 @@
 
     <p>Sie können den aktuellen Status Ihrer Anmeldung jederzeit über den folgenden Link einsehen. Solange noch keine Entscheidung getroffen wurde, können Sie dort auch Änderungen vornehmen oder einzelne Kinder zurückziehen.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "copy-link-hint" .StatusURL}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wie geht es weiter?</strong></p>
@@ -37,7 +32,6 @@
     </div>
 
     <p class="security-note">Bewahren Sie diese E-Mail auf. Der Link bleibt für die gesamte Bearbeitungsdauer gültig.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

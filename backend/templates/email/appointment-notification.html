@@ -1,7 +1,5 @@
 {{define "appointment-notification.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>{{.Title}}</h1>
 
@@ -15,16 +13,13 @@
     </div>
 
     {{if .PortalURL}}
-    <div class="button-wrapper" style="text-align: center; margin-top: 24px;">
+    <div class="button-wrapper" style="margin-top: 24px;">
         <a class="button" href="{{.PortalURL}}">Zum Eltern-Portal</a>
     </div>
 
     <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.PortalURL}}">{{.PortalURL}}</a>
-    </div>
+    {{template "link-box" .PortalURL}}
     {{end}}
-</div>
 
 {{template "footer" .}}
 {{end}}

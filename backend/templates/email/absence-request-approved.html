@@ -1,7 +1,5 @@
 {{define "absence-request-approved.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>Ihr Antrag wurde genehmigt</h1>
 
@@ -17,14 +15,11 @@
         {{end}}
     </div>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">Zur Zeiterfassung</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .LinkURL}}
 
 {{template "footer" .}}
 {{end}}

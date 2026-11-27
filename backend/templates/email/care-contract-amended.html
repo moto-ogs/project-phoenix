@@ -1,7 +1,5 @@
 {{define "care-contract-amended.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     <h1>Ihr Betreuungsvertrag wurde geändert</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -16,7 +14,6 @@
     <p>Haben Sie die moto Eltern-App? Dann finden Sie die neue Fassung auch dort unter „Dokumente“.</p>
 
     <p class="security-note">Stimmt etwas nicht? Dann melden Sie sich beim Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Vertrag. Bitte antworten Sie nicht auf diese E-Mail.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

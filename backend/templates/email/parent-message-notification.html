@@ -1,7 +1,5 @@
 {{define "parent-message-notification.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>{{.Subject}}</h1>
 
@@ -9,17 +7,14 @@
 
     <p>{{.IntroText}}</p>
 
-    <div class="button-wrapper" style="text-align: center; margin-top: 24px;">
+    <div class="button-wrapper" style="margin-top: 24px;">
         <a class="button" href="{{.MessagesURL}}">{{.ReplyLabel}}</a>
     </div>
 
     <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">{{.FallbackHint}}</p>
-    <div class="link-box">
-        <a href="{{.MessagesURL}}">{{.MessagesURL}}</a>
-    </div>
+    {{template "link-box" .MessagesURL}}
 
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">{{.PreferenceHint}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

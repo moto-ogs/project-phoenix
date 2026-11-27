@@ -1,7 +1,5 @@
 {{define "guardian-invitation.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     {{if .ExistingAccount}}
     <h1>Ihr Zugang zum Eltern-Portal</h1>
@@ -14,14 +12,11 @@
     <p>Sie haben schon ein Konto bei moto. Sie brauchen kein neues Konto.</p>
     <p>Melden Sie sich im Eltern-Portal mit Ihren bisherigen Zugangsdaten an.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.InvitationURL}}">Zum Eltern-Portal</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.InvitationURL}}">{{.InvitationURL}}</a>
-    </div>
+    {{template "copy-link-hint" .InvitationURL}}
 
     <p class="security-note">Passwort vergessen? Auf der Anmeldeseite können Sie ein neues Passwort anfordern.</p>
     {{else}}
@@ -46,7 +41,7 @@
 
     <p>Klicken Sie auf den Button unten, um Ihr Eltern-Konto einzurichten und ein Passwort zu vergeben.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.InvitationURL}}">Einladung annehmen</a>
     </div>
 
@@ -54,10 +49,7 @@
         <p><strong>Wichtig:</strong> Diese Einladung läuft in {{.ExpiryHours}} Stunden ab.</p>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.InvitationURL}}">{{.InvitationURL}}</a>
-    </div>
+    {{template "copy-link-hint" .InvitationURL}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Nach der Registrierung können Sie:</strong></p>
@@ -70,7 +62,6 @@
 
     <p class="security-note">Falls Sie diese Einladung nicht erwartet haben oder keinen Bezug zur moto-Einrichtung haben, können Sie diese E-Mail ignorieren.</p>
     {{end}}
-</div>
 
 {{template "footer" .}}
 {{end}}

@@ -1,7 +1,5 @@
 {{define "care-contract-reminder.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     <h1>{{if .Amendment}}Bitte unterschreiben Sie die geänderte Vertragsfassung{{else}}Ihr Betreuungsvertrag wartet auf Ihre Unterschrift{{end}}</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -17,7 +15,7 @@
         <p style="margin: 8px 0 0 0; font-size: 14px;">{{if .Amendment}}Lesen Sie die neue Fassung und unterschreiben Sie sie online.{{else}}Lesen Sie den Vertrag und unterschreiben Sie ihn online.{{end}} Stimmt etwas nicht? Dann melden Sie sich beim Träger.</p>
     </div>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.SigningURL}}">{{if .Amendment}}Änderung ansehen und unterschreiben{{else}}Vertrag lesen und unterschreiben{{end}}</a>
     </div>
 
@@ -25,8 +23,7 @@
 
     <p>Haben Sie die moto Eltern-App? Dann finden Sie den Vertrag auch dort unter „Dokumente“.</p>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}}</p>
 
 {{template "footer" .}}
 {{end}}

@@ -1,7 +1,5 @@
 {{define "mfa-email-code.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>Ihr Anmeldecode</h1>
     <p>Hallo,</p>
@@ -27,7 +25,6 @@
     {{end}}
 
     <p class="security-note">Wenn Sie diese Anmeldung nicht angefordert haben, ignorieren Sie diese E-Mail. Es wird nichts an Ihrem Konto verändert. moto fragt Sie niemals per E-Mail-Antwort, Anruf oder Messenger nach diesem Code — geben Sie ihn ausschließlich auf der moto-Anmeldemaske ein.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}
