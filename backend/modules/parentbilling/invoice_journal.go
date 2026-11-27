@@ -75,6 +75,9 @@ const InvoiceJournalPageSize = 100
 // MaxInvoiceJournalSearchLength bounds the search text of the journal.
 const MaxInvoiceJournalSearchLength = 100
 
+// InvoiceNumberServices are the services whose counters number documents.
+var InvoiceNumberServices = []string{ServiceHoliday, ServiceCare}
+
 // InvoiceJournalFilter narrows the journal. The zero value shows every
 // document of the Träger. Page counts from 1; zero reads every document that
 // passes, which is what an export asks for.
@@ -190,9 +193,10 @@ type JournalNumberGap struct {
 // the filter, every gap of the number ranges and every number range and run
 // of the Träger. A gap stays in view while a filter narrows the list.
 type InvoiceJournalPage struct {
-	Documents    []JournalDocument    `json:"documents"`
-	TotalCount   int                  `json:"total_count"`
-	HasMore      bool                 `json:"has_more"`
+	Documents []JournalDocument `json:"documents"`
+	// TotalCount is every document that passes the filter, over all pages;
+	// the page of the answer carries it (common.Pagination).
+	TotalCount   int                  `json:"-"`
 	Totals       JournalTotals        `json:"totals"`
 	Gaps         []JournalNumberGap   `json:"gaps"`
 	NumberRanges []JournalNumberRange `json:"number_ranges"`

@@ -30,7 +30,7 @@ type numberRangeStartRow struct {
 
 // invoiceNumberServices are the services whose counters number invoices;
 // the counter of the export files (service export) is not one of them.
-var invoiceNumberServices = []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare}
+var invoiceNumberServices = parentbilling.InvoiceNumberServices
 
 // NumberCounters names per issuer, service and year the last issued
 // invoice number of the Träger and the number its next invoice gets.

@@ -11,6 +11,9 @@ export function traegerInvoiceJournalTopic(): HelpTopic {
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "ListSearch",
+    image: "/help/screens/traeger-rechnungsausgangsbuch.webp",
+    imageAlt:
+      "Das Rechnungsausgangsbuch: oben Suche und Filter, darunter die Warnung zu fehlenden Nummern, die Summen und die Liste der Dokumente mit Nummer, Datum, Dokumentart, Empfänger, Lauf und Beträgen.",
     requirements: [
       "Deine Rolle im Träger-Büro ist Abrechnung.",
       "Mindestens ein Lauf ist freigegeben. Ein Dokument steht erst in der Liste, wenn es seine Nummer hat.",
@@ -68,7 +71,7 @@ export function traegerInvoiceJournalTopic(): HelpTopic {
     ],
     notes: [
       "Die Steuer ist immer 0,00 €. Elternbeiträge stellt moto ohne Steuer aus.",
-      "Ob eine Familie gezahlt hat, steht hier nicht. Zahlungen sieht moto nicht. Prüfe sie in deiner Buchhaltung.",
+      "Ob eine Familie gezahlt hat, steht hier nicht. Prüfe das in deiner Buchhaltung.",
     ],
     troubleshootingDetails: [
       "Ein Dokument fehlt in der Liste: Der Lauf ist noch nicht freigegeben. Entwürfe haben keine Nummer und stehen nur im Lauf.",

@@ -326,26 +326,41 @@ describe("TraegerInvoiceJournalPage", () => {
     );
   });
 
-  it("loads the next page below the list and counts a document once", async () => {
+  it("loads the next pages below the list and counts a document once", async () => {
+    const third: JournalDocument = {
+      ...INVOICE,
+      key: "holiday-3",
+      number: "FE-2026-0000",
+    };
     mockFetchJournal
       .mockResolvedValueOnce(
-        journal({ documents: [CANCELLATION], hasMore: true }),
+        journal({ documents: [CANCELLATION], hasMore: true, totalCount: 3 }),
       )
       .mockResolvedValueOnce(
-        journal({ documents: [CANCELLATION, INVOICE], hasMore: false }),
+        journal({ documents: [INVOICE], hasMore: true, totalCount: 3 }),
+      )
+      // A release meanwhile moved the rows: the page repeats one of them.
+      .mockResolvedValueOnce(
+        journal({ documents: [INVOICE, third], hasMore: false, totalCount: 3 }),
       );
     renderPage();
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Weitere Dokumente laden (1 von 2)",
+        name: "Weitere Dokumente laden (1 von 3)",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Weitere Dokumente laden (2 von 3)",
       }),
     );
 
     const table = await screen.findByRole("table");
-    expect(await within(table).findByText("FE-2026-0001")).toBeInTheDocument();
+    expect(await within(table).findByText("FE-2026-0000")).toBeInTheDocument();
+    expect(within(table).getAllByText("FE-2026-0001")).toHaveLength(1);
     expect(within(table).getAllByText("MB-2026-0002")).toHaveLength(1);
-    expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 2);
+    expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 3);
     expect(
       screen.queryByRole("button", { name: /Weitere Dokumente laden/ }),
     ).not.toBeInTheDocument();

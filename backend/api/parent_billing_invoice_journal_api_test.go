@@ -6,6 +6,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -53,9 +54,10 @@ type journalDocumentBody struct {
 }
 
 type journalBody struct {
-	Documents  []journalDocumentBody `json:"documents"`
-	TotalCount int                   `json:"total_count"`
-	HasMore    bool                  `json:"has_more"`
+	Documents []journalDocumentBody `json:"documents"`
+	// TotalCount and HasMore come from the page of the answer.
+	TotalCount int  `json:"-"`
+	HasMore    bool `json:"-"`
 	Totals     struct {
 		GrossCents int64 `json:"gross_cents"`
 		TaxCents   int64 `json:"tax_cents"`
@@ -93,7 +95,29 @@ func invoiceJournal(t *testing.T, router http.Handler, token string, query url.V
 	}
 	rec := traegerJSON(t, router, token, http.MethodGet, path, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[journalBody](t, rec.Body.Bytes())
+	journal := decodeSchoolPortalData[journalBody](t, rec.Body.Bytes())
+	var envelope struct {
+		Pagination struct {
+			CurrentPage  int `json:"current_page"`
+			PageSize     int `json:"page_size"`
+			TotalRecords int `json:"total_records"`
+		} `json:"pagination"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
+	require.Positive(t, envelope.Pagination.PageSize, "the journal answers as a page: %s", rec.Body.String())
+	journal.TotalCount = envelope.Pagination.TotalRecords
+	journal.HasMore = envelope.Pagination.CurrentPage*envelope.Pagination.PageSize < envelope.Pagination.TotalRecords
+	return journal
+}
+
+// journalReads counts the entries the journal left in the trail of a
+// holiday run.
+func journalReads(t *testing.T, f reviewFixture, runID int64) int {
+	t.Helper()
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, runID).Scan(context.Background(), &reads))
+	return reads
 }
 
 func journalNumbers(journal journalBody) []string {
@@ -235,13 +259,15 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal' ORDER BY id DESC LIMIT 1`, secondRun).
 		Scan(context.Background(), &shown))
 	assert.Len(t, shown, 1, "the trail names the documents of the run the reader saw")
-	var filteredOut int
-	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events
-		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, draft.ID).Scan(context.Background(), &filteredOut))
-	var readsOfSecond int
-	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events
-		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'journal'`, secondRun).Scan(context.Background(), &readsOfSecond))
-	assert.NotEqual(t, filteredOut, readsOfSecond, "a page that shows no document of a run leaves its trail alone")
+	// A page that shows no document of a run leaves its trail alone, and a
+	// download stands in the trail like the read of the page.
+	firstBefore, secondBefore := journalReads(t, f, int64(draft.ID)), journalReads(t, f, secondRun)
+	invoiceJournal(t, f.traeger, billing, url.Values{"run_kind": {"holiday"}, "run_id": {fmt.Sprint(secondRun)}})
+	assert.Equal(t, firstBefore, journalReads(t, f, int64(draft.ID)), "the first run shows no document on this page")
+	assert.Equal(t, secondBefore+1, journalReads(t, f, secondRun))
+	billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?document_type=credit")
+	assert.Equal(t, firstBefore+1, journalReads(t, f, int64(draft.ID)), "the file holds the credit of the first run")
+	assert.Equal(t, secondBefore+1, journalReads(t, f, secondRun), "and no document of the second")
 
 	// #4718: the file lists every document of the filter by number, then
 	// the sums.
@@ -272,15 +298,21 @@ func TestInvoiceJournalNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.T) 
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, path, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "GET %s without the right Abrechnung: %s", path, rec.Body.String())
 	}
+	// The Träger has a gap, so a leak of its number ranges would show.
+	_, err := f.db.ExecContext(context.Background(), `UPDATE parent_billing.number_range_counters SET last_number = last_number + 1
+		WHERE organization_id = ? AND service = 'holiday'`, f.office.organization)
+	require.NoError(t, err)
+	require.Len(t, invoiceJournal(t, f.traeger, billing, nil).Gaps, 1)
 	other := invoiceJournal(t, f.traeger, foreign.token, nil)
 	assert.Empty(t, other.Documents, "another Träger lists none of these documents")
+	assert.Empty(t, other.Gaps, "nor a gap of its number ranges")
 	assert.Empty(t, other.NumberRanges)
 	assert.Empty(t, other.Runs)
 	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, invoiceJournalPath+"/export"), 1, "the file of another Träger holds no document")
 	var reads int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.run_events WHERE run_id = ? AND details->>'view' = 'journal'`, run.ID).
 		Scan(context.Background(), &reads))
-	assert.Zero(t, reads, "refused and foreign reads leave no trail")
+	assert.Equal(t, 1, reads, "only the read of the Träger itself stands in the trail")
 	assert.Len(t, invoiceJournal(t, f.traeger, billing, nil).Documents, len(run.Documents))
 }
 

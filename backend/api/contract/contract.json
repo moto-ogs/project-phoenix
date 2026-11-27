@@ -13235,6 +13235,7 @@
       "portals": [
         "org"
       ],
+      "paginated": true,
       "query": [
         {
           "name": "document_type",
@@ -71933,18 +71934,6 @@
               "kind": "ref",
               "ref": "JournalDocument"
             }
-          }
-        },
-        {
-          "name": "total_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "has_more",
-          "schema": {
-            "kind": "bool"
           }
         },
         {

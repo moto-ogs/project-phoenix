@@ -2,15 +2,14 @@
 import { z } from "zod";
 import {
   arr,
-  bool,
   calendarDate,
   fileAnswer,
   int64String,
   nullable,
   object,
+  paginated,
   safeInt,
   str,
-  success,
   type OpenEnum,
 } from "./runtime";
 import {
@@ -150,8 +149,6 @@ export const JournalNumberRangeSchema: z.ZodType<JournalNumberRange, unknown> = 
 /** Go: parentbilling.InvoiceJournalPage */
 export interface InvoiceJournalPage {
   documents: JournalDocument[] | null;
-  total_count: number;
-  has_more: boolean;
   totals: JournalTotals;
   gaps: JournalNumberGap[] | null;
   number_ranges: JournalNumberRange[] | null;
@@ -160,8 +157,6 @@ export interface InvoiceJournalPage {
 
 export const InvoiceJournalPageSchema: z.ZodType<InvoiceJournalPage, unknown> = object<InvoiceJournalPage>({
   documents: nullable(arr(JournalDocumentSchema)),
-  total_count: safeInt,
-  has_more: bool,
   totals: JournalTotalsSchema,
   gaps: nullable(arr(JournalNumberGapSchema)),
   number_ranges: nullable(arr(JournalNumberRangeSchema)),
@@ -185,7 +180,7 @@ export const routes = {
       "to": { kind: "date" },
       "year": { kind: "int" },
     },
-    response: success(InvoiceJournalPageSchema),
+    response: paginated(InvoiceJournalPageSchema),
   },
   "GET /traeger/invoice-journal/export": {
     method: "GET",

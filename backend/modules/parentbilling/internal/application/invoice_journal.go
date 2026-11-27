@@ -24,9 +24,6 @@ type JournalStore interface {
 
 var _ parentbilling.InvoiceJournal = (*BillingFamilies)(nil)
 
-// journalNumberServices are the services whose counters number documents.
-var journalNumberServices = []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare}
-
 // InvoiceJournal reads one page of the Rechnungsausgangsbuch (#4819) and
 // records the read in the trail of each run whose documents it shows.
 func (f *BillingFamilies) InvoiceJournal(ctx context.Context, reviewer parentbilling.HolidayReviewer, filter parentbilling.InvoiceJournalFilter,
@@ -52,9 +49,6 @@ func (f *BillingFamilies) InvoiceJournal(ctx context.Context, reviewer parentbil
 	for i := range page.Gaps {
 		page.Gaps[i].FirstMissingNumber, page.Gaps[i].LastMissingNumber = missingNumbers(page.Gaps[i])
 	}
-	// A file holds every document; a page says whether more follow it.
-	shown := (filter.Page-1)*parentbilling.InvoiceJournalPageSize + len(page.Documents)
-	page.HasMore = filter.Page > 0 && shown < page.TotalCount
 	return page, nil
 }
 
@@ -64,7 +58,7 @@ func journalFilterErrors(filter parentbilling.InvoiceJournalFilter) validation.E
 	if filter.From != nil && filter.Until != nil && filter.Until.Before(*filter.From) {
 		errs["to"] = errors.New("must not lie before from")
 	}
-	if filter.Service != "" && !slices.Contains(journalNumberServices, filter.Service) {
+	if filter.Service != "" && !slices.Contains(parentbilling.InvoiceNumberServices, filter.Service) {
 		errs["service"] = errors.New("is no service with a number range")
 	}
 	if filter.DocumentType != "" && !slices.Contains(parentbilling.JournalDocumentTypes, filter.DocumentType) {
@@ -89,23 +83,32 @@ func journalFilterErrors(filter parentbilling.InvoiceJournalFilter) validation.E
 var trailingDigits = regexp.MustCompile(`[0-9]+$`)
 
 // missingNumbers writes the first and the last missing number of a gap like
-// the document beside it: the document before the gap, else the one after
-// it. A number range writes its running number at the end of the number
-// with leading zeros; a document that does not end with its own running
-// number gives no way to write its neighbours, and the answer is empty.
+// a document beside it: the document before the gap, else the one after it.
+// A number range writes its running number at the end of the number with
+// leading zeros; a document that does not end with its own running number
+// gives no way to write its neighbours. Without such a document on either
+// side the answer is empty.
 func missingNumbers(gap parentbilling.JournalNumberGap) (first, last string) {
-	neighbour, sequence := gap.AfterNumber, gap.FirstMissing-1
-	if neighbour == "" {
-		neighbour, sequence = gap.BeforeNumber, gap.FirstMissing+gap.MissingCount
+	write := numberWriter(gap.AfterNumber, gap.FirstMissing-1)
+	if write == nil {
+		write = numberWriter(gap.BeforeNumber, gap.FirstMissing+gap.MissingCount)
 	}
-	digits := trailingDigits.FindString(neighbour)
-	if value, err := strconv.ParseInt(digits, 10, 64); digits == "" || err != nil || value != sequence {
+	if write == nil {
 		return "", ""
 	}
-	prefix := strings.TrimSuffix(neighbour, digits)
-	write := func(number int64) string {
-		text := strconv.FormatInt(number, 10)
+	return write(gap.FirstMissing), write(gap.FirstMissing + gap.MissingCount - 1)
+}
+
+// numberWriter writes running numbers like the document number, which
+// carries the running number sequence; nil when number does not end with it.
+func numberWriter(number string, sequence int64) func(int64) string {
+	digits := trailingDigits.FindString(number)
+	if value, err := strconv.ParseInt(digits, 10, 64); digits == "" || err != nil || value != sequence {
+		return nil
+	}
+	prefix := strings.TrimSuffix(number, digits)
+	return func(running int64) string {
+		text := strconv.FormatInt(running, 10)
 		return prefix + strings.Repeat("0", max(0, len(digits)-len(text))) + text
 	}
-	return write(gap.FirstMissing), write(gap.FirstMissing + gap.MissingCount - 1)
 }

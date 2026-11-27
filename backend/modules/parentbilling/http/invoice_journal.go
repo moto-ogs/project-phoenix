@@ -60,7 +60,7 @@ const JournalIssuerTraeger = "traeger"
 var journalFilter = []common.QueryParam{
 	{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
 	{Name: "issuer", Kind: common.QueryString, TextReason: "the creditor identifier of the issuer, or traeger for the Träger"},
-	{Name: "service", Kind: common.QueryString, Values: []string{capability.ServiceHoliday, capability.ServiceCare}},
+	{Name: "service", Kind: common.QueryString, Values: capability.InvoiceNumberServices},
 	{Name: "year", Kind: common.QueryInt},
 	{Name: "document_type", Kind: common.QueryString, Values: capability.JournalDocumentTypes},
 	{Name: "run_kind", Kind: common.QueryString, Values: capability.JournalRunKinds},
@@ -74,7 +74,7 @@ func InvoiceJournalRouteContracts() []common.RouteContract {
 	page := append([]common.QueryParam{{Name: "page", Kind: common.QueryInt}}, journalFilter...)
 	export := append([]common.QueryParam{common.ListFormatQuery}, journalFilter...)
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: page, Response: capability.InvoiceJournalPage{},
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: page, Paginated: true, Response: capability.InvoiceJournalPage{},
 			Enums: []common.EnumContract{
 				{Name: "JournalDocumentType", Fields: []string{"JournalDocument.document_type"}, Values: capability.JournalDocumentTypes},
 				{Name: "JournalRunKind", Fields: []string{"JournalRun.kind"}, Values: capability.JournalRunKinds},
@@ -109,7 +109,9 @@ func (rs *InvoiceJournalResource) list(w http.ResponseWriter, r *http.Request) {
 		renderJournalError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, page, "Invoice journal retrieved successfully")
+	common.RespondPaginated(w, r, http.StatusOK, page, common.PaginationParams{
+		Page: filter.Page, PageSize: capability.InvoiceJournalPageSize, Total: page.TotalCount,
+	}, "Invoice journal retrieved successfully")
 }
 
 // export answers GET /traeger/invoice-journal/export: every document of the

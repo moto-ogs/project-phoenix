@@ -61,12 +61,8 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { documentsConcept } from "~/lib/concepts/documents";
-import {
-  berlinTodayISO,
-  formatDate,
-  parseISODate,
-  toISODate,
-} from "~/lib/date-helpers";
+import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { labelOf } from "~/lib/label-of";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
@@ -319,8 +315,8 @@ function journalColumns({
   ];
 }
 
-function rangePresets() {
-  const today = parseISODate(berlinTodayISO());
+function rangePresets(todayISO: string) {
+  const today = parseISODate(todayISO);
   const year = today.getFullYear();
   const month = today.getMonth();
   return [
@@ -360,22 +356,33 @@ function gapRange(gap: JournalNumberGap): JournalRangeFilter | null {
     : null;
 }
 
-/** Where each gap stands in the list: at the document beside it. */
+/**
+ * Where each gap stands in the list: at the document beside it. A document
+ * with a gap on either side carries both.
+ */
 function gapAnchors(
   gaps: readonly JournalNumberGap[],
 ): ReadonlyMap<string, string> {
-  const anchors = new Map<string, string>();
+  const missing = new Map<string, number>();
   for (const gap of gaps) {
     // The document after the gap carries it; a gap at the end of the range
-    // stands at its last document. The badge names no direction: the list
-    // shows the newest number first.
+    // stands at its last document.
     const number = gap.beforeNumber === "" ? gap.afterNumber : gap.beforeNumber;
-    anchors.set(
-      journalGapAnchor(gap.issuer.key, gap.service, gap.year, number),
-      `Lücke: ${gap.missingCount} ${gap.missingCount === 1 ? "Nummer" : "Nummern"}`,
+    const anchor = journalGapAnchor(
+      gap.issuer.key,
+      gap.service,
+      gap.year,
+      number,
     );
+    missing.set(anchor, (missing.get(anchor) ?? 0) + gap.missingCount);
   }
-  return anchors;
+  // The badge names no direction: the list shows the newest number first.
+  return new Map(
+    [...missing].map(([anchor, count]) => [
+      anchor,
+      `Lücke: ${count} ${count === 1 ? "Nummer" : "Nummern"}`,
+    ]),
+  );
 }
 
 // „moto‑Team“ with a hyphen that keeps the word on one line.
@@ -571,6 +578,8 @@ function noHitTitle(
 }
 
 export default function TraegerInvoiceJournalPage() {
+  // The page stays open across midnight: presets and the latest day follow.
+  const today = useBerlinToday();
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [issuerKey, setIssuerKey] = useState<string | null>(null);
@@ -640,14 +649,16 @@ export default function TraegerInvoiceJournalPage() {
   const continued = later && later.after === first ? later : null;
   const documents = useMemo(() => {
     if (!first) return [];
-    // A release between two pages moves the rows: a document counts once.
-    const seen = new Set(first.documents.map((document) => document.key));
-    return [
-      ...first.documents,
-      ...(continued?.documents ?? []).filter(
-        (document) => !seen.has(document.key),
-      ),
-    ];
+    // A release between two pages moves the rows: a document counts once,
+    // whichever page brought it first.
+    const seen = new Set<string>();
+    return [...first.documents, ...(continued?.documents ?? [])].filter(
+      (document) => {
+        if (seen.has(document.key)) return false;
+        seen.add(document.key);
+        return true;
+      },
+    );
   }, [first, continued]);
   const hasMore = continued ? continued.hasMore : (first?.hasMore ?? false);
 
@@ -703,8 +714,8 @@ export default function TraegerInvoiceJournalPage() {
         <DateRangePicker
           value={range}
           onChange={setRange}
-          presets={rangePresets()}
-          toMax={parseISODate(berlinTodayISO())}
+          presets={rangePresets(today)}
+          toMax={parseISODate(today)}
           fieldLabel="Ausgestellt im Zeitraum"
           className="w-full sm:w-auto"
           triggerClassName="w-full sm:w-auto"

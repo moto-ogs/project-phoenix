@@ -225,13 +225,15 @@ export async function fetchInvoiceJournal(
   filter: InvoiceJournalFilter,
   page: number,
 ): Promise<InvoiceJournalPage> {
-  const data = await bffJson("org", "GET /traeger/invoice-journal/", {
-    query: { ...journalQuery(filter), page },
-  });
+  const { data, pagination } = await bffJson(
+    "org",
+    "GET /traeger/invoice-journal/",
+    { query: { ...journalQuery(filter), page } },
+  );
   return {
     documents: (data.documents ?? []).map(toDocument),
-    totalCount: data.total_count,
-    hasMore: data.has_more,
+    totalCount: pagination.total_records,
+    hasMore: pagination.current_page < pagination.total_pages,
     totals: {
       grossCents: data.totals.gross_cents,
       taxCents: data.totals.tax_cents,
