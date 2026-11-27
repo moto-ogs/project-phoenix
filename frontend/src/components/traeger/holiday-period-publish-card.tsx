@@ -22,6 +22,9 @@ import type { QrBrand } from "~/components/qr-code/qr-brand-logo";
 
 const logger = createLogger({ component: "HolidayPeriodPublish" });
 
+/** The Träger-Büro's route, read at the click and not at module load. */
+const publishAsTraeger = (id: string) => publishHolidayPeriod(id);
+
 /** What keeps a draft from being published, or `null`. */
 function holidayPublishBlocker(
   period: HolidayPeriod,
@@ -47,7 +50,7 @@ export function HolidayPeriodPublishButton({
   period,
   unsavedChanges,
   onPublished,
-  publish: publishPeriod = publishHolidayPeriod,
+  publish: publishPeriod = publishAsTraeger,
 }: Readonly<{
   period: HolidayPeriod;
   unsavedChanges: boolean;

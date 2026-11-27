@@ -92,8 +92,8 @@ export interface ExtraDayStore {
 }
 
 const TRAEGER_STORE: ExtraDayStore = {
-  create: createHolidayPeriod,
-  update: updateHolidayPeriod,
+  create: (input) => createHolidayPeriod(input),
+  update: (id, input, version) => updateHolidayPeriod(id, input, version),
 };
 
 /** No day to change: the form creates one and sends no version. */

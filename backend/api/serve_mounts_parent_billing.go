@@ -689,8 +689,7 @@ func (b parentBillingBillingRegistrations) HolidayBillingPeriod(ctx context.Cont
 // and last week.
 func parentBillingPeriod(period enrollmentOwner.HolidayPeriod) parentbilling.HolidayBillingPeriod {
 	billing := parentbilling.HolidayBillingPeriod{
-		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished,
-		IncludedInFee: period.IncludedInFee, ExtraDay: period.Kind == enrollmentOwner.HolidayPeriodKindExtraDay,
+		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished, IncludedInFee: period.IncludedInFee, ExtraDay: period.Kind == enrollmentOwner.HolidayPeriodKindExtraDay,
 	}
 	for _, week := range period.Weeks {
 		if billing.StartsOn.IsZero() || week.StartsOn.Before(billing.StartsOn) {
@@ -749,8 +748,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 		ID: detail.ID.Int64(), Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
 		DebtorNumber: detail.DebtorNumber, Children: make([]parentbilling.HolidayChild, len(detail.Children)),
 		MovedUp:           promotedRegistrations(detail.Promotions),
-		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail,
-		IncludedInFee: detail.IncludedInFee,
+		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail, IncludedInFee: detail.IncludedInFee,
 	}
 	for i, child := range detail.Children {
 		bookings := make([]parentbilling.HolidayBooking, len(child.Bookings))
