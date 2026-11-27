@@ -29,6 +29,9 @@ function holidayPublishBlocker(
   if (unsavedChanges) {
     return "Bitte speichere zuerst deine Änderungen.";
   }
+  if (period.kind === "extra_day" && !holidayPeriodComplete(period)) {
+    return "Zum Veröffentlichen braucht der Zusatztag mindestens eine Schule.";
+  }
   if (!holidayPeriodComplete(period)) {
     return "Zum Veröffentlichen braucht der Ferienzeitraum mindestens eine Woche. Jede Woche braucht mindestens ein Zeitmodell.";
   }
@@ -79,14 +82,22 @@ export function HolidayPeriodPublishButton({
         size="md"
         disabled={blocker !== null}
         disabledReason={blocker ?? undefined}
-        tooltip="Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
+        tooltip={
+          period.kind === "extra_day"
+            ? "Gibt die Anmeldung für alle Schulen des Zusatztags frei. moto fragt vorher nach."
+            : "Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
+        }
         onClick={() => setConfirming(true)}
       >
         Veröffentlichen
       </Button>
       <ConfirmationModal
         isOpen={confirming}
-        title="Ferienzeitraum veröffentlichen?"
+        title={
+          period.kind === "extra_day"
+            ? "Zusatztag veröffentlichen?"
+            : "Ferienzeitraum veröffentlichen?"
+        }
         confirmText="Veröffentlichen"
         isConfirmLoading={publishing}
         loadingText="Wird veröffentlicht…"
@@ -94,8 +105,10 @@ export function HolidayPeriodPublishButton({
         onConfirm={() => void publish()}
       >
         <p className="text-sm text-gray-700">
-          Danach ist der Ferienzeitraum für die Anmeldung freigegeben. Du kannst
-          ihn weiter ändern, aber nicht mehr zum Entwurf machen.
+          Danach ist der{" "}
+          {period.kind === "extra_day" ? "Zusatztag" : "Ferienzeitraum"} für die
+          Anmeldung freigegeben. Du kannst ihn weiter ändern, aber nicht mehr
+          zum Entwurf machen.
         </p>
       </ConfirmationModal>
     </>
@@ -151,8 +164,10 @@ function HolidayRegistrationLink({
   return (
     <div className="space-y-2 text-sm text-gray-700">
       <p>
-        Über diesen Link melden Eltern ihre Kinder für alle Wochen an. Ein
-        Elternkonto brauchen sie nicht.
+        {period.kind === "extra_day"
+          ? "Über diesen Link melden Eltern ihre Kinder für den Zusatztag an."
+          : "Über diesen Link melden Eltern ihre Kinder für alle Wochen an."}{" "}
+        Ein Elternkonto brauchen sie nicht.
       </p>
       <CopyField
         value={url}
@@ -166,7 +181,11 @@ function HolidayRegistrationLink({
         action={
           <QrCodeButton
             url={url}
-            title="QR-Code für die Ferienanmeldung"
+            title={
+              period.kind === "extra_day"
+                ? "QR-Code für die Anmeldung zum Zusatztag"
+                : "QR-Code für die Ferienanmeldung"
+            }
             fileName="qr-code-ferienanmeldung"
             brand="traeger"
           />

@@ -266,6 +266,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerSchoolRoles]: "traeger",
   [HELP_TOPICS.traegerProfile]: "traeger",
   [HELP_TOPICS.traegerHolidayPeriod]: "traeger",
+  [HELP_TOPICS.traegerExtraCareDay]: "traeger",
   [HELP_TOPICS.traegerCatalogPhases]: "traeger",
   [HELP_TOPICS.traegerClosingDays]: "traeger",
   [HELP_TOPICS.traegerNotificationFeed]: "traeger",

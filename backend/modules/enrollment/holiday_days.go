@@ -163,6 +163,34 @@ type HolidayQueuedBooking struct {
 	Days    []calendar.Date
 }
 
+// HolidayWeekSpan names the days of a week in German, such as "04.01.2027
+// bis 08.01.2027". A week of a single day, such as an extra care day
+// (#4817), is that day alone.
+func HolidayWeekSpan(startsOn, endsOn calendar.Date) string {
+	if startsOn == endsOn {
+		return endsOn.Format("02.01.2006")
+	}
+	return startsOn.Format("02.01.2006") + " bis " + endsOn.Format("02.01.2006")
+}
+
+// HolidayWeekShortSpan is HolidayWeekSpan with the year once, such as
+// "04.01. bis 08.01.2027".
+func HolidayWeekShortSpan(startsOn, endsOn calendar.Date) string {
+	if startsOn == endsOn {
+		return endsOn.Format("02.01.2006")
+	}
+	return startsOn.Format("02.01.") + " bis " + endsOn.Format("02.01.2006")
+}
+
+// HolidayWeekHeading titles a list of one week, "Woche: 04.01. bis
+// 08.01.2027", or of a single day, "Tag: 22.05.2026" (#4817).
+func HolidayWeekHeading(startsOn, endsOn calendar.Date) string {
+	if startsOn == endsOn {
+		return "Tag: " + HolidayWeekShortSpan(startsOn, endsOn)
+	}
+	return "Woche: " + HolidayWeekShortSpan(startsOn, endsOn)
+}
+
 // holidayWeekdayNames are the German short names of the weekdays, Sunday
 // first like time.Weekday.
 var holidayWeekdayNames = [7]string{"So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"}

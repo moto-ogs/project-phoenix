@@ -49,6 +49,7 @@
     "forChildren": "Dla: {names}",
     "offeredByTraeger": "Organizator: {traeger}",
     "careLine": "Opieka {from} do {to}",
+    "careDayLine": "Opieka w dniu {date}",
     "registrationLine": "Zgłoszenia do {date}",
     "registrationRangeLine": "Zgłoszenia {from} do {to}",
     "registerTooltip": "Otwiera zapis na tę ofertę wakacyjną."

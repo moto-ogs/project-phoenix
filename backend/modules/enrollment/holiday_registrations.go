@@ -86,7 +86,11 @@ type HolidayRegistrationLink struct {
 // HolidayRegistrationOffer is the published period behind a link. Open
 // reports whether today lies in its registration window.
 type HolidayRegistrationOffer struct {
-	Name                 string
+	Name string
+	// Kind and IncludedInFee are those of the period (#4817): an extra day
+	// reads as one day, and an included one shows no price.
+	Kind                 string
+	IncludedInFee        bool
 	RegistrationOpensOn  calendar.Date
 	RegistrationClosesOn calendar.Date
 	Binding              bool

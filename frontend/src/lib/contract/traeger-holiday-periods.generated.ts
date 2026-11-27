@@ -76,6 +76,7 @@ export interface HolidayWeek {
   booking_unit: string;
   lunch_price_cents: number | null;
   lunch_booked: boolean;
+  placed: number;
 }
 
 export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = object<HolidayWeek>({
@@ -89,12 +90,15 @@ export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = object<Holiday
   booking_unit: str,
   lunch_price_cents: nullable(safeInt),
   lunch_booked: bool,
+  placed: safeInt,
 });
 
 /** Go: enrollment.HolidayPeriod */
 export interface HolidayPeriod {
   id: string;
   name: string;
+  kind: string;
+  included_in_fee: boolean;
   registration_opens_on: string | null;
   registration_closes_on: string | null;
   binding: boolean;
@@ -116,6 +120,8 @@ export interface HolidayPeriod {
 export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<HolidayPeriod>({
   id: int64String,
   name: str,
+  kind: str,
+  included_in_fee: bool,
   registration_opens_on: nullable(calendarDate),
   registration_closes_on: nullable(calendarDate),
   binding: bool,
@@ -561,6 +567,8 @@ export interface HolidayWeekRequest {
 /** Go: enrollmenthttp.HolidayPeriodRequest */
 export interface HolidayPeriodRequest {
   name?: string;
+  kind?: string;
+  included_in_fee?: boolean;
   registration_opens_on?: string | null;
   registration_closes_on?: string | null;
   binding?: boolean;
@@ -713,6 +721,7 @@ export const routes = {
     portals: ["org"],
     query: {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "kind": { kind: "string", values: ["extra_day", "holiday"] },
     },
     response: fileAnswer,
   },

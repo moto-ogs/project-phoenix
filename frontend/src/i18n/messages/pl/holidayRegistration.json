@@ -238,5 +238,11 @@
   "submitCaptchaPending": "Najpierw proszę zakończyć weryfikację bezpieczeństwa.",
   "submitUploadsPending": "Proszę poczekać, aż wszystkie pliki zostaną przesłane.",
   "doneToRegistrationsHint": "Otwiera listę Państwa zgłoszeń na ferie.",
-  "doneToStatusHint": "Pokazuje, na jakim etapie organizator jest z Państwa zgłoszeniem."
+  "doneToStatusHint": "Pokazuje, na jakim etapie organizator jest z Państwa zgłoszeniem.",
+  "extraDayTitle": "Dodatkowy dzień",
+  "extraDayText": "Wybierz, czy dziecko przyjdzie w tym dniu.",
+  "extraDayIncludedText": "Ten dzień jest wliczony w opłatę miesięczną. Nie płacisz nic dodatkowo.",
+  "extraDayPriceText": "Cena dotyczy tego dnia i jednego dziecka, bez zniżki ani zwolnienia. Twoją opłatę zobaczysz w podsumowaniu.",
+  "parallelDayHint": "Ten dzień jest oferowany w kilku szkołach. Wybierz jedną szkołę.",
+  "contributionTextExtraDay": "Tyle kosztuje dodatkowy dzień. Opłata obowiązuje, gdy organizator potwierdzi zgłoszenie."
 }

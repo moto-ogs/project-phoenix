@@ -118,7 +118,7 @@ func (h *HolidayPeriods) CreateHolidayPeriod(ctx context.Context, organizationID
 	if organizationID <= 0 {
 		return enrollment.HolidayPeriod{}, errHolidayPeriodRequired
 	}
-	input = normalizeHolidayPeriod(input)
+	input = withHolidayKind(normalizeHolidayPeriod(input), enrollment.HolidayPeriod{})
 	if err := validateHolidayPeriod(input, enrollment.HolidayPeriod{}); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
@@ -149,7 +149,7 @@ func (h *HolidayPeriods) UpdateHolidayPeriod(ctx context.Context, organizationID
 	if err := readstate.Check(input.ExpectedVersion, current.Version); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
-	input = keepArchivedHolidayTimeModels(normalizeHolidayPeriod(input), current)
+	input = keepArchivedHolidayTimeModels(withHolidayKind(normalizeHolidayPeriod(input), current), current)
 	input = keepHolidayBookingUnits(input, current)
 	if err := validateHolidayPeriod(input, current); err != nil {
 		return enrollment.HolidayPeriod{}, err
@@ -385,8 +385,12 @@ func validateHolidayPeriod(input enrollment.HolidayPeriodInput, current enrollme
 	}
 	if len(input.Weeks) > holidayMaxWeeks {
 		errs["weeks"] = fmt.Errorf("a period has at most %d weeks", holidayMaxWeeks)
-	} else if weekErrs := validateHolidayWeeks(input.Weeks, current); len(weekErrs) > 0 {
-		errs["weeks"] = weekErrs
+	} else {
+		weekErrs := validateHolidayWeeks(input.Weeks, current)
+		validateHolidayKind(input, current, errs, weekErrs)
+		if len(weekErrs) > 0 {
+			errs["weeks"] = weekErrs
+		}
 	}
 	if len(errs) == 0 {
 		return nil

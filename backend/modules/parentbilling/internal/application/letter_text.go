@@ -353,6 +353,10 @@ func invoiceLine(position parentbilling.BillingPosition) templates.InvoiceLine {
 	}
 	if position.WeekStartsOn != nil && position.WeekEndsOn != nil {
 		line.Week = fmt.Sprintf("Woche %s bis %s", position.WeekStartsOn.Format("02.01."), germanDate(*position.WeekEndsOn))
+		if *position.WeekStartsOn == *position.WeekEndsOn {
+			// A booking of a single day, such as an extra care day (#4817).
+			line.Week = "Tag " + germanDate(*position.WeekEndsOn)
+		}
 	}
 	return line
 }

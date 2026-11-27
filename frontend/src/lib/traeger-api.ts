@@ -79,6 +79,7 @@ const NO_CARE_KIND_VALUES = ["holiday", "closing_day"] as const;
 const BOOKING_UNIT_VALUES = ["week", "day"] as const;
 const ALLOCATION_MODE_VALUES = ["arrival", "criteria"] as const;
 const PERIOD_STATUS_VALUES = ["draft", "published"] as const;
+const PERIOD_KIND_VALUES = ["holiday", "extra_day"] as const;
 const ACCOUNT_ACTION_VALUES = [
   "invitation_created",
   "invitation_revoked",
@@ -337,7 +338,19 @@ export interface HolidayWeek {
   readonly lunchPriceCents?: number | null;
   /** A booking of the week has lunch, so the offer stays. Read only. */
   readonly lunchBooked?: boolean;
+  /**
+   * Children with a place in the week, a summed figure (#4817). Read only.
+   */
+  readonly placed?: number;
+  /** Places of the week; null is no bound (#4699). Read only. */
+  readonly capacity?: number | null;
 }
+
+/**
+ * What a holiday period plans (#4817): weeks of holiday care, or one extra
+ * care day outside the holidays, such as a bridge day.
+ */
+export type HolidayPeriodKind = (typeof PERIOD_KIND_VALUES)[number];
 
 /** How a holiday week is booked (#4701). */
 export type HolidayBookingUnit = (typeof BOOKING_UNIT_VALUES)[number];
@@ -345,6 +358,16 @@ export type HolidayBookingUnit = (typeof BOOKING_UNIT_VALUES)[number];
 /** What the Träger-Büro writes: the whole period with its weeks. */
 export interface HolidayPeriodInput {
   readonly name: string;
+  /**
+   * Absent is a holiday period. The kind of a stored period never changes
+   * (#4817).
+   */
+  readonly kind?: HolidayPeriodKind;
+  /**
+   * An extra day the monthly contribution covers: parents only register,
+   * its care time has no price (#4817).
+   */
+  readonly includedInFee?: boolean;
   readonly registrationOpensOn: string;
   readonly registrationClosesOn: string;
   readonly binding: boolean;
@@ -406,6 +429,9 @@ export function holidayPeriodFromBackend(
   return {
     id: period.id,
     name: period.name,
+    // A kind this build does not know is planned like a holiday period.
+    kind: knownEnum(PERIOD_KIND_VALUES, period.kind) ?? "holiday",
+    includedInFee: period.included_in_fee,
     registrationOpensOn: requiredDay(
       period.registration_opens_on,
       "holiday_period.registration_opens_on",
@@ -433,6 +459,8 @@ export function holidayPeriodFromBackend(
       hostSchoolId: week.host_school_id,
       bookingUnit: knownEnum(BOOKING_UNIT_VALUES, week.booking_unit),
       noCareDays: noCareDaysFromBackend(week.no_care_days),
+      placed: week.placed,
+      capacity: week.capacity,
       // Only a week with lunch carries the fields (#5631).
       ...(week.lunch_price_cents == null
         ? {}
@@ -458,6 +486,9 @@ function holidayPeriodToBackend(
 ): traegerHolidayPeriodsContract.HolidayPeriodRequest {
   return {
     name: input.name,
+    // Left out, the backend keeps the kind of a stored period.
+    ...(input.kind ? { kind: input.kind } : {}),
+    ...(input.includedInFee ? { included_in_fee: true } : {}),
     registration_opens_on: input.registrationOpensOn,
     registration_closes_on: input.registrationClosesOn,
     binding: input.binding,

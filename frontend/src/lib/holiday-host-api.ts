@@ -486,6 +486,8 @@ export function formatHolidayWeekRange(
   const [fromYear, fromMonth, fromDay] = startsOn.split("-");
   const [toYear, toMonth, toDay] = endsOn.split("-");
   const to = `${toDay}.${toMonth}.${toYear}`;
+  // A week of a single day, such as an extra care day (#4817).
+  if (startsOn === endsOn) return to;
   if (fromYear !== toYear) return `${fromDay}.${fromMonth}.${fromYear}–${to}`;
   if (fromMonth !== toMonth) return `${fromDay}.${fromMonth}.–${to}`;
   return `${fromDay}.–${to}`;

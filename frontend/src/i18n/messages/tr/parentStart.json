@@ -49,6 +49,7 @@
     "forChildren": "Kimin için: {names}",
     "offeredByTraeger": "Düzenleyen: {traeger}",
     "careLine": "Bakım {from} – {to}",
+    "careDayLine": "Bakım {date}",
     "registrationLine": "Kayıt {date} tarihine kadar",
     "registrationRangeLine": "Kayıt {from} – {to}",
     "registerTooltip": "Bu tatil teklifine kaydı açar."

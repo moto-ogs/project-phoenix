@@ -87,8 +87,12 @@ const HOME_SCHOOL_TAB = "andere-ogs";
 // Bauart 3 (Werkzeug): eine Liste zum Vorbereiten und Ausdrucken, kein
 // Objekt, das hier bearbeitet wird.
 
-/** „06.07. bis 10.07.2099“ */
+/**
+ * „06.07. bis 10.07.2099“; a week of a single day, such as an extra care
+ * day of the Träger (#4817), is that day alone.
+ */
 function weekLabel(week: HostedHolidayWeek): string {
+  if (week.startsOn === week.endsOn) return formatDate(week.endsOn);
   return `${formatDate(week.startsOn).slice(0, 6)} bis ${formatDate(week.endsOn)}`;
 }
 

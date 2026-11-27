@@ -45,6 +45,7 @@ type holidayReviewRegistrationRow struct {
 	DebtorNumber            *string    `bun:"debtor_number"`
 	RetentionDays           int        `bun:"retention_days"`
 	BenefitsProofAttached   bool       `bun:"benefits_proof_attached"`
+	IncludedInFee           bool       `bun:"included_in_fee"`
 }
 
 // holidayReviewChildRow is one child as the review reads it, without its
@@ -83,7 +84,10 @@ const (
 			guardian_address_street, guardian_address_postal_code, guardian_address_city, debtor_number, retention_days,
 			EXISTS (SELECT 1 FROM enrollment.holiday_registration_proofs AS proof
 				WHERE proof.organization_id = holiday_registrations.organization_id
-					AND proof.holiday_registration_id = holiday_registrations.id) AS benefits_proof_attached
+					AND proof.holiday_registration_id = holiday_registrations.id) AS benefits_proof_attached,
+			COALESCE((SELECT period.included_in_fee FROM enrollment.holiday_periods AS period
+				WHERE period.organization_id = holiday_registrations.organization_id
+					AND period.id = holiday_registrations.holiday_period_id), false) AS included_in_fee
 		FROM enrollment.holiday_registrations
 		WHERE organization_id = ? AND holiday_period_id = ? AND (?::bigint = 0 OR id = ?)
 		ORDER BY submitted_at, id`
@@ -196,6 +200,7 @@ func holidayReviewDetails(registrations []holidayReviewRegistrationRow, children
 			},
 			PrivacyConsentAt: row.PrivacyConsentAt, HealthConsentAt: row.HealthConsentAt, BindingConfirmedAt: row.BindingConfirmedAt,
 			CustodyConfirmedAt: row.CustodyConfirmedAt, BenefitsProofAttached: row.BenefitsProofAttached,
+			IncludedInFee: row.IncludedInFee,
 		}
 		if row.DeclarationName != nil {
 			details[i].DeclarationName = *row.DeclarationName

@@ -234,6 +234,8 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/ferien/:id/vergabe": "Platzvergabe",
     "/ferien/kriterien": "Kriterien der Platzvergabe",
     "/ferien/neu": "Neuer Ferienzeitraum",
+    "/ferien/zusatztage": "Zusatztage",
+    "/ferien/zusatztage/neu": "Neuer Zusatztag",
     "/invite": "Einladung annehmen",
     "/kinder": "Kinder",
     "/konto": "Konto",

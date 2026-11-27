@@ -117,12 +117,16 @@ export function HolidayWeekPlacesCard({
   noCareDays?: readonly HolidayNoCareDay[];
 }>) {
   const fill = holidayWeekFill(week, noCareDays);
-  const title = formatHolidayWeek(week.startsOn, week.endsOn);
+  const days = formatHolidayWeek(week.startsOn, week.endsOn);
+  // A single day, such as an extra care day (#4817): every card of the page
+  // is the same day, so the school is what tells the cards apart.
+  const singleDay = week.startsOn === week.endsOn;
+  const title = singleDay ? hostSchoolName : days;
   return (
     <SectionCard
       title={title}
       titleBadge={<StatusBadge label={fill.label} tone={fill.tone} size="xs" />}
-      description={hostSchoolName}
+      description={singleDay ? days : hostSchoolName}
       action={
         editing ? undefined : (
           <Button
@@ -130,8 +134,16 @@ export function HolidayWeekPlacesCard({
             variant="outline"
             size="md"
             onClick={onEdit}
-            aria-label={`Plätze für die Woche ${title} bearbeiten`}
-            tooltip="Öffnet die Zahl der Plätze dieser Woche zum Bearbeiten."
+            aria-label={
+              singleDay
+                ? `Plätze für ${title} am ${days} bearbeiten`
+                : `Plätze für die Woche ${title} bearbeiten`
+            }
+            tooltip={
+              singleDay
+                ? "Öffnet die Zahl der Plätze dieses Tages zum Bearbeiten."
+                : "Öffnet die Zahl der Plätze dieser Woche zum Bearbeiten."
+            }
           >
             Plätze bearbeiten
           </Button>
@@ -455,6 +467,12 @@ function HolidayCapacityEditor({
     : limited
       ? Math.min(waiting, Math.max(0, (valid ? capacity : placed) - placed))
       : waiting;
+  const singleDay = week.startsOn === week.endsOn;
+  const capacityLabel = byDays
+    ? "Plätze an jedem Tag"
+    : singleDay
+      ? "Plätze an diesem Tag"
+      : "Plätze in dieser Woche";
   const mostPlaced = byDays
     ? Math.max(0, ...(week.days ?? []).map((day) => day.placed))
     : placed;
@@ -462,7 +480,7 @@ function HolidayCapacityEditor({
     <form
       ref={formRef}
       noValidate
-      aria-label="Plätze dieser Woche"
+      aria-label={singleDay ? "Plätze dieses Tages" : "Plätze dieser Woche"}
       className="space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
@@ -479,9 +497,7 @@ function HolidayCapacityEditor({
       />
       {limited ? (
         <div className="space-y-2">
-          <SectionLabel as="p">
-            {byDays ? "Plätze an jedem Tag" : "Plätze in dieser Woche"}
-          </SectionLabel>
+          <SectionLabel as="p">{capacityLabel}</SectionLabel>
           <NumberStepper
             id="holiday-week-capacity"
             name="capacity"
@@ -507,15 +523,15 @@ function HolidayCapacityEditor({
             incrementLabel="Einen Platz mehr"
             canDecrement={capacity > 0}
             canIncrement={capacity < HOLIDAY_WEEK_CAPACITY_MAX}
-            aria-label={
-              byDays ? "Plätze an jedem Tag" : "Plätze in dieser Woche"
-            }
+            aria-label={capacityLabel}
             error={formErrors.fieldError("capacity")}
           />
           <p className="text-sm text-gray-600">
             {byDays
               ? "Die Zahl gilt für jeden Tag, für alle Zeitmodelle zusammen. Ein Kind bekommt seinen Platz, wenn alle seine Tage frei sind."
-              : "Die Plätze gelten für alle Zeitmodelle dieser Woche zusammen."}
+              : singleDay
+                ? "Die Plätze gelten für diesen Tag an dieser Schule."
+                : "Die Plätze gelten für alle Zeitmodelle dieser Woche zusammen."}
           </p>
         </div>
       ) : null}

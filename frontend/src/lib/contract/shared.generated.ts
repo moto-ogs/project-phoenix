@@ -4898,6 +4898,7 @@ export interface HolidayRegistrationDetail {
   custody_confirmed_at: string | null;
   declaration_name: string;
   benefits_proofs: HolidayRegistrationProof[] | null;
+  included_in_fee: boolean;
   history: HolidayRegistrationEvent[] | null;
   criteria: HolidayRegistrationCriterion[] | null;
   mails?: RequestMailOutcome[];
@@ -4937,6 +4938,7 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   custody_confirmed_at: nullable(instant),
   declaration_name: str,
   benefits_proofs: nullable(arr(HolidayRegistrationProofSchema)),
+  included_in_fee: bool,
   history: nullable(arr(HolidayRegistrationEventSchema)),
   criteria: nullable(arr(HolidayRegistrationCriterionSchema)),
   mails: optional(arr(RequestMailOutcomeSchema)),

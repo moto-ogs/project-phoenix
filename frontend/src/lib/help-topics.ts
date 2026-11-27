@@ -240,6 +240,7 @@ export const HELP_TOPICS = {
   traegerSchoolRoles: "rollen-fuer-alle-schulen-des-traegers",
   traegerProfile: "traeger-eigenen-namen-aendern",
   traegerHolidayPeriod: "traeger-ferienzeitraum",
+  traegerExtraCareDay: "traeger-zusatztag",
   traegerClosingDays: "traeger-schliesstage",
   traegerNotificationFeed: "traeger-hinweise-in-der-glocke",
   traegerHolidayRegistration: "traeger-ferienanmeldung-teilen",

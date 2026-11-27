@@ -12909,6 +12909,14 @@
             "pdf",
             "xlsx"
           ]
+        },
+        {
+          "name": "kind",
+          "kind": "string",
+          "values": [
+            "extra_day",
+            "holiday"
+          ]
         }
       ],
       "file": true
@@ -67254,6 +67262,18 @@
           }
         },
         {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "registration_opens_on",
           "schema": {
             "kind": "date",
@@ -67474,6 +67494,20 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -68482,6 +68516,12 @@
               "kind": "ref",
               "ref": "HolidayRegistrationProof"
             }
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -70483,6 +70523,12 @@
           "name": "lunch_booked",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "placed",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -89378,6 +89424,18 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {

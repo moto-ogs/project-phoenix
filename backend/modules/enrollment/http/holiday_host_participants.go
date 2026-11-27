@@ -365,7 +365,7 @@ func hostAnswerColumnID(key string) lists.ColumnID { return lists.ColumnID("answ
 // per child, the counts per time model and home school as header lines.
 func holidayParticipantDocument(list capability.HolidayParticipantList, names holidaySchoolNameMap, generatedAt time.Time) lists.Document {
 	models := make(map[int64]string, len(list.TimeModels))
-	header := []string{"Woche: " + list.Week.StartsOn.Format("02.01.") + " bis " + list.Week.EndsOn.Format("02.01.2006"),
+	header := []string{capability.HolidayWeekHeading(list.Week.StartsOn, list.Week.EndsOn),
 		"Kinder: " + strconv.Itoa(len(list.Participants))}
 	for _, model := range list.TimeModels {
 		models[model.ID.Int64()] = model.Name

@@ -7,12 +7,16 @@ import { bffFile } from "~/lib/bff-fetch";
 
 import { CalendarDays, ListChecks, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import {
   formatDateRange,
   formatWeeks,
   holidayStatusLabel,
 } from "~/components/traeger/holiday-period-format";
-import { HOLIDAY_CRITERIA_HINT } from "~/components/traeger/holiday-period-head";
+import {
+  HOLIDAY_CRITERIA_HINT,
+  holidayOverviewTabs,
+} from "~/components/traeger/holiday-period-head";
 import { ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -77,7 +81,11 @@ const COLUMNS: DataTableColumn<HolidayPeriod>[] = [
 export default function TraegerHolidayPeriodsPage() {
   const router = useRouter();
   const { data, isLoading: loading, loadError } = useTraegerHolidayPeriods();
-  const periods = data ?? [];
+  // Zusatztage haben ihre eigene Liste (#4817).
+  const periods = useMemo(
+    () => (data ?? []).filter((period) => period.kind !== "extra_day"),
+    [data],
+  );
 
   const newHref = traegerPath("/traeger/ferien/neu");
 
@@ -87,7 +95,7 @@ export default function TraegerHolidayPeriodsPage() {
     download: (format) =>
       downloadTraegerList(
         bffFile("org", "GET /traeger/holiday-periods/export", {
-          query: listExportQuery(format),
+          query: listExportQuery(format, { kind: "holiday" }),
         }),
       ),
     scope: traegerExportScope(),
@@ -103,7 +111,7 @@ export default function TraegerHolidayPeriodsPage() {
   return (
     <TenantPage
       title="Ferienbetreuung"
-      info="Hier planst du die Ferienbetreuung für die Schulen deines Trägers. Ein neuer Ferienzeitraum ist zuerst ein Entwurf. Eltern melden ihre Kinder erst an, wenn du ihn veröffentlicht hast."
+      info="Hier planst du die Ferienbetreuung für die Schulen deines Trägers. Ein neuer Ferienzeitraum ist zuerst ein Entwurf. Eltern melden ihre Kinder erst an, wenn du ihn veröffentlicht hast. Einzelne Tage außerhalb der Ferien, zum Beispiel einen Brückentag, planst du unter „Zusatztage“."
       stats={
         periods.length > 0 ? (
           <TenantPageStats
@@ -120,6 +128,7 @@ export default function TraegerHolidayPeriodsPage() {
       }
       statsLoading={loading}
       error={loadError}
+      tabs={holidayOverviewTabs("ferien")}
       overflowMenu={[
         {
           label: "Kriterien der Platzvergabe",

@@ -138,6 +138,11 @@ func holidayChildKey(registration parentbilling.HolidayRegistration, child paren
 func (h *HolidayContributions) confirmsChildNumbers(ctx context.Context, organizationID int64, registration parentbilling.HolidayRegistration,
 	childNumbers []parentbilling.HolidayChildDebtorNumberInput,
 ) (bool, error) {
+	// An extra care day the monthly contribution covers is never billed
+	// (#4817): the office confirms it without a number of the family.
+	if registration.IncludedInFee && childNumbers == nil {
+		return false, nil
+	}
 	perChild, err := h.perChild(ctx, organizationID)
 	if err != nil {
 		return false, err

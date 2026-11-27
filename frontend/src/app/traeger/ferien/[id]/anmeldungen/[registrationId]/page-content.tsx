@@ -952,7 +952,11 @@ function HolidayRegistrationContent() {
       registration={registration}
       contribution={contribution}
       previewPending={previewPending}
-      debtorNumberRequired={confirmation?.debtorNumberRequired ?? false}
+      // An extra day the monthly fee covers is never billed: its
+      // confirmation needs no debtor number (#4817).
+      debtorNumberRequired={
+        (confirmation?.debtorNumberRequired ?? false) && !period?.includedInFee
+      }
       debtorNumberFormat={confirmation?.debtorNumberFormat}
       familyDebtorNumber={familyDebtorNumbers.debtorNumber}
       childDebtorNumbers={familyDebtorNumbers.children}

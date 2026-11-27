@@ -102,6 +102,14 @@ interface HolidayRegistrationCriterion {
 export interface HolidayRegistrationOffer {
   readonly traegerName: string;
   readonly name: string;
+  /**
+   * An extra care day outside the holidays, such as a bridge day: each of
+   * its weeks is that one day at one school (#4817). Absent reads as a
+   * holiday period.
+   */
+  readonly extraDay?: boolean;
+  /** The extra day is covered by the monthly fee: it shows no price. */
+  readonly includedInFee?: boolean;
   readonly registrationOpensOn: string;
   readonly registrationClosesOn: string;
   readonly binding: boolean;
@@ -147,6 +155,8 @@ function offerFromBackend(
   return {
     traegerName: offer.traeger_name,
     name: offer.name,
+    extraDay: offer.kind === "extra_day",
+    includedInFee: offer.included_in_fee,
     registrationOpensOn: requiredDay(
       offer.registration_opens_on,
       "HolidayRegistrationOffer.registration_opens_on",

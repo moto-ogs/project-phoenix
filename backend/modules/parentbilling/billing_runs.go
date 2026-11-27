@@ -417,6 +417,9 @@ type HolidayBillingPeriod struct {
 	StartsOn  calendar.Date `json:"starts_on"`
 	EndsOn    calendar.Date `json:"ends_on"`
 	Published bool          `json:"-"`
+	// IncludedInFee marks an extra care day the monthly contribution covers
+	// (#4817): it has nothing to bill and takes no billing run.
+	IncludedInFee bool `json:"-"`
 }
 
 // HolidayBillingChild is a child of a confirmed registration by its name.

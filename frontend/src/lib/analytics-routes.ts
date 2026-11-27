@@ -284,6 +284,8 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/ferien/:id/vergabe",
   "/ferien/kriterien",
   "/ferien/neu",
+  "/ferien/zusatztage",
+  "/ferien/zusatztage/neu",
   "/invite",
   "/kinder",
   "/konto",

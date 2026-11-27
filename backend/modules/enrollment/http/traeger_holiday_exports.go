@@ -1,6 +1,7 @@
 package enrollmenthttp
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -66,9 +67,16 @@ func (rs *HolidayPeriodResource) exportPeriods(w http.ResponseWriter, r *http.Re
 		return
 	}
 	school := holidayNames(r)
+	kind := r.URL.Query().Get("kind")
+	if kind == capability.HolidayPeriodKindExtraDay {
+		common.WriteList(w, r, rs.lists, format, extraDayTable(periods, school))
+		return
+	}
 	rows := make([][]string, 0, len(periods))
 	for _, period := range periods {
-		rows = append(rows, holidayPeriodRow(period, school))
+		if kind == "" || period.Kind == kind {
+			rows = append(rows, holidayPeriodRow(period, school))
+		}
 	}
 	common.WriteList(w, r, rs.lists, format, common.ListTable{
 		Title: "Ferienbetreuung", Filters: []string{common.ListSchoolLabel("")},
@@ -79,6 +87,69 @@ func (rs *HolidayPeriodResource) exportPeriods(w http.ResponseWriter, r *http.Re
 		},
 		Rows: rows, Filename: "ferienzeitraeume",
 	})
+}
+
+// extraDayTable lists the extra care days of the Träger (#4817): one row per
+// day and school, so the figures of each school stand side by side.
+func extraDayTable(periods []capability.HolidayPeriod, school func(int64) string) common.ListTable {
+	var rows [][]string
+	for _, period := range periods {
+		if period.Kind != capability.HolidayPeriodKindExtraDay {
+			continue
+		}
+		status := "Entwurf"
+		if period.Status == capability.HolidayPeriodPublished {
+			status = "Veröffentlicht"
+		}
+		for _, week := range period.Weeks {
+			rows = append(rows, []string{
+				period.Name, week.StartsOn.Format(holidayDay), school(week.HostSchoolID.Int64()), extraDayCareTime(week),
+				period.RegistrationClosesOn.Format(holidayDay), extraDayFee(period, week), strconv.Itoa(week.Placed), extraDayCapacity(week), status,
+			})
+		}
+	}
+	return common.ListTable{
+		Title: "Zusatztage", Filters: []string{common.ListSchoolLabel("")},
+		Columns: []common.ListColumn{
+			{ID: "name", Label: "Zusatztag"}, {ID: "day", Label: "Tag"}, {ID: "school", Label: "Schule"},
+			{ID: "care", Label: "Betreuungszeit"}, {ID: "closes", Label: "Anmeldung bis"}, {ID: "fee", Label: "Beitrag"},
+			{ID: "placed", Label: "Kinder mit Platz"}, {ID: "capacity", Label: "Plätze"}, {ID: "status", Label: "Status"},
+		},
+		Rows: rows, Filename: "zusatztage",
+	}
+}
+
+// extraDayCapacity names the places of a school's extra day.
+func extraDayCapacity(week capability.HolidayWeek) string {
+	if week.Capacity == nil {
+		return "Ohne Grenze"
+	}
+	return strconv.Itoa(*week.Capacity)
+}
+
+// extraDayCareTime names the care time of a school's extra day, the first
+// time model that is still offered.
+func extraDayCareTime(week capability.HolidayWeek) string {
+	for _, model := range week.TimeModels {
+		if !model.Archived {
+			return model.StartsAt + " bis " + model.EndsAt + " Uhr"
+		}
+	}
+	return ""
+}
+
+// extraDayFee says what a school's extra day costs: nothing beyond the
+// monthly contribution, or the price of its time model.
+func extraDayFee(period capability.HolidayPeriod, week capability.HolidayWeek) string {
+	if period.IncludedInFee {
+		return "Im Monatsbeitrag enthalten"
+	}
+	for _, model := range week.TimeModels {
+		if !model.Archived {
+			return fmt.Sprintf("%d,%02d € je Tag", model.PriceCents/100, model.PriceCents%100)
+		}
+	}
+	return ""
 }
 
 // holidayPeriodRow counts weeks on the same days once, as the list does, and
@@ -136,9 +207,10 @@ func (rs *HolidayPeriodResource) exportedPeriod(w http.ResponseWriter, r *http.R
 	return format, reviewer, period, true
 }
 
-// holidayWeekLabel is „04.01.2027 bis 08.01.2027“.
+// holidayWeekLabel is „04.01.2027 bis 08.01.2027“, or the one day of a week
+// of a single day (#4817).
 func holidayWeekLabel(startsOn, endsOn calendar.Date) string {
-	return startsOn.Format(holidayDay) + " bis " + endsOn.Format(holidayDay)
+	return capability.HolidayWeekSpan(startsOn, endsOn)
 }
 
 // holidayDays is „04.01., 05.01.“: the wanted days of a booking by days.

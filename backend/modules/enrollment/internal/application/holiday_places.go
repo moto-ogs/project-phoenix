@@ -294,8 +294,7 @@ func holidayWeekLines(traeger enrollment.HolidayTraeger, period enrollment.Holid
 		if school := schools[week.HostSchoolID.Int64()]; school != "" {
 			place = school + ", " + model.Name
 		}
-		line := fmt.Sprintf("%s bis %s: %s (%s bis %s Uhr)", week.StartsOn.Format("02.01.2006"),
-			week.EndsOn.Format("02.01.2006"), place, model.StartsAt, model.EndsAt)
+		line := fmt.Sprintf("%s: %s (%s bis %s Uhr)", enrollment.HolidayWeekSpan(week.StartsOn, week.EndsOn), place, model.StartsAt, model.EndsAt)
 		if len(days) > 0 {
 			line += ", Tage: " + enrollment.HolidayDayNames(days)
 		}

@@ -238,5 +238,11 @@
   "submitCaptchaPending": "Lütfen önce güvenlik kontrolünü tamamlayın.",
   "submitUploadsPending": "Lütfen tüm dosyalar yüklenene kadar bekleyin.",
   "doneToRegistrationsHint": "Tatil kayıtlarınızın listesini açar.",
-  "doneToStatusHint": "Kurumun kaydınızı ne kadar işlediğini gösterir."
+  "doneToStatusHint": "Kurumun kaydınızı ne kadar işlediğini gösterir.",
+  "extraDayTitle": "Ek gün",
+  "extraDayText": "Çocuğunuzun bu gün gelip gelmeyeceğini seçin.",
+  "extraDayIncludedText": "Bu gün aylık ücrete dahildir. Ek bir ücret ödemezsiniz.",
+  "extraDayPriceText": "Fiyat bu gün ve bir çocuk içindir, indirim veya muafiyet hariç. Ücretinizi özette görürsünüz.",
+  "parallelDayHint": "Bu gün birkaç okulda sunuluyor. Bir okul seçin.",
+  "contributionTextExtraDay": "Ek gün bu kadar tutar. Ücret, kurum kaydı onayladığında geçerli olur."
 }
