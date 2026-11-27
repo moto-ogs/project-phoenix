@@ -79,6 +79,12 @@ const (
 		SET start_date = ?, end_date = ?, opens_at = ?::time, closes_at = ?::time, reason = ?
 		WHERE tenant_id = ? AND id = ? RETURNING ` + openingChangeColumns
 	deleteOpeningChangeQuery = `DELETE FROM schedule.opening_changes WHERE tenant_id = ? AND id = ?`
+	// lockTraegerOpeningChangeIDCollision locks a visible Träger change with
+	// the same independent table ID. A school must not use that ID to write an
+	// own change; FOR SHARE keeps a concurrent Träger edit or deletion behind
+	// the school write until the tenant transaction ends.
+	lockTraegerOpeningChangeIDCollision = `SELECT id FROM schedule.traeger_opening_changes
+		WHERE id = ? AND ? = ANY (school_ids) FOR SHARE`
 )
 
 // ListOpeningChanges lists the changes touching [from, to]: the school's
@@ -152,6 +158,9 @@ func (s *OpeningChangeStore) UpdateOpeningChange(ctx context.Context, id int64, 
 	if err != nil {
 		return schoolcalendar.OpeningChange{}, err
 	}
+	if err := rejectTraegerOpeningChangeIDCollision(ctx, db, schoolID, id); err != nil {
+		return schoolcalendar.OpeningChange{}, err
+	}
 	var row openingChangeRow
 	if err := db.NewRaw(lockOpeningChangeQuery, schoolID, id).Scan(ctx, &row); err != nil {
 		return schoolcalendar.OpeningChange{}, openingChangeError("lock", err)
@@ -172,6 +181,9 @@ func (s *OpeningChangeStore) LockOpeningChange(ctx context.Context, id int64) (s
 	if err != nil {
 		return schoolcalendar.OpeningChange{}, err
 	}
+	if err := rejectTraegerOpeningChangeIDCollision(ctx, db, schoolID, id); err != nil {
+		return schoolcalendar.OpeningChange{}, err
+	}
 	var row openingChangeRow
 	if err := db.NewRaw(lockOpeningChangeQuery, schoolID, id).Scan(ctx, &row); err != nil {
 		return schoolcalendar.OpeningChange{}, openingChangeError("lock", err)
@@ -185,6 +197,9 @@ func (s *OpeningChangeStore) DeleteOpeningChange(ctx context.Context, id int64) 
 	if err != nil {
 		return err
 	}
+	if err := rejectTraegerOpeningChangeIDCollision(ctx, db, schoolID, id); err != nil {
+		return err
+	}
 	result, err := db.NewRaw(deleteOpeningChangeQuery, schoolID, id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("school calendar postgres: delete opening change: %w", err)
@@ -195,6 +210,20 @@ func (s *OpeningChangeStore) DeleteOpeningChange(ctx context.Context, id int64) 
 		return schoolcalendar.ErrOpeningChangeNotFound
 	}
 	return nil
+}
+
+// rejectTraegerOpeningChangeIDCollision preserves the school route's 404 for
+// a Träger-owned change when its independent ID happens to match a school row.
+func rejectTraegerOpeningChangeIDCollision(ctx context.Context, db bun.IDB, schoolID, id int64) error {
+	var traegerID int64
+	err := db.NewRaw(lockTraegerOpeningChangeIDCollision, id, schoolID).Scan(ctx, &traegerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("school calendar postgres: lock Träger opening change ID collision: %w", err)
+	}
+	return schoolcalendar.ErrOpeningChangeNotFound
 }
 
 // normalizeOpeningChange checks a change against the domain rules.

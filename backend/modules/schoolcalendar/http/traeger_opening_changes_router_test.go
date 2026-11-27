@@ -111,6 +111,10 @@ func traegerShortDay(reason string, schools ...int64) map[string]any {
 	return map[string]any{"start_date": "2031-02-07", "end_date": "2031-02-07", "opens_at": "07:30", "closes_at": "12:00", "reason": reason, "school_ids": ids}
 }
 
+func schoolShortDay(reason string) map[string]any {
+	return map[string]any{"start_date": "2031-02-07", "end_date": "2031-02-07", "opens_at": "07:30", "closes_at": "12:00", "reason": reason}
+}
+
 // closingTime reads the closing time of 2031-02-07 in the school's tenant
 // transaction, as the session end, the care day and the parents' deadline
 // read it.
@@ -212,6 +216,39 @@ func TestTraegerOpeningChangeReachesOnlyTheNamedSchool(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	_, ok = f.closingTime(t, f.named)
 	assert.False(t, ok, "a deleted change gives the regular session end back")
+}
+
+// A Träger and a school use independent ID sequences. The school route must
+// reject a visible Träger ID even when it happens to name one of its own rows.
+func TestSchoolCannotWriteOpeningChangeThroughCollidingTraegerID(t *testing.T) {
+	t.Parallel()
+	f := newTraegerOpeningFixture(t, testpkg.SetupTestDB(t))
+
+	rec := f.send(t, f.school(f.named, permissions.SchedulesCreate), http.MethodPost, "/api/opening-changes/", schoolShortDay("Schule"))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	schoolChange := decodeOpeningChangeData[openingChangeBody](t, rec)
+	_, err := f.db.ExecContext(testpkg.Ctx(t), `INSERT INTO schedule.traeger_opening_changes
+		(id, organization_id, start_date, end_date, opens_at, closes_at, reason, school_ids)
+		VALUES (?, ?, '2031-02-07', '2031-02-07', '07:30', '12:00', 'Träger', ?::bigint[])`,
+		schoolChange.ID, f.traeger, fmt.Sprintf("{%d}", f.named))
+	require.NoError(t, err)
+
+	update := schoolShortDay("Unbefugt")
+	update["expected_version"] = schoolChange.Version
+	rec = f.send(t, f.school(f.named, permissions.SchedulesUpdate), http.MethodPut, "/api/opening-changes/"+schoolChange.ID, update)
+	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot update the Träger change through its colliding ID: %s", rec.Body.String())
+	rec = f.send(t, f.school(f.named, permissions.SchedulesDelete), http.MethodDelete, "/api/opening-changes/"+schoolChange.ID, nil)
+	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot delete the Träger change through its colliding ID: %s", rec.Body.String())
+
+	changes := f.schoolList(t, f.named)
+	require.Len(t, changes, 2)
+	for _, change := range changes {
+		if change.Traeger {
+			assert.Equal(t, "Träger", change.Reason)
+			continue
+		}
+		assert.Equal(t, "Schule", change.Reason)
+	}
 }
 
 // The Träger's list reads its changes in one statement, however many there
