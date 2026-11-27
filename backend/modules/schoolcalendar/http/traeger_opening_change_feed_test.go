@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -19,6 +20,7 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -64,7 +66,7 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 		rootAPI.NewTraegerOpeningChangesWithNotices(traegerDirectorySchools{db: db}, f.notifications, nil, func() string { return openingFeedToday }),
 		requireTraegerRight(identityaccess.TraegerRightOverviewRead), requireTraegerRight(identityaccess.TraegerRightSettingsManage), nil)
 	router := chi.NewRouter()
-	router.Mount("/traeger/opening-changes", resource.TraegerRouter(rootAPI.ProtectedTraegerRoutes))
+	router.Mount("/traeger/opening-changes", resource.TraegerRouter(rootAPI.TraegerOpeningChangeRoutes))
 	routes := traegerOpeningFixture{db: db, router: router, account: int(planner.ID)}
 	claims := routes.office(traeger, identityaccess.TraegerRoleAdministration)
 	day := func(closes string) map[string]any {
@@ -137,4 +139,94 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	assert.Equal(t, "Geänderte Öffnungszeit entfällt", f.entries(t, unnamedStaff, unnamed, "staff")[0].Title)
 	assert.Empty(t, f.entries(t, quietStaff, quietSchool, "staff"), "the switched-off school never hears of it")
 	assert.Empty(t, f.entries(t, planner.ID, traeger, "traeger"))
+}
+
+func TestTraegerOpeningChangeThatDoesNotCommitRetractsTheSchoolNotices(t *testing.T) {
+	t.Parallel()
+	school := testpkg.Tenant(t)
+	f := newOpeningFeedFixture(t, school)
+	db := f.db
+	var traeger int64
+	require.NoError(t, db.QueryRowContext(context.Background(), `SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(&traeger))
+	testpkg.OwnTraegerOpeningChanges(t, db, traeger)
+	staff := f.staff(t, "Rücknahme", true)
+	family := testpkg.CreateTestParentGuardianChain(t, db)
+	f.device(t, family.AccountID, "parent")
+	planner, office := testpkg.CreateTestAccount(t, db, "traeger-retract-planner"), testpkg.CreateTestAccount(t, db, "traeger-retract-office")
+	testpkg.CreateTestTraegerMember(t, db, traeger, planner.ID, identityaccess.TraegerRoleAdministration)
+	testpkg.CreateTestTraegerMember(t, db, traeger, office.ID, identityaccess.TraegerRoleReadOnly)
+
+	// failCommit lets the Träger transaction end without a commit after the
+	// handler has told the schools, as a failed commit does.
+	failCommit := false
+	routes := func(r chi.Router, fn func(chi.Router, func(http.Handler) http.Handler)) {
+		rootAPI.TraegerOpeningChangeRoutes(r, func(r chi.Router, withTx func(http.Handler) http.Handler) {
+			fn(r, func(next http.Handler) http.Handler {
+				return withTx(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					next.ServeHTTP(w, r)
+					if failCommit {
+						tenant.MarkRollback(r.Context())
+					}
+				}))
+			})
+		})
+	}
+	resource := calendarAPI.NewTraegerOpeningChangeResource(
+		rootAPI.NewTraegerOpeningChangesWithNotices(traegerDirectorySchools{db: db}, f.notifications, nil, func() string { return openingFeedToday }),
+		requireTraegerRight(identityaccess.TraegerRightOverviewRead), requireTraegerRight(identityaccess.TraegerRightSettingsManage), nil)
+	router := chi.NewRouter()
+	router.Mount("/traeger/opening-changes", resource.TraegerRouter(routes))
+	fixture := traegerOpeningFixture{db: db, router: router, account: int(planner.ID)}
+	claims := fixture.office(traeger, identityaccess.TraegerRoleAdministration)
+	day := func(date, reason string) map[string]any {
+		return map[string]any{"start_date": date, "end_date": date, "opens_at": "07:30", "closes_at": "12:00",
+			"reason": reason, "school_ids": []string{fmt.Sprint(school)}}
+	}
+
+	// A change that commits is told and stays told.
+	rec := fixture.send(t, claims, http.MethodPost, traegerOpeningChangesPath, day("2030-06-12", "Personalversammlung"))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	kept := decodeOpeningChangeData[traegerOpeningChangeBody](t, rec)
+	require.Len(t, f.entries(t, staff, school, "staff"), 1)
+	f.markRead(t, staff, int64(f.entries(t, staff, school, "staff")[0].ID))
+	parentBefore, bellBefore := len(f.entries(t, family.AccountID, 0, "parent")), len(f.entries(t, office.ID, traeger, "traeger"))
+
+	// A new change whose Träger transaction does not commit: the school
+	// notices committed already and are retracted.
+	failCommit = true
+	fixture.send(t, claims, http.MethodPost, traegerOpeningChangesPath, day("2030-06-13", "Fortbildung"))
+	failCommit = false
+	rec = fixture.send(t, claims, http.MethodGet, traegerOpeningChangesPath+"?from=2030-06-01&to=2030-06-30", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	stored := decodeOpeningChangeData[[]traegerOpeningChangeBody](t, rec)
+	require.Len(t, stored, 1, "the change that did not commit does not exist")
+	assert.Equal(t, kept.ID, stored[0].ID)
+
+	const retracted = "Die geänderte Öffnungszeit „Fortbildung“ am 13.06.2030 entfällt. Es gelten wieder die normalen Öffnungszeiten. Das hat der Träger eingetragen."
+	readers := map[string][]openingFeedEntry{
+		"staff":  f.entries(t, staff, school, "staff"),
+		"parent": f.entries(t, family.AccountID, 0, "parent"),
+		"bell":   f.entries(t, office.ID, traeger, "traeger"),
+	}
+	for reader, entries := range readers {
+		for _, entry := range entries {
+			assert.NotContains(t, entry.Body, "gilt", "%s: no notice tells the change that does not exist as standing", reader)
+			if strings.Contains(entry.Body, "Fortbildung") {
+				assert.Equal(t, "Geänderte Öffnungszeit entfällt", entry.Title, reader)
+				assert.Equal(t, retracted, entry.Body, reader)
+			}
+		}
+	}
+	staffEntries := readers["staff"]
+	require.Len(t, staffEntries, 2, "the read notice of the kept change stays; the retraction updates the unread notice")
+	assert.Equal(t, retracted, staffEntries[0].Body)
+	assert.Equal(t, "Am 12.06.2030 ist von 07:30 bis 12:00 Uhr geöffnet: Personalversammlung. Das hat der Träger eingetragen.", staffEntries[1].Body,
+		"the retraction touches only the notices of its own change")
+	assert.Len(t, readers["parent"], parentBefore+1, "the unread notice of the family reads the retraction instead")
+	assert.Len(t, readers["bell"], bellBefore+1, "so does the bell of the Träger-Büro")
+
+	// A later write commits as before.
+	rec = fixture.send(t, claims, http.MethodPost, traegerOpeningChangesPath, day("2030-06-14", "Ausflug"))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	assert.Equal(t, "Geänderte Öffnungszeit", f.entries(t, staff, school, "staff")[0].Title)
 }

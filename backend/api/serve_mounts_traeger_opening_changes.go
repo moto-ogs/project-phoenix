@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
@@ -31,7 +32,33 @@ func newTraegerOpeningChangeRouter(schools traegercalendar.Schools, staffing sch
 ) chi.Router {
 	resource := schoolCalendarHTTP.NewTraegerOpeningChangeResource(NewTraegerOpeningChangesWithNotices(schools, notifications, logger, today),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage), staffing)
-	return resource.TraegerRouter(ProtectedTraegerRoutes)
+	return resource.TraegerRouter(TraegerOpeningChangeRoutes)
+}
+
+// TraegerOpeningChangeRoutes registers the Träger route group of the opening
+// changes: ProtectedTraegerRoutes with the Träger transaction of
+// TraegerTxWithOpeningChangeRetractions (#8231).
+func TraegerOpeningChangeRoutes(r chi.Router, fn func(chi.Router, common.Middleware)) {
+	ProtectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
+		fn(r, TraegerTxWithOpeningChangeRetractions)
+	})
+}
+
+// TraegerTxWithOpeningChangeRetractions is common.TraegerTxMiddleware for a
+// request that tells schools of a Träger opening change: the request enters
+// the Träger transaction prepared for the retractions of its school notices,
+// and once the transaction has ended without a commit, each school whose
+// notice committed is told the retraction.
+func TraegerTxWithOpeningChangeRetractions(next http.Handler) http.Handler {
+	inTx := common.TraegerTxMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+		owners.TraegerOpeningChangeHandled(r.Context())
+	}))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, settle := owners.WithTraegerOpeningChangeRetractions(r.Context())
+		defer settle(context.WithoutCancel(ctx))
+		inTx.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // NewTraegerOpeningChangesWithNotices composes the Träger's opening changes

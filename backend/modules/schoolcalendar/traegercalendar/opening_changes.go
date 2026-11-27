@@ -85,7 +85,10 @@ type OpeningChanges interface {
 // named school of the change, with the same type, audience and push window
 // as a change the school entered itself (#8178), in a school transaction of
 // that school: its own switch notifications.opening_change_enabled decides,
-// and the person who made the change is left out.
+// and the person who made the change is left out. The notice commits before
+// the Träger transaction; should that transaction not commit, the school is
+// told retraction, the version that stands again, in a school transaction
+// of its own.
 type OpeningChangeNotices interface {
-	NotifySchool(ctx context.Context, schoolID int64, notice schoolcalendar.OpeningChangeNotice) error
+	NotifySchool(ctx context.Context, schoolID int64, notice, retraction schoolcalendar.OpeningChangeNotice) error
 }

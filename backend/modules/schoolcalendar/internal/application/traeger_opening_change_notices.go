@@ -49,21 +49,27 @@ func (t *TraegerOpeningChanges) notify(ctx context.Context, id int64, previous *
 	today := t.today()
 	for _, schoolID := range affectedSchoolIDs(before, after) {
 		var was, is *schoolcalendar.OpeningChangeSpan
-		var reason string
+		var wasReason, isReason string
 		if slices.Contains(before, schoolID) {
 			was = &schoolcalendar.OpeningChangeSpan{StartsOn: previous.StartDate, EndsOn: previous.EndDate, OpensAt: previous.OpensAt, ClosesAt: previous.ClosesAt}
-			reason = previous.Reason
+			wasReason, isReason = previous.Reason, previous.Reason
 		}
 		if slices.Contains(after, schoolID) {
 			is = &schoolcalendar.OpeningChangeSpan{StartsOn: current.StartDate, EndsOn: current.EndDate, OpensAt: current.OpensAt, ClosesAt: current.ClosesAt}
-			reason = current.Reason
+			isReason = current.Reason
+			if was == nil {
+				wasReason = current.Reason
+			}
 		}
-		notice, ok := openingChangeNotice(today, id, reason, was, is)
+		notice, ok := openingChangeNotice(today, id, isReason, was, is)
 		if !ok {
 			continue
 		}
-		notice.Traeger = true
-		if err := t.notices.NotifySchool(ctx, schoolID, notice); err != nil {
+		// The retraction tells the school the version that stands again
+		// when the Träger transaction does not commit.
+		retraction, _ := openingChangeNotice(today, id, wasReason, is, was)
+		notice.Traeger, retraction.Traeger = true, true
+		if err := t.notices.NotifySchool(ctx, schoolID, notice, retraction); err != nil {
 			return notifyOpeningChangeError(err)
 		}
 	}
