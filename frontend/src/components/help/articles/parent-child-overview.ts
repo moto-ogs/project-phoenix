@@ -38,13 +38,16 @@ export function parentChildOverviewTopic(): HelpTopic {
       "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
       "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
       "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",
+      // Vorschau auf morgen (#8236), components/home/day-switch.tsx.
+      "Neben `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen für dein Kind anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+      "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
     ],
     differences: [
       "Hast du mehrere Kinder, heißt der Punkt unten `Meine Kinder`.",
       "Ist dein Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
       "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
       "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
-      "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.`",
+      "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.` Für morgen steht dort `Morgen läuft alles wie geplant.`",
       "Konnte moto nicht alles laden, steht dort ein Hinweis. Schau dann später noch einmal nach.",
       "Hat dein Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
     ],

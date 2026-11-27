@@ -67,5 +67,31 @@
     "activityReinstated": "Saat {time} {title} bugün yine de yapılıyor.",
     "activityRoomChanged": "Saat {time} {title} bugün {room} odasında.",
     "activityLeadChanged": "Saat {time} {title} bugün bir yedek öğretmen yönetiyor."
+  },
+  "changesDay": {
+    "label": "Genel bakışın günü",
+    "today": "Bugün",
+    "tomorrow": "Yarın"
+  },
+  "changesTomorrow": {
+    "allAsPlanned": "Yarın her şey planlandığı gibi.",
+    "loadObject": "yarınki değişiklikler",
+    "sick": "{name} yarın için hasta bildirildi.",
+    "excused": "{name} yarın izinli.",
+    "pickupAt": "{name} yarın saat {time} alınacak.",
+    "notComing": "{name} yarın gelmiyor.",
+    "goesAlone": "{name} yarın eve yalnız gidiyor.",
+    "pickupPerson": "{person} yarın {name} adlı çocuğu alıyor.",
+    "pickupPersonOneTime": "{person} yarın {name} adlı çocuğu alıyor ve kimliğini gösteriyor.",
+    "classTrip": "{class} sınıfı yarın gezide.",
+    "classTripBack": "{class} sınıfı yarın gezide. Dönüş saat {time}.",
+    "classDismissal": "{class} sınıfının dersleri yarın saat {time} bitiyor.",
+    "closingDay": "{careTerm} yarın kapalı: {name}.",
+    "openingChanged": "{careTerm} yarın {opens} ile {closes} arasında açık: {name}.",
+    "mealCancelled": "Yarın {name} için öğle yemeği yok. Ücreti alınmayacak.",
+    "activityCancelled": "Saat {time} {title} yarın yapılmıyor.",
+    "activityReinstated": "Saat {time} {title} yarın yine de yapılıyor.",
+    "activityRoomChanged": "Saat {time} {title} yarın {room} odasında.",
+    "activityLeadChanged": "Saat {time} {title} yarın bir yedek öğretmen yönetiyor."
   }
 }

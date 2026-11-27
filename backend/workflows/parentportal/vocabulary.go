@@ -158,6 +158,7 @@ const (
 
 var (
 	ErrContractSignatureInvalid           = care.ErrContractSignatureInvalid
+	ErrDayChangesDayOutOfRange            = care.ErrDayChangesDayOutOfRange
 	ErrHolidayRegistrationConsentNotFound = care.ErrHolidayRegistrationConsentNotFound
 	ErrContractNotSignable                = care.ErrContractNotSignable
 	ErrContractWithdrawalNoticeRequired   = care.ErrContractWithdrawalNoticeRequired

@@ -6532,13 +6532,16 @@ export const parentChildOverviewTopic =
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
         "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
         "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",
+        // Vorschau auf morgen (#8236), components/home/day-switch.tsx.
+        "Neben `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen für dein Kind anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+        "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
       ],
       differences: [
         "Hast du mehrere Kinder, heißt der Punkt unten `Meine Kinder`.",
         "Ist dein Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
-        "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.`",
+        "Ist heute nichts anders, steht unter `Heute anders` der Satz `Heute läuft alles wie geplant.` Für morgen steht dort `Morgen läuft alles wie geplant.`",
         "Konnte moto nicht alles laden, steht dort ein Hinweis. Schau dann später noch einmal nach.",
         "Hat dein Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
@@ -13570,7 +13573,7 @@ export const traegerDailyAttendanceTopic =
     };
   } satisfies typeof authored_traegerDailyAttendanceTopic;
 
-/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672, #8146) und ihre Auffälligkeiten (#4675). */
+/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672, #8146, Vorschau auf morgen #8236) und ihre Auffälligkeiten (#4675). */
 export const traegerDashboardTopic =
   function traegerDashboardTopic(): HelpTopic {
     return {
@@ -13601,6 +13604,9 @@ export const traegerDashboardTopic =
         "Dazu kommen eine geänderte Öffnungszeit, ein ausfallendes Mittagessen, die Zahl der abgesagten Termine und die Zahl der gesperrten Räume.",
         "Unter `Heute anders` steht kein Name und kein Grund. Nur ein Schließtag zeigt seinen Namen.",
         "Fehlt Personal, steht das unter `Auffälligkeiten` bei `Zu wenig Personal`, nicht unter `Heute anders`.",
+        // Vorschau auf morgen (#8236).
+        "Oben in `Heute anders` wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, an welcher Schule morgen etwas anders läuft. Du siehst dort dasselbe wie für heute, nur für morgen.",
+        "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag.",
         "Du siehst nur Zahlen, keine Namen.",
         "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
         "Mit einem Klick auf eine Spaltenüberschrift sortierst du die Schulen, zum Beispiel nach `Heute krank`.",
@@ -13618,7 +13624,7 @@ export const traegerDashboardTopic =
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
         "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
         "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
-        "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann läuft heute an keiner Schule etwas anders als geplant.",
+        "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann läuft heute an keiner Schule etwas anders als geplant. Für morgen steht dort „Morgen läuft an allen Schulen alles wie geplant.“",
       ],
       related: [
         HELP_TOPICS.traegerSchoolView,
