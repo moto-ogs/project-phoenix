@@ -231,6 +231,123 @@ describe("TraegerVertraegePage", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("orders every contract of the filter in the database and names the offer in its own column", async () => {
+    renderPage();
+    expect((await screen.findAllByText("Lina Muster"))[0]).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Angebot" })).toBeVisible();
+    // The plain list asks for no order: the newest contract comes first.
+    expect(api.fetchCareContracts).toHaveBeenLastCalledWith({
+      status: undefined,
+      schoolId: "",
+      search: "",
+      offset: 0,
+    });
+
+    api.fetchCareContracts.mockResolvedValue({
+      contracts: [SENT, DRAFT],
+      counts: { entwurf: 1, versendet: 1 },
+      hasMore: true,
+    });
+    const childSort = screen.getByRole("button", {
+      name: "Kind – Spalte sortieren",
+    });
+    childSort.focus();
+    fireEvent.click(childSort);
+    expect(childSort).toHaveFocus();
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith({
+        status: undefined,
+        schoolId: "",
+        search: "",
+        sort: "child",
+        order: "asc",
+        offset: 0,
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Kind – aufsteigend sortiert",
+      }),
+    );
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "child", order: "desc" }),
+      ),
+    );
+    // An order shows the same contracts again: what is ticked stays ticked.
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Vertrag von Lina Muster auswählen",
+      }),
+    );
+    expect(await screen.findByText("1 Vertrag ausgewählt")).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Beginn – Spalte sortieren" }),
+    );
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "start", order: "asc" }),
+      ),
+    );
+    expect(await screen.findByText("1 Vertrag ausgewählt")).toBeVisible();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Kind – Spalte sortieren" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Kind – aufsteigend sortiert",
+      }),
+    );
+    // The next page continues the same order.
+    fireEvent.click(
+      await screen.findByRole("button", { name: /^Weitere Verträge laden/ }),
+    );
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith({
+        status: undefined,
+        schoolId: "",
+        search: "",
+        sort: "child",
+        order: "desc",
+        offset: 2,
+      }),
+    );
+  });
+
+  it("replaces the loaded contracts when status sorting restarts the list", async () => {
+    const initial = {
+      contracts: [DRAFT],
+      counts: { entwurf: 1, versendet: 1 },
+      hasMore: true,
+      revision: "1",
+    };
+    api.fetchCareContracts.mockResolvedValue(initial);
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Status – Spalte sortieren" }),
+    );
+    const more = await screen.findByRole("button", {
+      name: /^Weitere Verträge laden/,
+    });
+    api.fetchCareContracts.mockResolvedValueOnce({
+      ...initial,
+      contracts: [SENT],
+      revision: "2",
+    });
+    fireEvent.click(more);
+    expect((await screen.findAllByText("Ben Muster"))[0]).toBeInTheDocument();
+    expect(screen.queryByText("Lina Muster")).toBeNull();
+    expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sort: "status",
+        order: "asc",
+        offset: 1,
+        revision: "1",
+      }),
+    );
+  });
+
   it("loads older contracts and sends filters to the server", async () => {
     api.fetchCareContracts
       .mockResolvedValueOnce({

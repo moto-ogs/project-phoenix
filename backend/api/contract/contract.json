@@ -12353,12 +12353,34 @@
           "kind": "int"
         },
         {
+          "name": "order",
+          "kind": "string",
+          "values": [
+            "asc",
+            "desc"
+          ]
+        },
+        {
+          "name": "revision",
+          "kind": "string"
+        },
+        {
           "name": "school_id",
           "kind": "id"
         },
         {
           "name": "search",
           "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string",
+          "values": [
+            "child",
+            "school",
+            "start",
+            "status"
+          ]
         },
         {
           "name": "status",
@@ -12421,12 +12443,30 @@
           ]
         },
         {
+          "name": "order",
+          "kind": "string",
+          "values": [
+            "asc",
+            "desc"
+          ]
+        },
+        {
           "name": "school_id",
           "kind": "id"
         },
         {
           "name": "search",
           "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string",
+          "values": [
+            "child",
+            "school",
+            "start",
+            "status"
+          ]
         },
         {
           "name": "status",
@@ -49962,6 +50002,12 @@
           "name": "has_more",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "revision",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

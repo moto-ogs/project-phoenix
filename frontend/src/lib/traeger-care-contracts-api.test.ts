@@ -56,12 +56,14 @@ describe("care contract requests", () => {
       contracts: [],
       counts: { entwurf: 1100 },
       has_more: true,
+      revision: "101",
     });
     const result = await fetchCareContracts({
       search: "Mia & Ben",
       status: "entwurf",
       schoolId: "7",
       offset: 1000,
+      revision: "99",
     });
     expect(request.mock.calls[0]![1]).toBe("GET /traeger/contracts/");
     expect(request.mock.calls[0]![2].query).toEqual({
@@ -69,8 +71,10 @@ describe("care contract requests", () => {
       status: "entwurf",
       school_id: "7",
       offset: 1000,
+      revision: "99",
     });
     expect(result.hasMore).toBe(true);
+    expect(result.revision).toBe("101");
   });
 });
 

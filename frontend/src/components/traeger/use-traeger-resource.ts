@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { metadataLoadError } from "./metadata-load-error";
 import {
+  isRefusal,
   type RefusalGuard,
   useConfirmedResource,
   useRefusalGuard,
@@ -12,8 +13,11 @@ import {
   type SWRResponse,
   revalidateOrThrow,
   useOpeningRead,
+  useInvalidateMatching,
   useSWRAuth,
 } from "~/lib/swr";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
+import { useLatest } from "~/lib/hooks/use-latest";
 
 type TraegerReaderOptions<T> = Omit<ReaderOptions<T>, "onSuccess" | "onError">;
 
@@ -81,6 +85,40 @@ export function useFreshTraegerResource<T>(
     ...useTraegerResult(scoped, response, guard, object),
     /** Reads again and rejects when the read fails (ADR 0311, rule 6). */
     reloadOrThrow: opened.reload,
+  };
+}
+
+/**
+ * Later pages and downloads share the list's access boundary. Discard
+ * superseded answers and keep any refusal scoped to the list that asked.
+ */
+export function useTraegerListRequest(key: string, clearCurrent: () => void) {
+  const guard = useRefusalGuard(key);
+  const begin = useSWRRequestGuard();
+  const invalidate = useInvalidateMatching();
+  const currentKey = useLatest(key);
+
+  return async function request<T>(
+    fetch: () => Promise<T>,
+  ): Promise<T | undefined> {
+    let complete;
+    try {
+      complete = begin(key);
+      const result = await fetch();
+      if (complete.isCurrent()) return result;
+    } catch (error) {
+      if (!complete?.isCurrent()) return;
+      if (isRefusal(error)) {
+        complete(() => {
+          guard.callbacks.onError(error);
+          if (currentKey.current === key) {
+            clearCurrent();
+          }
+          void invalidate((cached) => cached === key, { clear: true });
+        });
+      }
+      throw error;
+    }
   };
 }
 

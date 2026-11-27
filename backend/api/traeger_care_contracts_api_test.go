@@ -55,6 +55,8 @@ type careContractSummaryBody struct {
 	ModuleNames   []string `json:"module_names"`
 	PartyEmail    string   `json:"party_email"`
 	EffectiveFrom string   `json:"effective_from"`
+	ChildFirst    string   `json:"child_first_name"`
+	ChildLast     string   `json:"child_last_name"`
 }
 
 type careContractCreateBody struct {
@@ -518,6 +520,7 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 		Contracts []careContractSummaryBody `json:"contracts"`
 		Counts    map[string]int            `json:"counts"`
 		HasMore   bool                      `json:"has_more"`
+		Revision  string                    `json:"revision"`
 	}
 	read := func(query string) page {
 		t.Helper()
@@ -539,9 +542,56 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 	assert.Empty(t, read("status=versendet").Contracts)
 	assert.Len(t, read("school_id="+strconv.FormatInt(f.school, 10)).Contracts, 2)
 	assert.Empty(t, read("school_id="+strconv.FormatInt(f.office.schools[1], 10)).Contracts)
-	for _, query := range []string{"offset=-1", "offset=no", "limit=101"} {
+
+	// #8138: a column orders every contract of the filter in the database,
+	// so the first page of a sorted list is the start of the whole order.
+	names := func(query string) []string {
+		var result []string
+		for _, contract := range read(query).Contracts {
+			result = append(result, contract.ChildLast+" "+contract.ChildFirst)
+		}
+		return result
+	}
+	byChild := names("sort=child")
+	require.Len(t, byChild, 2)
+	assert.IsIncreasing(t, byChild)
+	assert.IsDecreasing(t, names("sort=child&order=desc"))
+	assert.Equal(t, byChild[:1], names("sort=child&limit=1"), "the page is cut after the order")
+	assert.Equal(t, byChild[1:], names("sort=child&limit=1&offset=1"))
+	// The file follows the order of the list.
+	fileOrder := func(query string) []int {
+		lines := billingListCSV(t, f.traeger, token, "/traeger/contracts/export?"+query)
+		require.Len(t, lines, 3, "the header and both contracts")
+		return []int{strings.Index(lines[1], "Ben"), strings.Index(lines[2], "Ben")}
+	}
+	ascending, descending := fileOrder("sort=child"), fileOrder("sort=child&order=desc")
+	assert.NotEqual(t, ascending[0] >= 0, descending[0] >= 0, "the first row of the file turns with the order")
+	assert.NotEqual(t, ascending[0] >= 0, ascending[1] >= 0, "Ben stands in one row")
+	for _, column := range []string{"school", "start", "status"} {
+		assert.Len(t, read("sort="+column+"&order=desc").Contracts, 2, "sort=%s", column)
+	}
+	for _, query := range []string{"offset=-1", "offset=no", "limit=101", "sort=email", "sort=child&order=up"} {
 		assert.Equal(t, http.StatusBadRequest, traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts?"+query, nil).Code)
 	}
+	// Sending the first draft moves it behind the second one. The old
+	// offset would return the same contract and skip the remaining draft.
+	before := read("sort=status&limit=1")
+	require.Len(t, before.Contracts, 1)
+	require.NotEmpty(t, before.Revision)
+	sent := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send",
+		map[string]any{"contract_ids": []string{fmt.Sprint(before.Contracts[0].ID)}})
+	require.Equal(t, http.StatusAccepted, sent.Code, sent.Body.String())
+	restarted := read("sort=status&limit=1&offset=1&revision=" + before.Revision)
+	require.Len(t, restarted.Contracts, 1)
+	assert.NotEqual(t, before.Contracts[0].ID, restarted.Contracts[0].ID)
+	assert.NotEqual(t, before.Revision, restarted.Revision)
+	assert.True(t, restarted.HasMore)
+	continued := read("sort=status&limit=1&offset=1&revision=" + restarted.Revision)
+	require.Len(t, continued.Contracts, 1)
+	assert.Equal(t, before.Contracts[0].ID, continued.Contracts[0].ID)
+	assert.Equal(t, restarted.Revision, continued.Revision)
+	assert.False(t, continued.HasMore)
+
 }
 
 func TestCareContractFailedDeliveryCanUseACorrectedAddressWithItsFrozenPDF(t *testing.T) {

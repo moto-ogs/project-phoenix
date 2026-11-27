@@ -7,7 +7,10 @@ import { bffFile } from "~/lib/bff-fetch";
 // aus angenommenen Anmeldungen an; ausgewählte Entwürfe gehen per Mail und in
 // die Eltern-App. Schulen mit „Bei der Annahme“ (#4680) brauchen das
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
-// mit dem Recht „Verträge verwalten“ sieht die Seite.
+// mit dem Recht „Verträge verwalten“ sieht die Seite. Seit #8138 liest sich
+// die Liste wie eine Tabelle: das Angebot hat seine eigene Spalte, und eine
+// Spalte sortiert alle Verträge des Filters in der Datenbank, nicht nur die
+// geladenen Zeilen.
 
 import {
   ClipboardCheck,
@@ -35,12 +38,12 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
-import { useSWRRequestGuard } from "~/lib/swr/hooks";
+import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
 import {
-  isRefusal,
-  useRefusalGuard,
-} from "~/components/traeger/use-traeger-confirmed-resource";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+  useFreshTraegerResource,
+  useTraegerListRequest,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
   traegerExportScope,
@@ -61,7 +64,6 @@ import { hasPermission } from "~/lib/auth-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { ListSkeleton } from "~/components/ui/page-skeletons";
 import {
   useApiErrorDisplay,
   useApiLoadError,
@@ -76,6 +78,7 @@ import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   type CareContractList,
+  type CareContractSort,
   type CareContractStatus,
   type CareContractSummary,
   type ContractCandidate,
@@ -162,52 +165,85 @@ function contractHref(contract: CareContractSummary): string {
   return traegerPath(`/traeger/vertraege/${contract.id}`);
 }
 
+/** The columns the database orders by, under their column key. */
+const SORT_OF_COLUMN: Readonly<Record<string, CareContractSort>> = {
+  child: "child",
+  school: "school",
+  start: "start",
+  status: "status",
+};
+
+/** Without a chosen column the newest contract comes first. */
+const NO_SORT = { key: "", direction: "asc" } as const;
+
+/** The child's name as the link to its contract, with the note of an import. */
+function ChildName({ contract }: Readonly<{ contract: CareContractSummary }>) {
+  return (
+    <>
+      <NavigationLink
+        href={contractHref(contract)}
+        className="font-medium text-gray-900 hover:underline"
+        onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+          event.stopPropagation()
+        }
+      >
+        {childName(contract)}
+      </NavigationLink>
+      {contract.imported && !contract.studentId ? (
+        // An imported contract knows its child only by name until the
+        // office links it to the child record (#7760).
+        <StatusBadge
+          tone="gray"
+          size="xs"
+          label="Ohne Kinderakte"
+          className="ml-1.5 align-middle"
+        />
+      ) : null}
+    </>
+  );
+}
+
 const COLUMNS: DataTableColumn<CareContractSummary>[] = [
   {
     key: "child",
     header: "Kind",
     render: (contract) => (
       <span className="block min-w-0">
-        <NavigationLink
-          href={contractHref(contract)}
-          className="font-medium text-gray-900 hover:underline"
-          onClick={(event: MouseEvent<HTMLAnchorElement>) =>
-            event.stopPropagation()
-          }
-        >
-          {childName(contract)}
-        </NavigationLink>
-        {contract.imported && !contract.studentId ? (
-          // An imported contract knows its child only by name until the
-          // office links it to the child record (#7760).
-          <StatusBadge
-            tone="gray"
-            size="xs"
-            label="Ohne Kinderakte"
-            className="ml-1.5 align-middle"
-          />
-        ) : null}
+        <ChildName contract={contract} />
+      </span>
+    ),
+    // A phone row stays two lines: the child, then offer and start.
+    stackedRender: (contract) => (
+      <span className="block min-w-0">
+        <ChildName contract={contract} />
         <span className="block text-sm text-gray-500">
-          {contract.modulesText || "–"}
-          <span className="sm:hidden">
-            {" "}
-            · ab {formatDate(contract.effectiveFrom)}
-          </span>
+          {contract.modulesText || "–"} · ab{" "}
+          {formatDate(contract.effectiveFrom)}
         </span>
       </span>
     ),
-    sortValue: (contract) =>
-      `${contract.childLastName} ${contract.childFirstName}`,
+    serverSortable: true,
     stacked: "title",
+  },
+  {
+    // The offer in a column of its own (#8138), as in the table the office
+    // knows; on a phone it stands under the child.
+    key: "offer",
+    header: "Angebot",
+    render: (contract) => (
+      <span className="block max-w-64 wrap-break-word">
+        {contract.modulesText || "–"}
+      </span>
+    ),
+    stacked: "hidden",
   },
   {
     key: "school",
     header: "Betreuungsort",
     render: (contract) => contract.schoolName,
-    sortValue: (contract) => contract.schoolName,
+    serverSortable: true,
     stackedLabel: false,
-    // A phone row stays two lines (child, offer and start); only an open
-    // end, a task, adds its orange note.
+    // On a phone only an open end, a task, adds its orange note.
     stackedRender: (contract) =>
       contract.status === "gekuendigt" && !contract.endsOn ? (
         <span className="text-moto-orange-strong font-medium">
@@ -231,8 +267,12 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
   {
     key: "start",
     header: "Beginn",
-    render: (contract) => formatDate(contract.effectiveFrom),
-    sortValue: (contract) => contract.effectiveFrom,
+    render: (contract) => (
+      <span className="whitespace-nowrap tabular-nums">
+        {formatDate(contract.effectiveFrom)}
+      </span>
+    ),
+    serverSortable: true,
     stacked: "hidden",
   },
   {
@@ -276,8 +316,7 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         ) : null}
       </span>
     ),
-    sortValue: (contract) =>
-      contract.status ? CONTRACT_STATUS_ORDER.indexOf(contract.status) : -1,
+    serverSortable: true,
     stacked: "meta",
     // On a phone the status alone, without the date under it.
     stackedRender: (contract) => (
@@ -300,16 +339,30 @@ export default function TraegerVertraegePage() {
   const [rulesOpen, setRulesOpen] = useState<boolean | null>(null);
   // The search field keeps the typed text as its own draft and reports it
   // after a pause: a typed letter redraws the field, not the list.
+  const [sort, setSort] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>(NO_SORT);
   const term = search.trim();
   const filter = {
     status: status === "all" ? undefined : status,
     schoolId,
     search: term,
+    // Only a chosen column orders the list; without one the request is
+    // the plain list, newest first.
+    ...(SORT_OF_COLUMN[sort.key]
+      ? { sort: SORT_OF_COLUMN[sort.key], order: sort.direction }
+      : {}),
   };
   const listKey = traegerContractKeys.list(filter);
-  const listGuard = useRefusalGuard(listKey);
-  const beginPageRead = useSWRRequestGuard();
-  const firstPage = useTraegerResource(
+  // What the filter holds, whatever its order: an order shows the same
+  // contracts again, so it keeps what is ticked.
+  const selectionKey = traegerContractKeys.list({
+    status: filter.status,
+    schoolId,
+    search: term,
+  });
+  const firstPage = useFreshTraegerResource(
     listKey,
     () => fetchCareContracts({ ...filter, offset: 0 }),
     "die Liste der Verträge",
@@ -328,8 +381,19 @@ export default function TraegerVertraegePage() {
   const invalidateFamily = useInvalidateFamily();
   const invalidateMatching = useInvalidateMatching();
   const [more, setMore] = useState<MorePages | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingMoreFor, setLoadingMoreFor] = useState<CareContractList | null>(
+    null,
+  );
+  const loadingMore =
+    firstPage.data !== null && loadingMoreFor === firstPage.data;
   const moreLoad = useApiLoadError();
+  const [moreErrorFor, setMoreErrorFor] = useState<CareContractList | null>(
+    null,
+  );
+  const shownPage = useLatest(firstPage.data);
+  const listRequest = useTraegerListRequest(listKey, () => {
+    setMore(null);
+  });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
@@ -337,9 +401,9 @@ export default function TraegerVertraegePage() {
   const { success, warning } = useToast();
 
   // Another filter is another list: its rows start unselected.
-  const [selectionFor, setSelectionFor] = useState(listKey);
-  if (selectionFor !== listKey) {
-    setSelectionFor(listKey);
+  const [selectionFor, setSelectionFor] = useState(selectionKey);
+  if (selectionFor !== selectionKey) {
+    setSelectionFor(selectionKey);
     setSelected(new Set());
   }
   // A refusal takes the list away, and the choices made on it.
@@ -380,15 +444,25 @@ export default function TraegerVertraegePage() {
 
   const loadMore = async () => {
     const after = firstPage.data;
-    if (!after || !data) return;
-    const complete = beginPageRead(listKey);
-    setLoadingMore(true);
+    if (!after || !data || after !== shownPage.current || loadingMore) return;
+    setLoadingMoreFor(after);
+    setMoreErrorFor(null);
     moreLoad.clear();
     try {
-      const page = await fetchCareContracts({
-        ...filter,
-        offset: data.list.contracts.length,
-      });
+      const page = await listRequest(() =>
+        fetchCareContracts({
+          ...filter,
+          offset: data.list.contracts.length,
+          revision: after.revision,
+        }),
+      );
+      if (!page || shownPage.current !== after) return;
+      if (page.revision !== after.revision) {
+        // The server answered page one because the sorted result changed.
+        await firstPage.mutate(page, { revalidate: false });
+        setMore(null);
+        return;
+      }
       setMore((previous) => ({
         after,
         list:
@@ -400,21 +474,15 @@ export default function TraegerVertraegePage() {
             : page,
       }));
     } catch (err) {
-      // Pagination has the same access boundary as the first page. Record
-      // its refusal before any later request can replace it with a 5xx.
-      if (isRefusal(err))
-        complete(() => {
-          listGuard.callbacks.onError(err);
-          void firstPage.mutate(undefined, { revalidate: false });
-          setMore(null);
-        });
-      else
+      if (!isRefusal(err) && shownPage.current === after) {
+        setMoreErrorFor(after);
         await moreLoad.show(err, {
           object: "die Liste der Verträge",
           retry: () => void loadMore(),
         });
+      }
     } finally {
-      setLoadingMore(false);
+      setLoadingMoreFor((current) => (current === after ? null : current));
     }
   };
 
@@ -423,12 +491,10 @@ export default function TraegerVertraegePage() {
   // older pages loaded below the first.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Verträge",
-    // A mutation drops an answer to a request that started before it.
-    () =>
-      firstPage.mutate(fetchCareContracts({ ...filter, offset: 0 }), {
-        revalidate: false,
-      }),
+    firstPage.reloadOrThrow,
   );
+
+  const loading = !loadError && !afterWrite.error && !data;
 
   // The lists of the other filters count the written contracts too; the
   // list shown when the write ends reloads through afterWrite.
@@ -453,8 +519,20 @@ export default function TraegerVertraegePage() {
   const sentCount = data?.list.counts.versendet ?? 0;
   const activeCount = data?.list.counts.aktiv ?? 0;
   const candidates = data?.candidates ?? [];
+  // A new order may leave a ticked contract on a page not loaded yet: only
+  // the ticked rows the list shows count and are sent.
+  const shownSelected = useMemo(
+    () =>
+      new Set(
+        contracts
+          .filter((contract) => selected.has(contract.id))
+          .map((contract) => contract.id),
+      ),
+    [contracts, selected],
+  );
   const selectedDrafts = contracts.filter(
-    (contract) => selected.has(contract.id) && contract.status === "entwurf",
+    (contract) =>
+      shownSelected.has(contract.id) && contract.status === "entwurf",
   );
 
   const sendSelected = async () => {
@@ -580,14 +658,19 @@ export default function TraegerVertraegePage() {
   // and the export („Herunterladen“) sit in the page menu.
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList(
-        bffFile("org", "GET /traeger/contracts/export", {
-          query: listExportQuery(format, {
-            status: status === "all" ? undefined : status,
-            school_id: schoolId,
-            search: term,
+      listRequest(() =>
+        downloadTraegerList(
+          bffFile("org", "GET /traeger/contracts/export", {
+            query: listExportQuery(format, {
+              status: status === "all" ? undefined : status,
+              school_id: schoolId,
+              search: term,
+              // The file follows the order of the list.
+              sort: filter.sort,
+              order: filter.order,
+            }),
           }),
-        }),
+        ),
       ),
     scope: traegerExportScope(
       schools.find((school) => school.value === schoolId)?.label,
@@ -705,14 +788,6 @@ export default function TraegerVertraegePage() {
         </Button>
       }
       error={loadError ?? (!data ? afterWrite.error : null)}
-      // A list loads in the shape of its rows.
-      loading={
-        !loadError && !afterWrite.error && !data ? (
-          <ListSkeleton rows={6} avatar={false} />
-        ) : (
-          false
-        )
-      }
       overlays={
         data ? (
           <CareContractCreateModal
@@ -724,7 +799,12 @@ export default function TraegerVertraegePage() {
         ) : null
       }
     >
-      <LoadErrorAlert error={afterWrite.error ?? moreLoad.error} />
+      <LoadErrorAlert
+        error={
+          afterWrite.error ??
+          (moreErrorFor === firstPage.data ? moreLoad.error : null)
+        }
+      />
       {data && data.modes.length > 0 ? (
         <SectionCard
           title="Wann gilt der Vertrag?"
@@ -800,13 +880,21 @@ export default function TraegerVertraegePage() {
           </ul>
         </SectionCard>
       ) : null}
-      {data ? (
+      {data || loading ? (
         <DataTable
           columns={COLUMNS}
           rows={contracts}
+          isLoading={loading}
+          loadingRowCount={6}
           getRowKey={(contract) => contract.id}
+          // Six columns: narrower gaps keep child and offer on one line
+          // each on a laptop.
+          dense
           stackedLayout="row"
           stackedDetailKey="school"
+          // A column orders every contract of the filter, not the loaded
+          // rows: the database sorts and the list starts again (#8138).
+          serverSort={{ ...sort, onChange: setSort }}
           onRowClick={(contract) => router.push(contractHref(contract))}
           // Older contracts load inside the list's surface, like every list.
           moreAction={
@@ -826,7 +914,7 @@ export default function TraegerVertraegePage() {
               : undefined
           }
           selection={{
-            selectedKeys: selected,
+            selectedKeys: shownSelected,
             disabled: sending,
             rowLabel: (contract) => `Vertrag von ${childName(contract)}`,
             onChange: (keys, on) =>
@@ -850,7 +938,8 @@ export default function TraegerVertraegePage() {
               {...emptyText(
                 total,
                 waiting,
-                data.modes.length > 0 &&
+                data !== null &&
+                  data.modes.length > 0 &&
                   data.modes.every((school) => school.mode === "bei_annahme"),
                 emptySearchText(
                   search,
@@ -885,20 +974,20 @@ export default function TraegerVertraegePage() {
           }
         />
       ) : null}
-      {data && selected.size > 0 ? (
+      {data && shownSelected.size > 0 ? (
         // What the ticked rows are for, and the action, stick at the bottom
         // of the screen while the list scrolls.
         <SelectionBar
           aria-label="Ausgewählte Verträge"
           placement="bottom"
-          count={selected.size}
+          count={shownSelected.size}
           label={
-            selected.size === 1
+            shownSelected.size === 1
               ? "1 Vertrag ausgewählt"
-              : `${selected.size} Verträge ausgewählt`
+              : `${shownSelected.size} Verträge ausgewählt`
           }
           description={
-            selectedDrafts.length < selected.size ? (
+            selectedDrafts.length < shownSelected.size ? (
               // On a phone the bar keeps to the rule, so it covers less of
               // the list; the way to resend follows from the tablet on.
               <>
