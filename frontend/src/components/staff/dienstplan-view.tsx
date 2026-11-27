@@ -163,6 +163,15 @@ function DienstplanContent() {
   // Anlegen eines Kalenderzeitraums; bearbeitet wird auf /calendar-periods.
   const [periodModalOpen, setPeriodModalOpen] = useState(false);
 
+  // Ein Kontext ohne Profil kann erst eintreffen, während ein zuvor erlaubter
+  // Dialog offen ist. Dann bleibt keine Schreibaktion auf einer Anzeige übrig.
+  useEffect(() => {
+    if (!canPlanShifts) setModal(null);
+  }, [canPlanShifts]);
+  useEffect(() => {
+    if (!canWriteAbsences) setSickModal(null);
+  }, [canWriteAbsences]);
+
   // Montag der Woche, die `d` enthält.
   const weekAnchor = useMemo(() => startOfWeek(parseISODate(dayISO)), [dayISO]);
 
@@ -765,7 +774,7 @@ function DienstplanContent() {
       />
       {content}
 
-      {modal && (
+      {modal && canPlanShifts && (
         <ShiftEditModal
           isOpen
           mode={modal.mode}
@@ -809,7 +818,7 @@ function DienstplanContent() {
           onClose={() => setExportOpen(false)}
         />
       )}
-      {sickModal && (
+      {sickModal && canWriteAbsences && (
         <SickReportModal
           isOpen
           staff={sickModal}
