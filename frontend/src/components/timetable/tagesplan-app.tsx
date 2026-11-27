@@ -53,7 +53,6 @@ import {
 } from "~/lib/block-children";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useDeviceContext } from "~/lib/device-context";
-import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { GROUP_ROOM_SHADES, LOCATION_COLORS } from "~/lib/location-helper";
 import {
@@ -120,14 +119,13 @@ export function TagesplanDayBar({
 }>) {
   const days = weekDays(day);
   const todayInStrip = days.includes(today);
-  // Mit Monat wie das Datum am Desktop („25.11.“), sobald man eine andere
-  // Woche ansieht: dann bleibt der Tag auch über den Monatswechsel
-  // eindeutig. In der laufenden Woche (heute markiert) reicht der Tag; mit
-  // Monat füllte „26.11.“ die Markierung bis zum Rand. In der schmalen
-  // Listenspalte (iPad quer) und am SE steht nur der Tag.
-  const { isSplit } = useDeviceContext();
-  const narrow = useMediaQuery("(max-width: 389px)");
-  const withMonth = !isSplit && !narrow && !todayInStrip;
+  // Die Tageschips tragen am Telefon nur den Tag („26.“), auf jedem Gerät
+  // gleich: Mit Monat passte die Leiste am iPhone SE nicht. Das volle Datum
+  // des gewählten Tags steht im Kopf („Fr, 27.11.“), auch über einen
+  // Monatswechsel hinweg eindeutig. Nur die breite Fassung außerhalb der
+  // Telefon-Ansicht zeigt in anderen Wochen den Monat mit.
+  const { isSplit, isApp } = useDeviceContext();
+  const withMonth = !isSplit && !isApp && !todayInStrip;
   return (
     <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
