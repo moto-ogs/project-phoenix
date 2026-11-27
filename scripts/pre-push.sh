@@ -141,7 +141,7 @@ if [[ "$error_codes" == true ]]; then
   quality_step error-code-tests node --test scripts/generate-error-codes.test.mjs
   quality_step error-codes node scripts/generate-error-codes.mjs --check
 fi
-# Sie-Anrede in German texts (ADR 0294); scans the whole tree in about a second.
+# Form of address in German texts (ADR 0328); scans the whole tree in about a second.
 quality_step du-form node scripts/check-du-form.mjs
 if [[ "$du_form_tests" == true ]]; then
   quality_step du-form-tests node --test scripts/check-du-form.test.mjs

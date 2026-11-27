@@ -5,7 +5,7 @@
     {{template "moto-brand" .}}
     <h1>E-Mail-Adresse bestätigen</h1>
     <p>Hallo,</p>
-    <p>es wurde eine Änderung der E-Mail-Adresse für dein moto-Operator-Konto angefordert. Klicke auf den Button unten, um die neue E-Mail-Adresse zu bestätigen.</p>
+    <p>es wurde eine Änderung der E-Mail-Adresse für Ihr moto-Operator-Konto angefordert. Klicken Sie auf den Button unten, um die neue E-Mail-Adresse zu bestätigen.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.VerifyURL}}">E-Mail-Adresse bestätigen</a>
@@ -15,12 +15,12 @@
         <p>Dieser Link läuft in {{.ExpiryMinutes}} Minuten ab.</p>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link:</p>
     <div class="link-box">
         <a href="{{.VerifyURL}}">{{.VerifyURL}}</a>
     </div>
 
-    <p class="security-note">Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren. Deine E-Mail-Adresse wird nur geändert, wenn du den obigen Link verwendest.</p>
+    <p class="security-note">Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren. Ihre E-Mail-Adresse wird nur geändert, wenn Sie den obigen Link verwenden.</p>
 </div>
 
 {{template "footer" .}}

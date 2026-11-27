@@ -37,7 +37,7 @@ const (
 // reference. The name is the account holder, else senderName, the first
 // line of the letterhead. Without an amount to transfer, an account, a
 // name or a reference there is no code.
-func transferCode(to letterAddressee, account *parentbilling.LetterheadBankAccount, senderName string, cents int64, reference string) (PaymentCode, bool) {
+func transferCode(account *parentbilling.LetterheadBankAccount, senderName string, cents int64, reference string) (PaymentCode, bool) {
 	if account == nil || cents <= 0 || cents > epcMaxCents {
 		return PaymentCode{}, false
 	}
@@ -72,7 +72,7 @@ func transferCode(to letterAddressee, account *parentbilling.LetterheadBankAccou
 	return PaymentCode{
 		Payload: payload,
 		Heading: "Bezahlen per QR-Code",
-		Text:    to.say("Scannt den Code mit eurer Banking-App und überweist.", "Scanne den Code mit deiner Banking-App und überweise."),
+		Text:    "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
 		Facts: []LetterFact{
 			{Label: "Empfänger", Value: name},
 			{Label: "IBAN", Value: groupIBAN(iban)},
@@ -137,11 +137,11 @@ func documentReference(number, debtorNumber, documentKind string) string {
 // nil for a direct debit, without an amount to transfer or when the Träger
 // switched the code off (#5624). An invoice issued before #4689 has no
 // payment and is paid by transfer.
-func transferCodeOf(to letterAddressee, head parentbilling.Letterhead, payment *parentbilling.InvoicePayment, cents int64, reference string) *PaymentCode {
+func transferCodeOf(head parentbilling.Letterhead, payment *parentbilling.InvoicePayment, cents int64, reference string) *PaymentCode {
 	if head.WithoutTransferCode || isDirectDebit(payment) {
 		return nil
 	}
-	code, ok := transferCode(to, head.BankAccount, firstLine(textLines(head.SenderText)), cents, reference)
+	code, ok := transferCode(head.BankAccount, firstLine(textLines(head.SenderText)), cents, reference)
 	if !ok {
 		return nil
 	}
@@ -154,7 +154,7 @@ func careTransferCode(content careLetterContent) *PaymentCode {
 		return nil
 	}
 	invoice := content.invoice
-	return transferCodeOf(recipientAddressee(invoice.Recipient), content.letterhead, invoice.Payment, invoice.TotalCents,
+	return transferCodeOf(content.letterhead, invoice.Payment, invoice.TotalCents,
 		documentReference(invoice.Number, invoice.DebtorNumber, invoice.DocumentKind))
 }
 

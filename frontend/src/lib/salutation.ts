@@ -1,6 +1,6 @@
 // Die Anrede, die eine Person freiwillig für sich selbst wählt (#7362).
-// Sie färbt nur das Grußwort deutscher E-Mails („Liebe Karin“, „Lieber
-// Jonas“); ohne Angabe bleibt jede Begrüßung neutral.
+// Sie färbt nur das Grußwort deutscher E-Mails („Liebe Frau Klein“, „Lieber
+// Herr Klein“); ohne Angabe bleibt jede Begrüßung neutral.
 export type Salutation = "ms" | "mr";
 
 export const SALUTATIONS: readonly Salutation[] = ["ms", "mr"];

@@ -94,7 +94,7 @@ func confirmationLetter(content letterContent) Letter {
 	kind, to := templateKindOf(document.DocumentKind), documentAddressee(document)
 	filled := templates.Fill(letterTemplate(head.Template, kind, to), letterValues(content))
 	payment := paymentText(content)
-	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(to, head, document.Payment,
+	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(head, document.Payment,
 		document.TotalCents, documentReference(document.Number, document.DebtorNumber, document.DocumentKind)))
 	blocks = withDirectDebitNotice(blocks, payment, document.Payment, document.TotalCents)
 	if kind != templates.KindConfirmation {
@@ -107,8 +107,8 @@ func confirmationLetter(content letterContent) Letter {
 				facts = append(facts, LetterFact{Label: contact.Name, Value: contact.Phone})
 			}
 			blocks = append(blocks, LetterBlock{Heading: "Notfallnummern",
-				Text: to.say("In dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:",
-					"In dringenden Fällen und wenn das Kind krank ist, erreichst du die Betreuung hier:"), Facts: facts})
+				Text: to.say("In dringenden Fällen und wenn Ihr Kind krank ist, erreichen Sie die Betreuung hier:",
+					"In dringenden Fällen und wenn das Kind krank ist, erreichen Sie die Betreuung hier:"), Facts: facts})
 		}
 	}
 	blocks = append(blocks, legalRemedyBlocks(filled.LegalRemedy)...)
@@ -166,9 +166,9 @@ func legalRemedyBlocks(blocks []templates.Block) []LetterBlock {
 }
 
 // letterTemplate is the Träger's template, or the standard one of kind
-// while the letterhead carries none. The standard text speaks to the
-// addressee: to one person in the du-form, greeting them by name (ADR
-// 0294, #7463). A Träger without a template of its own gets the standard
+// while the letterhead carries none. The standard text says "Sie" and
+// speaks to the addressee: to one person, another payer, it greets them by
+// name and writes the text for one (ADR 0328, #7463). A Träger without a template of its own gets the standard
 // text from Document Templates, and one may save it unchanged, so a
 // template with the standard text counts as standard too; it keeps its
 // table layout and legal remedy. A Träger's own wording stays (#7462).
@@ -212,7 +212,7 @@ func invoiceLayout(template parentbilling.LetterTemplate) templates.InvoiceLayou
 // Träger's template (#5691).
 func letterValues(content letterContent) map[string]templates.Value {
 	document, head := content.document, content.letterhead
-	layout, to := invoiceLayout(head.Template), documentAddressee(content.document)
+	layout := invoiceLayout(head.Template)
 	text := func(value string) templates.Value { return templates.Value{Text: strings.TrimSpace(value)} }
 	values := map[string]templates.Value{
 		"familienname":    text(document.RecipientLastName),
@@ -220,7 +220,7 @@ func letterValues(content letterContent) map[string]templates.Value {
 		"kinder":          text(childNames(document.Children)),
 		"traeger":         text(firstLine(textLines(head.SenderText))),
 		"ansprechperson":  text(head.ContactName),
-		"rueckfragen":     text(questionText(head, to)),
+		"rueckfragen":     text(questionText(head)),
 		"zeitraum":        text(content.run.PeriodName),
 		"rechnungsnummer": text(document.Number),
 		"bescheidnummer":  text(document.Number),
@@ -402,12 +402,12 @@ const (
 // the built-in sentence is the debtor number of the family when the invoice
 // has one (ADR 0121 addendum, #5621), otherwise the invoice number.
 func paymentText(content letterContent) string {
-	document, to := content.document, documentAddressee(content.document)
+	document := content.document
 	if document.TotalCents == 0 {
 		if bearer := costBearerName(document); bearer != "" {
-			return to.say("Ihr müsst nichts bezahlen.", "Du musst nichts bezahlen.") + " Die Kosten übernimmt: " + bearer + "."
+			return "Sie müssen nichts bezahlen. Die Kosten übernimmt: " + bearer + "."
 		}
-		return to.say("Ihr müsst für diese Betreuung nichts bezahlen.", "Du musst für diese Betreuung nichts bezahlen.")
+		return "Sie müssen für diese Betreuung nichts bezahlen."
 	}
 	due := dueOnOf(document.Payment, content.input.PaymentDueOn)
 	// reference names what to pay with, owner its article or possessive.
@@ -417,13 +417,13 @@ func paymentText(content letterContent) string {
 		reference = "Bescheidnummer " + document.Number
 	}
 	if number := strings.TrimSpace(document.DebtorNumber); number != "" {
-		reference, owner = "Debitorennummer "+number, to.say("eure", "deine")
+		reference, owner = "Debitorennummer "+number, "Ihre"
 		if document.DocumentKind == parentbilling.DocumentKindFeeNotice {
-			reference, owner = "Buchungszeichen "+number, to.say("euer", "dein")
+			reference, owner = "Buchungszeichen "+number, "Ihr"
 		}
 	}
 	if isDirectDebit(document.Payment) {
-		return directDebitText(to, document.TotalCents, due, reference,
+		return directDebitText(document.TotalCents, due, reference,
 			paymentMandate(document.Payment), content.accountHolder,
 			fullName(document.RecipientFirstName, document.RecipientLastName),
 			secondLetterRecipient(document.RecipientKind, document.RecipientSecondName))
@@ -436,8 +436,7 @@ func paymentText(content letterContent) string {
 			placeholderDebtorNumber, strings.TrimSpace(document.DebtorNumber),
 		).Replace(text)
 	}
-	return fmt.Sprintf(to.say("Bitte überweist %s bis zum %s auf das Konto unten. Gebt als Verwendungszweck %s an.",
-		"Bitte überweise %s bis zum %s auf das Konto unten. Gib als Verwendungszweck %s an."),
+	return fmt.Sprintf("Bitte überweisen Sie %s bis zum %s auf das Konto unten. Geben Sie als Verwendungszweck %s an.",
 		formatEuro(document.TotalCents), germanDate(due), owner+" "+reference)
 }
 
@@ -455,18 +454,18 @@ func costBearerName(document parentbilling.BillingDocument) string {
 }
 
 // questionText says whom the addressee asks.
-func questionText(head parentbilling.Letterhead, to letterAddressee) string {
+func questionText(head parentbilling.Letterhead) string {
 	name := strings.TrimSpace(head.ContactName)
 	ways := nonBlank(head.ContactPhone, head.ContactEmail)
 	switch {
 	case name == "" && len(ways) == 0:
 		return ""
 	case name == "":
-		return to.say("Bei Fragen erreicht ihr uns unter ", "Bei Fragen erreichst du uns unter ") + strings.Join(ways, " oder ") + "."
+		return "Bei Fragen erreichen Sie uns unter " + strings.Join(ways, " oder ") + "."
 	case len(ways) == 0:
-		return to.say("Bei Fragen hilft euch ", "Bei Fragen hilft dir ") + name + "."
+		return "Bei Fragen hilft Ihnen " + name + "."
 	}
-	return to.say("Bei Fragen erreicht ihr ", "Bei Fragen erreichst du ") + name + " unter " + strings.Join(ways, " oder ") + "."
+	return "Bei Fragen erreichen Sie " + name + " unter " + strings.Join(ways, " oder ") + "."
 }
 
 func bankLine(account *parentbilling.LetterheadBankAccount) string {

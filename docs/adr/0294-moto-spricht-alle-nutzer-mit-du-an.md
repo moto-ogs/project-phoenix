@@ -1,8 +1,13 @@
 ---
-status: accepted
+status: superseded by ADR 0328
 ---
 
 # moto spricht alle Nutzer mit Du an
+
+> Superseded by [ADR 0328](0328-portale-duzen-mails-und-briefe-siezen.md) on
+> 2026-11-27: die Portale bleiben beim „du“, E-Mails und Schreiben sprechen
+> mit „Sie“ an. Der Nachtrag unten war der erste Schritt dahin. Die
+> Ausnahmen gelten in ADR 0328 weiter.
 
 Entscheidung vom 18.11.2026 zu
 [#7401](https://github.com/moto-ogs/project-phoenix/issues/7401).

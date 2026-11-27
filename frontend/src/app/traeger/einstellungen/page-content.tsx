@@ -313,7 +313,7 @@ function TraegerSettingsContent() {
         // prints it; a display only, the text changes in the field above.
         <SectionCard
           title="Vorschau des Zahlungstexts"
-          description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Ihr müsst für diese Betreuung nichts bezahlen.“"
+          description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Sie müssen für diese Betreuung nichts bezahlen.“"
         >
           <figure aria-label="Vorschau des Zahlungstexts">
             <p className="font-semibold wrap-anywhere whitespace-pre-line text-gray-900">

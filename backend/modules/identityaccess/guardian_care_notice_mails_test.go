@@ -62,8 +62,8 @@ func TestGuardianCareVisibleMail_GermanByDefaultAndPlainWithoutNames(t *testing.
 
 	assert.Equal(t, "Die Betreuung von Mia ist jetzt im Elternportal sichtbar", mail.Subject)
 	assert.Equal(t, "Hallo,", content["Greeting"])
-	assert.Equal(t, "Stimmt etwas nicht? Dann wende dich an deine Schule.", content["Ask"])
-	assert.Equal(t, "Du musst nichts tun. Die Betreuung läuft weiter wie bisher.", content["Nothing"])
+	assert.Equal(t, "Stimmt etwas nicht? Dann wenden Sie sich an Ihre Schule.", content["Ask"])
+	assert.Equal(t, "Sie müssen nichts tun. Die Betreuung läuft weiter wie bisher.", content["Nothing"])
 
 	siblings, _ := GuardianCareVisibleMailOf(GuardianCareNotice{
 		ChildFirstNames: []string{"Mia", "Ben"}, Recipient: GuardianMailRecipient{Email: "eva@example.test"},

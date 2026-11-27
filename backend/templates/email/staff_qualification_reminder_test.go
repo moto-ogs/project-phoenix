@@ -29,12 +29,12 @@ func TestStaffQualificationReminderTemplate_Render(t *testing.T) {
 		{
 			name: "leitung before expiry",
 			data: map[string]any{
-				"SchoolName": "OGS Am Park", "FirstName": "Lea", "StaffName": "Max Muster",
+				"SchoolName": "OGS Am Park", "FirstName": "Lea", "LastName": "Becker", "StaffName": "Max Muster",
 				"QualificationName": "Erste Hilfe am Kind", "ExpiresOn": "28.12.2026",
 				"LinkURL": "https://park.example.com/staff/7",
 			},
-			mustContain: []string{"Nachweis läuft bald ab", "Hallo Lea", "Nachweis von Max Muster", "Erste Hilfe am Kind: gültig bis 28.12.2026", "Person öffnen"},
-			mustNot:     []string{"Dein Nachweis"},
+			mustContain: []string{"Nachweis läuft bald ab", "Guten Tag Lea Becker,", "Nachweis von Max Muster", "Erste Hilfe am Kind: gültig bis 28.12.2026", "Person öffnen"},
+			mustNot:     []string{"Ihr Nachweis"},
 		},
 		{
 			name: "own on expiry day",
@@ -43,7 +43,7 @@ func TestStaffQualificationReminderTemplate_Render(t *testing.T) {
 				"QualificationName": "Erweitertes Führungszeugnis", "ExpiresOn": "02.11.2026", "ExpiryDay": true, "Own": true,
 				"LinkURL": "https://park.example.com/profile",
 			},
-			mustContain: []string{"Nachweis läuft heute ab", "Dein Nachweis „Erweitertes Führungszeugnis“ gilt nur noch heute", "Profil öffnen"},
+			mustContain: []string{"Nachweis läuft heute ab", "Ihr Nachweis „Erweitertes Führungszeugnis“ gilt nur noch heute", "Profil öffnen"},
 			mustNot:     []string{"Max Muster"},
 		},
 		{

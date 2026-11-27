@@ -3,11 +3,11 @@
 
 <div class="email-body">
     {{template "moto-brand" .}}
-    <h1>Dein Antrag wurde genehmigt</h1>
+    <h1>Ihr Antrag wurde genehmigt</h1>
 
-    <p>Hallo {{.FirstName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
 
-    <p>dein Abwesenheitsantrag wurde genehmigt:</p>
+    <p>Ihr Abwesenheitsantrag wurde genehmigt:</p>
 
     <div class="highlight-box">
         <p><strong>{{.AbsenceTypeLabel}}</strong><br>

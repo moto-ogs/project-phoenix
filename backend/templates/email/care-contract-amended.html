@@ -2,20 +2,20 @@
 {{template "header" .}}
 
 <div class="email-body">
-    <h1>Dein Betreuungsvertrag wurde geändert</h1>
+    <h1>Ihr Betreuungsvertrag wurde geändert</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
 
-    <p>du hast eine Änderung der Betreuung{{if .ChildName}} von <strong>{{.ChildName}}</strong>{{end}} beantragt. Dein Antrag wurde freigegeben. Im Anhang findest du die neue Fassung des Betreuungsvertrags{{if .Modules}} mit der Betreuung <strong>{{.Modules}}</strong>{{end}}.</p>
+    <p>Sie haben eine Änderung der Betreuung{{if .ChildName}} von <strong>{{.ChildName}}</strong>{{end}} beantragt. Ihr Antrag wurde freigegeben. Im Anhang finden Sie die neue Fassung des Betreuungsvertrags{{if .Modules}} mit der Betreuung <strong>{{.Modules}}</strong>{{end}}.</p>
 
     <div class="highlight-box">
-        <p style="margin: 0; font-size: 14px;"><strong>Du musst nichts unterschreiben.</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Dein Antrag gilt als deine Zustimmung zur neuen Fassung.{{if .EffectiveFrom}} Sie gilt ab dem {{.EffectiveFrom}}.{{end}} Bitte hebe die neue Fassung gut auf.</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Sie müssen nichts unterschreiben.</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Ihr Antrag gilt als Ihre Zustimmung zur neuen Fassung.{{if .EffectiveFrom}} Die neue Fassung gilt ab dem {{.EffectiveFrom}}.{{end}} Bitte heben Sie die neue Fassung gut auf.</p>
     </div>
 
-    <p>Hast du die moto Eltern-App? Dann findest du die neue Fassung auch dort unter „Dokumente“.</p>
+    <p>Haben Sie die moto Eltern-App? Dann finden Sie die neue Fassung auch dort unter „Dokumente“.</p>
 
-    <p class="security-note">Stimmt etwas nicht? Dann melde dich beim Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Vertrag. Bitte antworte nicht auf diese E-Mail.</p>
+    <p class="security-note">Stimmt etwas nicht? Dann melden Sie sich beim Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Vertrag. Bitte antworten Sie nicht auf diese E-Mail.</p>
 </div>
 
 {{template "footer" .}}

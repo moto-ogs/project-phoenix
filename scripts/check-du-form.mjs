@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Reports the formal address („Sie“, „Ihnen“, „Ihr …“) in German texts that
-// moto writes itself (ADR 0294: moto spricht alle Nutzer mit Du an).
+// Checks the form of address in German texts that moto writes itself (ADR
+// 0328: the portals say „du“, what moto sends out says „Sie“).
 //
 //   node scripts/check-du-form.mjs
 //
@@ -9,33 +9,80 @@
 // the e-mail templates and the string literals of the Go code. Code comments,
 // tests and the demo and seed data under backend/internal/devtools stay out.
 //
-// A hit is „Ihnen“ anywhere, and „Sie“ or „Ihr/Ihre/Ihrem/Ihren/Ihrer/Ihres“
-// inside a sentence. A sentence starts at the beginning of a text, after
-// „. ! ? : …“ (not after „z. B.“ and similar) or a block tag. There both
-// can be the third person („Sie lässt sich nicht ändern.“) or the plural
-// „Ihr könnt …“, so they pass.
-// Lower-case „sie/ihr“ is the third person or the plural and always passes, as
-// does text inside German quotation marks („…“, »…«), which quotes others.
-// A placeholder ({{.Name}}, ${…}, JSX {…}) may hold a whole sentence, so a
-// word right after it counts as a sentence start.
+// Portal texts (every scanned file outside OUTGOING): a hit is „Ihnen“
+// anywhere, and „Sie“ or „Ihr/Ihre/Ihrem/Ihren/Ihrer/Ihres“ inside a
+// sentence. A sentence starts at the beginning of a text, after „. ! ? : …“
+// (not after „z. B.“ and similar) or a block tag. There both can be the third
+// person („Sie lässt sich nicht ändern.“) or the plural „Ihr könnt …“, so they
+// pass. Lower-case „sie/ihr“ is the third person or the plural and always
+// passes. A placeholder ({{.Name}}, ${…}, JSX {…}) may hold a whole sentence,
+// so a word right after it counts as a sentence start.
 //
-// Texts whose wording is bound (ADR 0294, Ausnahmen) carry the marker
-// „sie-anrede-erlaubt (ADR 0294): <Grund>“ in a comment at the end of the
-// string's line or alone on the line above it. The marker covers that one
-// line and the lines indented deeper below it, up to the closing bracket or
-// tag (markerLines). JSON has no comments, so its exceptions are listed per
-// key in JSON_EXCEPTIONS below. A marker or list entry that no longer covers a hit fails, so exceptions
-// cannot outlive their text.
-import { readdirSync, readFileSync } from 'node:fs';
+// Outgoing texts (the e-mail templates and the Go files in OUTGOING, which
+// write mails and letters): a hit is a du- or ihr-form anywhere: „du“,
+// „dich“, „dir“, „dein…“, „euch“, „euer/eure…“, lower-case „ihr“ and the verb
+// forms in INFORMAL. Capitalised „Ihr …“ is the Sie-form and passes.
+//
+// In both, text inside German quotation marks („…“, »…«) quotes others and
+// passes.
+//
+// Texts whose wording is bound (ADR 0328, Ausnahmen) carry a marker in a
+// comment at the end of the string's line or alone on the line above it:
+// „sie-anrede-erlaubt (ADR 0328): <Grund>“ in a portal text,
+// „du-anrede-erlaubt (ADR 0328): <Grund>“ in an outgoing text, also for a
+// lower-case „ihr“ of the third person („setzt ihr Passwort“). The marker
+// covers that one line and the lines indented deeper below it, up to the
+// closing bracket or tag (markerLines). JSON has no comments, so its
+// exceptions are listed per key in JSON_EXCEPTIONS below. A marker or list
+// entry that no longer covers a hit fails, so exceptions cannot outlive their
+// text.
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const MARKER = /sie-anrede-erlaubt \(ADR 0294\):\s*\S/;
+export const MARKER = /sie-anrede-erlaubt \(ADR 0328\):\s*\S/;
+export const DU_MARKER = /du-anrede-erlaubt \(ADR 0328\):\s*\S/;
 
-// Message keys whose German wording is bound by ADR 0294, Ausnahmen.
+// Message keys whose German wording is bound by ADR 0328, Ausnahmen.
 export const JSON_EXCEPTIONS = [];
 
+// Go files whose literals are the text of mails and letters moto sends
+// (ADR 0328). They say „Sie“; a file that also holds portal texts stays out
+// and marks its mail texts with MARKER instead.
+export const OUTGOING = new Set([
+  'backend/cmd/devtools/command_mailpit.go',
+  'backend/modules/carecontract/internal/application/letter.go',
+  'backend/modules/carecontract/internal/application/mail.go',
+  'backend/modules/carecontract/internal/application/notice_text.go',
+  'backend/modules/carecontract/internal/application/signature_mail.go',
+  'backend/modules/carecontract/internal/application/withdrawal_text.go',
+  'backend/modules/communication/internal/parentmessages/message_email.go',
+  'backend/modules/documentrendering/templates/catalog.go',
+  'backend/modules/documentrendering/templates/sample.go',
+  'backend/modules/enrollment/internal/application/mail_renderers.go',
+  'backend/modules/identityaccess/guardian_care_notice_mails.go',
+  'backend/modules/identityaccess/guardian_invitation_mails.go',
+  'backend/modules/identityaccess/mails.go',
+  'backend/modules/identityaccess/parent_security_mails.go',
+  'backend/modules/parentbilling/internal/application/care_letter_meals.go',
+  'backend/modules/parentbilling/internal/application/care_letter_text.go',
+  'backend/modules/parentbilling/internal/application/care_notice_letter_text.go',
+  'backend/modules/parentbilling/internal/application/letter_addressee.go',
+  'backend/modules/parentbilling/internal/application/letter_correction_text.go',
+  'backend/modules/parentbilling/internal/application/letter_mail.go',
+  'backend/modules/parentbilling/internal/application/letter_text.go',
+  'backend/modules/parentbilling/internal/application/mandate_text.go',
+  'backend/modules/parentbilling/internal/application/payment_letter.go',
+  'backend/modules/parentbilling/internal/application/transfer_code.go',
+  'backend/modules/schoolcalendar/portal/internal/application/email.go',
+  'backend/modules/workforce/internal/application/payroll_dispatch_mail.go',
+]);
+
 const FORMAL_ANYWHERE = /\b(Sie|Ihnen|Ihre?[mnrs]?)\b/;
+// The du- and ihr-forms of an outgoing text, with the verb forms that only
+// they use.
+const INFORMAL = /(?<![\p{L}\p{N}_])([Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|ihr|[Kk]annst|[Mm]usst|[Hh]ast|[Bb]ist|[Ww]irst|[Ff]indest|[Ee]rhältst|[Mm]öchtest|[Dd]arfst|[Ss]iehst|[Bb]rauchst|[Bb]ekommst|[Hh]abt|[Ss]eid|[Mm]üsst|[Kk]önnt)(?![\p{L}\p{N}_])/gu;
+
 const FORMAL = /(?<![\p{L}\p{N}_])(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)(?![\p{L}\p{N}_])/gu;
 // Abbreviations whose dot does not end a sentence („z. B. Ihre …“).
 const ABBREVIATIONS = new Set(['z', 'B', 'd', 'h', 'u', 'a', 'o', 's', 'bzw', 'ggf', 'ca', 'Nr', 'evtl', 'inkl', 'vgl', 'usw', 'etc', 'bspw', 'zzgl', 'max', 'min', 'gem', 'lt', 'Str']);
@@ -108,6 +155,23 @@ function atSentenceStart(text, index) {
     return SENTENCE_END.has(char);
   }
 }
+
+// Informal address hits in one outgoing text: [{ index, word }].
+export function findInformalAddress(text) {
+  let quoted;
+  const hits = [];
+  for (const match of text.matchAll(INFORMAL)) {
+    quoted ??= quotedRanges(text);
+    if (quoted.some(([start, end]) => match.index > start && match.index < end)) continue;
+    hits.push({ index: match.index, word: match[1] });
+  }
+  return hits;
+}
+
+// The two directions of the check: a portal text must not say „Sie“, an
+// outgoing one not „du“ or „ihr“.
+export const PORTAL = { find: findFormalAddress, marker: MARKER, markerName: 'sie-anrede-erlaubt', wanted: 'Sie-Text' };
+export const OUTGOING_TEXT = { find: findInformalAddress, marker: DU_MARKER, markerName: 'du-anrede-erlaubt', wanted: 'Du-Text' };
 
 // Formal address hits in one text: [{ index, word }].
 export function findFormalAddress(text) {
@@ -370,9 +434,9 @@ function joinedTexts(source, texts) {
 
 // Applies the inline markers of one file to its hits.
 // Returns { findings: [{ line, word, excerpt }], staleMarkers: [line] }.
-export function checkTokens(source, { texts, comments }) {
+export function checkTokens(source, { texts, comments }, rule = PORTAL) {
   const line = lineIndex(source);
-  const markerComments = comments.filter(comment => MARKER.test(comment.text));
+  const markerComments = comments.filter(comment => rule.marker.test(comment.text));
   let markers = [];
   if (markerComments.length) {
     const lines = source.split('\n');
@@ -388,7 +452,7 @@ export function checkTokens(source, { texts, comments }) {
   }
   const hits = [];
   for (const group of joinedTexts(source, texts)) {
-    for (const hit of findFormalAddress(group.text)) {
+    for (const hit of rule.find(group.text)) {
       const part = group.parts.find(({ token, start }) => hit.index >= start && hit.index < start + token.text.length);
       const { token } = part;
       const index = hit.index - part.start;
@@ -454,7 +518,7 @@ function* walk(directory) {
 const TEST_FILE = /(\.test|\.spec|_test|\.node-test)\.[cm]?[jt]sx?$|_test\.go$|\.generated\.ts$|\.d\.ts$/;
 
 // The kind of a repository-relative path, or undefined when the check skips it.
-export function kindOf(file) {
+export function kindOf(file, outgoing = OUTGOING) {
   if (TEST_FILE.test(file)) return undefined;
   // Storybook's own fixtures render in stories as well.
   if (file.startsWith('frontend/.storybook/')) return /\.(ts|tsx)$/.test(file) ? 'script' : undefined;
@@ -463,28 +527,31 @@ export function kindOf(file) {
     return /\.(ts|tsx)$/.test(file) ? 'script' : undefined;
   }
   if (!file.startsWith('backend/') || file.startsWith('backend/internal/devtools/')) return undefined;
-  if (file.startsWith('backend/templates/email/') && /\.(html|txt|tmpl)$/.test(file)) return 'template';
+  if (file.startsWith('backend/templates/email/') && /\.(html|txt|tmpl)$/.test(file)) return 'outgoing-template';
+  if (outgoing.has(file)) return 'outgoing-go';
   return file.endsWith('.go') ? 'go' : undefined;
 }
 
 // The files the check reads, as repository-relative paths with their kind.
-export function scannedFiles(root) {
+export function scannedFiles(root, outgoing = OUTGOING) {
   const files = [];
   for (const directory of ['frontend/src', 'frontend/.storybook', 'backend']) {
     for (const path of walk(join(root, directory))) {
       const file = relative(root, path).split(sep).join('/');
-      const kind = kindOf(file);
+      const kind = kindOf(file, outgoing);
       if (kind) files.push({ file, kind });
     }
   }
   return files;
 }
 
-const TOKENIZERS = { go: goTokens, script: scriptTokens, template: templateTokens };
+const TOKENIZERS = { go: goTokens, script: scriptTokens, 'outgoing-go': goTokens, 'outgoing-template': templateTokens };
 
 // Problem lines of one file. JSON exceptions that matched are added to `used`.
 export function checkSource(file, kind, source, exceptions = JSON_EXCEPTIONS, used = new Set()) {
-  if (!FORMAL_ANYWHERE.test(source) && !MARKER.test(source)) return [];
+  const rule = kind.startsWith('outgoing-') ? OUTGOING_TEXT : PORTAL;
+  // A portal text without any formal word cannot hit; outgoing texts are few.
+  if (rule === PORTAL && !FORMAL_ANYWHERE.test(source) && !MARKER.test(source)) return [];
   const problems = [];
   if (kind === 'json') {
     for (const { key, text } of jsonTexts(JSON.parse(source))) {
@@ -496,16 +563,19 @@ export function checkSource(file, kind, source, exceptions = JSON_EXCEPTIONS, us
     }
     return problems;
   }
-  const { findings, staleMarkers } = checkTokens(source, TOKENIZERS[kind](source));
+  const { findings, staleMarkers } = checkTokens(source, TOKENIZERS[kind](source), rule);
   for (const finding of findings) problems.push(`${file}:${finding.line}: „${finding.word}“ in „${finding.excerpt}“`);
-  for (const line of staleMarkers) problems.push(`${file}:${line}: Marker „sie-anrede-erlaubt“ deckt keinen Sie-Text mehr ab; entfernen.`);
+  for (const line of staleMarkers) problems.push(`${file}:${line}: Marker „${rule.markerName}“ deckt keinen ${rule.wanted} mehr ab; entfernen.`);
   return problems;
 }
 
 // Checks the tree. Returns sorted problem lines; empty when clean.
-export function checkRepository(root, exceptions = JSON_EXCEPTIONS) {
+export function checkRepository(root, exceptions = JSON_EXCEPTIONS, outgoing = OUTGOING) {
   const used = new Set();
-  const problems = scannedFiles(root).flatMap(({ file, kind }) => checkSource(file, kind, readFileSync(join(root, file), 'utf8'), exceptions, used));
+  const problems = scannedFiles(root, outgoing).flatMap(({ file, kind }) => checkSource(file, kind, readFileSync(join(root, file), 'utf8'), exceptions, used));
+  for (const file of outgoing) {
+    if (!existsSync(join(root, file))) problems.push(`${file}: steht in OUTGOING, gibt es aber nicht mehr; entfernen.`);
+  }
   for (const exception of exceptions) {
     if (!used.has(exception)) problems.push(`${exception.file} ${exception.key}: Ausnahme in JSON_EXCEPTIONS deckt keinen Sie-Text mehr ab; entfernen.`);
   }
@@ -520,10 +590,12 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const problems = checkRepository(root);
   if (problems.length) {
-    console.error(`Sie-Anrede in deutschen Texten (ADR 0294: moto sagt „du“, an mehrere Personen „ihr“):\n${problems.map(problem => `  ${problem}`).join('\n')}`);
-    console.error('\nStelle den Text auf Du um. Ist der Wortlaut gebunden (ADR 0294, Ausnahmen), markiere ihn mit dem Kommentar\n„sie-anrede-erlaubt (ADR 0294): <Grund>“ (JSON: JSON_EXCEPTIONS in scripts/check-du-form.mjs).');
+    console.error(`Falsche Anrede in deutschen Texten (ADR 0328: die Portale sagen „du“, Mails und Briefe „Sie“):\n${problems.map(problem => `  ${problem}`).join('\n')}`);
+    console.error('\nPortaltexte stehen in der Du-Form, Mail-Vorlagen und die Dateien in OUTGOING (scripts/check-du-form.mjs) in der Sie-Form.\n' +
+      'Ist der Wortlaut gebunden (ADR 0328, Ausnahmen), markiere ihn mit dem Kommentar „sie-anrede-erlaubt (ADR 0328): <Grund>“\n' +
+      'im Portaltext oder „du-anrede-erlaubt (ADR 0328): <Grund>“ im ausgehenden Text (JSON: JSON_EXCEPTIONS).');
     process.exitCode = 1;
   } else {
-    console.log('check-du-form: keine Sie-Anrede in deutschen Texten.');
+    console.log('check-du-form: Anrede in deutschen Texten stimmt.');
   }
 }

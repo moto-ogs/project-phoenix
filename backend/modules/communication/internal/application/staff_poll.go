@@ -252,9 +252,9 @@ func (s *service) pushPollReminder(ctx context.Context, a *StaffParentAnnounceme
 // The mail carries the poll title and a portal link, never the question's
 // options — the answer belongs in the portal, where it is authenticated.
 func (s *service) enqueuePollReminderEmails(ctx context.Context, a *StaffParentAnnouncement, recipients []*StaffAnnouncementPollReminderRecipient) ([]int64, error) {
-	intro := "für dein Kind fehlt noch eine Rückmeldung zu dieser Umfrage. Du kannst sie im Eltern-Portal abgeben."
+	intro := "für Ihr Kind fehlt noch eine Rückmeldung zu dieser Umfrage. Sie können sie im Eltern-Portal abgeben." // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 	if a.ResponseDeadline != nil {
-		intro = fmt.Sprintf("für dein Kind fehlt noch eine Rückmeldung zu dieser Umfrage. Bitte antworte bis zum %s im Eltern-Portal.",
+		intro = fmt.Sprintf("für Ihr Kind fehlt noch eine Rückmeldung zu dieser Umfrage. Bitte antworten Sie bis zum %s im Eltern-Portal.", // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 			a.ResponseDeadline.Format("02.01.2006"))
 	}
 	return s.enqueueReminderEmails(ctx, a, recipients, pollReminderEmailKicker, intro, s.parentsURL)

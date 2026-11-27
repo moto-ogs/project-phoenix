@@ -6,7 +6,7 @@
 
     <p>Guten Tag {{.GuardianName}},</p>
 
-    <p>wir haben deine Anmeldung für <strong>{{.PeriodName}}</strong> bei <strong>{{.SchoolName}}</strong> erhalten.</p>
+    <p>wir haben Ihre Anmeldung für <strong>{{.PeriodName}}</strong> bei <strong>{{.SchoolName}}</strong> erhalten.</p>
 
     {{range .Children}}
     <div class="highlight-box">
@@ -41,41 +41,41 @@
     {{if .Pending}}
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wer bekommt einen Platz?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Die Plätze vergibt das Büro des Trägers nach festen Regeln. Dabei helfen deine Angaben im Formular. Wann du dich angemeldet hast, entscheidet nicht allein. Du bekommst eine E-Mail, sobald das Büro entschieden hat.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Die Plätze vergibt das Büro des Trägers nach festen Regeln. Dabei helfen Ihre Angaben im Formular. Wann Sie sich angemeldet haben, entscheidet nicht allein. Sie bekommen eine E-Mail, sobald das Büro entschieden hat.</p>
     </div>
     {{end}}
 
     {{if .Waitlisted}}
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Warteliste</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">In manchen Wochen sind alle Plätze vergeben. Dort steht dein Kind auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Wir schreiben dir dann eine E-Mail.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">In manchen Wochen sind alle Plätze vergeben. Dort steht Ihr Kind auf der Warteliste. Wird ein Platz frei, bekommt Ihr Kind ihn automatisch. Wir schreiben Ihnen dann eine E-Mail.</p>
     </div>
     {{end}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wie geht es weiter?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Das ist noch keine Zusage. Der Träger prüft deine Anmeldung und schreibt dir, ob dein Kind einen Platz bekommt.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Das ist noch keine Zusage. Der Träger prüft Ihre Anmeldung und schreibt Ihnen, ob Ihr Kind einen Platz bekommt.</p>
         {{if .Binding}}<p style="margin: 8px 0 0 0; font-size: 14px;">Die Anmeldung ist verbindlich.{{if .Waitlisted}} Das gilt auch für einen Platz von der Warteliste.{{end}}</p>{{end}}
     </div>
 
     {{if .StatusURL}}
-    <p style="margin-top: 24px;">Den Stand deiner Anmeldung siehst du jederzeit hier:</p>
+    <p style="margin-top: 24px;">Den Stand Ihrer Anmeldung sehen Sie jederzeit hier:</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.StatusURL}}">Stand ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht geht, kopiere diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht geht, kopieren Sie diesen Link:</p>
     <div class="link-box">
         <a href="{{.StatusURL}}">{{.StatusURL}}</a>
     </div>
-    <p style="font-size: 14px; color: #6b7280;">Gib den Link nicht weiter. Wer ihn hat, sieht den Stand deiner Anmeldung.</p>
+    <p style="font-size: 14px; color: #6b7280;">Geben Sie den Link nicht weiter. Wer ihn hat, sieht den Stand Ihrer Anmeldung.</p>
     {{end}}
 
     {{with .Declaration}}
     <div class="highlight-box" style="margin-top: 24px;">
-        <p style="margin: 0; font-size: 14px;"><strong>Deine Erklärung</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Diese Erklärungen hast du mit deinem Namen abgegeben. Bitte hebe die E-Mail auf.</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Ihre Erklärung</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Diese Erklärungen haben Sie mit Ihrem Namen abgegeben. Bitte heben Sie die E-Mail auf.</p>
         <p style="margin: 8px 0 0 0; font-size: 14px;">Name: {{.Name}}<br>Abgegeben am {{.GivenAt}}<br>Fassung der Texte: {{.Version}}</p>
         {{range .Statements}}
         <p style="margin: 12px 0 0 0; font-size: 14px;"><strong>{{.Title}}</strong></p>
@@ -85,7 +85,7 @@
     </div>
     {{end}}
 
-    <p class="security-note">Bitte antworte nicht auf diese E-Mail. Bei Fragen wende dich an den Träger ({{.SchoolName}}).</p>
+    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger ({{.SchoolName}}).</p>
 </div>
 
 {{template "footer" .}}

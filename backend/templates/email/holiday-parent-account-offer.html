@@ -2,14 +2,14 @@
 {{template "header" .}}
 
 <div class="email-body">
-    <h1>Dein Elternkonto für die Ferienbetreuung</h1>
+    <h1>Ihr Elternkonto für die Ferienbetreuung</h1>
 
     <p>Guten Tag {{.GuardianName}},</p>
 
     {{if .SetupURL}}
-    <p>Du hast dein Kind{{if .PeriodName}} für <strong>{{.PeriodName}}</strong>{{else}} für die Ferienbetreuung{{end}} angemeldet und möchtest ein Elternkonto.</p>
+    <p>Sie haben Ihr Kind{{if .PeriodName}} für <strong>{{.PeriodName}}</strong>{{else}} für die Ferienbetreuung{{end}} angemeldet und möchten ein Elternkonto.</p>
 
-    <p>In der Eltern-App siehst du dann den Stand deiner Anmeldung. Dort findest du auch die Bestätigung und deine Dokumente.</p>
+    <p>In der Eltern-App sehen Sie dann den Stand Ihrer Anmeldung. Dort finden Sie auch die Bestätigung und Ihre Dokumente.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.SetupURL}}">Elternkonto einrichten</a>
@@ -17,20 +17,20 @@
 
     <p style="font-size: 14px; color: #6b7280;">Der Link gilt 30 Tage.</p>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Der Knopf geht nicht? Dann kopiere diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Der Knopf geht nicht? Dann kopieren Sie diesen Link:</p>
     <div class="link-box">
         <a href="{{.SetupURL}}">{{.SetupURL}}</a>
     </div>
 
-    <p class="security-note">Du hast schon ein Elternkonto? Dann <a href="{{.LoginURL}}">melde dich einfach an</a>.{{if .SchoolName}} Fragen beantwortet dir {{.SchoolName}} gern.{{end}}</p>
+    <p class="security-note">Sie haben schon ein Elternkonto? Dann <a href="{{.LoginURL}}">melden Sie sich einfach an</a>.{{if .SchoolName}} Fragen beantwortet Ihnen {{.SchoolName}} gern.{{end}}</p>
     {{else}}
-    <p>Du hast schon ein Elternkonto. Nach der Anmeldung siehst du deine Ferienanmeldung{{if .PeriodName}} <strong>{{.PeriodName}}</strong>{{end}} in der Eltern-App.</p>
+    <p>Sie haben schon ein Elternkonto. Nach der Anmeldung sehen Sie Ihre Ferienanmeldung{{if .PeriodName}} <strong>{{.PeriodName}}</strong>{{end}} in der Eltern-App.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.LoginURL}}">In der Eltern-App anmelden</a>
     </div>
 
-    {{if .SchoolName}}<p class="security-note">Fragen beantwortet dir {{.SchoolName}} gern.</p>{{end}}
+    {{if .SchoolName}}<p class="security-note">Fragen beantwortet Ihnen {{.SchoolName}} gern.</p>{{end}}
     {{end}}
 </div>
 

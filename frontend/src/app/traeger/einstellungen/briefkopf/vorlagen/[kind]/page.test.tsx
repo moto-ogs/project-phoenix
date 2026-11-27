@@ -71,7 +71,7 @@ import TraegerVorlagePage from "./page-content";
 const STANDARD = {
   subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
   salutation: "Liebe Familie {{familienname}},",
-  body: "für {{kinder}} berechnen wir euch:\n\n{{positionen}}",
+  body: "für {{kinder}} berechnen wir Ihnen:\n\n{{positionen}}",
   closing: "Mit freundlichen Grüßen\n{{traeger}}",
 };
 
@@ -102,7 +102,7 @@ const PREVIEW: DocumentTemplatePreview = {
   blocks: [
     {
       heading: "",
-      text: "für Lina und Ben berechnen wir euch:",
+      text: "für Lina und Ben berechnen wir Ihnen:",
       bold: false,
       rows: [{ label: "Gesamtbetrag", value: "92,50 €", bold: true }],
     },

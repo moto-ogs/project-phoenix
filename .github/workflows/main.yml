@@ -366,7 +366,7 @@ jobs:
               - 'scripts/check-pr-body*'
               - 'scripts/check-contract-*'
               - 'scripts/check-caddyfile*'
-              # The Sie-Anrede check (ADR 0294). Go strings and frontend
+              # The form-of-address check (ADR 0328). Go strings and frontend
               # texts reach it in the backend and frontend quality jobs;
               # e-mail templates and the check itself only here.
               - 'scripts/check-du-form*'

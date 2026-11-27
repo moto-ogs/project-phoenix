@@ -27,7 +27,7 @@ func TestCareContractTemplate_Renders(t *testing.T) {
 	}))
 	body := out.String()
 	for _, want := range []string{"Guten Tag Erika Muster,", "Lina Muster", "Kurzbetreuung und Ganztag", "Ganztag im Quartier e.V.",
-		"Prüfe die gebuchte Betreuung pro Wochentag, den Beginn und den Beitrag.", "unter „Dokumente“"} {
+		"Prüfen Sie die gebuchte Betreuung pro Wochentag, den Beginn und den Beitrag.", "unter „Dokumente“"} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 }
@@ -41,13 +41,13 @@ func TestCareContractAmendmentReminderRequiresAnotherSignature(t *testing.T) {
 		"Amendment": true, "ChildName": "Lina Muster", "SigningURL": "https://example.org/sign",
 	}))
 	body := out.String()
-	assert.Contains(t, body, "Bitte unterschreibe die geänderte Vertragsfassung")
-	assert.Contains(t, body, "Auch die neue Fassung braucht deine Unterschrift.")
+	assert.Contains(t, body, "Bitte unterschreiben Sie die geänderte Vertragsfassung")
+	assert.Contains(t, body, "Auch die neue Fassung braucht Ihre Unterschrift.")
 	assert.Contains(t, body, "Änderung ansehen und unterschreiben")
-	assert.NotContains(t, body, "Hast du schon auf Papier unterschrieben? Dann musst du nichts tun.")
+	assert.NotContains(t, body, "Haben Sie schon auf Papier unterschrieben? Dann müssen Sie nichts tun.")
 	out.Reset()
 	require.NoError(t, tpl.ExecuteTemplate(&out, "care-contract-reminder.html", map[string]any{
 		"SigningURL": "https://example.org/sign",
 	}))
-	assert.Contains(t, out.String(), "Hast du schon auf Papier unterschrieben? Dann musst du nichts tun.")
+	assert.Contains(t, out.String(), "Haben Sie schon auf Papier unterschrieben? Dann müssen Sie nichts tun.")
 }

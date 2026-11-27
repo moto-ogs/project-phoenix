@@ -47,7 +47,7 @@ case "${1:-quality}" in
     quality_step migration-validation go run main.go migrate validate
     quality_step deadcode-regressions bash "$root/scripts/check-deadcode_test.sh"
     quality_step deadcode bash "$root/scripts/check-deadcode.sh"
-    # Sie-Anrede in German texts (ADR 0294); about a second over the whole tree.
+    # Form of address in German texts (ADR 0328); about a second over the whole tree.
     quality_step du-form node "$root/scripts/check-du-form.mjs"
     ;;
   # Dependency scans run nightly, not per pull request (nightly.yml).

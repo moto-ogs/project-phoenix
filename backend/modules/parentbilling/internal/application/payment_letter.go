@@ -52,12 +52,11 @@ func paymentFacts(payment *parentbilling.InvoicePayment, letters calendar.Date) 
 }
 
 // directDebitText announces the collection using the invoice's frozen payment.
-func directDebitText(to letterAddressee, amountCents int64, due calendar.Date, reference string, mandate *parentbilling.InvoiceMandate,
+func directDebitText(amountCents int64, due calendar.Date, reference string, mandate *parentbilling.InvoiceMandate,
 	holder, recipient, secondRecipient string,
 ) string {
 	if mandate == nil {
-		return fmt.Sprintf(to.say("Wir buchen %s am %s von eurem Konto ab. Verwendungszweck: %s. Ihr müsst nichts überweisen.",
-			"Wir buchen %s am %s von deinem Konto ab. Verwendungszweck: %s. Du musst nichts überweisen."),
+		return fmt.Sprintf("Wir buchen %s am %s von Ihrem Konto ab. Verwendungszweck: %s. Sie müssen nichts überweisen.",
 			formatEuro(amountCents), germanDate(due), reference)
 	}
 	lines := []string{
@@ -70,11 +69,10 @@ func directDebitText(to letterAddressee, amountCents int64, due calendar.Date, r
 	lines = append(lines,
 		"Konto: "+mandate.IBANMasked+" · Mandatsreferenz: "+mandate.Reference,
 		"Gläubiger-ID: "+mandate.CreditorID+" · Verwendungszweck: "+reference,
-		to.say("Ihr müsst nichts überweisen.", "Du musst nichts überweisen.")+" Am Abbuchungstag muss genug Geld auf dem Konto sein.",
+		"Sie müssen nichts überweisen. Am Abbuchungstag muss genug Geld auf dem Konto sein.",
 	)
 	if holder != "" && !sameBillingName(holder, recipient) && !sameBillingName(holder, secondRecipient) {
-		lines = append(lines, to.say("Seid ihr nicht der Kontoinhaber? Dann gebt dieses Schreiben bitte weiter.",
-			"Bist du nicht der Kontoinhaber? Dann gib dieses Schreiben bitte weiter."))
+		lines = append(lines, "Sind Sie nicht der Kontoinhaber? Dann geben Sie dieses Schreiben bitte weiter.")
 	}
 	return strings.Join(lines, "\n")
 }

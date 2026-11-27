@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, test } from 'node:test';
-import { checkRepository, checkSource, checkTokens, findFormalAddress, goTokens, scriptTokens, templateTokens } from './check-du-form.mjs';
+import { OUTGOING, OUTGOING_TEXT, checkRepository, checkSource, checkTokens, findFormalAddress, findInformalAddress, goTokens, scriptTokens, templateTokens } from './check-du-form.mjs';
 
 const words = text => findFormalAddress(text).map(hit => hit.word);
 
@@ -51,7 +51,27 @@ describe('findFormalAddress', () => {
   });
 });
 
-const check = (source, tokenize) => checkTokens(source, tokenize(source));
+describe('findInformalAddress', () => {
+  const informal = text => findInformalAddress(text).map(hit => hit.word);
+
+  test('reports the du- and ihr-forms anywhere in an outgoing text', () => {
+    assert.deepEqual(informal('Du findest den Link unten.'), ['Du', 'findest']);
+    assert.deepEqual(informal('Wir schicken dir deinen Code.'), ['dir', 'deinen']);
+    assert.deepEqual(informal('Habt ihr schon bezahlt? Dann meldet euch.'), ['Habt', 'ihr', 'euch']);
+    assert.deepEqual(informal('Euer Kind ist angemeldet. Eure OGS.'), ['Euer', 'Eure']);
+    assert.deepEqual(informal('Das müsst ihr nicht tun.'), ['müsst', 'ihr']);
+    assert.deepEqual(informal('Falls du das nicht warst, kannst du sie ignorieren.'), ['du', 'kannst', 'du']);
+  });
+
+  test('passes the Sie-form, other words and quoted text', () => {
+    assert.deepEqual(informal('Ihr Kind ist angemeldet. Bitte prüfen Sie Ihre Angaben.'), []);
+    assert.deepEqual(informal('Dirk und Duisburg, durch das Dach, Ihre Durchwahl, Dienstag.'), []);
+    assert.deepEqual(informal('Im Portal heißt der Bereich „Deine Kinder“.'), []);
+    assert.deepEqual(informal('Die Kosten übernimmt das Amt. Das ist erst ab Herbst fest.'), []);
+  });
+});
+
+const check = (source, tokenize, rule) => checkTokens(source, tokenize(source), rule);
 
 for (const kind of ['go', 'script']) {
   test(`${kind}: concatenated literals retain sentence context and source lines`, () => {
@@ -62,7 +82,7 @@ for (const kind of ['go', 'script']) {
       'const c = ["Bitte prüfen ", "Sie bleibt bestehen."];',
       'const d = status + " Sie bleibt bestehen.";',
       'const e = "Tippe auf „" + "Senden Sie“.";',
-      '// sie-anrede-erlaubt (ADR 0294): gebundener Wortlaut',
+      '// sie-anrede-erlaubt (ADR 0328): gebundener Wortlaut',
       'const f = "Bitte prüfen " + "Sie das.";',
     ].join('\n');
     const problems = checkSource('sample', kind, source);
@@ -71,7 +91,7 @@ for (const kind of ['go', 'script']) {
   });
 
   test(`${kind}: checkSource reports stale markers without formal address`, () => {
-    const source = '// sie-anrede-erlaubt (ADR 0294): alt\nconst a = "Bitte prüfe das.";';
+    const source = '// sie-anrede-erlaubt (ADR 0328): alt\nconst a = "Bitte prüfe das.";';
     assert.deepEqual(checkSource('sample', kind, source), [
       'sample:1: Marker „sie-anrede-erlaubt“ deckt keinen Sie-Text mehr ab; entfernen.',
     ]);
@@ -97,16 +117,16 @@ describe('Go strings', () => {
   test('a marker covers its expression and nothing after it', () => {
     const source = [
       'func notice() []string {',
-      '\t// sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut',
+      '\t// sie-anrede-erlaubt (ADR 0328): gesetzlicher Wortlaut',
       '\treturn []string{',
       '\t\t"Um Ihr Widerrufsrecht auszuüben, müssen Sie " +',
       '\t\t\t"uns informieren.",',
       '\t}',
       '}',
       'var other = "Bitte prüfen Sie das."',
-      'var trailing = "Mit Ihrem Namen." // sie-anrede-erlaubt (ADR 0294): versioniert',
+      'var trailing = "Mit Ihrem Namen." // sie-anrede-erlaubt (ADR 0328): versioniert',
       'var label =',
-      '\t// sie-anrede-erlaubt (ADR 0294): Standardhinweis',
+      '\t// sie-anrede-erlaubt (ADR 0328): Standardhinweis',
       '\t"Die Schule nutzt Ihre Adresse."',
     ].join('\n');
     const { findings, staleMarkers } = check(source, goTokens);
@@ -115,12 +135,12 @@ describe('Go strings', () => {
   });
 
   test('a marker without a hit is stale', () => {
-    const source = '// sie-anrede-erlaubt (ADR 0294): alt\nvar a = "Bitte prüfe das."\n';
+    const source = '// sie-anrede-erlaubt (ADR 0328): alt\nvar a = "Bitte prüfe das."\n';
     assert.deepEqual(check(source, goTokens).staleMarkers, [1]);
   });
 
   test('a marker needs a reason', () => {
-    const source = '// sie-anrede-erlaubt (ADR 0294):\nvar a = "Bitte prüfen Sie das."\n';
+    const source = '// sie-anrede-erlaubt (ADR 0328):\nvar a = "Bitte prüfen Sie das."\n';
     assert.equal(check(source, goTokens).findings.length, 1);
   });
 });
@@ -154,7 +174,7 @@ describe('TypeScript and TSX', () => {
   test('a JSX comment marker covers the element below it', () => {
     const source = [
       '<figure>',
-      '  {/* sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut */}',
+      '  {/* sie-anrede-erlaubt (ADR 0328): gesetzlicher Wortlaut */}',
       '  <blockquote className="x">',
       '    Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (',
       '    <span>{name}</span>',
@@ -171,7 +191,7 @@ describe('TypeScript and TSX', () => {
   test('a marker above a property covers its value on the next line', () => {
     const source = [
       'const blocks = [{',
-      '  // sie-anrede-erlaubt (ADR 0294): Standardhinweis',
+      '  // sie-anrede-erlaubt (ADR 0328): Standardhinweis',
       '  label:',
       '    "Die Schule nutzt Ihre E-Mail-Adresse.",',
       '  text: "Bitte prüfen Sie das.",',
@@ -181,20 +201,28 @@ describe('TypeScript and TSX', () => {
   });
 });
 
-test('e-mail templates are text without their comments', () => {
+test('e-mail templates are outgoing text without their comments', () => {
   const source = [
-    '{{/* Ihnen nicht */}}<!-- Sie auch nicht -->',
-    '<p>Hallo {{.Name}},</p>',
-    '<p>bitte bestätigen Sie den Link.</p>',
-    '<!-- sie-anrede-erlaubt (ADR 0294): Zitat einer Vorlage -->',
-    '<blockquote>',
-    '  Wir senden Ihnen den Vertrag.',
-    '</blockquote>',
-    '<p>Wir senden Ihnen den Link.</p>',
+    '{{/* dir nicht */}}<!-- du auch nicht -->',
+    '<p>Guten Tag {{.Name}},</p>',
+    '<p>bitte bestätige den Link. Ihr Konto ist sicher.</p>',
+    '{{/* du-anrede-erlaubt (ADR 0328): Die Person setzt ihr Passwort selbst. */}}',
+    '<p>',
+    '  Die Person setzt ihr Passwort selbst.',
+    '</p>',
+    '<p>Wir senden dir den Link.</p>',
+    '<p>Sie können sich jetzt anmelden.</p>',
   ].join('\n');
-  const { findings, staleMarkers } = check(source, templateTokens);
-  assert.deepEqual(findings.map(finding => [finding.line, finding.word]), [[3, 'Sie'], [8, 'Ihnen']]);
+  const { findings, staleMarkers } = check(source, templateTokens, OUTGOING_TEXT);
+  assert.deepEqual(findings.map(finding => [finding.line, finding.word]), [[8, 'dir']]);
   assert.deepEqual(staleMarkers, []);
+});
+
+test('a du-marker without a du-text in an outgoing text fails', () => {
+  const source = 'package x\n\nvar a = "Bitte prüfen Sie das." // du-anrede-erlaubt (ADR 0328): veraltet\n';
+  assert.deepEqual(checkSource('backend/x.go', 'outgoing-go', source), [
+    'backend/x.go:3: Marker „du-anrede-erlaubt“ deckt keinen Du-Text mehr ab; entfernen.',
+  ]);
 });
 
 test('an escaped line break keeps the hit on the line of its literal', () => {
@@ -204,7 +232,7 @@ test('an escaped line break keeps the hit on the line of its literal', () => {
 
 test('a marker covers one text: a raw Go string to its end, not the next element', () => {
   const source = [
-    '\t// sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut',
+    '\t// sie-anrede-erlaubt (ADR 0328): gesetzlicher Wortlaut',
     '\tnotice := []string{',
     '\t\t`Erster Absatz.',
     'Wir erstatten Ihnen alles.`,',
@@ -218,7 +246,7 @@ test('a marker covers one text: a raw Go string to its end, not the next element
 test('a marker covers a concatenation with expressions as one text', () => {
   const source = [
     'var notice = []string{',
-    '\t// sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut',
+    '\t// sie-anrede-erlaubt (ADR 0328): gesetzlicher Wortlaut',
     '\t"Um Ihr Recht auszuüben, müssen Sie uns (" + contact.details(true) + ") informieren. " +',
     '\t\t"Sie können dafür das Muster verwenden, das Ihnen beiliegt.",',
     '\t"Bitte prüfen Sie das.",',
@@ -230,7 +258,7 @@ test('a marker covers a concatenation with expressions as one text', () => {
 });
 
 test('a marker separated from its text by a blank line covers nothing', () => {
-  const source = 'func f() {\n\t// sie-anrede-erlaubt (ADR 0294): x\n\n\ta := "Bitte prüfen Sie das."\n}\n';
+  const source = 'func f() {\n\t// sie-anrede-erlaubt (ADR 0328): x\n\n\ta := "Bitte prüfen Sie das."\n}\n';
   const { findings, staleMarkers } = check(source, goTokens);
   assert.deepEqual(findings.map(finding => finding.line), [4]);
   assert.deepEqual(staleMarkers, [2]);
@@ -285,12 +313,16 @@ describe('checkRepository', () => {
   write('backend/modules/x/text_test.go', 'package x\nvar a = "Bitte prüfen Sie das."\n');
   write('backend/modules/x/testdata/a.go', 'package x\nvar a = "Bitte prüfen Sie das."\n');
   write('backend/internal/devtools/seed.go', 'package seed\nvar a = "Liebe Eltern, bitte geben Sie Ihrem Kind etwas mit."\n');
-  write('backend/templates/email/invite.html', '<p>Bitte bestätigen Sie den Link.</p>');
+  write('backend/templates/email/invite.html', '<p>Bitte bestätige deinen Link. Bitte bestätigen Sie den Link.</p>');
+  write('backend/modules/x/letter.go', 'package x\nvar a = "Bitte überweisen Sie den Betrag. Habt ihr schon bezahlt?"\n');
+  const outgoing = new Set(['backend/modules/x/letter.go']);
 
   test('reports every scanned kind and skips tests, generated files, other locales and demo data', () => {
     const exceptions = [{ file: 'frontend/src/i18n/messages/de/form.json', key: 'bound', reason: 'versioniert' }];
-    const problems = checkRepository(root, exceptions);
+    const problems = checkRepository(root, exceptions, outgoing);
     assert.deepEqual(problems.map(problem => problem.split(':')[0].split(' ')[0]), [
+      'backend/modules/x/letter.go',
+      'backend/modules/x/letter.go',
       'backend/modules/x/text.go',
       'backend/templates/email/invite.html',
       'frontend/.storybook/fixtures/slots.tsx',
@@ -307,7 +339,16 @@ describe('checkRepository', () => {
     const problems = checkRepository(root, [
       { file: 'frontend/src/i18n/messages/de/form.json', key: 'bound', reason: 'versioniert' },
       { file: 'frontend/src/i18n/messages/de/form.json', key: 'ok', reason: 'veraltet' },
-    ]);
+    ], outgoing);
     assert.ok(problems.some(problem => problem.includes('form.json ok: Ausnahme in JSON_EXCEPTIONS deckt keinen Sie-Text mehr ab')));
+  });
+
+  test('an outgoing file that is gone fails', () => {
+    const problems = checkRepository(root, [], new Set(['backend/modules/x/gone.go']));
+    assert.ok(problems.includes('backend/modules/x/gone.go: steht in OUTGOING, gibt es aber nicht mehr; entfernen.'));
+  });
+
+  test('every outgoing file is a Go file of the backend', () => {
+    for (const file of OUTGOING) assert.match(file, /^backend\/.+\.go$/);
   });
 });

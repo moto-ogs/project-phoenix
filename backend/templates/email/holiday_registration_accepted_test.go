@@ -87,7 +87,7 @@ func TestHolidayRegistrationAcceptedTemplate_OffersAParentAccount(t *testing.T) 
 // duForm is the informal address in the visible text of a mail.
 var duForm = regexp.MustCompile(`(?i)\b(du|dein\p{L}*|dir|dich|antworte|wende)\b`)
 
-// assertNoDuForm pins the decision of 27.11.2026 (Nachtrag of ADR 0294): the
+// assertNoDuForm pins the decision of 27.11.2026 (ADR 0328): the
 // acceptance mail addresses the parents with „Sie“, no du-form remains in
 // its fixed part. The test texts of the Träger hold none either.
 func assertNoDuForm(t *testing.T, body string) {

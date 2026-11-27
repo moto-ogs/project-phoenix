@@ -3,9 +3,9 @@
 
 <div class="email-body">
     {{template "moto-brand" .}}
-    <h1>Neues vertrautes Gerät zu deinem Konto hinzugefügt</h1>
+    <h1>Neues vertrautes Gerät zu Ihrem Konto hinzugefügt</h1>
     <p>Hallo,</p>
-    <p>auf deinem moto-Konto wurde gerade ein neues Gerät als vertrautes Gerät gespeichert. Auf diesem Gerät wird beim Login für die nächsten {{.TrustedDays}} Tage kein 2FA-Code mehr abgefragt.</p>
+    <p>auf Ihrem moto-Konto wurde gerade ein neues Gerät als vertrautes Gerät gespeichert. Auf diesem Gerät wird beim Login für die nächsten {{.TrustedDays}} Tage kein 2FA-Code mehr abgefragt.</p>
 
     <div class="highlight-box">
         <p><strong>Gerät:</strong> {{.DeviceLabel}}</p>
@@ -13,16 +13,16 @@
         <p><strong>Zeitpunkt:</strong> {{.AddedAt}}</p>
     </div>
 
-    <p class="security-note"><strong>Warst du das nicht?</strong></p>
+    <p class="security-note"><strong>Waren Sie das nicht?</strong></p>
     {{if .Caterer}}
-    <p>Wenn du dieses Gerät nicht erkennst, ändere umgehend dein Passwort und entferne das Gerät anschließend im Caterer-Portal unter <em>„Konto → Meine vertrauten Geräte“</em>.</p>
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Solltest du keinen Zugriff mehr auf dein Konto haben, wende dich an das moto-Team — es kann deine Zwei-Faktor-Anmeldung zurücksetzen.</p>
+    <p>Wenn Sie dieses Gerät nicht erkennen, ändern Sie umgehend Ihr Passwort und entfernen Sie das Gerät anschließend im Caterer-Portal unter <em>„Konto → Meine vertrauten Geräte“</em>.</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Sollten Sie keinen Zugriff mehr auf Ihr Konto haben, wenden Sie sich an das moto-Team — es kann Ihre Zwei-Faktor-Anmeldung zurücksetzen.</p>
     {{else if .Traeger}}
-    <p>Wenn du dieses Gerät nicht erkennst, ändere umgehend dein Passwort und entferne das Gerät anschließend im Träger-Portal unter <em>„Konto → Meine vertrauten Geräte“</em>.</p>
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Solltest du keinen Zugriff mehr auf dein Konto haben, wende dich an das moto-Team. Es kann deine Zwei-Faktor-Anmeldung zurücksetzen.</p>
+    <p>Wenn Sie dieses Gerät nicht erkennen, ändern Sie umgehend Ihr Passwort und entfernen Sie das Gerät anschließend im Träger-Portal unter <em>„Konto → Meine vertrauten Geräte“</em>.</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Sollten Sie keinen Zugriff mehr auf Ihr Konto haben, wenden Sie sich an das moto-Team. Es kann Ihre Zwei-Faktor-Anmeldung zurücksetzen.</p>
     {{else}}
-    <p>Wenn du dieses Gerät nicht erkennst, ändere umgehend dein Passwort und entferne das Gerät anschließend unter <em>„Mein Profil → Meine vertrauten Geräte"</em>.</p>
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Solltest du keinen Zugriff mehr auf dein Konto haben, wende dich an die Administration deiner Schule — diese kann das Gerät entfernen und deine Zwei-Faktor-Authentifizierung zurücksetzen.</p>
+    <p>Wenn Sie dieses Gerät nicht erkennen, ändern Sie umgehend Ihr Passwort und entfernen Sie das Gerät anschließend unter <em>„Mein Profil → Meine vertrauten Geräte"</em>.</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Sollten Sie keinen Zugriff mehr auf Ihr Konto haben, wenden Sie sich an die Administration Ihrer Schule — diese kann das Gerät entfernen und Ihre Zwei-Faktor-Authentifizierung zurücksetzen.</p>
     {{end}}
 </div>
 
