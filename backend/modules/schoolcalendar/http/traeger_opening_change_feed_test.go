@@ -39,8 +39,8 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 		require.NoError(t, err)
 		return id
 	}
-	quietSchool, unnamed := schoolOfTraeger(), schoolOfTraeger()
-	for _, id := range []int64{quietSchool, unnamed} {
+	quietSchool, removedSchool, unnamed := schoolOfTraeger(), schoolOfTraeger(), schoolOfTraeger()
+	for _, id := range []int64{quietSchool, removedSchool, unnamed} {
 		testpkg.SetTestTenantSetting(t, db, id, "notifications.dispatch_enabled", `true`)
 		testpkg.SetTestTenantSetting(t, db, id, "notifications.active_window_start", `"06:00"`)
 		testpkg.SetTestTenantSetting(t, db, id, "notifications.active_window_end", `"06:00"`)
@@ -53,7 +53,7 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 		return account.ID
 	}
 	staff := f.staff(t, "Betreuung", true)
-	quietStaff, unnamedStaff := staffAt(quietSchool, "Ruhig"), staffAt(unnamed, "Ungenannt")
+	quietStaff, removedStaff, unnamedStaff := staffAt(quietSchool, "Ruhig"), staffAt(removedSchool, "Entfernt"), staffAt(unnamed, "Ungenannt")
 	family := testpkg.CreateTestParentGuardianChain(t, db)
 	f.device(t, family.AccountID, "parent")
 	planner, office := testpkg.CreateTestAccount(t, db, "traeger-opening-planner"), testpkg.CreateTestAccount(t, db, "traeger-opening-office")
@@ -69,7 +69,7 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	claims := routes.office(traeger, identityaccess.TraegerRoleAdministration)
 	day := func(closes string) map[string]any {
 		return map[string]any{"start_date": "2030-06-12", "end_date": "2030-06-12", "opens_at": "07:30", "closes_at": closes,
-			"reason": "Personalversammlung", "school_ids": []string{fmt.Sprint(school), fmt.Sprint(quietSchool)}}
+			"reason": "Personalversammlung", "school_ids": []string{fmt.Sprint(school), fmt.Sprint(quietSchool), fmt.Sprint(removedSchool)}}
 	}
 
 	rec := routes.send(t, claims, http.MethodPost, traegerOpeningChangesPath, day("12:00"))
@@ -87,12 +87,13 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	assert.Equal(t, body, parent[0].Body)
 	assert.Equal(t, "/parents/calendar?date=2030-06-12", parent[0].DeepLink)
 	bell := f.entries(t, office.ID, traeger, "traeger")
-	require.Len(t, bell, 1, "the Träger-Büro reads it once, for the school whose switch is on")
-	assert.Equal(t, fmt.Sprintf("/traeger/schulen/%d", school), bell[0].DeepLink)
+	require.Len(t, bell, 2, "the Träger-Büro reads it once for each school whose switch is on")
+	assert.Contains(t, []string{bell[0].DeepLink, bell[1].DeepLink}, fmt.Sprintf("/traeger/schulen/%d", school))
 	assert.Equal(t, 1, f.pushes(t, staff), "a day within 14 days pushes")
 	assert.Equal(t, 1, f.pushes(t, family.AccountID))
 
 	assert.Empty(t, f.entries(t, quietStaff, quietSchool, "staff"), "a school that switched the type off gets nothing")
+	require.Len(t, f.entries(t, removedStaff, removedSchool, "staff"), 1, "a named school reads the original change")
 	assert.Empty(t, f.entries(t, unnamedStaff, unnamed, "staff"), "a school the Träger did not name gets nothing")
 	assert.Empty(t, f.entries(t, unnamedStaff, school, "staff"), "nor do its staff see the named school's feed")
 	assert.Empty(t, f.entries(t, planner.ID, traeger, "traeger"), "who entered it gets nothing in the bell")
@@ -100,11 +101,12 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	// Read, so the next notice adds an entry instead of updating this one.
 	f.markRead(t, staff, int64(entries[0].ID))
 
-	// Another closing time, and the second school leaves the change: the
-	// school that stays reads the change, the one that left it reads nothing
-	// under its switch.
+	// Another closing time and reason, and two schools leave the change: the
+	// school that stays reads the update; the switched-off school remains quiet;
+	// the other removed school sees the name it had before the removal.
 	update := day("13:00")
 	update["school_ids"] = []string{fmt.Sprint(school)}
+	update["reason"] = "Fortbildung"
 	update["expected_version"] = created.Version
 	rec = routes.send(t, claims, http.MethodPut, traegerOpeningChangesPath+created.ID, update)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -112,8 +114,11 @@ func TestTraegerOpeningChangeFeedReachesEachNamedSchoolUnderItsOwnSwitch(t *test
 	entries = f.entries(t, staff, school, "staff")
 	require.Len(t, entries, 2)
 	assert.Equal(t, "Öffnungszeit geändert", entries[0].Title)
-	assert.Equal(t, "Die geänderte Öffnungszeit „Personalversammlung“ gilt jetzt am 12.06.2030 von 07:30 bis 13:00 Uhr. Bisher: am 12.06.2030 von 07:30 bis 12:00 Uhr. Das hat der Träger eingetragen.", entries[0].Body)
+	assert.Equal(t, "Die geänderte Öffnungszeit „Fortbildung“ gilt jetzt am 12.06.2030 von 07:30 bis 13:00 Uhr. Bisher: am 12.06.2030 von 07:30 bis 12:00 Uhr. Das hat der Träger eingetragen.", entries[0].Body)
 	assert.Empty(t, f.entries(t, quietStaff, quietSchool, "staff"))
+	removed := f.entries(t, removedStaff, removedSchool, "staff")
+	require.Len(t, removed, 1)
+	assert.Equal(t, "Die geänderte Öffnungszeit „Personalversammlung“ am 12.06.2030 entfällt. Es gelten wieder die normalen Öffnungszeiten. Das hat der Träger eingetragen.", removed[0].Body)
 
 	// A school added later reads it as new.
 	update["school_ids"] = []string{fmt.Sprint(school), fmt.Sprint(unnamed)}

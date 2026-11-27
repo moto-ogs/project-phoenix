@@ -40,21 +40,23 @@ func (t *TraegerOpeningChanges) notify(ctx context.Context, id int64, previous *
 		return nil
 	}
 	var before, after []int64
-	var reason string
 	if previous != nil {
-		before, reason = previous.SchoolIDs, previous.Reason
+		before = previous.SchoolIDs
 	}
 	if current != nil {
-		after, reason = ident.Int64s(current.SchoolIDs), current.Reason
+		after = ident.Int64s(current.SchoolIDs)
 	}
 	today := t.today()
 	for _, schoolID := range affectedSchoolIDs(before, after) {
 		var was, is *schoolcalendar.OpeningChangeSpan
+		var reason string
 		if slices.Contains(before, schoolID) {
 			was = &schoolcalendar.OpeningChangeSpan{StartsOn: previous.StartDate, EndsOn: previous.EndDate, OpensAt: previous.OpensAt, ClosesAt: previous.ClosesAt}
+			reason = previous.Reason
 		}
 		if slices.Contains(after, schoolID) {
 			is = &schoolcalendar.OpeningChangeSpan{StartsOn: current.StartDate, EndsOn: current.EndDate, OpensAt: current.OpensAt, ClosesAt: current.ClosesAt}
+			reason = current.Reason
 		}
 		notice, ok := openingChangeNotice(today, id, reason, was, is)
 		if !ok {
