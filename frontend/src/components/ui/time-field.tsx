@@ -245,7 +245,7 @@ export function TimeField({
               ? inline
                 ? "border-moto-red focus-visible:border-moto-red"
                 : "border-parent-red focus-visible:border-parent-red"
-              : `focus-visible:border-gray-900 ${inline ? "border-gray-200" : "border-gray-500/80"}`
+              : `focus-visible:border-field-focus ${inline ? "border-gray-200" : "border-control-edge"}`
           }`}
         />
         <AnchoredPopover

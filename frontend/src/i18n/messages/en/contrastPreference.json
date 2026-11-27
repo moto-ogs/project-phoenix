@@ -1,0 +1,6 @@
+{
+  "title": "More contrast",
+  "description": "Input fields, select fields, checkboxes and switches get a darker border. This makes them easier to see. It applies to your account, on every device.",
+  "label": "Darker borders on input fields",
+  "errorObject": "your contrast setting"
+}

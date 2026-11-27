@@ -883,6 +883,51 @@
   animation: mui-pulse 2s ease-in-out infinite;
 }
 
+/*
+ * Ränder von Bedienelementen: hell als Grundwert, dunkel bei „Mehr Kontrast“.
+ *
+ * `field-edge`: Kontur von Text-, Such- und Auswahlfeldern.
+ * `control-edge`: Kontur von Kästchen, Optionsfeldern und Zeitfeldern.
+ * `switch-edge`: Kante eines ausgeschalteten Schalters.
+ * `field-focus`: Rahmen eines Feldes, in dem gerade getippt wird.
+ *
+ * Der Schalter im Profil setzt `html[data-contrast]` über ein Cookie
+ * (`~/lib/contrast-preference`). Ohne Wahl folgt die Seite der
+ * Systemeinstellung „Kontrast erhöhen“. Die dunklen Werte erreichen 3:1 auf
+ * Weiß (WCAG 1.4.11). Auch der Grundwert bleibt für Bedienelemente und ihren
+ * Fokus ausreichend deutlich.
+ */
+@theme inline {
+  --color-field-edge: var(--moto-field-edge);
+  --color-control-edge: var(--moto-control-edge);
+  --color-switch-edge: var(--moto-switch-edge);
+  --color-field-focus: var(--moto-field-focus);
+}
+
+:root {
+  --moto-field-edge: var(--color-gray-500);
+  --moto-control-edge: var(--color-gray-500);
+  --moto-switch-edge: var(--color-gray-500);
+  --moto-field-focus: var(--color-gray-900);
+  --moto-edge-more: var(--color-gray-700);
+}
+
+html[data-contrast="more"] {
+  --moto-field-edge: var(--moto-edge-more);
+  --moto-control-edge: var(--moto-edge-more);
+  --moto-switch-edge: var(--moto-edge-more);
+  --moto-field-focus: var(--color-gray-900);
+}
+
+@media (prefers-contrast: more) {
+  html:not([data-contrast]) {
+    --moto-field-edge: var(--moto-edge-more);
+    --moto-control-edge: var(--moto-edge-more);
+    --moto-switch-edge: var(--moto-edge-more);
+    --moto-field-focus: var(--color-gray-900);
+  }
+}
+
 /* Prevent layout shift when modals hide scrollbar */
 html {
   background: var(--color-gray-50);

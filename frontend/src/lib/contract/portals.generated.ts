@@ -41,6 +41,7 @@ import { routes as database } from "./database.generated";
 import { routes as dayChanges } from "./day-changes.generated";
 import { routes as demoAccess } from "./demo-access.generated";
 import { routes as display } from "./display.generated";
+import { routes as displayPreferences } from "./display-preferences.generated";
 import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as feedback } from "./feedback.generated";
@@ -207,8 +208,12 @@ export const portalRoutes = {
     catererSchools["GET /caterer/schools"],
     catererSchools["GET /caterer/schools/{schoolId}/orders"],
     catererSchools["POST /caterer/schools/{schoolId}/orders/{orderId}/confirm"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
   ],
   org: [
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     traegerAbsenceTypes["GET /traeger/absence-types/"],
     traegerAbsenceTypes["POST /traeger/absence-types/"],
     traegerAbsenceTypes["PUT /traeger/absence-types/{id}"],
@@ -617,6 +622,8 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     analyticsPolicy["GET /analytics-policy"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     parentEnrollments["GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId}"],
     parentEnrollments["GET /parent/enrollments/{tenantSlug}/profile"],
     parentEnrollments["POST /parent/enrollments/{tenantSlug}/submit"],
@@ -748,6 +755,8 @@ export const portalRoutes = {
     parentNewsAttachments["GET /parent-news-attachments/{announcementId}/{attachmentId}/download"],
   ],
   platform: [
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     operatorAccounts["DELETE /operator/accounts/{accountId}/tenants/{tenantId}"],
     operatorAccounts["GET /operator/accounts"],
     operatorAccounts["GET /operator/accounts/{accountId}/mfa/global-override"],
@@ -928,6 +937,8 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     analyticsPolicy["GET /analytics-policy"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     schoolAuth["DELETE /school/auth/mfa/trusted-devices/{deviceId}"],
     schoolAuth["GET /school/auth/mfa/trusted-devices"],
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
@@ -1137,6 +1148,8 @@ export const portalRoutes = {
     display["PATCH /api/display/{id}"],
     display["POST /api/display/"],
     display["POST /api/display/{id}/regenerate"],
+    displayPreferences["GET /display-preferences/"],
+    displayPreferences["PUT /display-preferences/"],
     emergency["POST /api/emergency/snapshot/export"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/children/{childId}"],

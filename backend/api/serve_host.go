@@ -13,7 +13,9 @@ import (
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	meAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
+	identityOperatorHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -48,7 +50,11 @@ func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironme
 	router := chi.NewRouter()
 	policy := analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings, identity, organizations)
 	auth, err := mountServeMiddleware(router, db.UnitOfWork(), env.Logger, config, tracer, metrics, tracker, settings, policy, identity, identity, identity, traegerModules, env.Config.RateLimitEnabled, newLimiter)
-	return router, auth, err
+	if err != nil {
+		return router, auth, err
+	}
+	mountDisplayPreferences(router, identityaccessCompose.NewAccountDisplayPreferences(db.Pool(), db.UnitOfWork()), identity)
+	return router, auth, nil
 }
 
 // mountServeMiddleware sets up the global middleware chain of the server
@@ -171,6 +177,17 @@ func mountAnalyticsConsent(router chi.Router, consent identityaccess.AccountAnal
 	// refuses operator and preview sessions itself.
 	router.Mount("/analytics-consent", meAPI.NewAnalyticsConsentResource(consent).Router(func(r chi.Router) {
 		r.Use(sessiontoken.Authenticator, ReadOnlyPreviewMiddleware)
+	}))
+}
+
+// mountDisplayPreferences serves each person's display preferences
+// ("Mehr Kontrast") in every portal, operators included. Like the consent
+// above, the Authenticator verifies the access token, the preview middleware
+// blocks writes, and the resource refuses preview sessions itself. Platform
+// sessions additionally verify their active operator and refresh family.
+func mountDisplayPreferences(router chi.Router, preferences identityaccess.AccountDisplayPreferences, operators identityaccess.OperatorSessionLiveness) {
+	router.Mount("/display-preferences", meAPI.NewDisplayPreferencesResource(preferences).Router(func(r chi.Router) {
+		r.Use(sessiontoken.Authenticator, ReadOnlyPreviewMiddleware, identityOperatorHTTP.RequiresLivePlatformOperator(operators))
 	}))
 }
 

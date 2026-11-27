@@ -1,0 +1,6 @@
+{
+  "title": "Większy kontrast",
+  "description": "Pola do wpisywania, pola wyboru, kratki i przełączniki dostają ciemniejszą ramkę. Dzięki temu łatwiej je zobaczyć. Dotyczy to twojego konta, na każdym urządzeniu.",
+  "label": "Ciemniejsze ramki pól",
+  "errorObject": "twoje ustawienie kontrastu"
+}

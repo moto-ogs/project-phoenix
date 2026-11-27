@@ -5,6 +5,7 @@ import { ModalProvider } from "@/components/ui/modal-context";
 import { NotificationBridge } from "~/components/notifications/notification-bridge";
 import { ServiceWorkerRegistrar } from "~/components/notifications/service-worker-registrar";
 import { ModuleNotBookedSlots } from "~/components/tenant/module-not-booked-state";
+import { ContrastPreferenceHydration } from "~/components/settings/contrast-preference-hydration";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { schedulePostHogInitialization } from "~/lib/posthog-client";
 
@@ -19,16 +20,19 @@ import { schedulePostHogInitialization } from "~/lib/posthog-client";
  */
 export function Providers({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  moreContrast = false,
+}: Readonly<{ children: React.ReactNode; moreContrast?: boolean }>) {
   useEffect(schedulePostHogInitialization, []);
 
   return (
-    <ModalProvider>
-      <ToastProvider>
-        <NotificationBridge />
-        <ServiceWorkerRegistrar />
-        <ModuleNotBookedSlots>{children}</ModuleNotBookedSlots>
-      </ToastProvider>
-    </ModalProvider>
+    <ContrastPreferenceHydration moreContrast={moreContrast}>
+      <ModalProvider>
+        <ToastProvider>
+          <NotificationBridge />
+          <ServiceWorkerRegistrar />
+          <ModuleNotBookedSlots>{children}</ModuleNotBookedSlots>
+        </ToastProvider>
+      </ModalProvider>
+    </ContrastPreferenceHydration>
   );
 }

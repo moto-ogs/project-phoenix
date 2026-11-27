@@ -6079,6 +6079,7 @@ export const ownProfileTopic = function ownProfileTopic(): HelpTopic {
     notes: [
       "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
       "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+      "Unter `Mehr Kontrast` schaltest du dunklere Ränder an Eingabefeldern, Kästchen und Schaltern ein. Das gilt für dein Konto, auf jedem Gerät.",
     ],
     related: [
       HELP_TOPICS.staffNotifications,
@@ -11197,6 +11198,7 @@ export const teacherSettingsTopic = function teacherSettingsTopic(): HelpTopic {
       "`Nachrichten von Kolleginnen und Kollegen`: neue Nachrichten im Team-Chat der OGS.",
       "`Absage eines Termins`: moto meldet sich, wenn ein Termin ausfällt, bei dem du eingeplant bist. Das gilt für Absagen von heute bis in 14 Tagen. Diese Benachrichtigung ist von Anfang an eingeschaltet. Den Hinweis in der Glocke bekommst du auch, wenn du sie ausschaltest.",
       "Benachrichtigungen kommen erst an, wenn moto schule auf dem Startbildschirm liegt.",
+      "Im Bereich `Darstellung` schaltest du `Mehr Kontrast` ein. Dann bekommen Eingabefelder, Kästchen und Schalter einen dunkleren Rand. Das gilt für dein Konto, auf jedem Gerät.",
       "Im Bereich `Vertraute Geräte` stehen die Geräte, die du dir beim Anmelden gemerkt hast. Öffne das Menü am Gerät und wähle `Entfernen`. Dort fragt moto beim nächsten Anmelden wieder nach dem Code.",
     ],
     differences: [

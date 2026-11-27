@@ -26,6 +26,7 @@ import { newsConcept } from "~/lib/concepts/news";
 import { parentConversationsConcept } from "~/lib/concepts/parentConversations";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { languageConcept } from "~/lib/concepts/language";
+import { displayConcept } from "~/lib/concepts/display";
 import { notificationsConcept } from "~/lib/concepts/notifications";
 import { privacyConcept } from "~/lib/concepts/privacy";
 import { signInConcept } from "~/lib/concepts/signIn";
@@ -201,7 +202,7 @@ export const PARENT_MORE_BADGE_SOURCES: readonly ParentNavBadgeSource[] = [
 
 export interface ParentSettingsSection {
   /** Der Wert von `?tab=` in der Adresse. */
-  readonly key: "notifications" | "signIn" | "language" | "privacy";
+  readonly key: "notifications" | "signIn" | "language" | "display" | "privacy";
   /** Schluessel im Katalog "parentNav". */
   readonly tKey: string;
   readonly concept: MotoConcept;
@@ -221,6 +222,8 @@ export const PARENT_SETTINGS_SECTIONS: readonly ParentSettingsSection[] = [
   // Die Anmeldung mit Code per E-Mail (#7051).
   { key: "signIn", tKey: "signIn", concept: signInConcept },
   { key: "language", tKey: "language", concept: languageConcept },
+  // Wie moto für das Konto aussieht, etwa „Mehr Kontrast“.
+  { key: "display", tKey: "display", concept: displayConcept },
   { key: "privacy", tKey: "privacy", concept: privacyConcept },
 ];
 

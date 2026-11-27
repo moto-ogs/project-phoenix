@@ -6,6 +6,7 @@ import {
   type CatalogRoute,
   type HandOffHead,
 } from "../contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "../contract/catalog-outside-mounts";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /**
@@ -25,9 +26,16 @@ export const catalogProxy = (
   method: CatalogMethod,
   publicRoutes: readonly CatalogRoute[] = [],
 ) =>
-  makeCatalogProxy(traeger, "/traeger", routes, method, [], {
-    routes: publicRoutes,
-  });
+  makeCatalogProxy(
+    traeger,
+    "/traeger",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.org,
+    {
+      routes: publicRoutes,
+    },
+  );
 
 /**
  * The Träger portal's proxy for a route file below its BFF prefix that Next would

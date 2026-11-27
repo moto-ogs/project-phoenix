@@ -14,6 +14,7 @@ import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
+import { ContrastPreferenceSection } from "~/components/settings/contrast-preference-section";
 import { SectionCard } from "~/components/ui/section-card";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -201,6 +202,7 @@ export default function TraegerAccountPage() {
             }}
           />
           <TrustedDevicesSection scope="traeger" />
+          <ContrastPreferenceSection portal="traeger" />
         </>
       ) : null}
     </TenantPage>
