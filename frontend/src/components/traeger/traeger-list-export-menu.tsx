@@ -63,7 +63,9 @@ interface TraegerListDownloadOptions {
    */
   readonly download: (
     format: TraegerListFormat,
-  ) => Promise<TraegerListFile | undefined>;
+  ) => Promise<
+    (TraegerListFile & { readonly isCurrent?: () => boolean }) | undefined
+  >;
   /** The heading over the formats, from `traegerExportScope`. */
   readonly scope: string;
   /** The file name without ending, when the backend names none. */
@@ -102,7 +104,8 @@ function useTraegerListDownload({
     setBusy(format);
     try {
       const file = await fetchFile(format);
-      if (!file) return; // The session changed while the file was loading.
+      // Check at the save, not just when the request handed back the file.
+      if (!file || file.isCurrent?.() === false) return;
       downloadBlob(file.blob, file.filename ?? `${fallbackName}.${format}`);
     } catch (err) {
       onError?.(err);

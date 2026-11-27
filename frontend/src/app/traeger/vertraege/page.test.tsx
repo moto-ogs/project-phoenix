@@ -15,11 +15,12 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
 import { releaseFakeTimers } from "~/test/clock";
 import type {
+  CareContractList,
   CareContractSummary,
   ContractCandidate,
 } from "~/lib/traeger-care-contracts-api";
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, bffFile, downloadBlob } = vi.hoisted(() => ({
   api: {
     fetchCareContracts: vi.fn(),
     fetchContractCandidates: vi.fn(),
@@ -29,10 +30,20 @@ const { api, mockPush } = vi.hoisted(() => ({
     sendCareContracts: vi.fn(),
   },
   mockPush: vi.fn(),
+  bffFile: vi.fn(),
+  downloadBlob: vi.fn(),
 }));
 
 vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
+vi.mock("~/lib/bff-fetch", async (original) => ({
+  ...(await original<typeof import("~/lib/bff-fetch")>()),
+  bffFile,
+}));
+vi.mock("~/lib/file-download", async (original) => ({
+  ...(await original<typeof import("~/lib/file-download")>()),
+  downloadBlob,
+}));
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
@@ -138,10 +149,24 @@ function renderPage() {
   );
 }
 
+function downloadCsv() {
+  const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+  fireEvent.click(menu!);
+  fireEvent.click(screen.getByRole("menuitem", { name: /CSV/ }));
+}
+
+function sortByChild() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Kind – Spalte sortieren" }),
+  );
+}
+
 describe("TraegerVertraegePage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();
+    bffFile.mockReset();
+    downloadBlob.mockReset();
     api.fetchCareContracts.mockResolvedValue({
       contracts: [DRAFT, SENT],
       counts: { entwurf: 1, versendet: 1 },
@@ -229,6 +254,52 @@ describe("TraegerVertraegePage", () => {
     ).toBeVisible();
     expect(screen.queryByText("Ben Muster")).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("withdraws the newly sorted list when a download from the previous sort is refused", async () => {
+    const file = deferred<Response>();
+    bffFile.mockReturnValueOnce(file.promise);
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    downloadCsv();
+    api.fetchCareContracts.mockResolvedValueOnce({
+      contracts: [SENT],
+      counts: { versendet: 1 },
+      hasMore: false,
+    });
+    sortByChild();
+    expect((await screen.findAllByText("Ben Muster"))[0]).toBeVisible();
+
+    api.fetchCareContracts.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    await act(async () => file.reject(new ApiError("refused", 403)));
+    // Anker: die Verweigerung steht anstelle der neu sortierten Liste.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Verträge"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Ben Muster")).not.toBeInTheDocument();
+  });
+
+  it("discards a download from the previous sort when the new list is refused", async () => {
+    const file = deferred<Response>();
+    bffFile.mockReturnValueOnce(file.promise);
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    downloadCsv();
+    expect(bffFile).toHaveBeenCalledOnce();
+    api.fetchCareContracts.mockRejectedValue(new ApiError("refused", 403));
+    sortByChild();
+    // Anker: die neu sortierte Liste hat eine Verweigerung erhalten.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Verträge"),
+      ),
+    ).toBeVisible();
+    await act(async () => file.resolve(new Response("Lina Muster")));
+    expect(downloadBlob).not.toHaveBeenCalled();
   });
 
   it("orders every contract of the filter in the database and names the offer in its own column", async () => {
@@ -556,6 +627,32 @@ describe("TraegerVertraegePage", () => {
     );
   });
 
+  it("saves a pending download even when creating drafts changes the filter", async () => {
+    const file = deferred<Response>();
+    bffFile.mockReturnValueOnce(file.promise);
+    api.createCareContracts.mockResolvedValue({
+      created: [DRAFT],
+      skipped: [],
+    });
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    downloadCsv();
+    fireEvent.click(screen.getByRole("button", { name: /Verträge erstellen/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "1 Entwurf erstellen" }),
+    );
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "entwurf" }),
+      ),
+    );
+    await act(async () => file.resolve(new Response("Lina Muster")));
+    expect(downloadBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      "betreuungsvertraege.csv",
+    );
+  });
+
   it("sends the selected drafts", async () => {
     api.sendCareContracts.mockResolvedValue({ sent: ["7"], skipped: [] });
     renderPage();
@@ -815,6 +912,88 @@ describe("TraegerVertraegePage", () => {
   // #6652: after a confirmed send a failed reload is a load error above the
   // list, not a failed send or a page error that replaces the contracts.
   describe("reload after a write (#6652)", () => {
+    it("does not let an older replacement first page overtake the reload after sending", async () => {
+      const initial = {
+        contracts: [DRAFT],
+        counts: { entwurf: 2 },
+        hasMore: true,
+        revision: "1",
+      };
+      const more = deferred<CareContractList>();
+      const reload = deferred<CareContractList>();
+      api.fetchCareContracts
+        .mockResolvedValueOnce(initial)
+        .mockReturnValueOnce(more.promise)
+        .mockReturnValueOnce(reload.promise);
+      api.sendCareContracts.mockResolvedValue({
+        sent: [DRAFT.id],
+        skipped: [],
+      });
+      renderPage();
+      await screen.findAllByText("Lina Muster");
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Weitere Verträge laden/ }),
+      );
+      fireEvent.click(
+        screen.getAllByLabelText("Vertrag von Lina Muster auswählen")[0]!,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "1 Entwurf senden" }));
+      await waitFor(() =>
+        expect(api.fetchCareContracts).toHaveBeenCalledTimes(3),
+      );
+      await act(async () => more.resolve({ ...initial, revision: "2" }));
+      await act(async () =>
+        reload.resolve({
+          ...initial,
+          contracts: [{ ...DRAFT, status: "versendet" }],
+          counts: { versendet: 1 },
+          hasMore: false,
+          revision: "3",
+        }),
+      );
+      const row = screen.getByRole("row", { name: /Lina Muster/ });
+      expect(within(row).getByText("Versendet")).toBeVisible();
+    });
+
+    it("does not show a stale-data warning when a new sort overtakes the reload", async () => {
+      const reload = deferred<CareContractList>();
+      api.sendCareContracts.mockResolvedValue({
+        sent: [DRAFT.id],
+        skipped: [],
+      });
+      renderPage();
+      await screen.findAllByText("Lina Muster");
+      api.fetchCareContracts
+        .mockReturnValueOnce(reload.promise)
+        .mockResolvedValueOnce({
+          contracts: [SENT],
+          counts: { versendet: 1 },
+          hasMore: false,
+          revision: "2",
+        });
+      fireEvent.click(
+        screen.getAllByLabelText("Vertrag von Lina Muster auswählen")[0]!,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "1 Entwurf senden" }));
+      await waitFor(() =>
+        expect(api.fetchCareContracts).toHaveBeenCalledTimes(2),
+      );
+      sortByChild();
+      await act(async () =>
+        reload.resolve({
+          contracts: [DRAFT],
+          counts: { entwurf: 1 },
+          hasMore: false,
+          revision: "1",
+        }),
+      );
+      // Anker: Die neue Sortierung hat ihre eigenen Daten geladen.
+      expect((await screen.findAllByText("Ben Muster"))[0]).toBeVisible();
+      expect(
+        screen.queryByText(SAVED_BUT_STALE_SUFFIX, { exact: false }),
+      ).not.toBeInTheDocument();
+    });
+
     it.each([401, 403])(
       "loads the page anew after the reload refuses access (%s)",
       async (status) => {

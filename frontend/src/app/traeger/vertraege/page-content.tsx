@@ -23,7 +23,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type MouseEvent, useMemo, useState } from "react";
+import { type MouseEvent, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { CareContractCreateModal } from "~/components/traeger/care-contract-create-modal";
 import {
@@ -75,6 +75,7 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
+import { isDiscardedAnswer } from "~/lib/swr/hooks";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   type CareContractList,
@@ -362,10 +363,12 @@ export default function TraegerVertraegePage() {
     schoolId,
     search: term,
   });
+  const listAccess = useTraegerListRequest(traegerContractKeys.listFamily);
   const firstPage = useFreshTraegerResource(
     listKey,
-    () => fetchCareContracts({ ...filter, offset: 0 }),
+    () => listAccess.read(() => fetchCareContracts({ ...filter, offset: 0 })),
     "die Liste der Verträge",
+    { refusalKey: traegerContractKeys.listFamily },
   );
   const candidateRead = useTraegerResource(
     traegerContractKeys.candidates(),
@@ -391,9 +394,7 @@ export default function TraegerVertraegePage() {
     null,
   );
   const shownPage = useLatest(firstPage.data);
-  const listRequest = useTraegerListRequest(listKey, () => {
-    setMore(null);
-  });
+  const pendingPage = useRef<symbol | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
@@ -411,6 +412,7 @@ export default function TraegerVertraegePage() {
     setSelected(new Set());
     setCreating(false);
   }
+  if (firstPage.refused && more) setMore(null);
 
   const data = useMemo<PageData | null>(() => {
     if (!firstPage.data || !candidateRead.data || !modeRead.data) return null;
@@ -445,18 +447,25 @@ export default function TraegerVertraegePage() {
   const loadMore = async () => {
     const after = firstPage.data;
     if (!after || !data || after !== shownPage.current || loadingMore) return;
+    const attempt = Symbol();
+    pendingPage.current = attempt;
+    const isCurrent = () =>
+      pendingPage.current === attempt && shownPage.current === after;
     setLoadingMoreFor(after);
     setMoreErrorFor(null);
     moreLoad.clear();
     try {
-      const page = await listRequest(() =>
-        fetchCareContracts({
-          ...filter,
-          offset: data.list.contracts.length,
-          revision: after.revision,
-        }),
+      const answer = await listAccess.request(
+        () =>
+          fetchCareContracts({
+            ...filter,
+            offset: data.list.contracts.length,
+            revision: after.revision,
+          }),
+        listKey,
       );
-      if (!page || shownPage.current !== after) return;
+      if (!answer?.isCurrent() || !isCurrent()) return;
+      const page = answer.result;
       if (page.revision !== after.revision) {
         // The server answered page one because the sorted result changed.
         await firstPage.mutate(page, { revalidate: false });
@@ -474,7 +483,7 @@ export default function TraegerVertraegePage() {
             : page,
       }));
     } catch (err) {
-      if (!isRefusal(err) && shownPage.current === after) {
+      if (!isRefusal(err) && isCurrent()) {
         setMoreErrorFor(after);
         await moreLoad.show(err, {
           object: "die Liste der Verträge",
@@ -482,8 +491,16 @@ export default function TraegerVertraegePage() {
         });
       }
     } finally {
-      setLoadingMoreFor((current) => (current === after ? null : current));
+      if (pendingPage.current === attempt) {
+        pendingPage.current = null;
+        setLoadingMoreFor(null);
+      }
     }
+  };
+
+  const cancelPagination = () => {
+    pendingPage.current = null;
+    setLoadingMoreFor(null);
   };
 
   // Reload after a send: a failure there is a load error above the
@@ -491,7 +508,15 @@ export default function TraegerVertraegePage() {
   // older pages loaded below the first.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Verträge",
-    firstPage.reloadOrThrow,
+    async () => {
+      cancelPagination();
+      try {
+        await firstPage.reloadOrThrow();
+      } catch (error) {
+        // A newer sort or refresh taking over is not a load failure.
+        if (!isDiscardedAnswer(error)) throw error;
+      }
+    },
   );
 
   const loading = !loadError && !afterWrite.error && !data;
@@ -547,6 +572,7 @@ export default function TraegerVertraegePage() {
       });
       void actionError.show(err, { object: "das Senden der Entwürfe" });
       setSelected(new Set());
+      cancelPagination();
       invalidateOtherLists();
       await firstPage.mutate();
       setSending(false);
@@ -595,6 +621,7 @@ export default function TraegerVertraegePage() {
       invalidateOtherLists();
       await afterWrite.refresh();
     } else {
+      cancelPagination();
       void invalidateFamily(traegerContractKeys.listFamily);
       setStatus("entwurf");
     }
@@ -657,8 +684,8 @@ export default function TraegerVertraegePage() {
   // #7409: „Verträge erstellen“ is the one visible head action; the import
   // and the export („Herunterladen“) sit in the page menu.
   const exportItems = useTraegerListExportItems({
-    download: (format) =>
-      listRequest(() =>
+    download: async (format) => {
+      const answer = await listAccess.request(() =>
         downloadTraegerList(
           bffFile("org", "GET /traeger/contracts/export", {
             query: listExportQuery(format, {
@@ -671,7 +698,9 @@ export default function TraegerVertraegePage() {
             }),
           }),
         ),
-      ),
+      );
+      return answer && { ...answer.result, isCurrent: answer.isCurrent };
+    },
     scope: traegerExportScope(
       schools.find((school) => school.value === schoolId)?.label,
     ),

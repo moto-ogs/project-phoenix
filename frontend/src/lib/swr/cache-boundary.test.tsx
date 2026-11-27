@@ -131,6 +131,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
+    "isDiscardedAnswer",
     "revalidateOrThrow",
     "useDiscardRefusedEntity",
     "useImmutableSWR",

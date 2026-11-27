@@ -1360,6 +1360,8 @@ export function useSWRRequestGuard() {
   );
 }
 
+export { isDiscardedAnswer };
+
 /** Resolve a factory key for cache reads/seeds without duplicating session scoping. */
 export function useSWRCacheKey() {
   const { prefix } = useSWRScope();
