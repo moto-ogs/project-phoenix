@@ -591,6 +591,8 @@ export default function TraegerInvoiceJournalPage() {
     "",
   );
   const [run, setRun] = useState<InvoiceJournalFilter["run"]>(null);
+  // A jump drops a search still being typed, so it cannot come back after.
+  const [jumps, setJumps] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const { show: showActionError } = useApiErrorDisplay();
 
@@ -891,6 +893,7 @@ export default function TraegerInvoiceJournalPage() {
   // A jump shows its target whatever was filtered before: the document a
   // reference names with all that refers to it, or one whole number range.
   const showReference = useCallback((number: string) => {
+    setJumps((count) => count + 1);
     setRange(undefined);
     setDocumentType("");
     setNumberRange(null);
@@ -899,6 +902,7 @@ export default function TraegerInvoiceJournalPage() {
     setSearch(number);
   }, []);
   const showRange = (next: JournalRangeFilter) => {
+    setJumps((count) => count + 1);
     resetAll();
     setNumberRange(next);
   };
@@ -946,6 +950,7 @@ export default function TraegerInvoiceJournalPage() {
         onChange: setSearch,
         placeholder: "Nummer oder Empfänger",
         debounceMs: SEARCH_PAUSE_MS,
+        resetKey: jumps,
       }}
       filters={filters}
       activeFilters={activeFilters}
@@ -955,7 +960,9 @@ export default function TraegerInvoiceJournalPage() {
       <NumberGaps
         gaps={gaps}
         severalIssuers={severalIssuers}
-        shownRange={rangeValue}
+        // The jump stays while a search or another filter hides rows of
+        // the range.
+        shownRange={searching || activeFilters.length > 1 ? "" : rangeValue}
         checkedCount={filtered ? allCount : null}
         onShowRange={showRange}
       />

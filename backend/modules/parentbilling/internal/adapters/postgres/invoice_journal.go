@@ -22,7 +22,7 @@ import (
 // name its number range together with issuer_key.
 const journalRowsSQL = `
 	SELECT 'holiday'::text AS source, document.id, 'holiday'::text AS run_kind, document.run_id, run.period_name AS run_name,
-		NULL::date AS run_month, NULL::int AS run_year, document.service::text AS service, document.issuer_key::text AS issuer_key,
+		NULL::date AS run_month, NULL::int AS run_year, run.issued_on AS run_issued_on, document.service::text AS service, document.issuer_key::text AS issuer_key,
 		COALESCE(document.issuer->>'body', '') AS issuer_body, COALESCE(document.issuer->>'name', '') AS issuer_name,
 		document.number::text AS number, document.number_year::int AS number_year, document.number_sequence, document.issued_on,
 		CASE document.kind WHEN 'invoice' THEN document.document_kind ELSE document.kind END::text AS document_type,
@@ -36,7 +36,7 @@ const journalRowsSQL = `
 		ON reference.organization_id = document.organization_id AND reference.id = document.reference_document_id
 	WHERE document.organization_id = ?0
 	UNION ALL
-	SELECT 'care_invoice', invoice.id, 'care', invoice.run_id, '', run.billing_month, NULL, 'care', invoice.issuer_key,
+	SELECT 'care_invoice', invoice.id, 'care', invoice.run_id, '', run.billing_month, NULL, run.issued_on, 'care', invoice.issuer_key,
 		COALESCE(invoice.issuer->>'body', ''), COALESCE(invoice.issuer->>'name', ''),
 		invoice.number, invoice.number_year, invoice.number_sequence, invoice.issued_on, invoice.document_kind,
 		invoice.recipient_first_name, invoice.recipient_last_name, invoice.total_cents, COALESCE(replaced.number, ''),
@@ -47,7 +47,7 @@ const journalRowsSQL = `
 		ON replaced.organization_id = invoice.organization_id AND replaced.id = invoice.replaces_invoice_id
 	WHERE invoice.organization_id = ?0
 	UNION ALL
-	SELECT 'care_cancellation', cancellation.id, 'care', cancellation.run_id, '', run.billing_month, NULL, 'care', cancellation.issuer_key,
+	SELECT 'care_cancellation', cancellation.id, 'care', cancellation.run_id, '', run.billing_month, NULL, run.issued_on, 'care', cancellation.issuer_key,
 		COALESCE(invoice.issuer->>'body', ''), COALESCE(invoice.issuer->>'name', ''),
 		cancellation.number, cancellation.number_year, cancellation.number_sequence, cancellation.issued_on, 'cancellation',
 		invoice.recipient_first_name, invoice.recipient_last_name, cancellation.total_cents, invoice.number, 'cancels'
@@ -57,7 +57,7 @@ const journalRowsSQL = `
 	JOIN parent_billing.care_runs AS run ON run.organization_id = cancellation.organization_id AND run.id = cancellation.run_id
 	WHERE cancellation.organization_id = ?0
 	UNION ALL
-	SELECT 'care_notice', notice.id, 'care_notice', notice.run_id, '', NULL, run.billing_year, 'care', notice.issuer_key,
+	SELECT 'care_notice', notice.id, 'care_notice', notice.run_id, '', NULL, run.billing_year, run.issued_on, 'care', notice.issuer_key,
 		COALESCE(notice.issuer->>'body', ''), COALESCE(notice.issuer->>'name', ''),
 		notice.number, notice.number_year, notice.number_sequence, notice.issued_on, 'fee_notice',
 		COALESCE(notice.recipient->>'first_name', ''), COALESCE(notice.recipient->>'last_name', ''), notice.total_cents,
@@ -148,7 +148,7 @@ const journalTailSQL = `, source, id) AS position
 	FROM gaps JOIN ranges USING (issuer_key, service, number_year)),
  run_options AS (
 	SELECT run_kind, run_id, max(run_name) AS run_name, max(run_month) AS run_month, max(run_year) AS run_year,
-		max(issued_on) AS last_issued_on
+		max(run_issued_on) AS run_issued_on
 	FROM journal GROUP BY run_kind, run_id)
  SELECT COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY position) FROM page), '[]'::jsonb) AS documents,
 	(SELECT count(*) FROM filtered) AS total_count,
@@ -157,7 +157,7 @@ const journalTailSQL = `, source, id) AS position
 		FROM named_gaps), '[]'::jsonb) AS gaps,
 	COALESCE((SELECT jsonb_agg(to_jsonb(ranges) ORDER BY number_year DESC, service, issuer_name, issuer_key) FROM ranges), '[]'::jsonb)
 		AS number_ranges,
-	COALESCE((SELECT jsonb_agg(to_jsonb(run_options) ORDER BY last_issued_on DESC, run_kind, run_id DESC) FROM run_options), '[]'::jsonb)
+	COALESCE((SELECT jsonb_agg(to_jsonb(run_options) ORDER BY run_issued_on DESC, run_kind, run_id DESC) FROM run_options), '[]'::jsonb)
 		AS runs`
 
 // The journal as a page, the newest document first, and as a file, every
@@ -212,7 +212,7 @@ type journalRunRow struct {
 	RunName  string         `json:"run_name"`
 	RunMonth *calendar.Date `json:"run_month"`
 	RunYear  *int           `json:"run_year"`
-	IssuedOn *calendar.Date `json:"last_issued_on"`
+	IssuedOn *calendar.Date `json:"run_issued_on"`
 }
 
 // journalIssuer is the issuer a row names: the Träger for the empty key.

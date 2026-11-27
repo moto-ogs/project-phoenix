@@ -116,9 +116,9 @@ type JournalRun struct {
 	Name  string         `json:"name"`
 	Month *calendar.Date `json:"month"`
 	Year  int            `json:"year"`
-	// IssuedOn is the latest issue day of the run's documents, where the
-	// run stands as a choice of the filter: two runs of one period or month
-	// are told apart by it. Nil on the run of a document.
+	// IssuedOn is the issue day of the run, where the run stands as a
+	// choice of the filter: two runs of one period or month are told apart
+	// by it. A later Storno does not move it. Nil on the run of a document.
 	IssuedOn *calendar.Date `json:"issued_on"`
 }
 
