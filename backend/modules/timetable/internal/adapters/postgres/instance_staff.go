@@ -32,6 +32,7 @@ type instanceStaffRow struct {
 	BlockStartTime *string `bun:"block_start_time,scanonly"`
 	BlockEndTime   *string `bun:"block_end_time,scanonly"`
 	BlockStatus    *string `bun:"block_status,scanonly"`
+	BlockRoomID    *int64  `bun:"block_room_id,scanonly"`
 }
 
 func (s *Store) FindInstanceStaff(ctx context.Context, id int64) (timetable.InstanceStaff, bool, domain.OperationStats, error) {
@@ -94,7 +95,8 @@ func filterInstanceStaffChanges(query *bun.SelectQuery, filter timetable.Instanc
 			ColumnExpr(`"activity_instance".title AS block_title`).
 			ColumnExpr(`to_char("activity_instance".start_time, 'HH24:MI') AS block_start_time`).
 			ColumnExpr(`to_char("activity_instance".end_time, 'HH24:MI') AS block_end_time`).
-			ColumnExpr(`"activity_instance".status AS block_status`)
+			ColumnExpr(`"activity_instance".status AS block_status`).
+			ColumnExpr(`COALESCE("instance_staff".room_id, "activity_instance".room_id) AS block_room_id`)
 	}
 	if !filter.StaffChangesOnly {
 		return query
@@ -325,8 +327,12 @@ func instanceStaffBlock(row instanceStaffRow) *timetable.InstanceStaffBlock {
 	if row.BlockTitle == nil || row.BlockStartTime == nil || row.BlockEndTime == nil {
 		return nil
 	}
-	return &timetable.InstanceStaffBlock{
+	block := &timetable.InstanceStaffBlock{
 		Title: *row.BlockTitle, StartTime: *row.BlockStartTime, EndTime: *row.BlockEndTime,
 		Cancelled: row.BlockStatus != nil && *row.BlockStatus == timetable.InstanceStatusCancelled,
 	}
+	if row.BlockRoomID != nil {
+		block.RoomID = *row.BlockRoomID
+	}
+	return block
 }

@@ -181,7 +181,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Classes:      dayChangesClasses{sources: sources, classDay: classDay},
 		MealPlan:     dayChangesMealPlan{reads: sources.MealPlan},
 		Appointments: dayChangesAppointments{caller: sources.Caller, reads: sources.Appointments},
-		RoomClosures: dayChangesRoomClosures{reads: sources.RoomClosures, linkRoom: true},
+		RoomClosures: dayChangesRoomClosures{reads: sources.RoomClosures, linkRoom: true, planned: plannedRoomsOf(sources.Blocks), caller: sources.Caller},
 		Logger:       sources.Logger,
 	})
 }

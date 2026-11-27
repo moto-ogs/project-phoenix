@@ -1070,6 +1070,8 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
           // Gesperrte Räume in „Heute anders" (#8161), api/day_changes_room_closures.go.
           "Ist ein Raum heute gesperrt, steht er unter `Schule` mit dem Grund. Termine dort bleiben, bis die Leitung sie in einen anderen Raum verlegt.",
+          // #8234: eigener Termin im gesperrten Raum.
+          "Hast du heute einen Termin in dem gesperrten Raum, steht die Sperre unter `Betrifft dich`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           // Vorschau auf morgen (#7657), components/home/day-switch.tsx.
@@ -8577,7 +8579,7 @@ export const roomsCatalogTopic = function roomsCatalogTopic(
       {
         title: "Einen Raum sperren",
         description:
-          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort. Am Tag der Sperre sieht das Team den Raum mit dem Grund auf der `Startseite` unter `Heute anders`.",
+          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort. Wer in der Zeit einen Termin im Raum hat, bekommt den Hinweis `Raum gesperrt`. Am Tag der Sperre sieht das Team den Raum mit dem Grund auf der `Startseite` unter `Heute anders`.",
         steps: [
           "Öffne `Räume` und wähle den Raum aus der Liste.",
           "Öffne den Reiter `Stammdaten`.",
@@ -9248,6 +9250,8 @@ export const staffNotificationsTopic =
         "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
         // #8178: Hinweis zur geänderten Öffnungszeit.
         "Öffnet oder schließt die OGS an einem Tag zu anderen Zeiten, bekommen alle im Team einen Hinweis. Darin stehen der Tag und die Uhrzeit.",
+        // #8234: Hinweis „Raum gesperrt“.
+        "Sperrt die Leitung einen Raum, in dem du in der Zeit einen Termin hast, steht hier `Raum gesperrt`. Darin stehen der Raum, die Tage und der Grund. Der Termin bleibt im Raum, bis die Leitung ihn verlegt. Ein Klick darauf öffnet deinen Dienstplan.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für deine eigenen Nachweise gibt es `Eigene Nachweise`.",
@@ -9257,7 +9261,7 @@ export const staffNotificationsTopic =
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was du auf dem Handy gelesen hast, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Du kannst auch `Weitere laden` wählen.",
-        "Zusätzlich kann moto dir eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
+        "Zusätzlich kann moto dir eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen, gesperrten Räumen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellst du in deinem `Profil` unter `Benachrichtigungen` für jede Art ein. Schaltest du sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Du kannst sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
@@ -9277,6 +9281,7 @@ export const staffNotificationsTopic =
         "Es kommt kein Hinweis zum Stundenplan einer Klasse? Deine Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einem Schließtag? Deine Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Deine Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage deine Leitung.",
+        "Es kommt kein Hinweis zu einem gesperrten Raum? Deine Schule kann `Benachrichtigung bei gesperrtem Raum` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Deine Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Frage deine Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Deine Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Frage deine Leitung.",

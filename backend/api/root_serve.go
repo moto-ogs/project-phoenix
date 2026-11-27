@@ -286,22 +286,20 @@ func composeServeRoot(
 		func() (err error) {
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
-			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service,
-				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
-				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
-				presence.SessionRecords, presence.Presence, workTime, calendar)
+			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service, audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest, structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable), presence.SessionRecords, presence.Presence, workTime, calendar)
 			return
 		},
 		func() (err error) {
 			messaging = owners.NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), env.Now, organizations)
-			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
-				DB: db.Pool(), Observe: env.Observe.Communication,
-			})
+			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{DB: db.Pool(), Observe: env.Observe.Communication})
 			return
 		},
 		func() (err error) {
-			notifications, err = owners.BuildDeliveryNotifications(db, unit, env, pushVAPID, hub, delivery, settings.Service,
-				consent, identity, people, structure, workTime, messaging, membership)
+			notifications, err = owners.BuildDeliveryNotifications(db, unit, env, pushVAPID, hub, delivery, settings.Service, consent, identity, people, structure, workTime, messaging, membership)
+			return
+		},
+		func() (err error) { // after Delivery: a closed room tells the staff planned there (#8234)
+			facilitiesRooms.Closures, err = owners.NoticeRoomClosures(db, facilitiesRooms.Closures, notifications, people.Staff, roomClosureActor, env.Now)
 			return
 		},
 		func() (err error) { // after Delivery: a changed menu tells the families (#7145)

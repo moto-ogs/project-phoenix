@@ -41,3 +41,8 @@ const KeyNotificationsSchoolClosingDayEnabled = "notifications.school_closing_da
 // about an entered, changed or deleted opening change (#8178): neither feed
 // entry nor push is written then, for the team, the families nor the Träger.
 const KeyNotificationsOpeningChangeEnabled = "notifications.opening_change_enabled"
+
+// KeyNotificationsRoomClosedEnabled lets a school switch off the notice to
+// the staff planned in a room it closes (#8234): neither feed entry nor push
+// is written then.
+const KeyNotificationsRoomClosedEnabled = "notifications.room_closed_enabled"
