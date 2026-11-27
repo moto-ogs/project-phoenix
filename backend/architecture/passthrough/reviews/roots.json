@@ -5861,11 +5861,6 @@
       "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
     },
     {
-      "decision": "0075",
-      "id": "roots/owners/traegerOpeningChangeNotices.NotifySchool",
-      "reason": "Transaction wrapper (ADR 0075) for the Träger opening change notices (#8231): opens a tenant transaction of each named school on its own beside the caller's Träger transaction and marks that transaction for rollback when the notice fails."
-    },
-    {
       "decision": "0090",
       "id": "roots/owners/weeklyApprovalAdapter.AuditDepartureModes",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

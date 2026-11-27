@@ -5066,17 +5066,6 @@
       "target_owner": "identity-access"
     },
     {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.OpeningChangeNotices.NotifySchool",
-      "reason": "Platform protocol participation (scope): school-calendar reaches tenant.MarkRollback (tenant-runtime) through roots/owners.traegerOpeningChangeNotices.NotifySchool (#8231). A failed notice to a named school marks the caller's Träger transaction for rollback, so the Träger's write does not stand without its notices; transaction correctness stays with the platform behavior tests (ADR 0098).",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.MarkRollback",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerOpeningChangeNotices.NotifySchool",
       "classification": "query",
       "effect": "query",
