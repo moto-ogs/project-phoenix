@@ -81,7 +81,10 @@ export const OUTGOING = new Set([
 const FORMAL_ANYWHERE = /\b(Sie|Ihnen|Ihre?[mnrs]?)\b/;
 // The du- and ihr-forms of an outgoing text, with the verb forms that only
 // they use.
-const INFORMAL = /(?<![\p{L}\p{N}_])([Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|ihr|[Kk]annst|[Mm]usst|[Hh]ast|[Bb]ist|[Ww]irst|[Ff]indest|[Ee]rhältst|[Mm]öchtest|[Dd]arfst|[Ss]iehst|[Bb]rauchst|[Bb]ekommst|[Hh]abt|[Ss]eid|[Mm]üsst|[Kk]önnt)(?![\p{L}\p{N}_])/gu;
+const INFORMAL = /(?<![\p{L}\p{N}_])([Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|ihr|[Kk]annst|[Mm]usst|[Hh]ast|[Bb]ist|[Ww]irst|[Ff]indest|[Ee]rhältst|[Mm]öchtest|[Dd]arfst|[Ss]iehst|[Bb]rauchst|[Bb]ekommst|[Hh]abt|[Ss]eid|[Mm]üsst|[Kk]önnt|[Dd]ürft|[Ww]ollt|[Ss]ollt|[Ww]isst)(?![\p{L}\p{N}_])/gu;
+// An imperative after „Bitte“ in the du- or ihr-form („Bitte öffne“, „Bitte
+// öffnet“); the Sie-form ends in -n („Bitte öffnen Sie“).
+const INFORMAL_PLEASE = /(?<![\p{L}\p{N}_])[Bb]itte (?!(?:nicht|erst|jetzt|direkt|sofort|selbst|rechtzeitig|bald|gut|unbedingt)(?![\p{L}]))(\p{L}+[et])(?![\p{L}\p{N}_])/gu;
 
 const FORMAL = /(?<![\p{L}\p{N}_])(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)(?![\p{L}\p{N}_])/gu;
 // Abbreviations whose dot does not end a sentence („z. B. Ihre …“).
@@ -160,12 +163,14 @@ function atSentenceStart(text, index) {
 export function findInformalAddress(text) {
   let quoted;
   const hits = [];
-  for (const match of text.matchAll(INFORMAL)) {
-    quoted ??= quotedRanges(text);
-    if (quoted.some(([start, end]) => match.index > start && match.index < end)) continue;
-    hits.push({ index: match.index, word: match[1] });
+  for (const pattern of [INFORMAL, INFORMAL_PLEASE]) {
+    for (const match of text.matchAll(pattern)) {
+      quoted ??= quotedRanges(text);
+      if (quoted.some(([start, end]) => match.index > start && match.index < end)) continue;
+      hits.push({ index: match.index, word: match[1] ?? match[0] });
+    }
   }
-  return hits;
+  return hits.sort((left, right) => left.index - right.index);
 }
 
 // The two directions of the check: a portal text must not say „Sie“, an

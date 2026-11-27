@@ -61,6 +61,8 @@ describe('findInformalAddress', () => {
     assert.deepEqual(informal('Euer Kind ist angemeldet. Eure OGS.'), ['Euer', 'Eure']);
     assert.deepEqual(informal('Das müsst ihr nicht tun.'), ['müsst', 'ihr']);
     assert.deepEqual(informal('Falls du das nicht warst, kannst du sie ignorieren.'), ['du', 'kannst', 'du']);
+    assert.deepEqual(informal('Bitte öffnet den Anhang. Ihr dürft den Link weitergeben.'), ['öffnet', 'dürft']);
+    assert.deepEqual(informal('Bitte prüfe die Angaben.'), ['prüfe']);
   });
 
   test('passes the Sie-form, other words and quoted text', () => {
@@ -68,6 +70,7 @@ describe('findInformalAddress', () => {
     assert.deepEqual(informal('Dirk und Duisburg, durch das Dach, Ihre Durchwahl, Dienstag.'), []);
     assert.deepEqual(informal('Im Portal heißt der Bereich „Deine Kinder“.'), []);
     assert.deepEqual(informal('Die Kosten übernimmt das Amt. Das ist erst ab Herbst fest.'), []);
+    assert.deepEqual(informal('Bitte öffnen Sie den Anhang. Bitte nicht überweisen. Bitte erst morgen.'), []);
   });
 });
 
@@ -214,7 +217,7 @@ test('e-mail templates are outgoing text without their comments', () => {
     '<p>Sie können sich jetzt anmelden.</p>',
   ].join('\n');
   const { findings, staleMarkers } = check(source, templateTokens, OUTGOING_TEXT);
-  assert.deepEqual(findings.map(finding => [finding.line, finding.word]), [[8, 'dir']]);
+  assert.deepEqual(findings.map(finding => [finding.line, finding.word]), [[3, 'bestätige'], [8, 'dir']]);
   assert.deepEqual(staleMarkers, []);
 });
 
@@ -324,6 +327,7 @@ describe('checkRepository', () => {
       'backend/modules/x/letter.go',
       'backend/modules/x/letter.go',
       'backend/modules/x/text.go',
+      'backend/templates/email/invite.html',
       'backend/templates/email/invite.html',
       'frontend/.storybook/fixtures/slots.tsx',
       'frontend/.storybook/fixtures/slots.tsx',

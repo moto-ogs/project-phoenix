@@ -4290,7 +4290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.qualificationMailOutbox.Enqueue",
-      "binding_digest": "a97b7b0cab1f0722d4a4273e8f7da1c8",
+      "binding_digest": "fc930f14abd7dc55730abe37f1ae03c2",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
@@ -4298,7 +4298,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.qualificationMailOutbox.Enqueue",
-      "binding_digest": "fd1a8aa46b143538f5676b4f7c3a758b",
+      "binding_digest": "f9fb3a51b7c25325282750462b9e8585",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
