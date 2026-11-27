@@ -228,9 +228,10 @@ function MessagesInboxContent() {
       <SearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        // Kurz, damit er neben „Nur ungelesene“ auch auf 375 px ganz
-        // steht, und sagt, dass auch das Kind gefunden wird (Runde 13).
-        placeholder="Name oder Kind"
+        // Kurz, damit er neben „Ungelesene“ auch auf 375 px ganz steht
+        // (Runde 21: „Name oder Kind“ wurde abgeschnitten), und sagt, dass
+        // auch das Kind gefunden wird (Runde 13).
+        placeholder="Name, Kind"
         inputProps={{ "aria-label": "Person oder Kind suchen" }}
         className="min-w-0 flex-1"
       />
@@ -247,7 +248,7 @@ function MessagesInboxContent() {
           <FunnelSimpleIcon size={16} className="mr-1.5" aria-hidden />
         )}
         {/* Beschriftet als Filter (Runde 11); die Zahl steht am Ende der
-            Liste. Ohne „Nur“ (Runde 13), damit „Name oder Kind“ am SE ganz
+            Liste. Ohne „Nur“ (Runde 13), damit der Platzhalter am SE ganz
             im Suchfeld steht. */}
         Ungelesene
       </ToggleChip>
@@ -302,7 +303,7 @@ function MessagesInboxContent() {
       aria-expanded={appSearchShown}
       tabIndex={inCompactHead ? -1 : undefined}
       // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
-      className={inCompactHead ? "mr-1" : "mr-3"}
+      className={inCompactHead ? "mr-1" : undefined}
       tooltip={
         appSearchShown
           ? "Schließt Suche und Filter und zeigt wieder alle Unterhaltungen."
@@ -319,6 +320,17 @@ function MessagesInboxContent() {
     </Button>
   );
   const appSearchButton = isApp ? renderAppSearchButton(false) : null;
+  // Runde 21: Die Zahl der ungelesenen Unterhaltungen steht wie am Desktop
+  // im Kopf (neben dem Titel) und beim Rollen im schmalen Kopf.
+  const appUnread =
+    isApp && unreadThreads > 0 ? (
+      // `tracking-tight`: Am SE fehlen der Zeile sonst 3 px neben Titel,
+      // Lupe und „…“.
+      <span className="tracking-tight whitespace-nowrap tabular-nums">
+        <span className="font-semibold text-gray-900">{unreadThreads}</span>{" "}
+        ungelesen
+      </span>
+    ) : null;
   const bodyReplaced =
     !showSkeleton && !hasThreads && !composeOpen && !appFilterEmpty;
 
@@ -330,10 +342,22 @@ function MessagesInboxContent() {
       // den Unterhaltungen, und der Kopf bleibt zweizeilig.
       tabs={isApp && appSearchShown ? undefined : messagesTabs("conversations")}
       // Runde 17: Am Telefon steht die Kopfkarte zweizeilig (Titel, Reiter);
-      // die Kennzahlen stehen am Ende der Liste, die ungelesenen
-      // Unterhaltungen sind fett und tragen ihre Zahl.
-      stats={isApp ? undefined : inboxSummary}
-      appCompactStats={isApp ? renderAppSearchButton(true) : undefined}
+      // die Gesamtzahl steht am Ende der Liste. Runde 21: Die Zahl der
+      // ungelesenen steht in der Titelzeile.
+      stats={isApp ? appUnread : inboxSummary}
+      appStatsInline={isApp}
+      // Runde 21: Beim Rollen bleiben Titel, Ungelesen-Zahl und Lupe; die
+      // Reiter rollen mit weg. Eine offene Suche klebt weiter, solange
+      // getippt wird.
+      appToolbarScrollsAway={isApp && !appSearchShown}
+      appCompactStats={
+        isApp ? (
+          <span className="flex items-center gap-2">
+            {appUnread}
+            {renderAppSearchButton(true)}
+          </span>
+        ) : undefined
+      }
       statsLoading={showSkeleton}
       actions={isApp ? appSearchButton : composeButton}
       overflowMenu={[
