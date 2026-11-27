@@ -55,6 +55,7 @@ import type {
   FilterConfig,
   ActiveFilter,
   FilterSection,
+  OverflowMenuEntry,
 } from "~/components/ui/page-header/types";
 import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
@@ -3490,6 +3491,73 @@ function SearchPageContent() {
   // only the results region skeletonizes while the session resolves. Note:
   // with required: true, unauthenticated users are auto-redirected to login.
 
+  // Die Einträge des „⋮“ am Computer. Am Telefon stehen sie direkt im „…“
+  // der Kopfkarte, statt als zweites Menü darin (#8070, Erreichbarkeit).
+  const searchMenuItems: OverflowMenuEntry[] = [
+    ...childScope.menuItems,
+    {
+      // Abwesenheits-Übersicht (#2288): bewusst kein eigener
+      // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
+      // ohnehin nach einem Kind sucht.
+      label: "Abwesenheiten",
+      description: "Öffnet die Übersicht, welche Kinder wann fehlen.",
+      icon: <CalendarRange className="h-4 w-4" aria-hidden />,
+      onClick: () => router.push("/absences"),
+    },
+    // Der Export verlangt users:read; der Gast hat es nicht.
+    ...(canExportStudents(session)
+      ? [
+          {
+            label: "Exportieren",
+            description:
+              "Öffnet den Export der Kinder aus der aktuellen Filterung.",
+            icon: <Download className="h-4 w-4" aria-hidden />,
+            onClick: () => setIsExportOpen(true),
+            // Erst wenn feststeht, ob der gespeicherte Filter
+            // nach Anmeldeangaben gilt.
+            disabled: awaitsEnrollmentAnswerAccess,
+            badge: rowsLoaded ? filteredStudents.length : undefined,
+          },
+        ]
+      : []),
+    // Nur mit vollständig geladenen, sichtbaren Kindern: ein
+    // Brief an eine abgeschnittene Liste würde Empfänger
+    // auslassen.
+    ...(parentAnnouncementsAvailable &&
+    rowsLoaded &&
+    !isSearchResultValidating &&
+    !hasLoadError &&
+    truncatedTotal === null &&
+    filteredStudents.length > 0
+      ? [
+          {
+            label: "Elternbrief schreiben",
+            description:
+              "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
+            icon: <FileText className="h-4 w-4" aria-hidden />,
+            onClick: writeParentLetter,
+            badge: filteredStudents.length,
+          },
+        ]
+      : []),
+    // Die Spaltenwahl der Liste (#3834) steht hier und nicht
+    // als eigener Knopf neben dem Umschalter.
+    ...(showTable && !isPhone
+      ? columnMenuEntries(
+          tableColumns,
+          collectionView.hiddenColumns,
+          collectionView.setColumnVisible,
+        )
+      : []),
+    ...(showTable && isPhone
+      ? phoneDetailMenuEntries(
+          tableColumns,
+          collectionView.phoneDetail,
+          collectionView.setPhoneDetail,
+        )
+      : []),
+  ];
+
   return (
     <>
       {/* Kopfkarte wie auf jeder Tenant-Seite: Titel, Statuszeile, Aktionen,
@@ -3505,87 +3573,26 @@ function SearchPageContent() {
         stats={studentSummary?.summary}
         appCompactStats={studentSummary?.compact ?? undefined}
         statsLoading={!hasFetchedOnce || isDateTransition}
+        overflowMenu={appView ? searchMenuItems : undefined}
+        // Am Telefon gibt es nur die Zeilenliste (kein Umschalter), und die
+        // Menüeinträge stehen direkt im „…“ (`overflowMenu`).
         actions={
-          <>
-            {appView ? null : (
+          appView ? undefined : (
+            <>
               <CollectionViewSwitch
                 value={collectionView.view}
                 onChange={changeView}
               />
-            )}
-            {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
+              {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
                 dieses Menü erreicht man die Aufsicht, wenn die Schule Kinder
                 nur hier finden lässt (#1321). */}
-            <OverflowMenu
-              tourTarget="child-search-menu"
-              items={[
-                ...childScope.menuItems,
-                {
-                  // Abwesenheits-Übersicht (#2288): bewusst kein eigener
-                  // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
-                  // ohnehin nach einem Kind sucht.
-                  label: "Abwesenheiten",
-                  description:
-                    "Öffnet die Übersicht, welche Kinder wann fehlen.",
-                  icon: <CalendarRange className="h-4 w-4" aria-hidden />,
-                  onClick: () => router.push("/absences"),
-                },
-                // Der Export verlangt users:read; der Gast hat es nicht.
-                ...(canExportStudents(session)
-                  ? [
-                      {
-                        label: "Exportieren",
-                        description:
-                          "Öffnet den Export der Kinder aus der aktuellen Filterung.",
-                        icon: <Download className="h-4 w-4" aria-hidden />,
-                        onClick: () => setIsExportOpen(true),
-                        // Erst wenn feststeht, ob der gespeicherte Filter
-                        // nach Anmeldeangaben gilt.
-                        disabled: awaitsEnrollmentAnswerAccess,
-                        badge: rowsLoaded ? filteredStudents.length : undefined,
-                      },
-                    ]
-                  : []),
-                // Nur mit vollständig geladenen, sichtbaren Kindern: ein
-                // Brief an eine abgeschnittene Liste würde Empfänger
-                // auslassen.
-                ...(parentAnnouncementsAvailable &&
-                rowsLoaded &&
-                !isSearchResultValidating &&
-                !hasLoadError &&
-                truncatedTotal === null &&
-                filteredStudents.length > 0
-                  ? [
-                      {
-                        label: "Elternbrief schreiben",
-                        description:
-                          "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
-                        icon: <FileText className="h-4 w-4" aria-hidden />,
-                        onClick: writeParentLetter,
-                        badge: filteredStudents.length,
-                      },
-                    ]
-                  : []),
-                // Die Spaltenwahl der Liste (#3834) steht hier und nicht
-                // als eigener Knopf neben dem Umschalter.
-                ...(showTable && !isPhone
-                  ? columnMenuEntries(
-                      tableColumns,
-                      collectionView.hiddenColumns,
-                      collectionView.setColumnVisible,
-                    )
-                  : []),
-                ...(showTable && isPhone
-                  ? phoneDetailMenuEntries(
-                      tableColumns,
-                      collectionView.phoneDetail,
-                      collectionView.setPhoneDetail,
-                    )
-                  : []),
-              ]}
-              ariaLabel="Weitere Aktionen"
-            />
-          </>
+              <OverflowMenu
+                tourTarget="child-search-menu"
+                items={searchMenuItems}
+                ariaLabel="Weitere Aktionen"
+              />
+            </>
+          )
         }
         // Der Zähler ändert sich mit der Filterung und gehört deshalb in
         // die Filterzeile, nicht in die Titelzeile.

@@ -140,6 +140,7 @@ import { OwnSupervisionView } from "~/components/active-supervisions/own-supervi
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
+import { childrenConcept } from "~/lib/concepts/children";
 import { SectionCard } from "~/components/ui/section-card";
 import { transitConcept } from "~/lib/concepts/transit";
 
@@ -491,6 +492,11 @@ function MeinRaumPageContent() {
     appOverdueCount === 0
       ? `${supervisionCount} da · max. ${supervisionOccupancy.limit}`
       : `${supervisionCount} da`;
+  // Fällt „max. 20“ aus dem Kopf, nennt die Karte „Betreuung“ die Grenze.
+  const appLimitInCard =
+    supervisionOccupancy.limit != null &&
+    supervisionOccupancy.limit > 0 &&
+    appOverdueCount > 0;
   const appSupervisionSummaryFor = (hideSoleOwnSupervisor: boolean) =>
     supervisionName ? (
       <TenantPageStats
@@ -1241,6 +1247,16 @@ function MeinRaumPageContent() {
                         </Button>
                       ) : null}
                     </div>
+                    {appLimitInCard ? (
+                      // Die Teilnehmergrenze nennt der Kopf am Computer
+                      // immer („13 / 20 Kinder“). Steht am Telefon
+                      // „überfällig“ in der Chipzeile, fehlt dort der
+                      // Platz; dann steht sie hier (Erreichbarkeit).
+                      <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                        <MotoConceptIcon concept={childrenConcept} size={16} />
+                        {`${supervisionCount} da · max. ${supervisionOccupancy.limit} Kinder`}
+                      </p>
+                    ) : null}
                   </SectionCard>
                 ) : null}
                 {spontaneousStartBanner}
