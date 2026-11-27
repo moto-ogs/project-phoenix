@@ -1,7 +1,9 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type MouseEventHandler,
@@ -10,6 +12,7 @@ import {
 } from "react";
 
 import { cn } from "~/lib/utils";
+import { Button } from "./button";
 import NavigationLink from "./navigation-link";
 import { Z_LAYER } from "./overlay-styles";
 
@@ -56,12 +59,25 @@ export function Collection({
   );
 }
 
+/** Auf- und Zuklappen einer Gruppe; den Zustand hält der Aufrufer. */
+export interface CollectionGroupCollapsible {
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  /**
+   * Zähler, der zugeklappt vor dem Pfeil steht, wie an einer zugeklappten
+   * Gruppe der Seitenleiste: was in den versteckten Zeilen neu oder offen
+   * ist. Nur Anzeige, kein eigenes Ziel; der Pfeil bleibt in der Flucht.
+   */
+  readonly collapsedBadge?: ReactNode;
+}
+
 /** Eine Gruppe mit klebendem Kopf („Fehlt noch“, „Da“ …). */
 export function CollectionGroup({
   title,
   count,
   meta,
   sticky = false,
+  collapsible,
   children,
 }: Readonly<{
   title: ReactNode;
@@ -75,10 +91,28 @@ export function CollectionGroup({
   count?: number;
   /** Rechts im Kopf, etwa eine Aktion für die ganze Gruppe. */
   meta?: ReactNode;
+  /**
+   * Der Kopf klappt die Zeilen auf und zu, wie eine Gruppe der Seitenleiste:
+   * der ganze Streifen ist der Knopf, der Pfeil rechts zeigt den Zustand.
+   * Zugeklappt fehlen die Zeilen im Baum. Ohne bleibt die Gruppe, wie sie war.
+   */
+  collapsible?: CollectionGroupCollapsible;
   children: ReactNode;
 }>) {
   const headRef = useRef<HTMLDivElement>(null);
   const stuck = useHeadStuck(headRef, sticky);
+  const rowsId = useId();
+  const expanded = collapsible?.expanded ?? true;
+  const heading = (
+    <>
+      {title}
+      {count === undefined ? null : (
+        <span className="ml-1.5 font-normal text-gray-500 tabular-nums">
+          {count}
+        </span>
+      )}
+    </>
+  );
   return (
     <div
       role="group"
@@ -89,7 +123,14 @@ export function CollectionGroup({
         ref={headRef}
         className={cn(
           sticky ? `sticky ${Z_LAYER.sticky}` : "relative",
-          "app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5",
+          "app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-gray-100 bg-gray-50/95 px-4 py-1.5",
+          // Zugeklappt trennt die Linie der nächsten Gruppe; eine eigene
+          // stünde doppelt.
+          expanded && "border-b",
+          // Ein Klapp-Kopf ist ein Ziel für den Finger: 44 px, damit die
+          // Trefferfläche des Knopfs ganz im Streifen liegt und weder von der
+          // Kartenkante noch von der ersten Zeile beschnitten wird.
+          collapsible && "min-h-11",
           // App: Zeilen, die unter dem klebenden Kopf verschwinden, laufen
           // weich aus statt hart angeschnitten stehen zu bleiben.
           stuck &&
@@ -97,19 +138,56 @@ export function CollectionGroup({
         )}
         style={sticky ? { top: "var(--app-sticky-offset, 0px)" } : undefined}
       >
-        <h3 className="tablet:text-[0.9375rem] text-sm font-semibold text-gray-700">
-          {title}
-          {count === undefined ? null : (
-            <span className="ml-1.5 font-normal text-gray-500 tabular-nums">
-              {count}
-            </span>
-          )}
-        </h3>
+        {collapsible ? (
+          <h3 className="flex min-w-0 flex-1">
+            {/* Der Knopf reicht über das Polster des Kopfes: ganzer Streifen
+                als Trefferfläche, ohne dass der Kopf höher wird. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="compact"
+              className="-mx-2.5 -my-1.5 w-[calc(100%+1.25rem)] min-w-0 justify-start"
+              aria-expanded={collapsible.expanded}
+              aria-controls={collapsible.expanded ? rowsId : undefined}
+              noTooltip="Der Gruppenname klappt nur ihre Zeilen auf und zu; aria-expanded nennt den Zustand."
+              onClick={collapsible.onToggle}
+            >
+              {/* Der Knopf bringt seine eigene Schrift mit; der Name
+                  behält die der übrigen Gruppenköpfe. */}
+              <span className="mr-auto min-w-0 truncate text-left text-sm font-semibold text-gray-700">
+                {heading}
+              </span>
+              {!collapsible.expanded && collapsible.collapsedBadge ? (
+                <span className="flex shrink-0 items-center">
+                  {collapsible.collapsedBadge}
+                </span>
+              ) : null}
+              <ChevronDown
+                aria-hidden="true"
+                className={cn(
+                  "h-4 w-4 shrink-0 text-gray-500 motion-safe:transition-transform motion-safe:duration-200",
+                  collapsible.expanded && "rotate-180",
+                )}
+              />
+            </Button>
+          </h3>
+        ) : (
+          <h3 className="tablet:text-[0.9375rem] text-sm font-semibold text-gray-700">
+            {heading}
+          </h3>
+        )}
         {meta ? (
           <div className="shrink-0 text-sm text-gray-500">{meta}</div>
         ) : null}
       </div>
-      <ul className="divide-y divide-gray-100">{children}</ul>
+      {expanded ? (
+        <ul
+          id={collapsible ? rowsId : undefined}
+          className="divide-y divide-gray-100"
+        >
+          {children}
+        </ul>
+      ) : null}
     </div>
   );
 }

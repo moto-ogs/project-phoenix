@@ -97,6 +97,7 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.*.notification-setup.v1*", // Geräte-Einrichtung erledigt oder später
   "parent-first-steps:v1:*", // Fortschritt der ersten Schritte, Elternportal
   "simple-staff-nav-show-all:*", // „Alle Seiten anzeigen“ gewählt (#6956)
+  "mehr-closed-groups:*", // zugeklappte Abschnitte der Seite „Mehr“ (#8070)
   // Gewählte Sprache, die das Elternportal noch speichern muss.
   "phoenix_parent_unsynced_locale*",
   // Gerätelayout.
