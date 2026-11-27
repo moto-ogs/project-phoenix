@@ -93,8 +93,8 @@ const (
 	// stands in its number range by its running number, not by its text.
 	journalByColumn = `CASE ?16 WHEN '` + parentbilling.JournalSortIssued + `' THEN issued_on - DATE '2000-01-01'
 			WHEN '` + parentbilling.JournalSortGross + `' THEN total_cents
-			WHEN '` + parentbilling.JournalSortOpen + `' THEN open_cents
-			WHEN '` + parentbilling.JournalSortNumber + `' THEN number_year END * (CASE WHEN ?17 THEN -1 ELSE 1 END),
+			WHEN '` + parentbilling.JournalSortOpen + `' THEN CASE WHEN status <> '' THEN open_cents END
+			WHEN '` + parentbilling.JournalSortNumber + `' THEN number_year END * (CASE WHEN ?17 THEN -1 ELSE 1 END) NULLS LAST,
 		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND NOT ?17 THEN recipient_last_name END COLLATE public.german_name ASC,
 		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND ?17 THEN recipient_last_name END COLLATE public.german_name DESC,
 		CASE WHEN ?16 = '` + parentbilling.JournalSortRecipient + `' AND NOT ?17 THEN recipient_first_name END COLLATE public.german_name ASC,
@@ -143,10 +143,11 @@ const journalTailSQL = `, source, id) AS position
 		AND (?11 = '' OR position(lower(?11) IN lower(number)) > 0 OR position(lower(?11) IN lower(reference_number)) > 0
 			OR position(lower(?11) IN lower(recipient_first_name || ' ' || recipient_last_name)) > 0
 			OR position(lower(?11) IN lower(debtor_number)) > 0
-			OR position(lower(?11) IN lower(CASE WHEN source = 'holiday' THEN COALESCE((
-					SELECT string_agg(DISTINCT item.child_first_name, ' ') FROM parent_billing.document_positions AS item
-					WHERE item.organization_id = ?0 AND item.document_id = stated.id), '')
-				ELSE COALESCE(child_first_name, '') END)) > 0)
+			OR position(lower(?11) IN lower(child_first_name)) > 0
+			OR (source = 'holiday' AND EXISTS (
+				SELECT 1 FROM parent_billing.document_positions AS item
+				WHERE item.organization_id = ?0 AND item.document_id = stated.id
+					AND position(lower(?11) IN lower(item.child_first_name)) > 0)))
 		AND (?15 = '' OR status = ?15)),
  page AS MATERIALIZED (
 	SELECT filtered.*,

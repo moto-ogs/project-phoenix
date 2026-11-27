@@ -205,18 +205,18 @@ function stateBadge(document: JournalDocument) {
 function recipientCell(document: JournalDocument) {
   const name = document.recipientName || "–";
   return (
-    <span className="block min-w-0">
+    <span className="block min-w-0 max-md:wrap-anywhere">
       {document.familyId ? (
         <NavigationLink
           href={traegerPath(
             `/traeger/abrechnung/familien/${encodeURIComponent(document.familyId)}`,
           )}
-          className={`${LINK_CLASS} whitespace-nowrap`}
+          className={`${LINK_CLASS} md:whitespace-nowrap`}
         >
           {name}
         </NavigationLink>
       ) : (
-        <span className="whitespace-nowrap text-gray-900">{name}</span>
+        <span className="text-gray-900 md:whitespace-nowrap">{name}</span>
       )}
       {document.childNames.length > 0 ? (
         <span className="block text-sm text-gray-500">

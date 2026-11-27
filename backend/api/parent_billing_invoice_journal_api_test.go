@@ -234,6 +234,12 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Equal(t, byNumber["FE-0002"].OpenCents, ofState.Totals.OpenCents)
 	assert.Contains(t, journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"search": {strings.ToUpper(byNumber["FE-0002"].ChildNames[0])}})),
 		"FE-0002", "the search finds a document by a child it bills")
+	combinedNames := url.Values{"search": {"Ben Lia"}}
+	noMatch := invoiceJournal(t, f.traeger, billing, combinedNames)
+	assert.Zero(t, noMatch.TotalCount, "two siblings do not make one first name")
+	assert.Zero(t, noMatch.Totals.GrossCents)
+	assert.Zero(t, noMatch.Totals.OpenCents)
+	assert.Len(t, billingListCSV(t, f.traeger, billing, invoiceJournalPath+"/export?"+combinedNames.Encode()), 1, "the export also omits the false match")
 	// A column orders every document of the filter in the database.
 	assert.Equal(t, []string{"FE-0001", "FE-0002", "FE-0003", "FE-0004", "FE-0007"},
 		journalNumbers(invoiceJournal(t, f.traeger, billing, url.Values{"sort": {"number"}})))
@@ -249,6 +255,12 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 			values := make([]int64, len(sorted.Documents))
 			for i, document := range sorted.Documents {
 				values[i] = value(document)
+				if column == "open" {
+					assert.Equal(t, i >= 3, document.Status == "", "%s: dashes follow amounts in %s order", document.Number, order)
+				}
+			}
+			if column == "open" {
+				values = values[:3]
 			}
 			if order == "asc" {
 				assert.IsNonDecreasing(t, values, "%s %s", column, order)

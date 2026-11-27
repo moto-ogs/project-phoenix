@@ -466,6 +466,34 @@ func TestDesignedPDFNormalHeaderNotTruncated(t *testing.T) {
 	}
 }
 
+func TestDesignedPDFKeepsDocumentNumbersOnOneLine(t *testing.T) {
+	t.Parallel()
+	columns := []listrecords.Column{
+		{ID: "number", Label: "Nummer"},
+		{ID: "issued", Label: "Ausgestellt am"},
+		{ID: "gross", Label: "Brutto (Euro)", Numeric: true},
+	}
+	for i := len(columns); i < 15; i++ {
+		columns = append(columns, listrecords.Column{ID: listrecords.ColumnID(fmt.Sprint(i)), Label: "Spalte"})
+	}
+	rows := []listrecords.Row{
+		{Values: map[listrecords.ColumnID]string{"number": "FE-2026-0001", "issued": "27.11.2026", "gross": "157,50"}},
+		{Values: map[listrecords.ColumnID]string{"number": strings.Repeat("W", 32) + "-0001", "issued": "27.11.2026", "gross": "1.157,50"}},
+	}
+	r, err := newDesignRenderer(listrecords.Document{Columns: columns, Rows: rows})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		cells := r.buildRow(row).cells
+		for i, column := range columns[:3] {
+			if len(cells[i]) != 1 || cells[i][0].text != row.Values[column.ID] {
+				t.Errorf("%s %q broken into %v", column.ID, row.Values[column.ID], cells[i])
+			}
+		}
+	}
+}
+
 // P2 (review): filter pills wrap onto additional header rows instead of
 // running past the right page edge, and the body start moves down to make
 // room.
