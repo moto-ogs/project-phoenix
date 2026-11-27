@@ -77,8 +77,6 @@ type GuardianUpdateRequest struct {
 	Notes                  *string `json:"notes,omitempty"`
 }
 
-func (req *GuardianUpdateRequest) Bind(_ *http.Request) error { return nil }
-
 // StudentGuardianLinkRequest links an existing guardian to a child.
 type StudentGuardianLinkRequest struct {
 	GuardianProfileID  ident.ID `json:"guardian_profile_id"`
@@ -116,8 +114,6 @@ type StudentGuardianUpdateRequest struct {
 	EmergencyPriority  *int    `json:"emergency_priority,omitempty"`
 }
 
-func (req *StudentGuardianUpdateRequest) Bind(_ *http.Request) error { return nil }
-
 // GuardianLinkResponse is one student-guardian relationship on the wire. It keeps
 // the field names of the persisted row the link endpoint used to echo.
 type GuardianLinkResponse struct {
@@ -153,25 +149,6 @@ func (req *PhoneNumberCreateRequest) Bind(_ *http.Request) error {
 	}
 	if req.PhoneType == "" {
 		req.PhoneType = "mobile"
-	}
-	return nil
-}
-
-// PhoneNumberUpdateRequest changes a phone number; every field is optional.
-type PhoneNumberUpdateRequest struct {
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	PhoneType   *string `json:"phone_type,omitempty"`
-	Label       *string `json:"label,omitempty"`
-	IsPrimary   *bool   `json:"is_primary,omitempty"`
-	Priority    *int    `json:"priority,omitempty"`
-}
-
-func (req *PhoneNumberUpdateRequest) Bind(_ *http.Request) error {
-	if req.PhoneNumber != nil && *req.PhoneNumber == "" {
-		return errors.New("phone_number cannot be empty")
-	}
-	if req.PhoneType != nil && !validPhoneTypes[*req.PhoneType] {
-		return errors.New("phone_type must be one of: mobile, home, work, other")
 	}
 	return nil
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // mockDecisionService is a hand-rolled fake that records inputs and
@@ -194,6 +195,7 @@ func executeAdminJSON(t *testing.T, router chi.Router, method, path string, body
 	} else {
 		req = httptest.NewRequest(method, path, nil)
 	}
+	req = req.WithContext(tenant.WithUnitOfWork(req.Context(), testpkg.PassthroughTenantRuntime()))
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	return w
@@ -205,7 +207,14 @@ func executeAdminJSON(t *testing.T, router chi.Router, method, path string, body
 func executeAdminRouteWithPermissions(t *testing.T, rs *Resource, method, path string, permissions []string) *httptest.ResponseRecorder {
 	t.Helper()
 	claims := routetest.TenantUserTestClaims(1, 4242)
-	return routetest.ExecuteWithAuthPermissions(t, rs.Router(scopeTestTenantSession(testpkg.TenantSessionGates())), httptest.NewRequest(method, path, nil), claims, permissions)
+	claims.Permissions = permissions
+	req := routetest.NewRequest(method, path, nil, routetest.WithJWTBearer(routetest.MintTestJWT(t, claims)))
+	// Keep the request's test runtime even when another test has opened the package database.
+	req = req.WithContext(tenant.WithUnitOfWork(req.Context(), testpkg.PassthroughTenantRuntime()))
+	recorder := httptest.NewRecorder()
+	router := rs.Router(scopeTestTenantSession(testpkg.TenantSessionGates()))
+	routetest.WithSessionVerifier(router).ServeHTTP(recorder, req)
+	return recorder
 }
 
 // makeReqSummary builds an enrollment request summary with the supplied IDs.

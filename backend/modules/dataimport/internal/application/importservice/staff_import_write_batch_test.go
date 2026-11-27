@@ -19,6 +19,15 @@ func (m staffEmailMembership) ListStaff(_ context.Context, filter ports.StaffFil
 	return m.members, nil
 }
 
+func (m staffEmailMembership) FindStaffByPerson(_ context.Context, personID int64) (ports.Staff, error) {
+	for _, member := range m.members {
+		if member.PersonID == personID {
+			return member, nil
+		}
+	}
+	return ports.Staff{}, ports.ErrStaffNotFound
+}
+
 func (m staffEmailMembership) CreateStaff(_ context.Context, input ports.CreateStaff) (ports.Staff, error) {
 	return ports.Staff{ID: 91, PersonID: input.PersonID}, nil
 }

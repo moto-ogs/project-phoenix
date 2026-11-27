@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  activeSupervisionRosterKey,
   buildGroupNameToIdMap,
   canBulkCheckinFromSupervision,
   mapSupervisedGroupsToRooms,
@@ -324,45 +323,6 @@ describe("bulk attendance in active supervisions (#3834)", () => {
 });
 
 describe("active-supervisions view model", () => {
-  it("suppresses active-group roster keys after a not-found roster miss", () => {
-    const missing = new Set(["active-1"]);
-
-    expect(
-      activeSupervisionRosterKey({
-        selectedTimetableInstanceId: null,
-        currentRoomId: "active-1",
-        missingRosterActiveGroupIds: missing,
-      }),
-    ).toBeNull();
-    expect(
-      activeSupervisionRosterKey({
-        selectedTimetableInstanceId: null,
-        currentRoomId: "active-2",
-        missingRosterActiveGroupIds: missing,
-      }),
-    ).toBe("timetable-roster-active-group-active-2");
-  });
-
-  it("keeps explicit timetable instance roster keys even when the active group missed", () => {
-    expect(
-      activeSupervisionRosterKey({
-        selectedTimetableInstanceId: "instance-1",
-        currentRoomId: "active-1",
-        missingRosterActiveGroupIds: new Set(["active-1"]),
-      }),
-    ).toBe("timetable-roster-instance-1");
-  });
-
-  it("resolves a planned roster by active group after a Schulhof reload", () => {
-    expect(
-      activeSupervisionRosterKey({
-        selectedTimetableInstanceId: null,
-        currentRoomId: "schulhof-planned-active-group",
-        missingRosterActiveGroupIds: new Set(),
-      }),
-    ).toBe("timetable-roster-active-group-schulhof-planned-active-group");
-  });
-
   it("drops every own session that a released room already stands for", () => {
     // All sessions of a released room feed its one shared entry, so listing
     // them again would put the same place on screen once per session (#3065).

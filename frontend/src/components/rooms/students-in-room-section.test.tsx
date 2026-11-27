@@ -889,27 +889,6 @@ describe("StudentsInRoomSection", () => {
       ).toBeChecked();
     });
 
-    it("reports active selection state to the drawer wrapper", async () => {
-      const onSelectionActiveChange = vi.fn();
-      setSWR({ data: { students: [makeStudent({ id: "7" })] } });
-
-      render(
-        <StudentsInRoomSection
-          roomId="42"
-          roomName="OGS-Raum 1"
-          onSelectionActiveChange={onSelectionActiveChange}
-        />,
-      );
-
-      fireEvent.click(
-        screen.getByRole("checkbox", { name: /Anna Müller auswählen/ }),
-      );
-
-      await waitFor(() => {
-        expect(onSelectionActiveChange).toHaveBeenLastCalledWith(true);
-      });
-    });
-
     it("excludes the current room from the target room list", () => {
       setSWR({ data: { students: [makeStudent({ id: "7" })] } });
       setBulkData({

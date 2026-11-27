@@ -2,10 +2,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Button } from "./button";
-import { ChoiceModal } from "./choice-modal";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 import { ExportDialog } from "./export-dialog";
-import { FormModal } from "./form-modal";
 import { Modal } from "./modal";
 import { ModalCancelButton } from "./modal-frame";
 import { MODAL_CLOSE_DELAY_MS, MODAL_MOTION_STYLE } from "./motion";
@@ -123,33 +121,7 @@ describe("isDismissDisabled", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it("locks FormModal, ChoiceModal and ConfirmDeleteModal without a running operation", () => {
-    const { unmount } = render(
-      <FormModal isOpen onClose={noop} title="Formular" isDismissDisabled>
-        Inhalt
-      </FormModal>,
-    );
-    expect(
-      screen.getByRole("button", { name: "Modal schließen" }),
-    ).toBeDisabled();
-    unmount();
-
-    const choice = render(
-      <ChoiceModal
-        isOpen
-        onClose={noop}
-        title="Termin bearbeiten"
-        options={[{ value: "single", label: "Nur diesen Termin" }]}
-        onSelect={noop}
-        isDismissDisabled
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Nur diesen Termin" }),
-    ).toBeEnabled();
-    choice.unmount();
-
+  it("locks the confirmation's X and Abbrechen while deletion runs", () => {
     render(
       <ConfirmDeleteModal
         isOpen
@@ -158,9 +130,8 @@ describe("isDismissDisabled", () => {
         gate={{ mode: "twoStep" }}
         onConfirm={noop}
         onClose={noop}
-        loading={false}
+        loading
         error=""
-        isDismissDisabled
       />,
     );
     expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
@@ -169,42 +140,7 @@ describe("isDismissDisabled", () => {
     ).toBeDisabled();
   });
 
-  it("locks a FormModal footer dismissal without locking its submit action", () => {
-    const onClose = vi.fn();
-    const onSave = vi.fn();
-    render(
-      <FormModal
-        isOpen
-        onClose={onClose}
-        title="Formular"
-        isDismissDisabled
-        footer={
-          <>
-            <ModalCancelButton onClick={() => onClose()}>
-              Abbrechen
-            </ModalCancelButton>
-            <Button type="submit" onClick={onSave}>
-              Speichern
-            </Button>
-          </>
-        }
-      >
-        Inhalt
-      </FormModal>,
-    );
-
-    const cancel = screen.getByRole("button", { name: "Abbrechen" });
-    expect(cancel).toBeDisabled();
-    fireEvent.click(cancel);
-    expect(onClose).not.toHaveBeenCalled();
-
-    const save = screen.getByRole("button", { name: "Speichern" });
-    expect(save).toBeEnabled();
-    fireEvent.click(save);
-    expect(onSave).toHaveBeenCalledOnce();
-  });
-
-  it("locks the ExportDialog's X and Abbrechen without a running export", () => {
+  it("locks the ExportDialog's X and Abbrechen while the download runs", () => {
     render(
       <ExportDialog
         isOpen
@@ -212,13 +148,12 @@ describe("isDismissDisabled", () => {
         title="Liste exportieren"
         formats={["pdf"]}
         run={{
-          busy: null,
+          busy: "download",
           error: "",
           bodyRef: { current: null },
           download: noop,
           updateFormat: noop,
         }}
-        isDismissDisabled
       />,
     );
 
@@ -226,7 +161,6 @@ describe("isDismissDisabled", () => {
       screen.getByRole("button", { name: "Export schließen" }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Herunterladen" })).toBeEnabled();
   });
 });
 

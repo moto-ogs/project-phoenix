@@ -177,7 +177,7 @@ func (s *service) lockStudentMovePlan(ctx context.Context, studentIDs []int64, a
 		}
 	}
 
-	refreshedVisits, err := s.currentPresenceVisits(ctx, studentIDs, false)
+	refreshedVisits, err := s.currentPresenceVisits(ctx, studentIDs)
 	if err != nil {
 		return nil, &ActiveError{Op: opMoveStudents, Err: ErrDatabaseOperation}
 	}
@@ -450,7 +450,7 @@ func (s *service) loadMoveState(ctx context.Context, studentIDs []int64, op stri
 		return nil, nil, &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
 
-	currentVisits, err := s.currentPresenceVisits(ctx, studentIDs, false)
+	currentVisits, err := s.currentPresenceVisits(ctx, studentIDs)
 	if err != nil {
 		return nil, nil, &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}

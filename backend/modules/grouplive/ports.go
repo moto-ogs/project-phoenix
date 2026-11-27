@@ -69,8 +69,7 @@ type GroupRecord struct {
 	RoomName string
 }
 
-// GroupDirectory lists groups. The projection sorts the rows of
-// SupervisedGroups and TenantGroups with Dependencies.Collate.
+// GroupDirectory lists groups. The projection sorts them in German dictionary order.
 type GroupDirectory interface {
 	// SupervisedGroups are the caller's own groups, including substitutions.
 	SupervisedGroups(ctx context.Context) ([]GroupRecord, error)

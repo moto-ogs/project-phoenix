@@ -183,6 +183,8 @@ export const HolidayRegistrationFormSchema: z.ZodType<HolidayRegistrationForm, u
 export interface PublicHolidayRegistrationOfferResponse {
   traeger_name: string;
   name: string;
+  kind: string;
+  included_in_fee: boolean;
   registration_opens_on: string | null;
   registration_closes_on: string | null;
   binding: boolean;
@@ -202,6 +204,8 @@ export interface PublicHolidayRegistrationOfferResponse {
 export const PublicHolidayRegistrationOfferResponseSchema: z.ZodType<PublicHolidayRegistrationOfferResponse, unknown> = object<PublicHolidayRegistrationOfferResponse>({
   traeger_name: str,
   name: str,
+  kind: str,
+  included_in_fee: bool,
   registration_opens_on: nullable(calendarDate),
   registration_closes_on: nullable(calendarDate),
   binding: bool,

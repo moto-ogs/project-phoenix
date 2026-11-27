@@ -13,7 +13,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { useSWRAuth, useSWRSeedFrom } from "~/lib/swr";
 import { TEAM_CHAT_SEND_REFUSALS } from "~/lib/message-send-refusals";
@@ -61,11 +60,6 @@ const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
   "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
-export type {
-  TeamChatThreadBack,
-  TeamChatThreadParts,
-} from "~/components/messaging/team-chat-frame-parts";
-
 /**
  * One conversation, shared by both portals (#2208). The back target is
  * passed in because the OGS portal resolves paths per tenant and the school
@@ -76,15 +70,12 @@ export function TeamChatThread({
   threadID,
   myAccountId,
   back,
-  frame = renderThreadFrame,
 }: {
   readonly portal: TeamChatPortal;
   readonly threadID: string;
   /** The viewer's account id — decides which bubbles are "mine". */
   readonly myAccountId: string;
   readonly back: TeamChatThreadBack;
-  /** Das Gerüst um die Teile; nur Tests reichen ein eigenes herein. */
-  readonly frame?: (parts: TeamChatThreadParts) => ReactNode;
 }) {
   const { api } = portal;
   const flagSaysEnabled = portal.flagSaysEnabled !== false;
@@ -527,7 +518,6 @@ export function TeamChatThread({
       (group ? thread?.group_name : thread?.counterpart_name) ??
       preview?.name ??
       "Unterhaltung",
-    previewTitle: preview?.name,
     roleLabel: roleLabel ?? null,
     stats,
     audience,
@@ -542,13 +532,12 @@ export function TeamChatThread({
     error: threadLoadFailed
       ? shownLoadError
       : "Diese Unterhaltung gibt es nicht.",
-    loading: showSkeleton,
     back,
     containerRef,
     body,
   };
 
-  return frame(parts);
+  return renderThreadFrame(parts);
 }
 
 /** The sent message once, also when a refresh already brought it. */

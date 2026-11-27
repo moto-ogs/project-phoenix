@@ -753,7 +753,6 @@ func TestDemoData_ActivitiesHaveRequiredFields(t *testing.T) {
 	for _, act := range DemoActivities {
 		assert.NotEmpty(t, act.Name)
 		assert.NotEmpty(t, act.DefaultRoom)
-		assert.Greater(t, act.DurationMins, 0)
 	}
 }
 

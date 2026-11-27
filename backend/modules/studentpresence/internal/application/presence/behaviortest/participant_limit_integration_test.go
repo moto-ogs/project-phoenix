@@ -87,9 +87,9 @@ func requireLimitRefusal(t *testing.T, err error, current, maxParticipants, inco
 	assert.NotZero(t, limitErr.ActivityID)
 }
 
-func openVisitsIn(t *testing.T, service activeSvc.Service, activeGroupID int64) int {
+func openVisitsIn(t *testing.T, db *testpkg.DB, activeGroupID int64) int {
 	t.Helper()
-	count, err := service.CountActiveVisitsByActiveGroupID(testpkg.Ctx(t), activeGroupID)
+	count, err := testSchoolPresence(t, db).CountOpenVisitsInGroup(testpkg.Ctx(t), activeGroupID)
 	require.NoError(t, err)
 	return count
 }
@@ -103,11 +103,11 @@ func TestWebParticipantLimit_TransitDefaultAllowsExceeding(t *testing.T) {
 	service := setupActiveService(t, db)
 	fixture := newLimitFixture(t, db, "limit-transit-default", 2, 1, 3)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID, activeSvcBypassAuth)
 
 	require.NoError(t, err)
 	assert.ElementsMatch(t, fixture.inTransit, ident.Int64s(result.Assigned))
-	assert.Equal(t, 4, openVisitsIn(t, service, fixture.session.ID))
+	assert.Equal(t, 4, openVisitsIn(t, db, fixture.session.ID))
 }
 
 func TestWebParticipantLimit_TransitRefusesWholeBulkAssignment(t *testing.T) {
@@ -117,10 +117,10 @@ func TestWebParticipantLimit_TransitRefusesWholeBulkAssignment(t *testing.T) {
 	service := setupActiveService(t, db)
 	fixture := newLimitFixture(t, db, "limit-transit-refused", 3, 1, 3)
 
-	_, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
+	_, err := service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID, activeSvcBypassAuth)
 
 	requireLimitRefusal(t, err, 1, 3, 3)
-	assert.Equal(t, 1, openVisitsIn(t, service, fixture.session.ID), "no child may be assigned when not all fit")
+	assert.Equal(t, 1, openVisitsIn(t, db, fixture.session.ID), "no child may be assigned when not all fit")
 	transit, err := service.ListStudentsInTransit(testpkg.Ctx(t))
 	require.NoError(t, err)
 	assert.Subset(t, transit, fixture.inTransit)
@@ -133,7 +133,7 @@ func TestWebParticipantLimit_TransitFillsLastPlaces(t *testing.T) {
 	service := setupActiveService(t, db)
 	fixture := newLimitFixture(t, db, "limit-transit-fits", 3, 1, 2)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID, activeSvcBypassAuth)
 
 	require.NoError(t, err)
 	assert.ElementsMatch(t, fixture.inTransit, ident.Int64s(result.Assigned))
@@ -146,7 +146,7 @@ func TestWebParticipantLimit_TransitWithoutLimit(t *testing.T) {
 	service := setupActiveService(t, db)
 	fixture := newLimitFixture(t, db, "limit-transit-unlimited", 0, 1, 3)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID, activeSvcBypassAuth)
 
 	require.NoError(t, err)
 	assert.Len(t, result.Assigned, 3)
@@ -160,7 +160,7 @@ func TestWebParticipantLimit_TransitChecksRoomCapacityFirst(t *testing.T) {
 	fixture := newLimitFixture(t, db, "limit-transit-room-first", 2, 1, 3)
 	testpkg.SetRoomCapacity(t, db, fixture.room, 2)
 
-	_, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
+	_, err := service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID, activeSvcBypassAuth)
 
 	require.ErrorIs(t, err, activeSvc.ErrRoomCapacityExceeded)
 	require.NotErrorIs(t, err, activeSvc.ErrActivityParticipantLimitExceeded)
@@ -184,7 +184,7 @@ func TestWebParticipantLimit_ConcurrentAssignments(t *testing.T) {
 		go func(i int, studentID int64) {
 			defer wg.Done()
 			<-start
-			_, errs[i] = service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), []int64{studentID}, fixture.session.ID)
+			_, errs[i] = service.AssignTransitStudentsToActiveGroupAuthorized(testpkg.Ctx(t), []int64{studentID}, fixture.session.ID, activeSvcBypassAuth)
 		}(i, studentID)
 	}
 	close(start)
@@ -198,7 +198,7 @@ func TestWebParticipantLimit_ConcurrentAssignments(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 1, refused, "exactly one of the two assignments may take the last place")
-	assert.Equal(t, 2, openVisitsIn(t, service, fixture.session.ID))
+	assert.Equal(t, 2, openVisitsIn(t, db, fixture.session.ID))
 }
 
 func TestWebParticipantLimit_MoveBetweenSessions(t *testing.T) {
@@ -238,7 +238,7 @@ func TestWebParticipantLimit_ManualCheckIn(t *testing.T) {
 
 	requireLimitRefusal(t, err, 1, 1, 1)
 	assert.Zero(t, visit.ID)
-	assert.Equal(t, 1, openVisitsIn(t, service, fixture.session.ID))
+	assert.Equal(t, 1, openVisitsIn(t, db, fixture.session.ID))
 }
 
 // Device admissions enforce the same locked limit even while web overflow
@@ -257,7 +257,7 @@ func TestParticipantLimit_DeviceAdmissionRefusesFullSession(t *testing.T) {
 
 	requireLimitRefusal(t, err, 1, 1, 1)
 	assert.Zero(t, visit.ID)
-	assert.Equal(t, 1, openVisitsIn(t, service, fixture.session.ID))
+	assert.Equal(t, 1, openVisitsIn(t, db, fixture.session.ID))
 }
 
 func TestWebParticipantLimit_BulkMoveMovesNobody(t *testing.T) {
@@ -275,8 +275,8 @@ func TestWebParticipantLimit_BulkMoveMovesNobody(t *testing.T) {
 	_, err := service.MoveStudentsToActiveGroupAuthorized(ctx, []int64{first, second}, target.session.ID, activeSvcBypassAuth)
 
 	requireLimitRefusal(t, err, 1, 2, 2)
-	assert.Equal(t, 2, openVisitsIn(t, service, source.ID), "no child may move when not all fit")
-	assert.Equal(t, 1, openVisitsIn(t, service, target.session.ID))
+	assert.Equal(t, 2, openVisitsIn(t, db, source.ID), "no child may move when not all fit")
+	assert.Equal(t, 1, openVisitsIn(t, db, target.session.ID))
 }
 
 func TestWebParticipantLimit_OpenRoomMove(t *testing.T) {

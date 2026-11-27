@@ -20,7 +20,7 @@ type DeletionOwner interface {
 	UsedLateInviteCleaner
 }
 
-// DeletionModuleDependencies are the owner and ports of deletion and cleanup; a nil Audit leaves both unaudited, a nil Retention fails the retention lookup.
+// DeletionModuleDependencies are the owner and ports of deletion and cleanup.
 type DeletionModuleDependencies struct {
 	Owner                 DeletionOwner
 	Guardians             GuardianDirectory
@@ -53,14 +53,9 @@ func NewDeletionModule(deps DeletionModuleDependencies) DeletionModule {
 		Requests: deps.Owner, Children: deps.Owner, Preview: preview, Audit: deps.Audit,
 		Delivery: deps.Delivery, Logger: applicationBindings.WithService(deps.Logger, "enrollment-deletion"), Now: deps.Now,
 	})
-	// The cleanup audits through the shared preview only with an audit trail bound (not in focused suites).
-	var cleanupPreview *DeletionPreview
-	if deps.Audit != nil {
-		cleanupPreview = preview
-	}
 	cleanup := NewRejectedCleanup(RejectedCleanupDependencies{
 		Requests: deps.Owner, Children: deps.Owner, LateInvites: deps.Owner, Delivery: deps.Delivery,
-		Settings: deps.Retention, Preview: cleanupPreview, Audit: deps.Audit,
+		Settings: deps.Retention, Preview: preview, Audit: deps.Audit,
 		Logger: applicationBindings.WithService(deps.Logger, "enrollment-rejected-cleanup"), Now: deps.Now, Today: deps.Today,
 	})
 	return DeletionModule{Preview: preview, Deletions: deletions, Cleanup: cleanup}

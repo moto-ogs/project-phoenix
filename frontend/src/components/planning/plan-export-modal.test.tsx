@@ -83,7 +83,6 @@ function renderModal(
   const onClose = vi.fn();
   render(
     <PlanExportModal
-      isOpen
       plan="dienstplan"
       weekDay="2026-07-29"
       isWeekOnScreen

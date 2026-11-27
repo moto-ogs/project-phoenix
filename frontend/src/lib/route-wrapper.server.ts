@@ -17,12 +17,6 @@ export { isStringParam } from "./route-wrapper-utils.server";
 /** The tenant portal's route handlers; see makePortalHandlers. */
 export const tenant = makePortalHandlers(tenantPortal);
 
-export const {
-  get: createGetHandler,
-  put: createPutHandler,
-  del: createDeleteHandler,
-} = tenant;
-
 /**
  * The staff portal's proxy: forwards `/api/…` to the backend's `/api/…`
  * for the routes the contract registers for this portal, and the public

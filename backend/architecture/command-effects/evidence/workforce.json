@@ -4130,7 +4130,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollMailOutbox.Enqueue",
-      "binding_digest": "7bf1c6fef6c683eac0e153099559e18b",
+      "binding_digest": "c108f06ad4a2cb96c6a44df2d1d48334",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
@@ -4138,7 +4138,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollMailOutbox.Enqueue",
-      "binding_digest": "64a1f713259e92d4fd7984f9a0e28812",
+      "binding_digest": "58115e4bb26f6205846fa5b121dbb3c9",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
@@ -4290,7 +4290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.qualificationMailOutbox.Enqueue",
-      "binding_digest": "fc930f14abd7dc55730abe37f1ae03c2",
+      "binding_digest": "3aa41f1c443df5539ad7ca6fec24fd8b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
@@ -4298,7 +4298,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.qualificationMailOutbox.Enqueue",
-      "binding_digest": "f9fb3a51b7c25325282750462b9e8585",
+      "binding_digest": "66f0ee7c6ab645c03d07f6fed8c71d6c",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationMail.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
@@ -15362,7 +15362,23 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
-      "binding_digest": "84dad50e2020f1a540e82a7e98cf67ff",
+      "binding_digest": "d7c1015fbf4c8f60c085297bb7405339",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
+      "binding_digest": "9da910e6d9f3f70472abdfcacc7491cb",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
+      "binding_digest": "cbe3c7e91e2551709383111309d61a1a",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
@@ -15370,7 +15386,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
-      "binding_digest": "5589edbcdf1df31230263f88169b7744",
+      "binding_digest": "cbe78e35e794f9130a1f3c937e4305cf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
@@ -15378,11 +15394,11 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.AbsenceEmailDispatcher.Enqueue",
-      "binding_digest": "6611895ad1223c3d429e8a57653fe85b",
+      "binding_digest": "43c565b57aadcbcd19faa912447ff44a",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.absenceEmailDispatcher.Enqueue",
       "source_owner": "workforce",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.enqueue",
-      "target_owner": ""
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.absenceEmailSchoolDirectory.FindSchoolSubdomain",

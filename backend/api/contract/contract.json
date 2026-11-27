@@ -766,15 +766,6 @@
     },
     {
       "method": "DELETE",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "no_data": true
-    },
-    {
-      "method": "DELETE",
       "pattern": "/api/iot/{id}",
       "portals": [
         "tenant"
@@ -824,21 +815,6 @@
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
-      ],
-      "no_data": true
-    },
-    {
-      "method": "DELETE",
-      "pattern": "/api/meal-plan/{date}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "query": [
-        {
-          "name": "expected_version",
-          "kind": "string"
-        }
       ],
       "no_data": true
     },
@@ -3693,6 +3669,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayPeriod"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-extra-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/holiday-guests/",
       "portals": [
         "tenant"
@@ -4102,27 +4103,6 @@
         }
       ],
       "file": true
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/meal-plan/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "query": [
-        {
-          "name": "week_start",
-          "kind": "date"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "MealPlanWeekEntryResponse"
-        }
-      }
     },
     {
       "method": "GET",
@@ -12552,21 +12532,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/traeger/family-billing/",
-      "portals": [
-        "org"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "FamilyBilling"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/traeger/family-billing/contracts/{id}",
       "portals": [
         "org"
@@ -12909,6 +12874,14 @@
             "pdf",
             "xlsx"
           ]
+        },
+        {
+          "name": "kind",
+          "kind": "string",
+          "values": [
+            "extra_day",
+            "holiday"
+          ]
         }
       ],
       "file": true
@@ -13228,6 +13201,149 @@
         "kind": "ref",
         "ref": "InvitationPreviewResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/invoice-journal/",
+      "portals": [
+        "org"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "document_type",
+          "kind": "string",
+          "values": [
+            "cancellation",
+            "confirmation",
+            "credit",
+            "fee_notice",
+            "invoice"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "issuer",
+          "kind": "string",
+          "text_reason": "the creditor identifier of the issuer, or traeger for the Träger"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "run_id",
+          "kind": "id"
+        },
+        {
+          "name": "run_kind",
+          "kind": "string",
+          "values": [
+            "care",
+            "care_notice",
+            "holiday"
+          ]
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "service",
+          "kind": "string",
+          "values": [
+            "care",
+            "holiday"
+          ]
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InvoiceJournalPage"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/invoice-journal/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "document_type",
+          "kind": "string",
+          "values": [
+            "cancellation",
+            "confirmation",
+            "credit",
+            "fee_notice",
+            "invoice"
+          ]
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "issuer",
+          "kind": "string",
+          "text_reason": "the creditor identifier of the issuer, or traeger for the Träger"
+        },
+        {
+          "name": "run_id",
+          "kind": "id"
+        },
+        {
+          "name": "run_kind",
+          "kind": "string",
+          "values": [
+            "care",
+            "care_notice",
+            "holiday"
+          ]
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "service",
+          "kind": "string",
+          "values": [
+            "care",
+            "holiday"
+          ]
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -15487,18 +15603,6 @@
     },
     {
       "method": "POST",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "PhoneNumberResponse"
-      }
-    },
-    {
-      "method": "POST",
       "pattern": "/api/holiday-closure-notices/{id}/notify",
       "portals": [
         "tenant"
@@ -15510,6 +15614,32 @@
       "response": {
         "kind": "ref",
         "ref": "NoticeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-extra-days/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-extra-days/{id}/publish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPeriod"
       }
     },
     {
@@ -22599,19 +22729,6 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/guardians/relationships/{relationshipId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "StudentGuardianUpdateRequest"
-      },
-      "no_data": true
-    },
-    {
-      "method": "PUT",
       "pattern": "/api/guardians/students/{studentId}/guardians/{guardianId}",
       "portals": [
         "tenant"
@@ -22639,22 +22756,6 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/guardians/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "GuardianUpdateRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "GuardianResponse"
-      }
-    },
-    {
-      "method": "PUT",
       "pattern": "/api/guardians/{id}/payment",
       "portals": [
         "tenant"
@@ -22667,18 +22768,17 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
+      "pattern": "/api/holiday-extra-days/{id}",
       "portals": [
         "tenant"
       ],
-      "deprecated": true,
       "request": {
         "kind": "ref",
-        "ref": "PhoneNumberUpdateRequest"
+        "ref": "HolidayPeriodRequest"
       },
       "response": {
         "kind": "ref",
-        "ref": "PhoneNumberResponse"
+        "ref": "HolidayPeriod"
       }
     },
     {
@@ -22782,19 +22882,6 @@
         "kind": "ref",
         "ref": "ScheduleChangedResponse"
       }
-    },
-    {
-      "method": "PUT",
-      "pattern": "/api/meal-plan/{date}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "request": {
-        "kind": "ref",
-        "ref": "SetDayRequest"
-      },
-      "no_data": true
     },
     {
       "method": "PUT",
@@ -26221,6 +26308,33 @@
         "other",
         "parent",
         "relative"
+      ]
+    },
+    {
+      "name": "JournalDocumentType",
+      "values": [
+        "cancellation",
+        "confirmation",
+        "credit",
+        "fee_notice",
+        "invoice"
+      ]
+    },
+    {
+      "name": "JournalReferenceKind",
+      "values": [
+        "amends",
+        "cancels",
+        "credits",
+        "replaces"
+      ]
+    },
+    {
+      "name": "JournalRunKind",
+      "values": [
+        "care",
+        "care_notice",
+        "holiday"
       ]
     },
     {
@@ -67084,6 +67198,25 @@
           }
         },
         {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_by_school_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
           "name": "registration_opens_on",
           "schema": {
             "kind": "date",
@@ -67304,6 +67437,20 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -68312,6 +68459,12 @@
               "kind": "ref",
               "ref": "HolidayRegistrationProof"
             }
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -70314,6 +70467,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "placed",
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -71752,6 +71911,63 @@
       ]
     },
     {
+      "name": "InvoiceJournalPage",
+      "go_type": "parentbilling.InvoiceJournalPage",
+      "fields": [
+        {
+          "name": "documents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "JournalDocument"
+            }
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "JournalTotals"
+          }
+        },
+        {
+          "name": "gaps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "JournalNumberGap"
+            }
+          }
+        },
+        {
+          "name": "number_ranges",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "JournalNumberRange"
+            }
+          }
+        },
+        {
+          "name": "runs",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "JournalRun"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "InvoiceLayout",
       "go_type": "templates.InvoiceLayout",
       "fields": [
@@ -72073,6 +72289,294 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffExcusedRequestResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalDocument",
+      "go_type": "parentbilling.JournalDocument",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issued_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "document_type",
+          "schema": {
+            "kind": "enum",
+            "ref": "JournalDocumentType"
+          }
+        },
+        {
+          "name": "recipient_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recipient_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer",
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "number_year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "run",
+          "schema": {
+            "kind": "ref",
+            "ref": "JournalRun"
+          }
+        },
+        {
+          "name": "gross_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "tax_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "net_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "reference",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "JournalReference"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalNumberGap",
+      "go_type": "parentbilling.JournalNumberGap",
+      "fields": [
+        {
+          "name": "issuer",
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "first_missing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "first_missing_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_missing_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "after_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "before_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalNumberRange",
+      "go_type": "parentbilling.JournalNumberRange",
+      "fields": [
+        {
+          "name": "issuer",
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "document_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "first_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalReference",
+      "go_type": "parentbilling.JournalReference",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "JournalReferenceKind"
+          }
+        },
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalRun",
+      "go_type": "parentbilling.JournalRun",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "JournalRunKind"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "issued_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "JournalTotals",
+      "go_type": "parentbilling.JournalTotals",
+      "fields": [
+        {
+          "name": "gross_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "tax_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "net_cents",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -73938,47 +74442,6 @@
           "name": "version",
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "MealPlanWeekEntryResponse",
-      "go_type": "mealplan.MealPlanWeekEntryResponse",
-      "fields": [
-        {
-          "name": "date",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "position",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "dish",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "note",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "allergens",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
           }
         }
       ]
@@ -86089,53 +86552,6 @@
       ]
     },
     {
-      "name": "PhoneNumberUpdateRequest",
-      "go_type": "users.PhoneNumberUpdateRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "phone_number",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "phone_type",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "label",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "is_primary",
-          "optional": true,
-          "schema": {
-            "kind": "bool",
-            "nullable": true
-          }
-        },
-        {
-          "name": "priority",
-          "optional": true,
-          "schema": {
-            "kind": "int",
-            "nullable": true
-          }
-        }
-      ]
-    },
-    {
       "name": "PickupBucket",
       "go_type": "display.PickupBucket",
       "fields": [
@@ -88863,6 +89279,18 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "included_in_fee",
+          "schema": {
+            "kind": "bool"
           }
         },
         {
@@ -101374,37 +101802,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "SetDayRequest",
-      "go_type": "mealplan.SetDayRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "dishes",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "DishRequest"
-            }
-          }
-        },
-        {
-          "name": "expected",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "DishRequest"
-            }
           }
         }
       ]

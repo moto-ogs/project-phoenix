@@ -25,12 +25,8 @@ type recordedMealPlan struct {
 	replaced []mealplanModule.ReplaceDay
 }
 
-func (m *recordedMealPlan) Week(_ context.Context, weekStart mealplanModule.Date) ([]mealplanModule.Entry, error) {
-	return []mealplanModule.Entry{{Date: weekStart, Position: 1, Dish: "Linsensuppe", Allergens: []mealplanModule.Allergen{"A"}}}, nil
-}
-
 func (m *recordedMealPlan) Days(_ context.Context, weekStart mealplanModule.Date) ([]mealplanModule.Day, error) {
-	return []mealplanModule.Day{{Date: weekStart, Version: "v1", Dishes: []mealplanModule.Dish{{Dish: "Linsensuppe"}}}}, nil
+	return []mealplanModule.Day{{Date: weekStart, Version: "v1", Dishes: []mealplanModule.Dish{{Dish: "Linsensuppe", Allergens: []mealplanModule.Allergen{"gluten"}}}}}, nil
 }
 
 func (m *recordedMealPlan) ReplaceDay(_ context.Context, day mealplanModule.ReplaceDay) (mealplanModule.Day, error) {
@@ -134,36 +130,30 @@ func TestMealPlanSchoolRoutesHandTheirRequestsOn(t *testing.T) {
 	}
 	send(http.MethodGet, "/api/meal-plan/participants/week?week_start=2026-09-07", nil, &week)
 
-	var dishes []struct {
-		Date      string   `json:"date"`
-		Dish      string   `json:"dish"`
-		Allergens []string `json:"allergens"`
-	}
-	send(http.MethodGet, "/api/meal-plan/?week_start=2026-09-07", nil, &dishes)
-	require.Len(t, dishes, 1)
-	assert.Equal(t, "Linsensuppe", dishes[0].Dish)
-	assert.Equal(t, []string{"A"}, dishes[0].Allergens)
-	send(http.MethodPut, "/api/meal-plan/2026-09-08", map[string]any{"dishes": []map[string]any{{"dish": "Nudeln", "note": nil}}}, nil)
-	require.Len(t, plan.replaced, 1)
-	assert.Equal(t, mealplanModule.Date("2026-09-08"), plan.replaced[0].Date)
-	assert.Equal(t, "Nudeln", plan.replaced[0].Dishes[0].Dish)
-	send(http.MethodDelete, "/api/meal-plan/2026-09-08?expected_version=v1", nil, nil)
-	require.Len(t, plan.replaced, 2)
-	assert.Equal(t, mealplanModule.ReplaceDay{Date: "2026-09-08", ExpectedVersion: "v1", AccountID: account.ID}, plan.replaced[1])
 	var days []struct {
 		Date    string `json:"date"`
 		Version string `json:"version"`
+		Dishes  []struct {
+			Dish      string   `json:"dish"`
+			Allergens []string `json:"allergens"`
+		} `json:"dishes"`
 	}
 	send(http.MethodGet, "/api/meal-plan/days?week_start=2026-09-07", nil, &days)
 	require.Len(t, days, 1)
 	assert.Equal(t, "v1", days[0].Version)
+	require.Len(t, days[0].Dishes, 1)
+	assert.Equal(t, "Linsensuppe", days[0].Dishes[0].Dish)
+	assert.Equal(t, []string{"gluten"}, days[0].Dishes[0].Allergens)
 	var saved struct {
 		Version string `json:"version"`
 	}
 	send(http.MethodPut, "/api/meal-plan/days/2026-09-08", map[string]any{"dishes": []map[string]any{{"dish": "Nudeln"}}, "expected_version": "v1"}, &saved)
 	assert.Equal(t, "v2", saved.Version)
-	require.Len(t, plan.replaced, 3)
-	assert.Equal(t, "v1", plan.replaced[2].ExpectedVersion)
+	require.Len(t, plan.replaced, 1)
+	assert.Equal(t, mealplanModule.Date("2026-09-08"), plan.replaced[0].Date)
+	assert.Equal(t, "Nudeln", plan.replaced[0].Dishes[0].Dish)
+	assert.Equal(t, "v1", plan.replaced[0].ExpectedVersion)
+	assert.Equal(t, account.ID, plan.replaced[0].AccountID)
 	assert.Equal(t, "2026-09-07", week.WeekStart)
 	require.Len(t, week.Days, 1)
 	assert.Equal(t, "42", week.Days[0].Participants[0].StudentID)

@@ -159,6 +159,3 @@ func (r CareArrivalExceptionRows) list(ctx context.Context, filter ports.CareSch
 	}
 	return mapRows(values, arrivalExceptionToLegacy), nil
 }
-func (r CareArrivalExceptionRows) DeleteByStudentID(ctx context.Context, id int64) error {
-	return r.rows.ScheduleError("delete by student id", r.rows.Records.DeleteArrivalExceptionsByStudent(ctx, id))
-}

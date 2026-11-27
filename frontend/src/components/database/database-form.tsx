@@ -269,9 +269,7 @@ interface DatabaseFormProps<T = Record<string, unknown>> {
   readonly onSubmit: (data: T) => Promise<void>;
   readonly onCancel: () => void;
   readonly initialData?: Partial<T>;
-  readonly isLoading?: boolean;
   readonly submitLabel: string;
-  readonly stickyActions?: boolean; // Render sticky action bar like other entity forms
   /**
    * Ergänzt nachgeladene Felder mit ihren aktuellen Werten, ohne andere Werte
    * eines offenen Entwurfs zu überschreiben.
@@ -389,9 +387,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
   onSubmit,
   onCancel,
   initialData,
-  isLoading,
   submitLabel,
-  stickyActions = false,
   preserveDraftOnSectionsChange = false,
   sectionLevel = 2,
   errorPath,
@@ -538,7 +534,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
     e.preventDefault();
 
     // Prevent double-submit: check and set synchronously before any async work
-    if (isSubmitting || isLoading) {
+    if (isSubmitting) {
       return;
     }
     // Nothing to send yet: the error that says why stays on screen.
@@ -835,6 +831,8 @@ export function DatabaseForm<T = Record<string, unknown>>({
     }
   };
 
+  const blocked = isSubmitting ? undefined : draft?.blocked;
+
   return (
     <>
       {asyncOptionFields.map((field) =>
@@ -908,60 +906,30 @@ export function DatabaseForm<T = Record<string, unknown>>({
           );
         })}
 
-        {/* Form actions */}
-        {(() => {
-          // Combined busy state: parent loading OR local submitting
-          const isBusy = isLoading === true || isSubmitting;
-          const blocked = isBusy ? undefined : draft?.blocked;
-          return stickyActions ? (
-            <div className="sticky bottom-0 -mx-4 mt-4 -mb-4 flex gap-2 border-t border-gray-100 bg-white px-4 pt-3 pb-3 md:-mx-6 md:mt-6 md:-mb-6 md:gap-3 md:px-6 md:pt-4 md:pb-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={onCancel}
-                className="flex-1"
-                disabled={isBusy}
-                noTooltip="Abbrechen schließt das Formular, ohne etwas zu speichern."
-              >
-                Abbrechen
-              </Button>
-              <Button
-                type="submit"
-                size="md"
-                data-setup-tour="form-submit"
-                className="flex-1"
-                disabled={isBusy || blocked !== undefined}
-                disabledReason={blocked}
-                tooltip={SUBMIT_TOOLTIP}
-              >
-                {isBusy ? "Wird gespeichert..." : submitLabel}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex justify-end gap-2 pt-6 pb-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="md"
-                onClick={onCancel}
-                disabled={isBusy}
-                noTooltip="Abbrechen schließt das Formular, ohne etwas zu speichern."
-              >
-                Abbrechen
-              </Button>
-              <Button
-                type="submit"
-                size="md"
-                disabled={isBusy || blocked !== undefined}
-                disabledReason={blocked}
-                tooltip={SUBMIT_TOOLTIP}
-              >
-                {isBusy ? "Wird gespeichert..." : submitLabel}
-              </Button>
-            </div>
-          );
-        })()}
+        <div className="sticky bottom-0 -mx-4 mt-4 -mb-4 flex gap-2 border-t border-gray-100 bg-white px-4 pt-3 pb-3 md:-mx-6 md:mt-6 md:-mb-6 md:gap-3 md:px-6 md:pt-4 md:pb-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onCancel}
+            className="flex-1"
+            disabled={isSubmitting}
+            noTooltip="Abbrechen schließt das Formular, ohne etwas zu speichern."
+          >
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            size="md"
+            data-setup-tour="form-submit"
+            className="flex-1"
+            disabled={isSubmitting || blocked !== undefined}
+            disabledReason={blocked}
+            tooltip={SUBMIT_TOOLTIP}
+          >
+            {isSubmitting ? "Wird gespeichert..." : submitLabel}
+          </Button>
+        </div>
       </form>
     </>
   );

@@ -23,9 +23,9 @@ type service struct {
 	settings       Settings
 	outbox         OutboxEnqueuer
 	pushOutbox     PushOutboxCanceller
-	notifier       NotificationSender
+	notifier       communication.NotificationSender
 	series         communication.NotificationSeries
-	preferences    NotificationPreferences
+	preferences    communication.NotificationPreferences
 	deliveries     DeliveryRecorder
 	fingerprints   Fingerprints
 	signatures     DeclarationSignatures
@@ -344,12 +344,12 @@ func (s *service) notifyAnnouncementGuardians(ctx context.Context, a *StaffParen
 // The publication and the scheduled reminder share this resolution, so the
 // reminder can never reach anyone the announcement itself would not.
 func (s *service) notifyAnnouncementGuardiansAs(ctx context.Context, a *StaffParentAnnouncement, shape pushShape) (int, error) {
-	if s.notifier == nil {
+	if s.series.Notify == nil {
 		return 0, nil
 	}
 	// The publication counts one receipt per language variant the router
 	// accepted, never a channel receipt.
-	accepted, err := s.notifyAnnouncementGuardiansWith(ctx, a, shape, s.notifyEach)
+	accepted, err := s.notifyAnnouncementGuardiansWith(ctx, a, shape, s.series.Notify)
 	if s.deliveryPolicy.IsNotificationsDisabled(err) || s.deliveryPolicy.IsOutsideActiveWindow(err) {
 		return accepted, nil
 	}
@@ -388,7 +388,7 @@ func (s *service) notifyAnnouncementGuardiansWith(ctx context.Context, a *StaffP
 	events := make([]communication.NotificationEvent, 0, len(locales))
 	for _, locale := range locales {
 		title, body := s.deliveryPolicy.ParentAnnouncementCopy(locale, copyKind)
-		events = append(events, NotificationEvent{
+		events = append(events, communication.NotificationEvent{
 			Type: notificationType,
 			// The push outbox deduplicates by tenant and key. Each locale is a
 			// distinct payload and audience, so it needs its own replay-safe key.
@@ -398,12 +398,12 @@ func (s *service) notifyAnnouncementGuardiansWith(ctx context.Context, a *StaffP
 			Body:     body,
 			DeepLink: deepLink,
 			Priority: priority,
-			Audience: NotificationAudience{
+			Audience: communication.NotificationAudience{
 				TenantID:           a.GetTenantID(),
 				Scope:              ScopeGuardian,
 				GuardianAccountIDs: groups[locale],
 			},
-		}.Public())
+		})
 	}
 	accepted, err := notifyEach(ctx, events)
 	if s.deliveryPolicy.IsNotificationsDisabled(err) || s.deliveryPolicy.IsOutsideActiveWindow(err) {

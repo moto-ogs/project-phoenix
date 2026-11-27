@@ -403,20 +403,6 @@ func (s *Service) DeleteArrivalNote(ctx context.Context, id int64) error {
 	})
 }
 
-func (s *Service) DeleteArrivalNotesByStudent(ctx context.Context, id int64) error {
-	if id <= 0 {
-		return scheduleInvalid()
-	}
-
-	return s.withinTenant(ctx, func(tx context.Context) error {
-		return s.run(tx, "delete_arrival_notes_by_student", func(ctx context.Context, stats *domain.OperationStats) error {
-			q, err := s.store.DeleteArrivalNotesByStudent(ctx, id)
-			stats.Add(q)
-			return err
-		})
-	})
-}
-
 func (s *Service) CreatePickupSchedule(ctx context.Context, v careplan.PickupSchedule) (result careplan.PickupSchedule, err error) {
 	if !validatePickupSchedule(v) {
 		return careplan.PickupSchedule{}, scheduleInvalid()
@@ -620,20 +606,6 @@ func (s *Service) ReplaceWeekdayPickupNotes(ctx context.Context, studentID, crea
 				return err
 			}
 			return s.saveWeekdayPickupNotes(ctx, studentID, createdBy, stored, notes, stats)
-		})
-	})
-}
-
-func (s *Service) DeletePickupNotesByStudent(ctx context.Context, id int64) error {
-	if id <= 0 {
-		return scheduleInvalid()
-	}
-
-	return s.withinTenant(ctx, func(tx context.Context) error {
-		return s.run(tx, "delete_pickup_notes_by_student", func(ctx context.Context, stats *domain.OperationStats) error {
-			q, err := s.store.DeletePickupNotesByStudent(ctx, id)
-			stats.Add(q)
-			return err
 		})
 	})
 }

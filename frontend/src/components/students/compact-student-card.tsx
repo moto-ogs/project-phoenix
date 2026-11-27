@@ -30,9 +30,6 @@ interface CompactStudentCardProps {
    * so callers can pass `student.photo_url` unconditionally.
    */
   readonly photoUrl?: string | null;
-  readonly onClick?: () => void;
-  readonly chrome?: "card" | "plain";
-  readonly className?: string;
 }
 
 export function CompactStudentCard({
@@ -42,9 +39,6 @@ export function CompactStudentCard({
   schoolClass,
   groupName,
   photoUrl,
-  onClick,
-  chrome = "card",
-  className = "",
 }: CompactStudentCardProps) {
   // Per-tenant feature flag. When off, the avatar slot is suppressed so
   // opt-out schools see the original pre-feature shape (name + meta only).
@@ -56,12 +50,11 @@ export function CompactStudentCard({
   const meta = [schoolClass, groupName].filter(Boolean).join(" · ");
   const fullName = `${firstName ?? ""} ${lastName ?? ""}`.trim() || "?";
 
-  const chromeClass =
-    chrome === "card"
-      ? "moto-content-surface border px-4 py-3"
-      : "bg-transparent px-0 py-0 hover:bg-transparent";
-  const content = (
-    <>
+  const card = (
+    <div
+      data-testid={`compact-student-card-${studentId}`}
+      className="flex w-full items-center gap-3 rounded-xl bg-transparent px-0 py-0 text-left hover:bg-transparent"
+    >
       {photosEnabled ? (
         <Avatar imageUrl={photoUrl ?? null} name={fullName} size="sm" />
       ) : null}
@@ -73,34 +66,8 @@ export function CompactStudentCard({
           <p className="mt-0.5 truncate text-xs text-gray-500">{meta}</p>
         )}
       </div>
-    </>
+    </div>
   );
-
-  let card: React.ReactElement;
-  if (!onClick) {
-    card = (
-      <div
-        data-testid={`compact-student-card-${studentId}`}
-        className={`flex w-full items-center gap-3 rounded-xl text-left ${chromeClass} ${className}`}
-      >
-        {content}
-      </div>
-    );
-  } else {
-    card = (
-      <button
-        key={studentId}
-        type="button"
-        onClick={onClick}
-        data-testid={`compact-student-card-${studentId}`}
-        className={`group moto-hover-elevated flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-gray-600 ${chromeClass} ${className}`}
-      >
-        {content}
-        {/* Named by its content, name first (WCAG 2.5.3, #7112). */}
-        <span className="sr-only">, Profil öffnen</span>
-      </button>
-    );
-  }
 
   if (!parentAttentionEnabled) return card;
   // Neue Elternnachrichten (#6486), wie an der großen Kinderkachel.

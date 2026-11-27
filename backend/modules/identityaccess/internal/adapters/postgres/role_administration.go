@@ -340,19 +340,6 @@ func (s *RoleStore) LockAccount(ctx context.Context, accountID int64) (bool, err
 	return found, err
 }
 
-func (s *RoleStore) HasTenantMembership(ctx context.Context, accountID, tenantID int64, share bool) (bool, error) {
-	if share {
-		found, _, err := s.LockActiveTenantMappingShared(ctx, accountID, tenantID)
-		return found, err
-	}
-	db, err := s.database(ctx)
-	if err != nil {
-		return false, err
-	}
-	return db.NewSelect().TableExpr("auth.account_tenants").
-		Where("account_id = ? AND tenant_id = ? AND status = 'active'", accountID, tenantID).Exists(ctx)
-}
-
 func (s *RoleStore) ListAccountEmails(ctx context.Context, accountIDs []int64) (map[int64]string, error) {
 	emails, _, err := s.Store.ListAccountEmails(ctx, accountIDs)
 	return emails, err

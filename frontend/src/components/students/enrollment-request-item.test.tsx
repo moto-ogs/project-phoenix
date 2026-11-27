@@ -46,7 +46,12 @@ describe("EnrollmentRequestItem", () => {
     // Die Zeile ist zugeklappt; das Detail steht erst danach.
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByText("Lina Beispiel, Timo Beispiel")).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: /Lina Beispiel, Timo Beispiel/,
+        expanded: true,
+      }),
+    ).toBeVisible();
     expect(screen.getByText("Wartet auf Prüfung")).toBeVisible();
     // Das echte vorher → nachher, nicht nur die Namen der Bereiche.
     expect(screen.getByText("Änderungen")).toBeVisible();

@@ -489,9 +489,7 @@ func TestScheduler_DisabledByEnvVars(t *testing.T) {
 
 func TestScheduleSessionCleanupTask_WithoutSettings(t *testing.T) {
 	t.Parallel()
-	s := unitScheduler(&unitSchedulerDependencies{
-		tasks: make(map[string]*ScheduledTask),
-		done:  make(chan struct{})})
+	s := &Scheduler{tasks: make(map[string]*ScheduledTask)}
 
 	// Schedule session cleanup task (no settings resolver: nothing to schedule)
 	s.scheduleSessionCleanupTask()
@@ -1609,7 +1607,7 @@ func TestWasRunToday_DifferentTenant(t *testing.T) {
 func TestResolveStringSetting_NoSettings(t *testing.T) {
 	t.Parallel()
 
-	s := unitScheduler(&unitSchedulerDependencies{logger: slog.Default()})
+	s := &Scheduler{logger: slog.Default()}
 	val := s.resolveStringSetting(context.Background(), "key", "fallback")
 	assert.Equal(t, "fallback", val)
 }
@@ -1617,7 +1615,7 @@ func TestResolveStringSetting_NoSettings(t *testing.T) {
 func TestResolveBoolSetting_NoSettings(t *testing.T) {
 	t.Parallel()
 
-	s := unitScheduler(&unitSchedulerDependencies{logger: slog.Default()})
+	s := &Scheduler{logger: slog.Default()}
 	val := s.resolveBoolSetting(context.Background(), "key", true)
 	assert.True(t, val)
 }
@@ -1625,7 +1623,7 @@ func TestResolveBoolSetting_NoSettings(t *testing.T) {
 func TestResolveIntSetting_NoSettings(t *testing.T) {
 	t.Parallel()
 
-	s := unitScheduler(&unitSchedulerDependencies{logger: slog.Default()})
+	s := &Scheduler{logger: slog.Default()}
 	val := s.resolveIntSetting(context.Background(), "key", 42)
 	assert.Equal(t, 42, val)
 }
@@ -1878,6 +1876,7 @@ func (f *fakeMaterializer) ResolveWindow(baseDate calendar.Date, weeksAhead int)
 // about; anything else returns the zero value with HasTenantOverride=false so
 // resolveXSetting falls through to the default.
 type fakeSettingsResolver struct {
+	unitSnapshots
 	mu           sync.Mutex
 	boolValues   map[string]bool
 	intValues    map[string]int
@@ -1993,9 +1992,9 @@ func TestCheckAndRunMaterialization_EnabledByDefault(t *testing.T) {
 	// the defaultVal (true) — materializer runs on the configured weekday.
 	m := &fakeMaterializer{}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			intValues: map[string]int{
 				settingTimetableMaterializationWeekday: materializationTestWeekday,
@@ -2018,9 +2017,9 @@ func TestCheckAndRunMaterialization_EnabledWrongWeekday(t *testing.T) {
 
 	m := &fakeMaterializer{}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,
@@ -2042,9 +2041,9 @@ func TestCheckAndRunMaterialization_WasRunToday(t *testing.T) {
 
 	m := &fakeMaterializer{}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,
@@ -2075,9 +2074,9 @@ func TestCheckAndRunMaterialization_HappyPath(t *testing.T) {
 		},
 	}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,
@@ -2113,9 +2112,9 @@ func TestCheckAndRunMaterialization_ZeroCounters(t *testing.T) {
 		},
 	}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,
@@ -2139,9 +2138,9 @@ func TestCheckAndRunMaterialization_MaterializerError(t *testing.T) {
 		returnErr: errors.New("materialization exploded"),
 	}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,
@@ -2171,9 +2170,9 @@ func TestCheckAndRunMaterialization_OnlyRacedCounter(t *testing.T) {
 		},
 	}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger:             slog.Default(),
-		materializer:       m,
-		materializationNow: fixedMaterializationTime,
+		logger:       slog.Default(),
+		materializer: m,
+		now:          fixedMaterializationTime,
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingTimetableMaterializationEnabled: true,

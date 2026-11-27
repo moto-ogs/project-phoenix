@@ -12,10 +12,10 @@ func PickupScheduleRecords(r carePlanBindingPorts.PickupScheduleRecords) Effecti
 
 func PickupExceptionRecords(r carePlanBindingPorts.PickupScheduleRecords) ExceptionRecords[careplan.PickupException, *careplan.PickupException] {
 	return NewExceptionRecords[careplan.PickupException, *careplan.PickupException](RecordFuncs[careplan.PickupException]{Find: r.FindPickupException, List: r.ListPickupExceptions,
-		Create: r.CreatePickupException, Update: r.UpdatePickupException, Remove: r.DeletePickupException, RemoveByStudent: r.DeletePickupExceptionsByStudent})
+		Create: r.CreatePickupException, Update: r.UpdatePickupException, Remove: r.DeletePickupException})
 }
 
-func PickupNoteRecords(r carePlanBindingPorts.PickupScheduleRecords) NoteRecords[careplan.PickupNote, *careplan.PickupNote] {
-	return NewNoteRecords[careplan.PickupNote, *careplan.PickupNote](RecordFuncs[careplan.PickupNote]{Find: Unlocked(r.FindPickupNote), List: r.ListPickupNotes,
-		Create: r.CreatePickupNote, Update: r.UpdatePickupNote, Remove: r.DeletePickupNote, RemoveByStudent: r.DeletePickupNotesByStudent})
+func PickupNoteRecords(r carePlanBindingPorts.PickupScheduleRecords) EffectiveRecords[careplan.PickupNote, *careplan.PickupNote] {
+	return NewEffectiveRecords[careplan.PickupNote, *careplan.PickupNote](RecordFuncs[careplan.PickupNote]{Find: Unlocked(r.FindPickupNote), List: r.ListPickupNotes,
+		Create: r.CreatePickupNote, Update: r.UpdatePickupNote, Remove: r.DeletePickupNote})
 }

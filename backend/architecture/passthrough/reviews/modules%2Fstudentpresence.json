@@ -517,17 +517,7 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/service.CountActiveVisitsByActiveGroupID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/service.FindDeviceActiveGroupInRoom",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/service.FindVisitsByStudentID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

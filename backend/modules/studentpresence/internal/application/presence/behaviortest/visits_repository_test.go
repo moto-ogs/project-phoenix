@@ -350,7 +350,7 @@ func TestVisitRepository_FindByTimeRange(t *testing.T) {
 		start := now.Add(-1 * time.Hour)
 		end := now.Add(1 * time.Hour)
 
-		visits, err := repo.ListVisits(ctx, studentpresence.VisitFilter{OverlapFrom: &start, OverlapUntil: &end})
+		visits, err := repo.ListVisits(ctx, studentpresence.VisitFilter{ClosedSince: &start, EnteredUntil: &end})
 		require.NoError(t, err)
 		assert.NotEmpty(t, visits)
 

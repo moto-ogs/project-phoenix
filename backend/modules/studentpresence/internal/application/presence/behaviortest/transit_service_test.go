@@ -629,7 +629,7 @@ func TestActiveService_AssignTransitStudentsToActiveGroup(t *testing.T) {
 	testpkg.CreateTestAttendance(t, db, inRoomStudent.ID, staff.ID, device.ID, now.Add(-20*time.Minute), nil)
 	testpkg.CreateTestVisit(t, db, inRoomStudent.ID, sourceGroup.ID, now.Add(-15*time.Minute), nil)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(ctx, []int64{transitStudent.ID, inRoomStudent.ID, transitStudent.ID}, targetGroup.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{transitStudent.ID, inRoomStudent.ID, transitStudent.ID}, targetGroup.ID, activeSvcBypassAuth)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -654,7 +654,7 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_InvalidInput(t *testin
 	service := setupActiveService(t, db)
 	ctx := testpkg.Ctx(t)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(ctx, nil, 42)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(ctx, nil, 42, activeSvcBypassAuth)
 	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.ErrorIs(t, err, activeSvc.ErrInvalidData)
@@ -663,7 +663,7 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_InvalidInput(t *testin
 	room := testpkg.CreateTestRoom(t, db, "Transit Invalid Input Room")
 	targetGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 
-	result, err = service.AssignTransitStudentsToActiveGroup(ctx, []int64{-42}, targetGroup.ID)
+	result, err = service.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{-42}, targetGroup.ID, activeSvcBypassAuth)
 	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.ErrorIs(t, err, activeSvc.ErrInvalidData)
@@ -690,7 +690,7 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_BinaryModeSkipsAll(t *
 	targetGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 	student := testpkg.CreateTestStudent(t, db, "Transit", "Binary", "TBS1")
 
-	result, err := service.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, targetGroup.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, targetGroup.ID, activeSvcBypassAuth)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -723,7 +723,7 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_EndedTargetFails(t *te
 	_, err := db.NewRaw("UPDATE active.groups SET end_time = ? WHERE id = ?", time.Now(), targetGroup.ID).Exec(ctx)
 	require.NoError(t, err)
 
-	result, err := service.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, targetGroup.ID)
+	result, err := service.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, targetGroup.ID, activeSvcBypassAuth)
 
 	require.Error(t, err)
 	assert.Nil(t, result)

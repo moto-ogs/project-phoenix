@@ -115,9 +115,7 @@ Variante 3.
   lehnen einen veralteten Stand mit `general.changed_since_read` ab.
   `students.companions_changed` bleibt registriert; der Client erkennt beide
   Codes, bis kein älteres Backend mehr läuft.
-- Der Speiseplan (#7930) liest und schickt ein Token je Tag. Seine alten
-  Routen, die den gelesenen Tag statt eines Tokens schicken (#7898), bleiben
-  ein Release lang und prüfen über dieselbe Funktion.
+- Der Speiseplan (#7930) liest und schickt ein Token je Tag.
 - Die Ankündigungen des Operator-Portals nennen ihren Token `edit_version`
   (`expected_edit_version`), weil `version` dort die Release-Bezeichnung ist.
 - Auch die Fehlerrenderer des Operator-Portals führen keinen eigenen Fall:

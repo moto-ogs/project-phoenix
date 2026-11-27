@@ -97,9 +97,10 @@ func newPersonalLetterFixture(body string) letterFixture {
 		},
 		access: &recordingLetterAccess{},
 	}
+	notifier := &fakeNotifier{}
 	f.service = NewService(ServiceConfig{
 		Now: staffTestClock, Repo: f.repo, Settings: &fakeSettings{enabled: true, logoURL: "/uploads/login-images/7.png"},
-		Notifier: &fakeNotifier{}, Outbox: f.outbox, Deliveries: &letterDeliveries{},
+		Notifier: notifier, Series: notifier.series(), Outbox: f.outbox, Deliveries: &letterDeliveries{},
 		ParentsURL: "https://eltern.example.test", Logger: slog.Default(),
 		Letters: ParentLetters{Copies: f.copies, Children: f.values, Logos: fixedLetterLogo("png"), Access: f.access},
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())

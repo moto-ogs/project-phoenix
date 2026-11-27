@@ -56,7 +56,7 @@ func TestNativeArrivalWeekPreservesInheritanceAndRollsBackFailures(t *testing.T)
 	require.ErrorIs(t, err, failure)
 	rules.classErr = nil
 	rules.lockErr = failure
-	require.ErrorIs(t, service.DeleteAllStudentArrivalSchedules(ctx, student.ID), failure)
+	require.ErrorIs(t, service.UpsertBulkStudentArrivalSchedules(ctx, student.ID, nil), failure)
 	stored, err = owner.ListArrivalSchedules(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{student.ID}})
 	require.NoError(t, err)
 	require.Len(t, stored, 2, "failed writes must preserve the whole week")

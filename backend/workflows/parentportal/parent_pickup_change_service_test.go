@@ -164,7 +164,9 @@ func TestPickupChangeRoundTrip(t *testing.T) {
 	date := careFixtureToday().AddDays(3)
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 30, 0, 0, time.UTC))
 
-	created, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
+	created, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupTime: pickup, Reason: "Arzttermin",
+	})
 	require.NoError(t, err)
 	require.NotNil(t, created)
 	assert.Equal(t, "pending", created.Status)
@@ -195,10 +197,14 @@ func TestPickupChangeRejectsASecondOpenRequestForTheSameDay(t *testing.T) {
 	date := careFixtureToday().AddDays(4)
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 0, 0, 0, time.UTC))
 
-	_, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
+	_, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupTime: pickup, Reason: "Arzttermin",
+	})
 	require.NoError(t, err)
 
-	_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Noch ein Termin", nil)
+	_, err = svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupTime: pickup, Reason: "Noch ein Termin",
+	})
 	require.Error(t, err, "eine zweite offene Anfrage fuer denselben Tag muss abgewiesen werden")
 }
 
@@ -217,29 +223,32 @@ func TestSubmitPickupChangeRequestRejectsBadInput(t *testing.T) {
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
 
 	t.Run("ohne Uhrzeit", func(t *testing.T) {
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, tomorrow, time.Time{}, "", "Arzttermin", nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, parentService.PickupChangeSubmission{Date: tomorrow, PickupTime: time.Time{}, Reason: "Arzttermin"})
 		require.ErrorIs(t, err, parentService.ErrNoCareException)
 	})
 
 	t.Run("ohne Grund", func(t *testing.T) {
 		// #2267: reason policy defaults to "both"
 		chain := testpkg.CreateTestParentGuardianChain(t, db)
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()),
-			chain.AccountID, chain.StudentID, tomorrow, pickup, "", "   ", nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+			Date: tomorrow, PickupTime: pickup, Reason: "   ",
+		})
 		require.ErrorIs(t, err, parentService.ErrCareExceptionReasonRequired)
 	})
 
 	t.Run("Grund zu lang", func(t *testing.T) {
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, tomorrow, pickup, "",
-			strings.Repeat("a", 256), nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, parentService.PickupChangeSubmission{
+			Date: tomorrow, PickupTime: pickup, Reason: strings.Repeat("a", 256),
+		})
 		require.ErrorIs(t, err, parentService.ErrCareExceptionReasonTooLong)
 	})
 
 	// 255 runes is the limit, and it counts runes, not bytes: an Umlaut must not
 	// cost two characters of a parent's explanation.
 	t.Run("255 Umlaute sind kein zu langer Grund", func(t *testing.T) {
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, tomorrow, pickup, "",
-			strings.Repeat("ä", 255), nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, parentService.PickupChangeSubmission{
+			Date: tomorrow, PickupTime: pickup, Reason: strings.Repeat("ä", 255),
+		})
 		assert.NotErrorIs(t, err, parentService.ErrCareExceptionReasonTooLong)
 	})
 }
@@ -253,8 +262,9 @@ func TestSubmitPickupChangeRequestRejectsForeignChild(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
-	_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-		chain.StudentID+999999, careFixtureToday().AddDays(1), pickup, "", "Arzttermin", nil)
+	_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID+999999, parentService.PickupChangeSubmission{
+		Date: careFixtureToday().AddDays(1), PickupTime: pickup, Reason: "Arzttermin",
+	})
 
 	require.Error(t, err, "ein nicht verknuepftes Kind muss abgewiesen werden")
 }
@@ -267,8 +277,9 @@ func TestSubmitPickupChangeRequestRespectsSchoolSetting(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
-	_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-		chain.StudentID, careFixtureToday().AddDays(1), pickup, "", "Arzttermin", nil)
+	_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: careFixtureToday().AddDays(1), PickupTime: pickup, Reason: "Arzttermin",
+	})
 
 	require.ErrorIs(t, err, parentService.ErrPickupChangeDisabled)
 }
@@ -285,14 +296,16 @@ func TestSubmitPickupChangeRequestBoundsTheDate(t *testing.T) {
 	today := careFixtureToday()
 
 	t.Run("gestern", func(t *testing.T) {
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-			chain.StudentID, today.AddDays(-1), pickup, "", "Arzttermin", nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+			Date: today.AddDays(-1), PickupTime: pickup, Reason: "Arzttermin",
+		})
 		require.ErrorIs(t, err, parentService.ErrPastCareDate)
 	})
 
 	t.Run("zu weit voraus", func(t *testing.T) {
-		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-			chain.StudentID, today.AddDays(200), pickup, "", "Arzttermin", nil)
+		_, err := svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+			Date: today.AddDays(200), PickupTime: pickup, Reason: "Arzttermin",
+		})
 		require.ErrorIs(t, err, parentService.ErrCareDateTooFar)
 	})
 }

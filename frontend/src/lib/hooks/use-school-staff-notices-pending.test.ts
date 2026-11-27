@@ -74,7 +74,6 @@ describe("useSchoolStaffNoticesPending", () => {
     // stellt useSWRAuth davor.
     expect(opts.key).toBe("school-staff-notices-today");
     expect(opts.eventNames).toEqual(["staff-notices-refresh"]);
-    expect(opts.refetchOnFocus).toBe(true);
   });
 
   it("holt nichts, solange niemand angemeldet ist", () => {

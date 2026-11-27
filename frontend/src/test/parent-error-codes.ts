@@ -116,7 +116,6 @@ export const PARENT_PORTAL_ERROR_CODES = [
   "meals.participation_cutoff_passed",
   "meals.invalid_participation",
   // Care exceptions, request edits and care-offering requests.
-  "students.care_exception_raced",
   "students.reason_required",
   "students.care_offerings_disabled",
   "students.offering_changes_no_enrollment",

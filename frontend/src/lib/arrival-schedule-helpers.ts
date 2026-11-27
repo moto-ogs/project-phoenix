@@ -20,11 +20,6 @@ export const WEEKDAYS = [
   { value: 5, label: "Freitag", shortLabel: "Fr" },
 ] as const;
 
-export function getWeekdayLabel(weekday: number): string {
-  const found = WEEKDAYS.find((w) => w.value === weekday);
-  return found ? found.label : `Tag ${weekday}`;
-}
-
 export function formatArrivalTime(time: string): string {
   if (time.length > 5) return time.substring(0, 5);
   return time;
@@ -53,19 +48,6 @@ export function getWeekStart(
   monday.setDate(today.getDate() - daysToMonday + weekOffset * 7);
   monday.setHours(0, 0, 0, 0);
   return monday;
-}
-
-export function getWeekDays(
-  weekOffset = 0,
-  weekendFollowsFriday = false,
-  todayISO = berlinTodayISO(),
-): Date[] {
-  const monday = getWeekStart(weekOffset, todayISO);
-  return getWeekDaysForStart(
-    formatDateISO(monday),
-    weekendFollowsFriday,
-    todayISO,
-  );
 }
 
 /** Returns the visible care days for a week identified by its Monday. */

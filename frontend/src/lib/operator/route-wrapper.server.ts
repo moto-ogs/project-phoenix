@@ -29,12 +29,6 @@ export function operatorErrorResponse(
 /** The operator portal's route handlers, on the operator session only. */
 export const operator = makePortalHandlers(operatorPortal);
 
-export const {
-  post: createOperatorPostHandler,
-  put: createOperatorPutHandler,
-  del: createOperatorDeleteHandler,
-} = operator;
-
 /**
  * The operator portal's proxy: forwards `/api/operator/…` to the backend's `/operator/…`
  * for the routes the contract registers for this portal.

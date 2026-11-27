@@ -18,8 +18,8 @@ import (
 )
 
 type engine struct {
+	mealplanModule.Capability
 	available bool
-	entries   []mealplanModule.Entry
 	// dayChange records the last day change: account, date, participating,
 	// by school.
 	dayChange *dayChange
@@ -79,7 +79,7 @@ func TestStaffRoutesKeepProtectedPermissionBoundaries(t *testing.T) {
 	}
 	// #3873: the school's changes of a child's registration need a
 	// permission of their own; seeing the lists with names opens no change.
-	want := []mealplanHTTP.Access{mealplanHTTP.AccessRead, mealplanHTTP.AccessRead, mealplanHTTP.AccessWrite, mealplanHTTP.AccessWrite, mealplanHTTP.AccessWrite, mealplanHTTP.AccessDailyParticipants, mealplanHTTP.AccessParticipants,
+	want := []mealplanHTTP.Access{mealplanHTTP.AccessRead, mealplanHTTP.AccessWrite, mealplanHTTP.AccessDailyParticipants, mealplanHTTP.AccessParticipants,
 		mealplanHTTP.AccessParticipants, mealplanHTTP.AccessParticipants,
 		mealplanHTTP.AccessRead, mealplanHTTP.AccessParticipants,
 		mealplanHTTP.AccessRegister, mealplanHTTP.AccessRegister, mealplanHTTP.AccessRegister, mealplanHTTP.AccessRegister}
@@ -89,12 +89,6 @@ func TestStaffRoutesKeepProtectedPermissionBoundaries(t *testing.T) {
 }
 
 func (e engine) Available(context.Context) (bool, error) { return e.available, nil }
-func (e engine) Week(context.Context, mealplanModule.Date) ([]mealplanModule.Entry, error) {
-	if !e.available {
-		return nil, mealplanModule.ErrDisabled
-	}
-	return e.entries, nil
-}
 func (e engine) Days(context.Context, mealplanModule.Date) ([]mealplanModule.Day, error) {
 	if !e.available {
 		return nil, mealplanModule.ErrDisabled
@@ -163,11 +157,7 @@ func resource(available bool) *mealplanHTTP.Resource {
 // resourceAllowing builds the resource for a caller who passes every access
 // level (registering) or only those below a school's change.
 func resourceAllowing(available, registering bool) *mealplanHTTP.Resource {
-	date, _ := mealplanModule.ParseDate("2026-09-07")
-	module := engine{available: available, entries: []mealplanModule.Entry{{
-		Date: date, Position: 0, Dish: "Nudeln",
-	}}}
-	return resourceFor(module, registering)
+	return resourceFor(engine{available: available}, registering)
 }
 
 func resourceFor(module mealplanModule.Capability, registering bool) *mealplanHTTP.Resource {
@@ -199,21 +189,6 @@ func TestStaffDailyListResponseContract(t *testing.T) {
 	assert.JSONEq(t, `{"status":"success","data":{"date":"2026-09-07","cutoff_time":"09:00","deadline":"2026-09-07T07:00:00Z","closed":false,"participants":[{"student_id":"42","first_name":"Mia","last_name":"Muster","school_class":"2a"}]},"message":"Meal participation list retrieved successfully"}`, response.Body.String())
 }
 
-func TestStaffWeekResponseContract(t *testing.T) {
-	t.Parallel()
-	request := routetest.NewRequest("GET", "/?week_start=2026-09-07", nil)
-	response := routetest.ExecuteRequest(resource(true).Router(), request)
-
-	if response.Code != 200 {
-		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
-	}
-	assert.JSONEq(t, `{
-		"status":"success",
-		"data":[{"date":"2026-09-07","position":0,"dish":"Nudeln","allergens":[]}],
-		"message":"Meal plan retrieved successfully"
-	}`, response.Body.String())
-}
-
 // The days of a week carry their version; a save sends the version it read
 // and answers the day as stored with its new one (ADR 0311).
 func TestStaffDaysCarryTheirVersion(t *testing.T) {
@@ -235,23 +210,14 @@ func TestStaffDaysCarryTheirVersion(t *testing.T) {
 func TestStaffDisabledAndMalformedContracts(t *testing.T) {
 	t.Parallel()
 
-	disabled := routetest.ExecuteRequest(resource(false).Router(), routetest.NewRequest("GET", "/?week_start=2026-09-07", nil))
+	disabled := routetest.ExecuteRequest(resource(false).Router(), routetest.NewRequest("GET", "/days?week_start=2026-09-07", nil))
 	if disabled.Code != 403 {
 		t.Fatalf("disabled status = %d, body = %s", disabled.Code, disabled.Body.String())
 	}
 
-	malformed := routetest.ExecuteRequest(resource(true).Router(), routetest.NewRequest("PUT", "/2026-09-07", strings.NewReader(`{}`)))
+	malformed := routetest.ExecuteRequest(resource(true).Router(), routetest.NewRequest("GET", "/days?week_start=not-a-date", nil))
 	if malformed.Code != 400 {
 		t.Fatalf("malformed status = %d, body = %s", malformed.Code, malformed.Body.String())
-	}
-}
-
-func TestStaffDeleteKeepsWeekendNoOpContract(t *testing.T) {
-	t.Parallel()
-
-	response := routetest.ExecuteRequest(resource(true).Router(), routetest.NewRequest("DELETE", "/2026-09-05", nil))
-	if response.Code != 200 {
-		t.Fatalf("weekend delete status = %d, body = %s", response.Code, response.Body.String())
 	}
 }
 
@@ -279,7 +245,7 @@ func TestStaffWeekendWriteKeepsItsErrorContract(t *testing.T) {
 	require.NoError(t, err)
 
 	response := routetest.ExecuteRequest(resourceFor(module.Capability, true).Router(), routetest.NewRequest(
-		"PUT", "/2026-09-05", strings.NewReader(`{"dishes":[{"dish":"Suppe"}]}`),
+		"PUT", "/days/2026-09-05", strings.NewReader(`{"dishes":[{"dish":"Suppe"}],"expected_version":"read"}`),
 	))
 	if response.Code != 400 {
 		t.Fatalf("weekend write status = %d, body = %s", response.Code, response.Body.String())

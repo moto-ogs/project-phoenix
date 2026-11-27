@@ -12,8 +12,6 @@ const (
 	CarePlanOfferingChangeDisabled         CarePlanError = CarePlanError(care.CarePlanOfferingChangeDisabled)
 	CarePlanManualPartialAbsenceConflict   CarePlanError = CarePlanError(care.CarePlanManualPartialAbsenceConflict)
 	CarePlanSchoolStatusDayConflict        CarePlanError = CarePlanError(care.CarePlanSchoolStatusDayConflict)
-	CarePlanGuardianPickupExceptionRaced   CarePlanError = CarePlanError(care.CarePlanGuardianPickupExceptionRaced)
-	CarePlanPickupExceptionStaffOwned      CarePlanError = CarePlanError(care.CarePlanPickupExceptionStaffOwned)
 	CarePlanStudentDataRequestFieldPending CarePlanError = CarePlanError(care.CarePlanStudentDataRequestFieldPending)
 )
 

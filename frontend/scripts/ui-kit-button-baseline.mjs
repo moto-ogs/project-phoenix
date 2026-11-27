@@ -108,7 +108,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1114],
+    lines: [1110],
     reason: "Termin-Block im Kalenderraster: Kalenderzelle",
   },
   {
@@ -120,7 +120,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/companion-picker.tsx",
-    lines: [391],
+    lines: [386],
     reason: "Suchtreffer zum Auswählen: Auswahlzeile",
   },
   {
@@ -152,12 +152,6 @@ export const buttonRatchetAllowlist = [
   },
   {
     rule: "no-hand-rolled-button",
-    file: "src/components/students/compact-student-card.tsx",
-    lines: [91],
-    reason: "Kinderkarte im Raster, öffnet das Profil: Kachel",
-  },
-  {
-    rule: "no-hand-rolled-button",
     file: "src/components/parent/child/child-switcher.tsx",
     lines: [57],
     reason:
@@ -172,7 +166,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1063],
+    lines: [1059],
     reason: "Termin-Block in der Wochenansicht: Kalenderzelle",
   },
   // #5574: hellgraue Fläche als gewählter Zustand einer Auswahl oder

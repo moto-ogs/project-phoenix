@@ -12,7 +12,6 @@ export function ParentSection({
   description,
   actions,
   children,
-  bare = false,
   level = 2,
   concept,
   prominent = false,
@@ -21,57 +20,33 @@ export function ParentSection({
   description?: string;
   actions?: React.ReactNode;
   children?: React.ReactNode;
-  /** Ohne eigene Kartenflaeche, wenn der Inhalt selbst schon Karten sind. */
-  bare?: boolean;
   /** 3 fuer Bloecke, die unter einem anderen Abschnitt haengen. */
   level?: 2 | 3;
   concept?: MotoConcept;
   prominent?: boolean;
 }>) {
-  if (!bare) {
-    return (
-      <SectionCard
-        title={title}
-        description={description}
-        leading={
-          concept ? (
-            <ConceptIconTile concept={concept} size="section" />
-          ) : undefined
-        }
-        actions={
-          actions ? (
-            <div className="w-full sm:w-auto [&>*]:w-full sm:[&>*]:w-auto">
-              {actions}
-            </div>
-          ) : undefined
-        }
-        headingLevel={level}
-        titleSize={prominent ? "lg" : "md"}
-        bodyClassName="mt-5 space-y-5"
-      >
-        {children}
-      </SectionCard>
-    );
-  }
-
-  const Heading = level === 3 ? "h3" : "h2";
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <Heading className="text-base font-semibold text-gray-900">
-            {title}
-          </Heading>
-          {description && (
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              {description}
-            </p>
-          )}
-        </div>
-        {actions}
-      </div>
+    <SectionCard
+      title={title}
+      description={description}
+      leading={
+        concept ? (
+          <ConceptIconTile concept={concept} size="section" />
+        ) : undefined
+      }
+      actions={
+        actions ? (
+          <div className="w-full sm:w-auto [&>*]:w-full sm:[&>*]:w-auto">
+            {actions}
+          </div>
+        ) : undefined
+      }
+      headingLevel={level}
+      titleSize={prominent ? "lg" : "md"}
+      bodyClassName="mt-5 space-y-5"
+    >
       {children}
-    </section>
+    </SectionCard>
   );
 }
 

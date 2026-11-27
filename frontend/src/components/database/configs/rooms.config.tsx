@@ -1,38 +1,18 @@
 // Room Entity Configuration
 
-import { defineEntityConfig } from "@/lib/database/types";
+import type { EntityConfig, EntityFormConfig } from "@/lib/database/types";
 import { CatalogColorField } from "@/components/database/catalog-color-field";
 import { mapRoomResponse, prepareRoomForBackend } from "@/lib/room-helpers";
 import type { Room } from "@/lib/room-helpers";
 import { bffJson } from "~/lib/bff-fetch";
-import { roomsConcept } from "~/lib/concepts/rooms";
 
-export const roomsConfig = defineEntityConfig<Room>({
+export const roomsConfig = {
   name: {
     singular: "Raum",
     plural: "Räume",
   },
 
-  concept: roomsConcept,
-
-  backUrl: "/database",
-
   api: {
-    list: async () => {
-      // Admin view keeps showing system rooms (Schulhof, WC) — they are
-      // rendered greyed-out via isSystemRoom instead of hidden.
-      const page = await bffJson("tenant", "GET /api/rooms/", {
-        query: { include_system: true },
-      });
-      return {
-        data: page.data.map(mapRoomResponse),
-        pagination: page.pagination,
-      };
-    },
-    get: async (id) =>
-      mapRoomResponse(
-        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
-      ),
     create: async (data) =>
       mapRoomResponse(
         await bffJson("tenant", "POST /api/rooms/", {
@@ -142,121 +122,5 @@ export const roomsConfig = defineEntityConfig<Room>({
     },
   },
 
-  detail: {
-    header: {
-      title: (room) => room.name,
-      subtitle: (room) => {
-        if (room.building && room.floor !== undefined) {
-          return `${room.building}, Etage ${room.floor}`;
-        }
-        if (room.floor !== undefined) {
-          return `Etage ${room.floor}`;
-        }
-        if (room.building) {
-          return room.building;
-        }
-        return "";
-      },
-      avatar: {
-        text: (room) => room.name?.[0] ?? "R",
-        size: "md",
-      },
-    },
-
-    sections: [
-      {
-        title: "Raumdetails",
-        items: [
-          {
-            label: "Raumname",
-            value: (room: Room) => room.name,
-          },
-          {
-            label: "Kategorie",
-            value: (room: Room) => room.category ?? "Nicht angegeben",
-          },
-          {
-            label: "Gebäude",
-            value: (room: Room) => room.building ?? "Nicht angegeben",
-          },
-          {
-            label: "Etage",
-            value: (room: Room) =>
-              room.floor === undefined
-                ? "Nicht angegeben"
-                : `Etage ${room.floor}`,
-          },
-          {
-            label: "Maximale Belegung",
-            value: (room: Room) =>
-              room.capacity === undefined
-                ? "Keine Begrenzung"
-                : `${room.capacity} Plätze`,
-          },
-          {
-            label: "Status",
-            value: (room: Room) => (room.isOccupied ? "Belegt" : "Frei"),
-            colSpan: 2,
-          },
-        ],
-      },
-    ],
-  },
-
-  list: {
-    title: "Raum auswählen",
-    description: "Verwalte Räume und deren Eigenschaften",
-    searchPlaceholder: "Raum suchen…",
-
-    // No filters needed for ~20 rooms - search is sufficient
-
-    // Frontend search configuration
-    searchStrategy: "frontend",
-    searchableFields: ["name", "category", "building"],
-    minSearchLength: 0,
-
-    item: {
-      title: (room: Room) => room.name,
-      subtitle: (room: Room) => {
-        // Show occupancy status as subtitle
-        if (room.isOccupied) {
-          const parts = ["Belegt"];
-          if (room.groupName) parts.push(`Gruppe: ${room.groupName}`);
-          if (room.activityName) parts.push(room.activityName);
-          return parts.join(" • ");
-        }
-        return "Frei";
-      },
-      description: (room: Room) => {
-        const parts: string[] = [];
-        if (room.building) parts.push(`Gebäude ${room.building}`);
-        if (room.floor !== undefined) parts.push(`Etage ${room.floor}`);
-        return parts.join(" • ");
-      },
-      avatar: {
-        text: (room: Room) => {
-          // Use icon based on category
-          switch (room.category) {
-            case "Normaler Raum":
-              return "📚";
-            case "Gruppenraum":
-              return "👥";
-            case "Themenraum":
-              return "🎨";
-            case "Sport":
-              return "🏃";
-            default:
-              return room.name?.[0] ?? "R";
-          }
-        },
-      },
-    },
-  },
-
-  labels: {
-    createButton: "Neuen Raum erstellen",
-    createModalTitle: "Neuer Raum",
-    detailModalTitle: "Raumdetails",
-    deleteConfirmation: "Bist du sicher, dass du diesen Raum löschen möchtest?",
-  },
-});
+  createTitle: "Neuer Raum",
+} satisfies EntityConfig<Room> & EntityFormConfig<Room>;

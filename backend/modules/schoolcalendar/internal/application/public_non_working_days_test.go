@@ -11,45 +11,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// calendarDaysEngine stubs the holiday and closing-day reads the tenant
-// non-working-day queries compose; every other engine method is unreachable.
+// calendarDaysEngine supplies the tenant's federal state and closing days.
 type calendarDaysEngine struct {
 	recordingEngine
 	region      string
 	regionErr   error
-	holidays    []schoolcalendar.Holiday
-	dates       map[string]bool
-	holidayErr  error
 	closing     []schoolcalendar.ClosingDay
 	closingErr  error
-	seenRegion  string
 	seenClosing schoolcalendar.ClosingDayFilter
 }
 
 func (e *calendarDaysEngine) FederalState(context.Context) (string, error) {
 	return e.region, e.regionErr
-}
-
-func (e *calendarDaysEngine) ValidHolidayRegion(region string) bool {
-	return region == "DE-NW" || region == "DE-SN"
-}
-
-func (e *calendarDaysEngine) ListHolidays(_ context.Context, region, _, _ string) ([]schoolcalendar.Holiday, error) {
-	e.seenRegion = region
-	return e.holidays, e.holidayErr
-}
-
-func (e *calendarDaysEngine) HolidayDates(_ context.Context, region, _, _ string) (map[string]bool, error) {
-	e.seenRegion = region
-	if e.holidayErr != nil {
-		return nil, e.holidayErr
-	}
-	// Copy so the union in the module cannot leak into the stub.
-	out := make(map[string]bool, len(e.dates))
-	for day := range e.dates {
-		out[day] = true
-	}
-	return out, nil
 }
 
 func (e *calendarDaysEngine) ListClosingDays(_ context.Context, filter schoolcalendar.ClosingDayFilter) ([]schoolcalendar.ClosingDay, error) {
@@ -64,14 +37,12 @@ func closingRange(start, end, reason string) schoolcalendar.ClosingDay {
 func TestTenantHolidaysResolveTheRegionFromTheTenant(t *testing.T) {
 	t.Parallel()
 
-	engine := &calendarDaysEngine{region: "DE-SN", holidays: []schoolcalendar.Holiday{{Date: "2026-11-18", Name: "Buß- und Bettag"}}}
+	engine := &calendarDaysEngine{region: "DE-SN"}
 	module := newTestModule(engine)
 
 	list, err := module.TenantHolidays(context.Background(), "2026-11-01", "2026-11-30")
 	require.NoError(t, err)
-	assert.Equal(t, "DE-SN", engine.seenRegion)
-	require.Len(t, list, 1)
-	assert.Equal(t, "Buß- und Bettag", list[0].Name)
+	assert.Equal(t, []schoolcalendar.Holiday{{Date: "2026-11-18", Name: "Buß- und Bettag"}}, list)
 }
 
 // The school checks its holidays against the state they are computed for
@@ -93,7 +64,7 @@ func TestTenantHolidayRegionNamesTheFederalState(t *testing.T) {
 func TestTenantHolidayDates(t *testing.T) {
 	t.Parallel()
 
-	module := newTestModule(&calendarDaysEngine{region: "DE-NW", dates: map[string]bool{"2026-05-01": true, "2026-05-25": true}})
+	module := newTestModule(&calendarDaysEngine{region: "DE-NW"})
 
 	set, err := module.TenantHolidayDates(context.Background(), "2026-05-01", "2026-05-31")
 	require.NoError(t, err)
@@ -190,26 +161,27 @@ func TestNonWorkingDayDatesUnionsHolidaysAndClosingDays(t *testing.T) {
 	// into one entry so a Soll is never subtracted twice.
 	engine := &calendarDaysEngine{
 		region:  "DE-NW",
-		dates:   map[string]bool{"2026-10-03": true, "2026-11-01": true},
 		closing: []schoolcalendar.ClosingDay{closingRange("2026-10-12", "2026-10-12", "Pädagogischer Tag"), closingRange("2026-10-30", "2026-11-01", "Brücke")},
 	}
 
-	set, err := newTestModule(engine).NonWorkingDayDates(context.Background(), "2026-10-01", "2026-11-30")
+	module := newTestModule(engine)
+	set, err := module.NonWorkingDayDates(context.Background(), "2026-10-01", "2026-11-30")
 	require.NoError(t, err)
 	assert.Equal(t, map[string]bool{"2026-10-03": true, "2026-10-12": true, "2026-10-30": true, "2026-10-31": true, "2026-11-01": true}, set)
-	assert.Len(t, engine.dates, 2, "the union must not mutate the holiday set")
+	holidays, err := module.TenantHolidayDates(context.Background(), "2026-10-01", "2026-11-30")
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"2026-10-03": true, "2026-11-01": true}, holidays, "the union must not mutate the holiday set")
 }
 
 func TestNonWorkingDayDatesKeepsTenantHolidaysPure(t *testing.T) {
 	t.Parallel()
 
 	engine := &calendarDaysEngine{
-		region:   "DE-NW",
-		holidays: []schoolcalendar.Holiday{{Date: "2026-05-01", Name: "Tag der Arbeit"}},
-		closing:  []schoolcalendar.ClosingDay{closingRange("2026-05-04", "2026-05-04", "Brückentag")},
+		region:  "DE-NW",
+		closing: []schoolcalendar.ClosingDay{closingRange("2026-05-04", "2026-05-04", "Brückentag")},
 	}
 
-	list, err := newTestModule(engine).TenantHolidays(context.Background(), "2026-05-01", "2026-05-31")
+	list, err := newTestModule(engine).TenantHolidays(context.Background(), "2026-05-01", "2026-05-04")
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 	assert.Equal(t, "Tag der Arbeit", list[0].Name, "closing days must never leak into the holiday listing")
@@ -218,11 +190,11 @@ func TestNonWorkingDayDatesKeepsTenantHolidaysPure(t *testing.T) {
 func TestNonWorkingDayDatesPropagatesErrors(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestModule(&calendarDaysEngine{region: "DE-NW", holidayErr: errors.New("holiday boom")}).
+	_, err := newTestModule(&calendarDaysEngine{regionErr: errors.New("holiday boom")}).
 		NonWorkingDayDates(context.Background(), "2026-05-01", "2026-05-31")
-	require.Error(t, err)
+	require.ErrorIs(t, err, schoolcalendar.ErrFederalStateUnavailable)
 
-	_, err = newTestModule(&calendarDaysEngine{region: "DE-NW", dates: map[string]bool{}, closingErr: errors.New("closing boom")}).
+	_, err = newTestModule(&calendarDaysEngine{region: "DE-NW", closingErr: errors.New("closing boom")}).
 		NonWorkingDayDates(context.Background(), "2026-05-01", "2026-05-31")
 	require.Error(t, err)
 }
@@ -273,7 +245,7 @@ func TestErrorCodeNamesTheAdministrationOutcomes(t *testing.T) {
 
 func TestNewRecordsAndAdministeredModuleRequireTheirParts(t *testing.T) {
 	t.Parallel()
-	assert.Panics(t, func() { New(nil, nil, Administration{}, nil) })
+	assert.Panics(t, func() { New(nil, nil, Administration{}) })
 	_, err := WithAdministration(nil, Administration{}, nil)
 	require.Error(t, err)
 }

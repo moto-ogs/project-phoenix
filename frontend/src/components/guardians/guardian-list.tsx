@@ -123,7 +123,6 @@ interface GuardianListProps {
   readonly onLiftEmailBlock?: (guardian: GuardianWithRelationship) => void;
   readonly onResumeEmails?: (guardian: GuardianWithRelationship) => void;
   readonly readOnly?: boolean;
-  readonly showRelationship?: boolean;
 }
 
 function canInviteGuardian(
@@ -165,7 +164,6 @@ export default function GuardianList({
   onLiftEmailBlock,
   onResumeEmails,
   readOnly = false,
-  showRelationship = true,
 }: GuardianListProps) {
   if (guardians.length === 0) {
     return (
@@ -296,11 +294,9 @@ export default function GuardianList({
                     />
                   )}
                 </h4>
-                {showRelationship && (
-                  <p className="mt-1 text-xs text-gray-600 sm:text-sm">
-                    {getRelationshipTypeLabel(guardian.relationshipType)}
-                  </p>
-                )}
+                <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+                  {getRelationshipTypeLabel(guardian.relationshipType)}
+                </p>
               </div>
 
               {!readOnly && menuItems.length > 0 && (

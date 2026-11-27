@@ -31,36 +31,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: enrollment reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "classification": "platform",
@@ -2312,6 +2282,28 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0329",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. ADR 0329 (#4817): the school's extra day route names the Träger of the session's school from its row in platform.schools, read in the school's tenant transaction before the route opens the Träger transaction of that Träger; the Träger never comes from the request.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0329",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. ADR 0329 (#4817): the school's extra day route names the Träger of the session's school from its row in platform.schools, read in the school's tenant transaction before the route opens the Träger transaction of that Träger; the Träger never comes from the request.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
     },
     {

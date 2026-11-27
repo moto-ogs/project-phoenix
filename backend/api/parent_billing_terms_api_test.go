@@ -444,9 +444,9 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{"contract_id": fmt.Sprint(contract), "recipient_kind": "applicant"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"family":null`)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyBillingPath, nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/contracts/%d", familyBillingPath, contract), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Empty(t, decodeSchoolPortalData[[]familyBillingBody](t, rec.Body.Bytes()))
+	assert.Contains(t, rec.Body.String(), `"family":null`, "the family has no deviation left")
 	var actions []string
 	require.NoError(t, f.db.NewRaw(`SELECT action FROM parent_billing.family_billing_events WHERE family_billing_id = ? ORDER BY id`,
 		saved.ID).Scan(context.Background(), &actions))
@@ -470,7 +470,8 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		Family *familyBillingBody `json:"family"`
 	}](t, rec.Body.Bytes()).Family
 	require.NotNil(t, deviation)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyBillingPath, nil)
+	familyOfContract := fmt.Sprintf("%s/contracts/%d", familyBillingPath, contract)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyOfContract, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var reads int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing_events WHERE family_billing_id = ? AND action = 'read'`,
@@ -488,7 +489,7 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	}{
 		{http.MethodGet, billingTermsPath, nil},
 		{http.MethodPut, billingTermsPath + "/care", map[string]any{"payment_method": "transfer", "due_days": 1}},
-		{http.MethodGet, familyBillingPath, nil},
+		{http.MethodGet, familyOfContract, nil},
 		{http.MethodPut, familyBillingPath, map[string]any{"contract_id": fmt.Sprint(contract), "recipient_kind": "applicant"}},
 		{http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04")},
 		{http.MethodPut, runDueDatesPathOf("holiday", int64(run.ID)), dueDates("2030-01-02", "2030-01-04")},
@@ -499,9 +500,8 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	}
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Zahlung Fremd", identityaccess.TraegerRoleBilling)
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, familyBillingPath, nil)
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Empty(t, decodeSchoolPortalData[[]familyBillingBody](t, rec.Body.Bytes()), "no deviation of another Träger")
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, familyOfContract, nil)
+	assert.Equal(t, http.StatusNotFound, rec.Code, "no deviation of another Träger: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, familyBillingPath, map[string]any{
 		"contract_id": fmt.Sprint(contract), "recipient_kind": "payer", "payer_first_name": "Fremd", "payer_last_name": "Zahler",
 		"payer_email": "fremd@example.org", "payer_address": map[string]any{"street": "Weg 1", "postal_code": "12345", "city": "Ort"}})
@@ -525,8 +525,7 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), `"due_days":3`, "the other Träger's terms stay there")
 }
 
-// The terms and the deviations read the same statements for any number of
-// deviations.
+// The terms read the same statements for any number of deviations.
 func TestBillingTermsQueryBudgetIsFlat(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Zahlung Budget")
@@ -547,13 +546,11 @@ func TestBillingTermsQueryBudgetIsFlat(t *testing.T) {
 	}
 	deviate("Mia")
 	setTerms(t, f.traeger, f.office.token, "care", map[string]any{"payment_method": "direct_debit", "due_days": 10})
-	families, terms := measure(familyBillingPath), measure(billingTermsPath)
+	terms := measure(billingTermsPath)
 	deviate("Noah")
 	deviate("Lia")
 	setTerms(t, f.traeger, f.office.token, "holiday", map[string]any{"payment_method": "transfer", "due_days": 10})
-	assert.Len(t, measure(familyBillingPath).Statements, len(families.Statements), "the deviations read the same statements for any number")
 	assert.Len(t, measure(billingTermsPath).Statements, len(terms.Statements))
-	querybudgets.AssertQueryBudget(t, "api.traeger.family_billing", families)
 	querybudgets.AssertQueryBudget(t, "api.traeger.billing_terms", terms)
 }
 

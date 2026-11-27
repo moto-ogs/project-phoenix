@@ -228,7 +228,6 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		option(&settingsOverrides, &mail)
 	}
 	mailer := mail.mailer
-	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger, time.Now)
 	defaultFrom := email.NewEmail(cfg.EmailFromName, cfg.EmailFromAddress)
 	if defaultFrom.Address == "" {
 		defaultFrom = email.NewEmail("moto", "no-reply@moto.local")
@@ -249,11 +248,8 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	var identityAccess identityaccess.Owner
-	durable := newAuthFixtureOutbox(owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox, Runtime: deliveryModule.Runtime}, deliveryModule.Runtime, mailer, logger, func() identityaccess.Owner { return identityAccess })
-	if mail.outbox != nil {
-		durable = mail.outbox
-	}
+	mailRenderer := &owners.TransactionalMailRenderer{Logger: logger}
+	durable := authTestTransactionalMail(deliveryModule.Runtime, mailRenderer, mail, logger)
 	identity := owners.TenantMailIdentity(organizations, settings.Settings, owners.RootEnvironment{Logger: logger})
 	sessionRepos := owners.SessionRepositoriesOf(r, organizations, audits.AuthEvent, deliveryCompose.NewPushSubscriptionRepository(db.Pool()))
 	if settingsOverrides.staffCreateErr != nil {
@@ -309,8 +305,8 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	demo, err := owners.DemoDependencies(&owners.DemoAccessWiring{
-		Dispatcher: dispatcher, DefaultFrom: defaultFrom, Durable: durable, FrontendURL: frontendURL,
-		Logger: logger, Backoff: settingsOverrides.resetBackoff, MaxActiveSchools: settingsOverrides.demoMaxActiveSchools,
+		DefaultFrom: defaultFrom, Durable: durable, FrontendURL: frontendURL,
+		Backoff: settingsOverrides.resetBackoff, MaxActiveSchools: settingsOverrides.demoMaxActiveSchools,
 		OperatorWithoutSecondFactor: settingsOverrides.demoOperatorWithoutSecondFactor,
 		NewToken:                    requestTokenReads.NewCapabilityToken, Fingerprint: requestTokenReads.CapabilityFingerprint,
 	}, settingsOverrides.standingDemo, organizations)
@@ -318,7 +314,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	invitationDependencies := owners.InvitationDependencies(&owners.InvitationWiring{
-		Dispatcher: dispatcher, DefaultFrom: defaultFrom, Durable: durable, StaffURL: frontendURL, SchoolURL: schoolURL,
+		DefaultFrom: defaultFrom, Durable: durable, StaffURL: frontendURL, SchoolURL: schoolURL,
 		MailIdentity: identity, Expiry: time.Duration(inviteHours) * time.Hour,
 		Backoff: settingsOverrides.resetBackoff, Settings: settings.Settings, Outcomes: deliveryModule.Runtime.EmailOutcomes,
 		Outbox:       owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox},
@@ -328,20 +324,21 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	identityAccess, err = owners.NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
+	identityAccess, err := owners.NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
 		DB: db.Pool(), Observe: func(identityaccessCompose.Observation) {}, Now: settingsOverrides.identityClock,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo, TenantRuntime: unit,
 		Resets: owners.PasswordResetDependencies(&owners.PasswordResetWiring{
-			Dispatcher: dispatcher, DefaultFrom: defaultFrom, Durable: durable,
+			DefaultFrom: defaultFrom, Durable: durable,
 			StaffURL: frontendURL, ParentsURL: parentsURL, SchoolURL: schoolURL, TraegerURL: strings.TrimRight(cfg.TraegerURL, "/"),
 			Expiry: time.Duration(resetMinutes) * time.Minute, RateLimitEnabled: settingsOverrides.rateLimitEnabled,
 			Backoff: settingsOverrides.resetBackoff,
 		}, logger, cfg.JWTSecret),
-		Invitations: invitationDependencies, Traeger: authTestTraegerAccounts(dispatcher, defaultFrom, deliveryModule.Runtime, frontendURL, inviteHours, settingsOverrides.resetBackoff, logger),
+		Invitations: invitationDependencies, Traeger: authTestTraegerAccounts(defaultFrom, deliveryModule.Runtime, frontendURL, inviteHours, settingsOverrides.resetBackoff, logger),
 	}, sessionRepos, codec, settings.Settings, command, logger)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
+	mailRenderer.Identity = identityAccess
 	invitation := InvitationCapability(identityAccess)
 	guardian := GuardianInvitationCapability(identityAccess)
 	return AuthTestModule{
@@ -352,6 +349,24 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		SessionSigning: AuthTestSessionSigning{Secret: cfg.JWTSecret, AccessExpiry: cfg.JWTExpiry, RefreshExpiry: cfg.JWTRefreshExpiry},
 		Invitation:     invitation, GuardianInvitation: guardian,
 	}, nil
+}
+
+func authTestTransactionalMail(runtime *deliveryCompose.Runtime, renderer *owners.TransactionalMailRenderer, mail authTestMail, logger *slog.Logger) owners.DurableMailOutbox {
+	if mail.outbox != nil {
+		return mail.outbox
+	}
+	provider := &deliveryCompose.MailPushProvider{
+		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
+			owners.TransactionalMailKind: renderer,
+		}),
+		Mailer: mail.mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: runtime.Now,
+	}
+	return fixtureMailOutbox{
+		outbox:   owners.OutboxEnqueuer{Runtime: runtime},
+		runtime:  runtime,
+		provider: provider,
+		logger:   logger,
+	}
 }
 
 // IdentityAccessForTests composes the Identity & Access module over the
@@ -455,9 +470,9 @@ func authTestTokenExpiry(value, fallback, maximum int) int {
 // authTestTraegerAccounts composes the Träger-Büro account management of the
 // test module: its invitation mails stay queued in Delivery's outbox and link
 // to a Träger-Portal host that resolves nowhere.
-func authTestTraegerAccounts(dispatcher email.Dispatcher, from email.Email, delivery *deliveryCompose.Runtime, frontendURL string, inviteHours int, backoff []time.Duration, logger *slog.Logger) *identityPorts.TraegerAccountDependencies {
+func authTestTraegerAccounts(from email.Email, delivery *deliveryCompose.Runtime, frontendURL string, inviteHours int, backoff []time.Duration, logger *slog.Logger) *identityPorts.TraegerAccountDependencies {
 	return owners.TraegerAccountDependencies(&owners.TraegerAccountWiring{
-		Dispatcher: dispatcher, DefaultFrom: from, Outbox: owners.OutboxEnqueuer{Runtime: delivery},
+		DefaultFrom: from, Outbox: owners.OutboxEnqueuer{Runtime: delivery},
 		FrontendURL: frontendURL, TraegerURL: "http://traeger.invalid",
 		Expiry: time.Duration(inviteHours) * time.Hour, Backoff: backoff, Logger: logger,
 	})

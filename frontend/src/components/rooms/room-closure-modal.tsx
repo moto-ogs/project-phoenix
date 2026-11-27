@@ -6,7 +6,7 @@
  * sie selbst über den Raumplan.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -38,7 +38,6 @@ const logger = createLogger({ component: "RoomClosureModal" });
 const AFFECTED_WINDOW_DAYS = 56;
 
 interface RoomClosureModalProps {
-  readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSaved: () => void;
   readonly roomId: string;
@@ -50,7 +49,6 @@ interface RoomClosureModalProps {
 }
 
 export function RoomClosureModal({
-  isOpen,
   onClose,
   onSaved,
   roomId,
@@ -62,32 +60,17 @@ export function RoomClosureModal({
   const [endDate, setEndDate] = useState(today);
   const [reason, setReason] = useState("");
   const latestStartDate = addCalendarDays(today, ROOM_CLOSURE_MAX_DAYS - 1);
-  const save = useFormModalPending(isOpen);
+  const save = useFormModalPending(true);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
-  const clearErrors = formErrors.clear;
   const latestSaveRef = useRef<() => void>(() => undefined);
-
-  const opened = useRef(false);
-  useEffect(() => {
-    if (!isOpen) {
-      opened.current = false;
-      return;
-    }
-    if (opened.current) return;
-    opened.current = true;
-    setStartDate(today);
-    setEndDate(today);
-    setReason("");
-    clearErrors();
-  }, [isOpen, today, clearErrors]);
 
   const periodValid = Boolean(startDate && endDate && endDate >= startDate);
   const affectedUntil = periodValid
     ? minDay(endDate, addCalendarDays(startDate, AFFECTED_WINDOW_DAYS - 1))
     : "";
   const affected = useSWRAuth(
-    isOpen && canReadPlan && periodValid
+    canReadPlan && periodValid
       ? roomKeys.plan(roomId, startDate, affectedUntil)
       : null,
     () => fetchRoomPlanBlocks(roomId, startDate, affectedUntil),
@@ -137,7 +120,7 @@ export function RoomClosureModal({
 
   return (
     <FormModal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title="Raum sperren"
       size="md"

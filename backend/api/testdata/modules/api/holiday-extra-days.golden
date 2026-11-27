@@ -1,0 +1,5 @@
+GET /api/holiday-extra-days/ -> basis
+GET /api/holiday-extra-days/{id} -> basis
+POST /api/holiday-extra-days/ -> basis
+POST /api/holiday-extra-days/{id}/publish -> basis
+PUT /api/holiday-extra-days/{id} -> basis

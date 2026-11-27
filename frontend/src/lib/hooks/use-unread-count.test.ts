@@ -363,14 +363,14 @@ describe("useUnreadCount — event listeners", () => {
 });
 
 // ---------------------------------------------------------------------------
-// refetchOnFocus
+// Focus
 // ---------------------------------------------------------------------------
 
-describe("useUnreadCount — refetchOnFocus", () => {
-  it("refetches when window gains focus and refetchOnFocus is true", async () => {
+describe("useUnreadCount — focus", () => {
+  it("refetches when the window gains focus", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetcher = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(4);
-    const { result } = render({ fetcher, refetchOnFocus: true });
+    const { result } = render({ fetcher });
 
     await waitFor(() => expect(result.current.unreadCount).toBe(1));
     // Past the shared reader's dedupe window of the mount request.
@@ -379,20 +379,6 @@ describe("useUnreadCount — refetchOnFocus", () => {
     act(() => window.dispatchEvent(new Event("focus")));
 
     await waitFor(() => expect(result.current.unreadCount).toBe(4));
-  });
-
-  it("does NOT refetch on focus when refetchOnFocus is false (default)", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const fetcher = vi.fn().mockResolvedValue(2);
-    render({ fetcher });
-
-    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-    act(() => vi.advanceTimersByTime(10_000));
-
-    act(() => window.dispatchEvent(new Event("focus")));
-    await settle();
-
-    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -239,9 +239,6 @@ func newStammdatenStudentConfig(t *testing.T, db *bun.DB) (*importService.Studen
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	groups, err := owners.NewSchoolStructure(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	rooms, err := api.NewFacilities(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	references := owners.NewReferences(groups, rooms)
 	rfid, err := api.NewIdentityAccessForTests(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	config := importService.NewStudentImportConfig(ports.StudentImportDeps{Now: time.Now, Transactions: dataImportCompose.NewTransactions(),
@@ -250,7 +247,7 @@ func newStammdatenStudentConfig(t *testing.T, db *bun.DB) (*importService.Studen
 		Schedules:       repos.CarePlan(),
 		PrivacyConsents: api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)),
 		FindRFIDCard:    rfid.FindRFIDCard,
-		Resolver:        importService.NewRelationshipResolver(references.Groups, references.Rooms),
+		Resolver:        importService.NewRelationshipResolver(owners.NewGroupReferenceReader(groups)),
 	})
 	return config, reposPeople
 }

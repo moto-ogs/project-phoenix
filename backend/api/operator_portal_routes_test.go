@@ -98,7 +98,7 @@ func TestOperatorRoutesUpdateAndRemoveOrganizationsSchoolsAndPersons(t *testing.
 func TestOperatorRoutesSwitchTheCaregiverCapabilityOfASchoolAccount(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	_, _, _, _, _, _, _, _, _, _, services, _, _, _, _, _, _, _, provisioning, _, _, _, _, _, _, _, _, err := composeTestRoot(testpkg.NewDatabase(t, db), slog.Default(), currentTestServiceConfig())
+	_, _, _, _, _, _, _, _, _, services, _, _, _, _, _, _, _, provisioning, _, _, _, _, _, _, _, _, err := composeTestRoot(testpkg.NewDatabase(t, db), slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	config, err := newProvisioningConfig(provisioning, caregiverCapabilityViews(testpkg.NewDatabase(t, db), services.CaregiverCapability))
 	require.NoError(t, err)

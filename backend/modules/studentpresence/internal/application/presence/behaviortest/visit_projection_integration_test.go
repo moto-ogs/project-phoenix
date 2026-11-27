@@ -63,16 +63,15 @@ func TestPresenceProjection_ActiveGroupStudentDisplay(t *testing.T) {
 	assert.Nil(t, row.ExitTime)
 }
 
-func TestPresenceProjection_CurrentVisitWithRoom(t *testing.T) {
+func TestPresenceProjection_CurrentRoomVisits(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := setupActiveService(t, db)
 	presence := testSchoolPresence(t, db)
 	ctx := testpkg.Ctx(t)
 
-	t.Run("returns visit with active group and room", func(t *testing.T) {
+	t.Run("returns visit with its session and room", func(t *testing.T) {
 		data := newVisitProjectionFixture(t, db)
 		now := time.Now()
 		visit := studentpresence.Visit{
@@ -83,19 +82,17 @@ func TestPresenceProjection_CurrentVisitWithRoom(t *testing.T) {
 		visit, err := presence.RecordVisit(ctx, visit)
 		require.NoError(t, err)
 
-		result, err := repo.GetStudentCurrentVisitWithRoom(ctx, data.Student1)
+		locations, err := presence.ListVisitLocations(ctx, studentpresence.CurrentRoomVisitsFilter([]int64{data.Student1}))
 		require.NoError(t, err)
-		require.NotNil(t, result)
-		assert.Equal(t, visit.ID, result.ID)
-		assert.Nil(t, result.ExitTime)
+		require.Len(t, locations, 1)
+		result := locations[0]
+		assert.Equal(t, visit.ID, result.Visit.ID)
+		assert.Nil(t, result.Visit.ExitTime)
 
-		// ActiveGroup should be loaded
-		require.NotNil(t, result.ActiveGroup, "ActiveGroup should be loaded")
-		assert.Equal(t, data.GroupID, result.ActiveGroup.ID)
+		require.NotNil(t, result.Group, "ActiveGroup should be loaded")
+		assert.Equal(t, data.GroupID, result.Group.ID)
 
-		// Room should be loaded on active group
-		require.NotNil(t, result.ActiveGroup.Room, "Room should be loaded on ActiveGroup")
-		assert.Equal(t, data.Room, result.ActiveGroup.Room.ID)
+		assert.Equal(t, data.Room, result.Group.RoomID)
 	})
 
 	t.Run("returns visit when active group timeout_minutes is null", func(t *testing.T) {
@@ -116,19 +113,20 @@ func TestPresenceProjection_CurrentVisitWithRoom(t *testing.T) {
 			Exec(ctx)
 		require.NoError(t, err)
 
-		result, err := repo.GetStudentCurrentVisitWithRoom(ctx, data.Student1)
+		locations, err := presence.ListVisitLocations(ctx, studentpresence.CurrentRoomVisitsFilter([]int64{data.Student1}))
 		require.NoError(t, err)
-		require.NotNil(t, result)
-		require.NotNil(t, result.ActiveGroup)
-		assert.Equal(t, 0, result.ActiveGroup.TimeoutMinutes)
-		require.NotNil(t, result.ActiveGroup.Room)
-		assert.Equal(t, data.Room, result.ActiveGroup.Room.ID)
+		require.Len(t, locations, 1)
+		result := locations[0]
+		require.NotNil(t, result.Group)
+		assert.Equal(t, 0, result.Group.TimeoutMinutes)
+		assert.Equal(t, data.Room, result.Group.RoomID)
 	})
 
-	t.Run("returns error for student with no active visit", func(t *testing.T) {
+	t.Run("returns no location for student with no active visit", func(t *testing.T) {
 		data := newVisitProjectionFixture(t, db)
-		_, err := repo.GetStudentCurrentVisitWithRoom(ctx, data.Student2)
-		require.Error(t, err)
+		locations, err := presence.ListVisitLocations(ctx, studentpresence.CurrentRoomVisitsFilter([]int64{data.Student2}))
+		require.NoError(t, err)
+		assert.Empty(t, locations)
 	})
 
 	t.Run("ignores exited visits", func(t *testing.T) {
@@ -145,7 +143,8 @@ func TestPresenceProjection_CurrentVisitWithRoom(t *testing.T) {
 		require.NoError(t, err)
 
 		// Student2 should have no current visit (only exited one)
-		_, err = repo.GetStudentCurrentVisitWithRoom(ctx, data.Student2)
-		require.Error(t, err)
+		locations, err := presence.ListVisitLocations(ctx, studentpresence.CurrentRoomVisitsFilter([]int64{data.Student2}))
+		require.NoError(t, err)
+		assert.Empty(t, locations)
 	})
 }

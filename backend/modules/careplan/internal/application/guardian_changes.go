@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -118,53 +117,11 @@ func compareDates(a, b careplan.Date) int {
 	return calendar.Date(a).Compare(calendar.Date(b))
 }
 
-// GuardianPickupExceptions writes the guardian leg of a day's pickup
-// exception. A nil Excusal skips the derived block excusal coupling.
-// IsUniqueViolation classifies storage errors; the application layer cannot
-// read driver errors itself.
+// GuardianPickupExceptions withdraws a guardian's pickup exception. A nil
+// Excusal skips releasing derived block excusals.
 type GuardianPickupExceptions struct {
-	Records           ports.GuardianPickupRecords
-	Excusal           ports.GuardianPickupExcusal
-	IsUniqueViolation func(error) bool
-}
-
-// ApplyGuardianPickupException never touches a staff row. A nil time removes
-// the guardian row, a non-nil time updates or creates it. A unique violation
-// anywhere in the apply, the excusal sync included, means a concurrent write
-// won: it returns ErrGuardianPickupExceptionRaced joined with the raw error.
-func (s *GuardianPickupExceptions) ApplyGuardianPickupException(ctx context.Context, change careplan.GuardianPickupChange) error {
-	err := s.apply(ctx, change)
-	if err != nil && s.IsUniqueViolation(err) {
-		return fmt.Errorf("%w: %w", careplan.ErrGuardianPickupExceptionRaced, err)
-	}
-	return err
-}
-
-func (s *GuardianPickupExceptions) apply(ctx context.Context, change careplan.GuardianPickupChange) error {
-	existing, err := s.find(ctx, change.StudentID, change.Date)
-	if err != nil {
-		return err
-	}
-	if existing != nil && careplan.SchoolOwnedException(existing.Source) {
-		return careplan.ErrPickupExceptionStaffOwned
-	}
-	if err := s.writeLeg(ctx, existing, change); err != nil {
-		return err
-	}
-	return s.syncExcusal(ctx, change.StudentID, change.Date)
-}
-
-func (s *GuardianPickupExceptions) writeLeg(ctx context.Context, existing *careplan.PickupException, change careplan.GuardianPickupChange) error {
-	switch {
-	case change.PickupTime == nil && existing == nil:
-		return nil
-	case change.PickupTime == nil:
-		return s.WithdrawGuardianPickupException(ctx, *existing)
-	case existing != nil:
-		return s.update(ctx, *existing, change)
-	default:
-		return s.create(ctx, change)
-	}
+	Records ports.GuardianPickupRecords
+	Excusal ports.GuardianPickupExcusal
 }
 
 // WithdrawGuardianPickupException releases the derived excusal BEFORE the
@@ -177,49 +134,4 @@ func (s *GuardianPickupExceptions) WithdrawGuardianPickupException(ctx context.C
 		}
 	}
 	return s.Records.DeletePickupException(ctx, row.ID)
-}
-
-func (s *GuardianPickupExceptions) update(ctx context.Context, row careplan.PickupException, change careplan.GuardianPickupChange) error {
-	guardianID := change.GuardianAccountID
-	row.PickupTime = change.PickupTime
-	row.Reason = change.Reason
-	row.Source = careplan.ExceptionSourceGuardian
-	row.CreatedBy, row.EnteredByTraeger = 0, false
-	row.CreatedByGuardian = &guardianID
-	// Scanned TIME values (e.g. a carried-over excused_from) land on year 0.
-	row.NormalizeWallClockTimes()
-	return s.Records.UpdatePickupException(ctx, row)
-}
-
-func (s *GuardianPickupExceptions) create(ctx context.Context, change careplan.GuardianPickupChange) error {
-	guardianID := change.GuardianAccountID
-	_, err := s.Records.CreatePickupException(ctx, careplan.PickupException{
-		TenantID: change.TenantID, StudentID: change.StudentID, ExceptionDate: change.Date,
-		PickupTime: change.PickupTime, Reason: change.Reason,
-		Source: careplan.ExceptionSourceGuardian, CreatedByGuardian: &guardianID,
-	})
-	return err
-}
-
-// syncExcusal couples the resulting row with the per-block excusal: a pull
-// forward against the weekly baseline excuses the later blocks, moving it
-// back releases them again.
-func (s *GuardianPickupExceptions) syncExcusal(ctx context.Context, studentID int64, date careplan.Date) error {
-	if s.Excusal == nil {
-		return nil
-	}
-	row, err := s.find(ctx, studentID, date)
-	if err != nil || row == nil {
-		return err
-	}
-	_, err = s.Excusal.Sync(ctx, row.ID)
-	return err
-}
-
-func (s *GuardianPickupExceptions) find(ctx context.Context, studentID int64, date careplan.Date) (*careplan.PickupException, error) {
-	rows, err := s.Records.ListPickupExceptions(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{studentID}, Date: date})
-	if err != nil || len(rows) == 0 {
-		return nil, err
-	}
-	return &rows[0], nil
 }

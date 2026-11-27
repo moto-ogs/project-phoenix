@@ -2,10 +2,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 
-import {
-  RequestReviewCard,
-  ReviewDiffPanel,
-} from "~/components/students/request-review-card";
+import { RequestReviewCard } from "~/components/students/request-review-card";
+import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { usePickupExtensionPrompt } from "~/components/timetable/pickup-extension-access";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -135,7 +133,6 @@ function decisionNotice(row: StaffCareRequest, approve: boolean): string {
 export function CareRequestReviewItem({
   row,
   onDecided,
-  grouped = false,
   expectedVersion,
   onStale,
   decisionDisabledReason,
@@ -143,7 +140,6 @@ export function CareRequestReviewItem({
 }: Readonly<{
   row: StaffCareRequest;
   onDecided: (notice: string) => void;
-  grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
@@ -163,12 +159,10 @@ export function CareRequestReviewItem({
       type="care_schedule"
       typeLabel={careTypeLabel(row.request_kind)}
       childName={`${row.first_name} ${row.last_name}`}
-      grouped={grouped}
       summary={careSummary(row.diff, row.request_kind)}
       submittedAt={row.created_at}
       reason={decision.reason}
       onReasonChange={decision.setReason}
-      reasonPlaceholder="Begründung (Pflicht bei Ablehnung)"
       reasonError={decision.reasonError}
       approveReasonRequired={approveReasonRequired}
       decisionDisabledReason={decisionDisabledReason}

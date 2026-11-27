@@ -104,24 +104,6 @@ export const AdminView: Story = {
     accountStartDatePending: false,
     accountStartDateError: false,
     today,
-    isAdminView: true,
-  },
-};
-
-export const SelfView: Story = {
-  args: {
-    staffId: "1",
-    from,
-    to,
-    sessions,
-    reloadSessions: () => Promise.resolve(),
-    absences,
-    schedule,
-    accountStartDate: "",
-    accountStartDatePending: false,
-    accountStartDateError: false,
-    today,
-    isAdminView: false,
   },
 };
 
@@ -138,6 +120,5 @@ export const Empty: Story = {
     accountStartDatePending: false,
     accountStartDateError: false,
     today,
-    isAdminView: true,
   },
 };

@@ -423,7 +423,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Method: route.Method, Pattern: prefix + route.Pattern,
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
 		PartialError: route.PartialError,
-		Deprecated:   route.Deprecated, DeprecatedFields: route.DeprecatedFields, Refuses: route.Refuses,
+		Deprecated:   route.Deprecated, DeprecatedFields: route.DeprecatedFields,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
@@ -462,6 +462,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/invoice-journal", parentBillingHTTP.InvoiceJournalRouteContracts()},
 		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
 		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
@@ -519,15 +520,10 @@ func guardianRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
 	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryID, Repeated: true}}
-	const guardianEditRefused = "the staff form saves a guardian as one entry against its read state (ADR 0311, #7953 removes this edit)"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: types.Guardian},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: types.GuardianCreate, Response: types.Guardian},
-		// The single-field edits answer general.changed_since_read since the
-		// staff form saves one entry with its version (ADR 0311); they go
-		// after one release (ADR 0270, #7953).
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian, Deprecated: true, Refuses: guardianEditRefused},
 		// Without force a guardian still linked to children is refused; the
 		// expected links pin the confirmed state of the full delete.
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
@@ -545,13 +541,9 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},
 		{Method: "GET", Pattern: "/{id}/phone-numbers/", Portals: portals, Response: types.Phones},
 		{Method: "POST", Pattern: "/{id}/phone-numbers/", Portals: portals, Request: types.PhoneCreate, Response: types.Phone},
-		{Method: "PUT", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, Request: types.PhoneUpdate, Response: types.Phone, Deprecated: true, Refuses: guardianEditRefused},
-		{Method: "DELETE", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, NoData: true, Deprecated: true, Refuses: guardianEditRefused},
-		{Method: "POST", Pattern: "/{id}/phone-numbers/{phoneId}/set-primary", Portals: portals, Response: types.Phone, Deprecated: true, Refuses: guardianEditRefused},
 		{Method: "POST", Pattern: "/bulk-invite", Portals: portals, Request: types.BulkInviteRequest, Response: types.BulkInvite},
 		{Method: "GET", Pattern: "/invitations/pending-approval", Portals: portals, Response: types.Approvals},
 		{Method: "GET", Pattern: "/payment-overview", Portals: portals, Response: types.Overview},
-		{Method: "PUT", Pattern: "/relationships/{relationshipId}", Portals: portals, Request: types.LinkUpdate, NoData: true, Deprecated: true, Refuses: guardianEditRefused},
 		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Response: types.WithRelationships},
 		{Method: "POST", Pattern: "/students/{studentId}/guardians", Portals: portals, Request: types.LinkRequest, Response: types.Link},
 		{Method: "POST", Pattern: "/students/{studentId}/guardians/batch", Portals: portals, Request: types.BatchRequest, NoData: true},
@@ -610,15 +602,8 @@ func mealPlanRouteContracts() []common.RouteContract {
 	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
 	format := common.QueryParam{Name: "format", Kind: common.QueryString, Values: []string{"pdf", "xlsx"}}
 	return []common.RouteContract{
-		// The days with their version replace the week as entries and the
-		// save with the day as read (ADR 0311); no client calls the
-		// deprecated routes after this release.
 		{Method: "GET", Pattern: "/meal-plan/days", Portals: portals, Query: week, Response: types.Days},
 		{Method: "PUT", Pattern: "/meal-plan/days/{date}", Portals: portals, Request: types.SaveDay, Response: types.SavedDay},
-		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week, Deprecated: true},
-		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true, Deprecated: true},
-		{Method: "DELETE", Pattern: "/meal-plan/{date}", Portals: portals, NoData: true, Deprecated: true,
-			Query: []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}}},
 		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
 		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
 		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},
@@ -740,6 +725,7 @@ func tenantEnrollmentContractMounts() []contractMount {
 		{"/api/enrollment", enrollmentHTTP.AdminRequestRouteContracts()},
 		{"/api/enrollment", enrollmentHTTP.AdminReviewRouteContracts()},
 		{"/api/holiday-weeks", enrollmentHTTP.HolidayHostRouteContracts()},
+		{"/api/holiday-extra-days", enrollmentHTTP.SchoolExtraDayRouteContracts()},
 		{"/api/holiday-guests", enrollmentHTTP.HolidayGuestRouteContracts()},
 		// People Directory's http role may not import the contract types;
 		// both decisions answer no data.

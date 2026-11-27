@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 const { mockPathname, sessionUser } = vi.hoisted(() => ({
   mockPathname: vi.fn(() => "/"),
@@ -42,12 +41,10 @@ describe("TraegerBottomNav", () => {
     sessionStorage.clear();
     mockPathname.mockReturnValue("/");
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
     sessionUser.permissions = [];
   });
 

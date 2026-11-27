@@ -10,7 +10,6 @@ import {
   mapStaffAbsenceResponse,
   formatDuration,
   formatTime,
-  getWeekDays,
   getWeekNumber,
   calculateNetMinutes,
   indexWorkSessionMinutesByBerlinDate,
@@ -566,60 +565,6 @@ describe("formatTime", () => {
     // Verify format is always HH:MM with zero padding
     expect(result1).toMatch(/^\d{2}:\d{2}$/);
     expect(result2).toMatch(/^\d{2}:\d{2}$/);
-  });
-});
-
-describe("getWeekDays", () => {
-  it("returns 7 days starting from Monday", () => {
-    const date = new Date("2026-01-15"); // Thursday
-    const days = getWeekDays(date);
-
-    expect(days).toHaveLength(7);
-    expect(days[0]?.getDay()).toBe(1); // Monday
-    expect(days[6]?.getDay()).toBe(0); // Sunday
-  });
-
-  it("handles Monday input correctly", () => {
-    // Use Date.UTC to avoid timezone issues
-    const monday = new Date(Date.UTC(2026, 0, 19)); // Monday 2026-01-19 in UTC
-    const days = getWeekDays(monday);
-
-    // First day should be a Monday
-    expect(days[0]?.getDay()).toBe(1); // Monday
-    // All 7 days should be in sequence
-    for (let i = 1; i < 7; i++) {
-      const expectedDay = (i + 1) % 7; // Mon=1, Tue=2, ..., Sun=0
-      expect(days[i]?.getDay()).toBe(expectedDay);
-    }
-  });
-
-  it("handles Sunday input correctly", () => {
-    // Use Date.UTC to avoid timezone issues
-    const sunday = new Date(Date.UTC(2026, 0, 25)); // Sunday 2026-01-25 in UTC
-    const days = getWeekDays(sunday);
-
-    // Should return Monday of the same week
-    expect(days[0]?.getDay()).toBe(1); // Monday
-    expect(days[6]?.getDay()).toBe(0); // Sunday
-    // Verify the Sunday is the same date we input
-    const sundayResult = days[6];
-    if (sundayResult) {
-      expect(sundayResult.getFullYear()).toBe(2026);
-      expect(sundayResult.getMonth()).toBe(0); // January
-      expect(sundayResult.getDate()).toBe(25);
-    }
-  });
-
-  it("normalizes times to midnight", () => {
-    const date = new Date("2026-01-15T14:30:00Z");
-    const days = getWeekDays(date);
-
-    days.forEach((day) => {
-      expect(day.getHours()).toBe(0);
-      expect(day.getMinutes()).toBe(0);
-      expect(day.getSeconds()).toBe(0);
-      expect(day.getMilliseconds()).toBe(0);
-    });
   });
 });
 

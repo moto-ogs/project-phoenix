@@ -110,8 +110,8 @@ type ActivityInstanceCommand interface {
 	PatchActivityInstance(context.Context, int64, ActivityInstanceInput, []string) (int64, error)
 	DeleteActivityInstance(context.Context, int64) error
 	// DeletePlannedActivityInstances removes the template-backed occurrences
-	// of the window that have not started; a started or ended block stays.
-	DeletePlannedActivityInstances(context.Context, string, *string, *int64, bool) (int64, error)
+	// of the window that have not started, including rows with deviations.
+	DeletePlannedActivityInstances(context.Context, string, *string, *int64) (int64, error)
 	DeleteRemovedWeekendActivityInstances(context.Context, int64, []int) (int64, error)
 	PropagateActivityInstanceListKind(context.Context, int64, *string, *string, string) (int64, error)
 	DeleteActivityInstancesBefore(context.Context, string) (int64, error)

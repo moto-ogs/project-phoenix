@@ -31,7 +31,6 @@ type FixedSeeder struct {
 	teacherIDs       map[string]int64   // "firstName lastName" -> teacher id (for group assignment)
 	studentIDs       map[string]int64   // "firstName lastName" -> id (student IDs for enrollment)
 	studentIDByIndex map[int]int64      // student index -> student ID (for guardian linking)
-	studentRFID      map[int64]string   // student ID -> RFID tag
 	groupIDs         map[string]int64   // class name -> id
 	activityIDs      map[string]int64   // activity name -> id
 	activityRoomIDs  map[int64]int64    // activity ID -> room ID (for runtime seeder)
@@ -50,15 +49,12 @@ type FixedSeeder struct {
 // FixedResult contains counts of created entities
 type FixedResult struct {
 	RoomCount             int
-	PersonCount           int
 	StaffCount            int
 	AccountCount          int
 	GroupCount            int
 	StudentCount          int
 	SickStudentCount      int // Students marked as sick for demo badges
 	GuardianCount         int
-	PayerCount            int // Children with a guardian marked as payer (#2608)
-	GuardianIBANCount     int // Guardians with bank details stored (#2608)
 	PickupScheduleCount   int // Students with weekly pickup schedules seeded
 	ClassArrivalTimeCount int // Classes with seeded arrival times
 	// ClassArrivalExceptionCount is the number of class-wide arrival day
@@ -83,7 +79,6 @@ func NewFixedSeeder(client *Client, verbose bool, staffPassword string) *FixedSe
 		teacherIDs:       make(map[string]int64),
 		studentIDs:       make(map[string]int64),
 		studentIDByIndex: make(map[int]int64),
-		studentRFID:      make(map[int64]string),
 		groupIDs:         make(map[string]int64),
 		activityIDs:      make(map[string]int64),
 		activityRoomIDs:  make(map[int64]int64),
@@ -169,7 +164,7 @@ func (s *FixedSeeder) Seed(ctx context.Context) (*FixedResult, error) {
 	}
 
 	// 8a. Store bank details on the paying guardian and mark who pays per child
-	if err := s.seedGuardianPayments(ctx, result); err != nil {
+	if err := s.seedGuardianPayments(); err != nil {
 		return nil, fmt.Errorf("failed to seed guardian payments: %w", err)
 	}
 
@@ -895,8 +890,9 @@ func demoIBAN(index int) string {
 // IBAN, and every seventh child gets no payer at all. The Bankverbindungen
 // list exists to show exactly those gaps, and a demo where every row is
 // complete never shows what the screen is for.
-func (s *FixedSeeder) seedGuardianPayments(_ context.Context, result *FixedResult) error {
+func (s *FixedSeeder) seedGuardianPayments() error {
 	ibanIndex := 0
+	payerCount, bankDetailsCount := 0, 0
 	for index, guardian := range DemoGuardians {
 		if !guardian.IsPrimary {
 			continue
@@ -924,19 +920,19 @@ func (s *FixedSeeder) seedGuardianPayments(_ context.Context, result *FixedResul
 		}); err != nil {
 			return fmt.Errorf("mark payer for student %d: %w", studentID, err)
 		}
-		result.PayerCount++
+		payerCount++
 
 		stored, err := s.storeDemoBankDetails(index, guardian, guardianID, ibanIndex)
 		if err != nil {
 			return err
 		}
 		if stored {
-			result.GuardianIBANCount++
+			bankDetailsCount++
 		}
 	}
 
 	if s.verbose {
-		fmt.Printf("  ✓ %d payers marked, %d bank details stored\n", result.PayerCount, result.GuardianIBANCount)
+		fmt.Printf("  ✓ %d payers marked, %d bank details stored\n", payerCount, bankDetailsCount)
 	}
 	return nil
 }
@@ -1374,7 +1370,6 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 		// seedStaff later posts this id to /api/staff, which adopts the staff
 		// record created here instead of adding a second one.
 		s.personIDs[personKey] = int64(account.Data.SchoolIdentity.PersonID)
-		result.PersonCount++
 
 		// Store credentials for summary
 		s.staffCredentials = append(s.staffCredentials, StaffCredentials{

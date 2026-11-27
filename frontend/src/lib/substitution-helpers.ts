@@ -2,7 +2,6 @@
 // Type definitions and helper functions for substitutions
 
 import { ApiError } from "~/lib/api-error";
-import { toISODate } from "~/lib/date-helpers";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   SubstitutionAssignmentResponse,
@@ -100,18 +99,6 @@ export interface Substitution {
   canEnd: boolean;
 }
 
-export interface TeacherAvailability {
-  id: string;
-  firstName: string;
-  lastName: string;
-  regularGroup?: string;
-  role?: string;
-  inSubstitution: boolean;
-  substitutionCount: number;
-  teacherId?: string;
-  specialization?: string;
-}
-
 // Mapping functions
 export function mapSubstitutionResponse(
   backend: Pick<
@@ -130,12 +117,6 @@ export function mapSubstitutionResponse(
     endDate: backend.period.end_date,
     canEnd: backend.can_end,
   };
-}
-
-export function mapSubstitutionsResponse(
-  backendSubstitutions: readonly GroupHandover[] | null,
-): Substitution[] {
-  return (backendSubstitutions ?? []).map(mapSubstitutionResponse);
 }
 
 function mapSupervisionStaffRef(staff: StaffRef): SupervisionStaffRef {
@@ -182,7 +163,9 @@ export function mapSubstitutionOverview(
       id: group.id,
       name: group.name,
     })),
-    groupHandovers: mapSubstitutionsResponse(backend.group_handovers),
+    groupHandovers: (backend.group_handovers ?? []).map(
+      mapSubstitutionResponse,
+    ),
     targets: (backend.targets ?? []).map((staff) => ({
       id: staff.id,
       fullName: staff.full_name,
@@ -242,9 +225,4 @@ export function prepareSubstitutionForBackend(
       end_date: endDate,
     },
   };
-}
-
-// Helper functions
-export function formatDateForBackend(date: Date): string {
-  return toISODate(date); // YYYY-MM-DD format
 }

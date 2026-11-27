@@ -20,6 +20,11 @@ import (
 // in snake_case after what succeeded (group_created, not create_group).
 var coreActions = map[RouteKey]CoreAction{
 	// Period-owned PDFs have no school to count them for (#5199).
+	// The extra days a school plans for itself (#4817, ADR 0329) are the
+	// Träger's holiday periods, whose planning is not captured either.
+	{http.MethodPost, "/api/holiday-extra-days/"}:                                    notCaptured,
+	{http.MethodPut, "/api/holiday-extra-days/{id}"}:                                 notCaptured,
+	{http.MethodPost, "/api/holiday-extra-days/{id}/publish"}:                        notCaptured,
 	{http.MethodPost, "/traeger/holiday-periods/{id}/form/documents"}:                notCaptured,
 	{http.MethodDelete, "/traeger/holiday-periods/{id}/form/documents/{documentId}"}: notCaptured,
 	// The bell of the Träger-Portal (#7146): its read marks count in the
@@ -129,7 +134,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/guardians/invitations/{invitationId}/approve"}:                                 notCaptured,
 	{http.MethodPost, "/api/guardians/invitations/{invitationId}/reject"}:                                  notCaptured,
 	{http.MethodPost, "/api/guardians/payment-overview/export"}:                                            export("payment_overview"),
-	{http.MethodPut, "/api/guardians/relationships/{relationshipId}"}:                                      notCaptured,
 	{http.MethodPost, "/api/guardians/students/{studentId}/guardians"}:                                     notCaptured,
 	{http.MethodPost, "/api/guardians/students/{studentId}/guardians/batch"}:                               notCaptured,
 	{http.MethodDelete, "/api/guardians/students/{studentId}/guardians/{guardianId}"}:                      notCaptured,
@@ -137,7 +141,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/guardians/students/{studentId}/invite"}:                                        notCaptured,
 	{http.MethodPut, "/api/guardians/students/{studentId}/payer"}:                                          notCaptured,
 	{http.MethodDelete, "/api/guardians/{id}"}:                                                             notCaptured,
-	{http.MethodPut, "/api/guardians/{id}"}:                                                                notCaptured,
 	{http.MethodDelete, "/api/guardians/{id}/email-block"}:                                                 notCaptured,
 	{http.MethodDelete, "/api/guardians/{id}/email-stop"}:                                                  notCaptured,
 	{http.MethodPost, "/api/guardians/{id}/email-stop"}:                                                    notCaptured,
@@ -145,9 +148,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/api/guardians/{id}/payment"}:                                                        notCaptured,
 	{http.MethodPost, "/api/guardians/{id}/payment/reveal"}:                                                notCaptured,
 	{http.MethodPost, "/api/guardians/{id}/phone-numbers/"}:                                                notCaptured,
-	{http.MethodDelete, "/api/guardians/{id}/phone-numbers/{phoneId}"}:                                     notCaptured,
-	{http.MethodPut, "/api/guardians/{id}/phone-numbers/{phoneId}"}:                                        notCaptured,
-	{http.MethodPost, "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary"}:                           notCaptured,
 	{http.MethodPut, "/api/holiday-weeks/{weekId}/guest-group"}:                                            event("holiday_guests_taken_over"),
 	{http.MethodPost, "/api/import/class-list-entries/import"}:                                             notCaptured,
 	{http.MethodPost, "/api/import/class-list-entries/preview"}:                                            notCaptured,
@@ -164,8 +164,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodDelete, "/api/meal-caterer/invitations/{invitationId}"}:                                    notCaptured,
 	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        endedEvent("caterer_supply_ended"),
 	{http.MethodPost, "/api/meal-billing-months/{month}/release"}:                                          event("meal_month_released"),
-	{http.MethodDelete, "/api/meal-plan/{date}"}:                                                           notCaptured,
-	{http.MethodPut, "/api/meal-plan/{date}"}:                                                              notCaptured,
 	{http.MethodPut, "/api/meal-plan/days/{date}"}:                                                         notCaptured,
 	{http.MethodDelete, "/api/meal-plan/days/{date}/cancellation"}:                                         notCaptured,
 	{http.MethodPut, "/api/meal-plan/days/{date}/cancellation"}:                                            notCaptured,

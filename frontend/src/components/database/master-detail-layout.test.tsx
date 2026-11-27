@@ -155,44 +155,6 @@ describe("MasterDetailLayout", () => {
       expect(screen.queryByText("Detail")).not.toBeInTheDocument();
     });
 
-    it("uses custom listWidth when detail visible", () => {
-      const { container } = render(
-        <MasterDetailLayout
-          list={<div>List</div>}
-          detail={<div>Detail</div>}
-          selectedId="1"
-          onDeselect={vi.fn()}
-          listWidth={500}
-        />,
-      );
-      const root = container.firstElementChild;
-      expect(root).toBeInstanceOf(HTMLElement);
-      expect(
-        (root as HTMLElement).style.getPropertyValue(
-          "--master-detail-list-width",
-        ),
-      ).toBe("500px");
-
-      const listPane = screen.getByText("List").closest("section");
-      expect(listPane).toHaveClass(
-        "w-(--master-detail-list-width)",
-        "shrink-0",
-      );
-    });
-
-    it("applies className to root", () => {
-      const { container } = render(
-        <MasterDetailLayout
-          list={<div>List</div>}
-          detail={<div>Detail</div>}
-          selectedId="1"
-          onDeselect={vi.fn()}
-          className="my-root"
-        />,
-      );
-      expect(container.firstChild).toHaveClass("my-root");
-    });
-
     // #3330: Höhe aus useFillHeight, Scrollen in der Karte. Den Browser-
     // Nachbau dieses Markups prüft e2e/layout/database-layouts.spec.ts.
     it("takes both cards out of the grow rule and keeps them in one row", () => {
@@ -210,7 +172,11 @@ describe("MasterDetailLayout", () => {
       expect(root).toHaveClass("flex", "gap-4");
       const cards = root.querySelectorAll(":scope > .moto-content-surface");
       expect(cards).toHaveLength(2);
-      expect(cards[0]).toHaveClass("moto-scroll-surface", "shrink-0");
+      expect(cards[0]).toHaveClass(
+        "moto-scroll-surface",
+        "w-[440px]",
+        "shrink-0",
+      );
       expect(cards[1]).toHaveClass("moto-scroll-surface", "min-w-0", "flex-1");
     });
 

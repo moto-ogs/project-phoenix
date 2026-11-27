@@ -136,9 +136,8 @@ function openEvent(title: string) {
 function CalendarWithChrome(
   props: Readonly<{
     events: CalendarEvent[];
-    weekStart: Date;
-    onWeekChange: (date: Date) => void;
-    onCreate?: () => void;
+    referenceDate: Date;
+    onDateChange: (date: Date) => void;
   }>,
 ) {
   const [showWeekend, setShowWeekend] = useState(false);
@@ -146,15 +145,15 @@ function CalendarWithChrome(
     <>
       <PersonalCalendarChrome
         events={props.events}
-        weekStart={props.weekStart}
-        onWeekChange={props.onWeekChange}
-        onCreate={props.onCreate}
+        referenceDate={props.referenceDate}
+        onDateChange={props.onDateChange}
+        onViewModeChange={vi.fn()}
         showWeekend={showWeekend}
         onShowWeekendChange={setShowWeekend}
       />
       <PersonalCalendar
         events={props.events}
-        weekStart={props.weekStart}
+        referenceDate={props.referenceDate}
         showWeekend={showWeekend}
       />
     </>
@@ -166,7 +165,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[publicHoliday]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
       />,
     );
 
@@ -180,7 +179,10 @@ describe("PersonalCalendar", () => {
 
   it("renders shift events with the Schicht badge", () => {
     render(
-      <PersonalCalendar events={[shift]} weekStart={new Date(2026, 0, 5)} />,
+      <PersonalCalendar
+        events={[shift]}
+        referenceDate={new Date(2026, 0, 5)}
+      />,
     );
 
     expect(screen.getAllByText("Frühdienst").length).toBeGreaterThan(0);
@@ -203,7 +205,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[schoolEvent]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
       />,
     );
 
@@ -231,7 +233,7 @@ describe("PersonalCalendar", () => {
       end_time: "16:30",
     };
     render(
-      <PersonalCalendar events={[duty]} weekStart={new Date(2026, 0, 5)} />,
+      <PersonalCalendar events={[duty]} referenceDate={new Date(2026, 0, 5)} />,
     );
 
     const dienstBefore = screen.getAllByText("Dienst").length;
@@ -254,7 +256,7 @@ describe("PersonalCalendar", () => {
       end_time: "16:30",
     };
     render(
-      <PersonalCalendar events={[duty]} weekStart={new Date(2026, 0, 5)} />,
+      <PersonalCalendar events={[duty]} referenceDate={new Date(2026, 0, 5)} />,
     );
 
     const chip = screen
@@ -268,7 +270,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[appointment, timetable]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={onRespond}
       />,
     );
@@ -304,7 +306,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[series]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={onRespond}
         onShowOverview={onShowOverview}
       />,
@@ -347,7 +349,7 @@ describe("PersonalCalendar", () => {
             series_response_status: "accepted",
           },
         ]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={vi.fn()}
       />,
     );
@@ -369,7 +371,7 @@ describe("PersonalCalendar", () => {
     const { rerender } = render(
       <PersonalCalendar
         events={[appointment]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={vi.fn()}
       />,
     );
@@ -379,7 +381,7 @@ describe("PersonalCalendar", () => {
     rerender(
       <PersonalCalendar
         events={[{ ...appointment, response_status: "accepted" }]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={vi.fn()}
       />,
     );
@@ -414,7 +416,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[shortRsvp, followUp]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={vi.fn()}
       />,
     );
@@ -446,8 +448,8 @@ describe("PersonalCalendar", () => {
     render(
       <CalendarWithChrome
         events={[appointment, weekendEvent]}
-        weekStart={new Date(2026, 0, 5)}
-        onWeekChange={vi.fn()}
+        referenceDate={new Date(2026, 0, 5)}
+        onDateChange={vi.fn()}
       />,
     );
 
@@ -487,26 +489,21 @@ describe("PersonalCalendar", () => {
     ).toEqual([appointment, weekendEvent]);
   });
 
-  it("supports week navigation and create action", () => {
-    const onWeekChange = vi.fn();
-    const onCreate = vi.fn();
+  it("supports week navigation", () => {
+    const onDateChange = vi.fn();
     render(
       <CalendarWithChrome
         events={[]}
-        weekStart={new Date(2026, 0, 5)}
-        onWeekChange={onWeekChange}
-        onCreate={onCreate}
+        referenceDate={new Date(2026, 0, 5)}
+        onDateChange={onDateChange}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Nächste Woche" }));
-    expect(onWeekChange).toHaveBeenCalledWith(new Date(2026, 0, 12));
+    expect(onDateChange).toHaveBeenCalledWith(new Date(2026, 0, 12));
 
     fireEvent.click(screen.getByRole("button", { name: "Vorherige Woche" }));
-    expect(onWeekChange).toHaveBeenCalledWith(new Date(2025, 11, 29));
-
-    fireEvent.click(screen.getByRole("button", { name: "Neuer Termin" }));
-    expect(onCreate).toHaveBeenCalledOnce();
+    expect(onDateChange).toHaveBeenCalledWith(new Date(2025, 11, 29));
   });
 
   it("marks cancelled events, hides RSVP, and offers .ics download", () => {
@@ -518,7 +515,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[cancelled]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onRespond={onRespond}
         icsHref={(id) =>
           `/api/parent/me/calendar/appointments/${encodeURIComponent(id)}/ics`
@@ -539,7 +536,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[appointment]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         icsHref={(id) =>
           `/api/parent/me/calendar/appointments/${encodeURIComponent(id)}/ics`
         }
@@ -564,7 +561,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[editable]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onEdit={onEdit}
         onCancel={onCancel}
         onDelete={onDelete}
@@ -588,7 +585,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[cancelled]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
         onEdit={vi.fn()}
         onCancel={vi.fn()}
         onDelete={vi.fn()}
@@ -617,7 +614,7 @@ describe("PersonalCalendar", () => {
     render(
       <PersonalCalendar
         events={[multiDayTimed]}
-        weekStart={new Date(2026, 0, 5)}
+        referenceDate={new Date(2026, 0, 5)}
       />,
     );
 
@@ -660,7 +657,9 @@ describe("PersonalCalendar", () => {
   // Fehler zeigt die Seite über den gemeinsamen Anzeigeweg (#2517), nicht
   // das Raster.
   it("shows the empty state", () => {
-    render(<PersonalCalendar events={[]} weekStart={new Date(2026, 0, 5)} />);
+    render(
+      <PersonalCalendar events={[]} referenceDate={new Date(2026, 0, 5)} />,
+    );
 
     expect(
       screen.getAllByText("Keine Einträge in dieser Woche.").length,
@@ -679,6 +678,7 @@ describe("PersonalCalendar", () => {
           referenceDate={new Date(2026, 4, 27)}
           viewMode="day"
           onDateChange={onDateChange}
+          onViewModeChange={vi.fn()}
           showWeekend={false}
           onShowWeekendChange={vi.fn()}
         />,
@@ -706,6 +706,7 @@ it.each(schoolDateCases("2026-05-27"))(
         events={[]}
         referenceDate={new Date(2026, 0, 5)}
         onDateChange={onDateChange}
+        onViewModeChange={vi.fn()}
         showWeekend={false}
         onShowWeekendChange={vi.fn()}
       />,

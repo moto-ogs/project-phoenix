@@ -553,26 +553,6 @@ export function formatTime(isoString: string | null | undefined): string {
 }
 
 /**
- * Gets array of dates for a week (Monday to Sunday)
- * @param date - Any date within the week
- * @returns Array of 7 dates starting from Monday
- */
-export function getWeekDays(date: Date): Date[] {
-  const days: Date[] = [];
-  const currentDay = date.getDay();
-  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
-
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(date);
-    day.setDate(date.getDate() + mondayOffset + i);
-    day.setHours(0, 0, 0, 0);
-    days.push(day);
-  }
-
-  return days;
-}
-
-/**
  * Gets ISO week number for a date
  * @param date - Date to get week number for
  * @returns ISO week number (1-53)

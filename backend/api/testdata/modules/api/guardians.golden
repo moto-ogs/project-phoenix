@@ -2,7 +2,6 @@ DELETE /api/guardians/students/{studentId}/guardians/{guardianId} -> basis
 DELETE /api/guardians/{id} -> basis
 DELETE /api/guardians/{id}/email-block -> basis
 DELETE /api/guardians/{id}/email-stop -> basis
-DELETE /api/guardians/{id}/phone-numbers/{phoneId} -> basis
 GET /api/guardians/invitations/pending-approval -> eltern_app
 GET /api/guardians/payment-overview -> basis
 GET /api/guardians/search -> basis
@@ -24,10 +23,6 @@ POST /api/guardians/{id}/email-stop -> basis
 POST /api/guardians/{id}/invite -> eltern_app
 POST /api/guardians/{id}/payment/reveal -> basis
 POST /api/guardians/{id}/phone-numbers/ -> basis
-POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary -> basis
-PUT /api/guardians/relationships/{relationshipId} -> basis
 PUT /api/guardians/students/{studentId}/guardians/{guardianId} -> basis
 PUT /api/guardians/students/{studentId}/payer -> basis
-PUT /api/guardians/{id} -> basis
 PUT /api/guardians/{id}/payment -> basis
-PUT /api/guardians/{id}/phone-numbers/{phoneId} -> basis

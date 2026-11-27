@@ -2,8 +2,6 @@
 package enrollmenthttp
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -62,9 +60,8 @@ type Resource struct {
 	// tenant and administrative transactions of the shared tenant runtime.
 	// The bare Resource a route unit test builds runs runInTenantTx on the
 	// request context instead and answers the public routes as not wired.
-	transactions         bool
-	legalDocumentRefs    legalDocumentReferenceRepository
-	runInTenantTxForTest func(r *http.Request, fn func(ctx context.Context) error) error
+	transactions      bool
+	legalDocumentRefs legalDocumentReferenceRepository
 }
 
 // now reads the resource's clock.

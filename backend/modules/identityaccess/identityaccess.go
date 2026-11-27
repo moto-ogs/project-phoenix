@@ -162,7 +162,7 @@ type Owner interface {
 	AccountAuthentication
 	AccessSessions
 	AccountSessionMaintenance
-	AccountClaimsQuery
+	GuardianTenantQuery
 	OperatorAuthentication
 	OperatorAccountAccess
 	AccountLifecycle

@@ -60,13 +60,12 @@ function OpenRequestContent({
 }>) {
   switch (request.request_type) {
     case "enrollment":
-      return <EnrollmentRequestItem row={request.data} view="open" grouped />;
+      return <EnrollmentRequestItem row={request.data} view="open" />;
     case "master_data":
       return (
         <MasterDataReviewItem
           row={request.data}
           onDecided={onDecided}
-          grouped
           expectedVersion={request.expected_version}
           onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
@@ -78,7 +77,6 @@ function OpenRequestContent({
         <CareRequestReviewItem
           row={request.data}
           onDecided={onDecided}
-          grouped
           expectedVersion={request.expected_version}
           onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
@@ -92,7 +90,6 @@ function OpenRequestContent({
           onDecided={onDecided}
           onHold={onHold}
           held={held}
-          grouped
           expectedVersion={request.expected_version}
           onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
@@ -104,7 +101,6 @@ function OpenRequestContent({
         <ExcusedRequestReviewItem
           row={request.data}
           onDecided={onDecided}
-          grouped
           expectedVersion={request.expected_version}
           onStale={onStale}
           currentStatusByDate={request.current_status_by_date}

@@ -815,9 +815,9 @@ func TestWalkingHomeAloneNeedsASignature(t *testing.T) {
 	})
 	require.ErrorIs(t, err, parentService.ErrPickupSignatureRequired)
 
-	_, err = f.svc.CreateCareScheduleRequest(ctx, chain.AccountID, chain.StudentID, map[string]any{"weekdays": []any{
+	_, err = f.svc.CreateSignedCareScheduleRequest(ctx, chain.AccountID, chain.StudentID, map[string]any{"weekdays": []any{
 		map[string]any{"weekday": 2, "mode": "alone"},
-	}})
+	}}, nil)
 	require.ErrorIs(t, err, parentService.ErrPickupSignatureRequired, "a weekday alone needs a signature too")
 
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{

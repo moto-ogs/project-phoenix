@@ -136,8 +136,6 @@ describe("api.ts list clients", () => {
       const { roomService } = await import("./api");
 
       await roomService.getRooms({
-        building: "Building A",
-        category: "classroom",
         includeSystem: false,
         openOn: "2026-12-01",
         page: 1,
@@ -145,8 +143,6 @@ describe("api.ts list clients", () => {
       });
 
       const url = calledURL();
-      expect(url).toContain("building=Building+A");
-      expect(url).toContain("category=classroom");
       expect(url).toContain("include_system=false");
       expect(url).toContain("open_on=2026-12-01");
       expect(url).toContain("page=1");

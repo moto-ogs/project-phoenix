@@ -248,7 +248,6 @@ type ArrivalNotesCommand interface {
 	CreateArrivalNote(context.Context, ArrivalNote) (ArrivalNote, error)
 	UpdateArrivalNote(context.Context, ArrivalNote) error
 	DeleteArrivalNote(context.Context, int64) error
-	DeleteArrivalNotesByStudent(context.Context, int64) error
 }
 
 // PickupSchedulesCommand writes weekly pickup schedules.
@@ -273,7 +272,6 @@ type PickupNotesCommand interface {
 	CreatePickupNote(context.Context, PickupNote) (PickupNote, error)
 	UpdatePickupNote(context.Context, PickupNote) error
 	DeletePickupNote(context.Context, int64) error
-	DeletePickupNotesByStudent(context.Context, int64) error
 }
 
 // WeekdayPickupNotesCommand replaces recurring notes without enlarging the

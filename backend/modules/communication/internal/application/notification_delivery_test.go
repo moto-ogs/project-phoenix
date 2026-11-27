@@ -15,11 +15,6 @@ func TestNotificationProducerPreservesNativeAudienceAndFailureReceipt(t *testing
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	failure := errors.New("dispatch refused")
-	original := NotificationEvent{
-		Type: "kind", IdempotencyKey: "key", RelatedType: "related", RelatedID: 13,
-		Audience: NotificationAudience{TenantID: 17, Scope: "guardian", GuardianAccountID: 19, GuardianAccountIDs: []int64{23}, ActiveGroupID: "group", StaffAccountIDs: []int64{29}, StudentIDs: []int64{31}},
-		Priority: "high", Title: "title", Body: "body", DeepLink: "/parent", SchoolDeepLink: "/staff", Data: map[string]string{"key": "value"}, Portal: "parents",
-	}
 	expected := communication.NotificationEvent{
 		Type: "kind", IdempotencyKey: "key", RelatedType: "related", RelatedID: 13,
 		Audience: communication.NotificationAudience{TenantID: 17, Scope: "guardian", GuardianAccountID: 19, GuardianAccountIDs: []int64{23}, ActiveGroupID: "group", StaffAccountIDs: []int64{29}, StudentIDs: []int64{31}},
@@ -32,7 +27,7 @@ func TestNotificationProducerPreservesNativeAudienceAndFailureReceipt(t *testing
 		assert.Equal(t, expected, event)
 		return failure
 	})
-	assert.Same(t, failure, send.Notify(ctx, original.Public()))
+	assert.Same(t, failure, send.Notify(ctx, expected))
 	assert.Equal(t, 1, calls)
 	assert.Nil(t, NewNotificationSender(nil))
 	require.NoError(t, NewNotificationSender(func(_ context.Context, event communication.NotificationEvent) error {
@@ -41,5 +36,5 @@ func TestNotificationProducerPreservesNativeAudienceAndFailureReceipt(t *testing
 		assert.Nil(t, event.Audience.StaffAccountIDs)
 		assert.Nil(t, event.Audience.StudentIDs)
 		return nil
-	}).Notify(ctx, NotificationEvent{}.Public()))
+	}).Notify(ctx, communication.NotificationEvent{}))
 }

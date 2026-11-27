@@ -1,7 +1,5 @@
 {{define "enrollment-approved.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Anmeldung bestätigt</h1>
 
@@ -26,20 +24,16 @@
 
     <p style="margin-top: 16px;">Den vollständigen Stand Ihrer Anmeldung können Sie weiterhin hier einsehen:</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "copy-link-hint" .StatusURL}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wie geht es weiter?</strong></p>
         <p style="margin: 8px 0 0 0; font-size: 14px;">Sie erhalten ggf. in Kürze eine separate E-Mail mit einem Einladungslink, um sich im Eltern-Portal zu registrieren. Dort können Sie alle Informationen rund um die Betreuung Ihres Kindes einsehen und verwalten.</p>
     </div>
-</div>
 
 {{template "footer" .}}
 {{end}}

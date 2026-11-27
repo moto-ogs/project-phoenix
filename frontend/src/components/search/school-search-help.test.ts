@@ -4,7 +4,7 @@ import { GET } from "~/app/help/search-index/route";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 import { matchEntries } from "./school-search-catalog";
-import { helpSearchEntries } from "./school-search-help";
+import { helpEntriesOf, loadHelpIndex } from "./school-search-help";
 
 const CONTEXT = {
   role: "caregiver",
@@ -14,12 +14,12 @@ const CONTEXT = {
   returnTo: "/home",
 } as const;
 
-describe("helpSearchEntries", () => {
+describe("help search", () => {
   it("finds the role's articles from the small index and links them with the context", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () => GET());
-    const entries = await helpSearchEntries(CONTEXT);
+    const entries = helpEntriesOf(await loadHelpIndex(), CONTEXT);
 
     const [vacation] = matchEntries(entries, "urlaub beantragen");
     expect(vacation?.href).toMatch(
@@ -32,7 +32,7 @@ describe("helpSearchEntries", () => {
     expect(ids).not.toContain(`help-${HELP_TOPICS.tabletLogin}`);
 
     // The index loads once per page, not on every open.
-    await helpSearchEntries({ ...CONTEXT, role: "lead" });
+    helpEntriesOf(await loadHelpIndex(), { ...CONTEXT, role: "lead" });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledWith("/help/search-index");
     fetchSpy.mockRestore();

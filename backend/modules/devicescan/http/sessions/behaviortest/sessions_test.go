@@ -212,7 +212,7 @@ func TestGetCurrentSession_WithActiveSession(t *testing.T) {
 	activity := testpkg.CreateTestActivityGroup(t, ctx.db, "Current Session Activity")
 	staff := testpkg.CreateTestStaff(t, ctx.db, "CurrentSession", "Supervisor")
 	// The room is passed explicitly: with neither a manual nor a planned room,
-	// determineRoomIDWithStrategy now fails with ErrNoRoomAvailable.
+	// room resolution fails with ErrNoRoomAvailable.
 	room := testpkg.CreateTestRoom(t, ctx.db, "Current Session Room")
 
 	// Start a real session with supervisors

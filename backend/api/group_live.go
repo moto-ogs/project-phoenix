@@ -27,7 +27,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
-	groupliveCompose "github.com/moto-ogs/project-phoenix/modules/grouplive/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	educationService "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
@@ -156,7 +155,7 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 	if sources.Now == nil {
 		sources.Now = time.Now
 	}
-	return groupliveCompose.New(grouplive.Dependencies{
+	return grouplive.New(grouplive.Dependencies{
 		Access:   groupLiveAccess{settings: sources.Settings, userContext: sources.UserContext},
 		Groups:   groupLiveDirectory{education: sources.Education, userContext: sources.UserContext},
 		Roster:   groupLiveRoster{GroupRoster: sources.People, careParticipation: sources.CareParticipation},

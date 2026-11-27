@@ -327,7 +327,6 @@ describe("InstanceDetailModal", () => {
             ["23", "Tom Krank"],
           ])
         }
-        editDeferred={false}
       />,
     );
 
@@ -478,7 +477,6 @@ describe("InstanceDetailModal", () => {
             ["25", "Ole Abgemeldet"],
           ])
         }
-        editDeferred={false}
       />,
     );
 
@@ -528,7 +526,6 @@ describe("InstanceDetailModal", () => {
             ["25", "Ole Fehlt Wirklich"],
           ])
         }
-        editDeferred={false}
       />,
     );
 
@@ -737,7 +734,6 @@ describe("InstanceDetailModal", () => {
         onLifecycleAction={vi.fn()}
         onAttendancePatch={onAttendancePatch}
         studentNames={new Map([["24", "Nina Ohne Betreuung"]])}
-        editDeferred={false}
       />,
     );
 

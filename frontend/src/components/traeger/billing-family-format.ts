@@ -19,6 +19,7 @@ export type BillingTab =
   | "laeufe"
   | "monatsbeitraege"
   | "jahresbescheide"
+  | "rechnungsausgangsbuch"
   | "preise"
   | "mensa"
   | "ermaessigungen"
@@ -54,6 +55,12 @@ const BILLING_AREAS: Record<
         value: "jahresbescheide",
         label: "Jahresbescheide",
         path: "/traeger/abrechnung/jahresbescheide",
+      },
+      {
+        // Jedes ausgestellte Dokument aus allen Läufen (#4819).
+        value: "rechnungsausgangsbuch",
+        label: "Rechnungsausgangsbuch",
+        path: "/traeger/abrechnung/rechnungsausgangsbuch",
       },
     ],
   },

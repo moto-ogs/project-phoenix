@@ -18,10 +18,6 @@ func (carePlanFixturePolicy) Error(kind CarePlanError) error {
 		return careplan.ErrOfferingChangeDisabled
 	case CarePlanManualPartialAbsenceConflict:
 		return careplan.ErrManualPartialAbsenceConflict
-	case CarePlanGuardianPickupExceptionRaced:
-		return careplan.ErrGuardianPickupExceptionRaced
-	case CarePlanPickupExceptionStaffOwned:
-		return careplan.ErrPickupExceptionStaffOwned
 	case CarePlanStudentDataRequestFieldPending:
 		return careplan.ErrStudentDataRequestFieldPending
 	default:

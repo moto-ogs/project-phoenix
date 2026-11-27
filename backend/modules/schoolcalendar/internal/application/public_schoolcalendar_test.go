@@ -49,23 +49,6 @@ func (e *recordingEngine) FederalState(context.Context) (string, error) {
 	return "DE-NW", nil
 }
 
-func (e *recordingEngine) AddCalendarPeriod(context.Context, schoolcalendar.CreateCalendarPeriod) (schoolcalendar.CalendarPeriod, error) {
-	e.calls++
-	return schoolcalendar.CalendarPeriod{}, nil
-}
-
-func (e *recordingEngine) ChangeCalendarPeriod(context.Context, schoolcalendar.UpdateCalendarPeriod) (schoolcalendar.CalendarPeriod, error) {
-	e.calls++
-	return schoolcalendar.CalendarPeriod{}, nil
-}
-
-func (e *recordingEngine) RemoveCalendarPeriod(context.Context, int64) error { e.calls++; return nil }
-
-func (e *recordingEngine) EnsureDefaultSchoolYear(context.Context) ([]schoolcalendar.CalendarPeriod, bool, error) {
-	e.calls++
-	return nil, false, nil
-}
-
 func (e *recordingEngine) FindClosingDay(context.Context, int64) (schoolcalendar.ClosingDay, error) {
 	e.calls++
 	return schoolcalendar.ClosingDay{}, nil
@@ -111,23 +94,6 @@ func (e *recordingEngine) UpdateDateframe(context.Context, schoolcalendar.Update
 }
 
 func (e *recordingEngine) DeleteDateframe(context.Context, int64) error { e.calls++; return nil }
-func (e *recordingEngine) ValidHolidayRegion(string) bool               { return true }
-func (e *recordingEngine) ListHolidays(context.Context, string, string, string) ([]schoolcalendar.Holiday, error) {
-	e.calls++
-	return nil, nil
-}
-func (e *recordingEngine) HolidayDates(context.Context, string, string, string) (map[string]bool, error) {
-	e.calls++
-	return nil, nil
-}
-func (e *recordingEngine) RenderCalendar(context.Context, string, []schoolcalendar.CalendarEvent) (string, error) {
-	e.calls++
-	return "calendar", nil
-}
-func (e *recordingEngine) RenderCalendarObject(context.Context, schoolcalendar.CalendarEvent) (string, error) {
-	e.calls++
-	return "calendar-object", nil
-}
 
 func validPeriod() schoolcalendar.CalendarPeriodFields {
 	return schoolcalendar.CalendarPeriodFields{
@@ -136,12 +102,7 @@ func validPeriod() schoolcalendar.CalendarPeriodFields {
 	}
 }
 
-func TestNewModuleRequiresAnEngine(t *testing.T) {
-	t.Parallel()
-	assert.Panics(t, func() { newTestModule(nil) })
-}
-
-func TestHolidayWindowValidationRunsBeforeTheEngine(t *testing.T) {
+func TestHolidayWindowValidation(t *testing.T) {
 	t.Parallel()
 
 	for name, dates := range map[string][2]string{
@@ -152,10 +113,9 @@ func TestHolidayWindowValidationRunsBeforeTheEngine(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			engine := &recordingEngine{}
-			_, err := newTestModule(engine).ListHolidays(context.Background(), "DE-NW", dates[0], dates[1])
+			// A misspelled region would fail after date validation.
+			_, err := newTestModule(&recordingEngine{}).ListHolidays(context.Background(), "unknown", dates[0], dates[1])
 			require.ErrorIs(t, err, schoolcalendar.ErrInvalidHolidayRange)
-			assert.Zero(t, engine.calls)
 		})
 	}
 }

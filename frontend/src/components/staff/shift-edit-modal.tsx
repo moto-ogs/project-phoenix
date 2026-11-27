@@ -111,7 +111,6 @@ const NO_WEEKDAYS: readonly number[] = [];
 export type ShiftEditMode = "create" | "edit";
 
 interface ShiftEditModalProps {
-  readonly isOpen: boolean;
   readonly mode: ShiftEditMode;
   readonly staffId: string;
   readonly staffName: string;
@@ -148,7 +147,6 @@ interface ShiftEditModalProps {
 }
 
 export function ShiftEditModal({
-  isOpen,
   mode,
   staffId,
   staffName,
@@ -215,11 +213,9 @@ export function ShiftEditModal({
     [mode, shift, existingReplacements],
   );
   const drafts = useShiftEditDraft({
-    opening: !isOpen
-      ? null
-      : stored
-        ? `edit:${stored.shift.id}`
-        : `create:${staffId}:${date}:${seed.startTime}-${seed.endTime}`,
+    opening: stored
+      ? `edit:${stored.shift.id}`
+      : `create:${staffId}:${date}:${seed.startTime}-${seed.endTime}`,
     stored,
     seed,
     reloadShift,
@@ -261,7 +257,7 @@ export function ShiftEditModal({
   // the ones started from the delete confirmation or the scope question
   // while the panel is hidden behind them. A late answer must not close or
   // fill the dialog for another shift.
-  const write = useFormModalPending(isOpen, shift?.id ?? `${staffId}:${date}`);
+  const write = useFormModalPending(true, shift?.id ?? `${staffId}:${date}`);
   // Which write runs: the save buttons and the scope question show a save,
   // the delete confirmation a delete.
   const [runningWrite, setRunningWrite] = useState<"save" | "delete">("save");
@@ -321,9 +317,8 @@ export function ShiftEditModal({
   // Errors belong to one opening: a different shift or a new opening starts
   // without them. The reload after a refusal hands in the stored shift with
   // the same id; its message stays until the person acts (ADR 0311).
-  const openedShiftId = isOpen ? (shift?.id ?? "") : null;
+  const openedShiftId = shift?.id;
   useEffect(() => {
-    if (openedShiftId === null) return;
     clearFormError();
     clearDeleteError();
   }, [openedShiftId, clearFormError, clearDeleteError]);
@@ -332,7 +327,6 @@ export function ShiftEditModal({
   // on opening and when the stored shift arrives after a refusal; the
   // fields are the draft's.
   useEffect(() => {
-    if (!isOpen) return;
     resetWorkingTime();
     setConfirmDeleteOpen(false);
     setRepeatEnabled(false);
@@ -345,7 +339,7 @@ export function ShiftEditModal({
     setIncludeSchoolBreaks(false);
     setScopeQuestion(null);
     leaveSeriesEdit();
-  }, [isOpen, seed, date, stored, resetWorkingTime, leaveSeriesEdit]);
+  }, [seed, date, stored, resetWorkingTime, leaveSeriesEdit]);
 
   // Calendar periods load once the series section is opened; the period is
   // required (it bounds the series and anchors Woche A/B). A series row needs
@@ -1179,7 +1173,7 @@ export function ShiftEditModal({
           z-index, so stacking them puts the topmost dialog's buttons behind
           this modal's body. */}
       <SlideOver
-        open={isOpen && !confirmDeleteOpen && !scopeOverlayOpen}
+        open={!confirmDeleteOpen && !scopeOverlayOpen}
         pending={write}
         onOpenChange={(next) => {
           if (!next) onClose();
@@ -1703,7 +1697,7 @@ export function ShiftEditModal({
         }}
       />
       <ChoiceModal
-        isOpen={isOpen && scopeQuestion === "edit"}
+        isOpen={scopeQuestion === "edit"}
         onClose={() => setScopeQuestion(null)}
         title="Änderung übernehmen"
         description="Diese Schicht ist Teil einer Serie. Wofür soll die Änderung gelten?"

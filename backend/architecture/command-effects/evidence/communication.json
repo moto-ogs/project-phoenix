@@ -105,6 +105,22 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "binding_digest": "2b9dcbc7244f4916b708a145ce0f902e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.NotificationPreferences.FilterNotOptedOut",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "binding_digest": "77915cf4a74a2bb8425f240b498e8c3c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.NotificationPreferences.FilterOptedIn",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.AttachmentDigests",
       "binding_digest": "8ae0551f10affd523aed6e5040cefc99",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementAttachmentPurger.AttachmentDigests",
@@ -1172,22 +1188,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
       "binding_digest": "77915cf4a74a2bb8425f240b498e8c3c",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationOptIns.FilterOptedIn",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
-      "binding_digest": "2b9dcbc7244f4916b708a145ce0f902e",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationPreferences.FilterNotOptedOut",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
-      "binding_digest": "77915cf4a74a2bb8425f240b498e8c3c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.NotificationPreferences.FilterOptedIn",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
       "target_owner": "delivery-platform"

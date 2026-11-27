@@ -42,7 +42,6 @@ type raStore struct {
 	rolePerms    map[int64][]int64
 	accountRoles map[int64][]int64
 	manageable   map[int64]bool
-	memberships  map[int64]bool
 	calls        []string
 	nextID       int64
 
@@ -67,7 +66,7 @@ func newRAStore() *raStore {
 	return &raStore{
 		roles: map[int64]domain.ManagedRole{}, permissions: map[int64]domain.ManagedPermission{},
 		rolePerms: map[int64][]int64{}, accountRoles: map[int64][]int64{},
-		manageable: map[int64]bool{}, memberships: map[int64]bool{}, nextID: 500,
+		manageable: map[int64]bool{}, nextID: 500,
 	}
 }
 
@@ -297,15 +296,6 @@ func (s *raStore) FindManageableAccount(_ context.Context, accountID int64) (ide
 func (s *raStore) LockAccount(_ context.Context, accountID int64) (bool, error) {
 	s.record("lock account")
 	return s.manageable[accountID], nil
-}
-
-func (s *raStore) HasTenantMembership(_ context.Context, accountID, _ int64, share bool) (bool, error) {
-	if share {
-		s.record("membership for share")
-	} else {
-		s.record("membership")
-	}
-	return s.memberships[accountID], nil
 }
 
 func (s *raStore) ListAccountEmails(context.Context, []int64) (map[int64]string, error) {

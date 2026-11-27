@@ -2,12 +2,9 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
-	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 )
 
@@ -53,7 +50,7 @@ func (w *Worker) DispatchPush(ctx context.Context, tenantID, id int64) error {
 }
 
 func (w *Worker) deliverPushOnce(ctx context.Context, intent domain.Intent) error {
-	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.now(), w.leaseDuration))
+	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousDispatchLease(ctx, w.now(), w.leaseDuration))
 	if err != nil {
 		return err
 	}
@@ -86,33 +83,5 @@ func (w *Worker) deliverPushOnce(ctx context.Context, intent domain.Intent) erro
 		}
 		return errors.Join(sendErr, err)
 	}
-	return w.finalizeSynchronousPush(finalizeCtx, intent, token, result)
-}
-
-func (w *Worker) finalizeSynchronousPush(finalizeCtx context.Context, intent domain.Intent, token string, result deliveryContract.ProviderResult) error {
-	encoded, err := json.Marshal(result)
-	if err != nil {
-		return fmt.Errorf("delivery: encode synchronous push result: %w", err)
-	}
-	done, err := w.store.FinalizeSent(finalizeCtx, intent.Transport, intent.ID, token, encoded, w.now())
-	if err != nil {
-		return err
-	}
-	if !done {
-		return errors.New("delivery: push finalization lost its lease")
-	}
-	return nil
-}
-
-// The synchronous caller keeps its existing deadline, which may exceed the
-// background provider timeout. Its fence must survive that full operation.
-// The deadline counts on the worker clock, which the stored lease is compared with.
-func synchronousPushLease(ctx context.Context, now time.Time, duration time.Duration) time.Time {
-	expires := now.Add(duration)
-	if deadline, ok := ctx.Deadline(); ok {
-		if fence := now.Add(time.Until(deadline) + providerTimeout); fence.After(expires) {
-			return fence
-		}
-	}
-	return expires
+	return w.finalizeSynchronousSend(finalizeCtx, intent, token, result)
 }

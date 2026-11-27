@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// ErrNotFound is returned by Open and Stat when the key does not exist.
+// ErrNotFound reports that the requested object does not exist.
 // Callers translate it to 404 rather than 500.
 var ErrNotFound = errors.New("storage: object not found")
 
@@ -55,8 +55,6 @@ type Backend interface {
 	// Remove deletes the object. Removing a missing object is not an error,
 	// so cleanup retries are idempotent.
 	RemoveObject(ctx context.Context, key string) error
-	// Stat returns the stored size in bytes.
-	ObjectSize(ctx context.Context, key string) (int64, error)
 	// ReplaceObject atomically replaces an existing private object with
 	// content: readers see either the old or the new bytes, never a mix.
 	ReplaceObject(ctx context.Context, key string, content []byte) error

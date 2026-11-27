@@ -12,7 +12,6 @@ import { secureLaunchOptions } from "../secure-chrome";
 
 import { accessForShot, type Credentials, type StackAccess } from "./access";
 import { captureInOrder } from "./capture-order";
-import { assertConcurrency } from "./concurrency";
 import {
   DEVICES,
   nativeSize,
@@ -38,26 +37,22 @@ import type { Shot, Step } from "./shot-list";
 // Capture der Rohbilder (#3759): pro Shot und Gerät ein Browser-Kontext mit
 // dem nativen Viewport, fester Uhr, Deutsch und hellem Modus.
 
-export interface RawShot {
+interface RawShot {
   readonly shotId: string;
   readonly device: DeviceId;
   readonly png: Buffer;
 }
 
-export interface CaptureOptions {
+interface CaptureOptions {
   readonly access: StackAccess;
   readonly shots: readonly Shot[];
-  readonly now?: Date;
+  readonly now: Date;
   /** Maximum simultaneous shots; devices within one shot stay sequential. */
-  readonly concurrency?: number;
-  /**
-   * Wie lange Ladeanzeigen stehen dürfen, während die Seite nichts mehr lädt,
-   * bevor der Shot als kaputt gilt (network-activity.ts).
-   */
-  readonly loadTimeoutMs?: number;
-  readonly log?: (message: string) => void;
+  readonly concurrency: number;
+  readonly log: (message: string) => void;
 }
 
+/** Höchstdauer für Ladeanzeigen, während die Seite nichts mehr lädt. */
 const LOAD_TIMEOUT_MS = 20_000;
 /** Dasselbe für `warten_auf`: so lange darf die Seite ohne Laden still stehen. */
 const STEP_IDLE_MS = 30_000;
@@ -260,12 +255,11 @@ async function waitWhileLoading(
 async function waitForSettled(
   page: Page,
   network: NetworkActivity,
-  idleMs: number,
 ): Promise<Settled> {
   await waitWhileLoading(
     page,
     network,
-    idleMs,
+    LOAD_TIMEOUT_MS,
     // Erst nach den Ladeanzeigen: vorher stehen die Bilder noch nicht im DOM.
     async () =>
       (await countLoadingIndicators(page)) === 0 &&
@@ -598,7 +592,6 @@ async function captureOne(
   shot: Shot,
   origin: string,
   now: Date,
-  loadTimeoutMs: number,
 ): Promise<Buffer> {
   const context = await browser.newContext({
     storageState,
@@ -675,7 +668,7 @@ async function captureOne(
     const opensDialog = (shot.vorbereitung ?? []).some(
       (step) => "klicken" in step,
     );
-    let settled = await waitForSettled(page, network, loadTimeoutMs);
+    let settled = await waitForSettled(page, network);
     // Die Umleitungsprüfung gilt der Seite, auf der der Shot landet. Ein Klick
     // der Vorbereitung darf danach weiterführen, etwa von der Kindersuche auf
     // ein Kind, dessen ID erst der Seed vergibt.
@@ -691,7 +684,7 @@ async function captureOne(
         );
         break;
       }
-      settled = await waitForSettled(page, network, loadTimeoutMs);
+      settled = await waitForSettled(page, network);
     }
 
     const reasons = [
@@ -769,14 +762,13 @@ function assertNativeSize(
  * seine übrigen Geräte; am Ende wirft der Lauf alle kaputten Shots zusammen
  * (BrokenShotError) und gibt keine Teilergebnisse aus.
  */
-export async function captureShots(
-  options: CaptureOptions,
-): Promise<RawShot[]> {
-  const log = options.log ?? (() => undefined);
-  const now = options.now ?? new Date();
-  const loadTimeoutMs = options.loadTimeoutMs ?? LOAD_TIMEOUT_MS;
-  const concurrency = options.concurrency ?? 4;
-  assertConcurrency(concurrency);
+export async function captureShots({
+  access,
+  shots,
+  now,
+  concurrency,
+  log,
+}: CaptureOptions): Promise<RawShot[]> {
   const browser = await chromium.launch(secureLaunchOptions());
   try {
     const sessions = new Map<
@@ -784,16 +776,11 @@ export async function captureShots(
       Promise<Awaited<ReturnType<BrowserContext["storageState"]>>>
     >();
     return await captureInOrder(
-      options.shots,
+      shots,
       concurrency,
       async (shot, deviceId) => {
-        const { origin } = accessForShot(options.access, shot);
-        const storageState = await sessionFor(
-          browser,
-          sessions,
-          options.access,
-          shot,
-        );
+        const { origin } = accessForShot(access, shot);
+        const storageState = await sessionFor(browser, sessions, access, shot);
         log(`Fotografiere ${shot.id} auf ${deviceId}`);
         const started = performance.now();
         const png = await captureOne(
@@ -803,7 +790,6 @@ export async function captureShots(
           shot,
           origin,
           now,
-          loadTimeoutMs,
         );
         log(
           `Aufnahme ${shot.id}/${deviceId}: ${Math.round(performance.now() - started)} ms`,

@@ -26,6 +26,16 @@ const (
 	HolidayPeriodPublished = "published"
 )
 
+// Kinds of a holiday period (#4817). A holiday period plans weeks of holiday
+// care. An extra day is one care day outside the holidays, such as a bridge
+// day or a movable holiday: each of its weeks is that one weekday at one
+// school of the Träger. Registration, places, the host school's lists and
+// the contribution are those of a holiday period. The kind never changes.
+const (
+	HolidayPeriodKindHoliday  = "holiday"
+	HolidayPeriodKindExtraDay = "extra_day"
+)
+
 var (
 	// ErrHolidayPeriodNotFound reports a period that does not exist for the
 	// Träger of the session.
@@ -138,12 +148,25 @@ type HolidayWeek struct {
 	// its care days without the days without care. Only the public offer
 	// fills it (#5631).
 	LunchDays int `json:"-"`
+	// Placed is the number of children with a place in the week, those of
+	// received and confirmed registrations: a summed figure without personal
+	// data, the count of each school of an extra day (#4817).
+	Placed int `json:"placed"`
 }
 
 // HolidayPeriod is a holiday period of a Träger with its weeks.
 type HolidayPeriod struct {
-	ID                   ident.ID      `json:"id"`
-	Name                 string        `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
+	// Kind is HolidayPeriodKindHoliday or HolidayPeriodKindExtraDay (#4817).
+	Kind string `json:"kind"`
+	// IncludedInFee marks an extra day the monthly contribution covers:
+	// parents only register, its time models have no price and nothing is
+	// billed (#4817). A holiday period is never included.
+	IncludedInFee bool `json:"included_in_fee"`
+	// CreatedBySchoolID names the school that planned the extra day for
+	// itself (ADR 0329); nil when the Träger-Büro planned it.
+	CreatedBySchoolID    *ident.ID     `json:"created_by_school_id"`
 	RegistrationOpensOn  calendar.Date `json:"registration_opens_on"`
 	RegistrationClosesOn calendar.Date `json:"registration_closes_on"`
 	// Binding states that a registration is binding once submitted.
@@ -212,7 +235,16 @@ type HolidayWeekInput struct {
 
 // HolidayPeriodInput is the whole period as the Träger-Büro writes it.
 type HolidayPeriodInput struct {
-	Name                 string
+	Name string
+	// Kind is HolidayPeriodKindHoliday or HolidayPeriodKindExtraDay; empty
+	// is a holiday period on a create and the stored kind on an update,
+	// which keeps it (#4817).
+	Kind string
+	// IncludedInFee marks an extra day without a price (#4817).
+	IncludedInFee bool
+	// CreatedBySchoolID is the school that plans the extra day for itself
+	// (ADR 0329). Only SchoolExtraDays sets it, and only a create stores it.
+	CreatedBySchoolID    int64
 	RegistrationOpensOn  calendar.Date
 	RegistrationClosesOn calendar.Date
 	Binding              bool

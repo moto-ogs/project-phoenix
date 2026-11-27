@@ -177,36 +177,6 @@ func TestAuthService_AssignRoleToAccount_Extended(t *testing.T) {
 // Account Management Extended Tests (account_management.go)
 // =============================================================================
 
-func TestAuthService_ActivateAccount_Extended(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthServiceWithDB(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("activates already active account (idempotent)", func(t *testing.T) {
-		// ARRANGE
-		email := fmt.Sprintf("already-active-%d@test.local", time.Now().UnixNano())
-		account, err := service.Register(ctx, email, fmt.Sprintf("user-%d", testpkg.UniqueSuffix()), "Test1234%", nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		// Account is already active by default
-
-		// ACT
-		err = service.ActivateAccount(ctx, int(account.ID))
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// Verify still active
-		updated, err := service.GetAccountByID(ctx, int(account.ID))
-		require.NoError(t, err)
-		assert.True(t, updated.Active)
-	})
-}
-
 func TestAuthService_DeactivateAccount_Extended(t *testing.T) {
 	t.Parallel()
 

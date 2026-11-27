@@ -49,6 +49,7 @@
     "forChildren": "Për: {names}",
     "offeredByTraeger": "Ofruar nga {traeger}",
     "careLine": "Kujdesi {from} deri më {to}",
+    "careDayLine": "Kujdesi më {date}",
     "registrationLine": "Regjistrimi deri më {date}",
     "registrationRangeLine": "Regjistrimi {from} deri më {to}",
     "registerTooltip": "Hap regjistrimin për këtë ofertë pushimesh."

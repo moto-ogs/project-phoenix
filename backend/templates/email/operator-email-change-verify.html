@@ -1,13 +1,11 @@
 {{define "operator-email-change-verify.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>E-Mail-Adresse bestätigen</h1>
     <p>Hallo,</p>
     <p>es wurde eine Änderung der E-Mail-Adresse für Ihr moto-Operator-Konto angefordert. Klicken Sie auf den Button unten, um die neue E-Mail-Adresse zu bestätigen.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.VerifyURL}}">E-Mail-Adresse bestätigen</a>
     </div>
 
@@ -16,12 +14,9 @@
     </div>
 
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.VerifyURL}}">{{.VerifyURL}}</a>
-    </div>
+    {{template "link-box" .VerifyURL}}
 
     <p class="security-note">Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren. Ihre E-Mail-Adresse wird nur geändert, wenn Sie den obigen Link verwenden.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

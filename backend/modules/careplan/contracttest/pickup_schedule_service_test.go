@@ -31,6 +31,12 @@ func setupPickupScheduleService(t *testing.T, db *bun.DB, clocks ...func() time.
 	return serviceFactorySchedules.Pickups
 }
 
+func createPickupExceptionFixture(t *testing.T, ctx context.Context, db *bun.DB, row *careplan.PickupException) error {
+	t.Helper()
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
+	return api.CreateParentPickupExceptionFixture(ctx, owner, row)
+}
+
 func createPickupServiceTestStaffID(t *testing.T, db *bun.DB) int64 {
 	t.Helper()
 
@@ -79,7 +85,7 @@ func TestPickupScheduleService_GetStudentPickupSchedules(t *testing.T) {
 	})
 }
 
-func TestPickupScheduleService_GetStudentPickupScheduleForWeekday(t *testing.T) {
+func TestPickupScheduleService_ReadsSchedulesForWeekday(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -99,15 +105,15 @@ func TestPickupScheduleService_GetStudentPickupScheduleForWeekday(t *testing.T) 
 		err := testpkg.TenantCommand1(t, ctx, db, service.UpsertStudentPickupSchedule, sched)
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentPickupScheduleForWeekday, student.ID, timetable.WeekdayTuesday)
+		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetWeeklySchedulesByStudentIDsAndWeekday, []int64{student.ID}, timetable.WeekdayTuesday)
 
 		require.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, timetable.WeekdayTuesday, result.Weekday)
+		require.Len(t, result, 1)
+		assert.Equal(t, timetable.WeekdayTuesday, result[0].Weekday)
 	})
 
 	t.Run("returns error for invalid weekday", func(t *testing.T) {
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentPickupScheduleForWeekday, int64(1), 10)
+		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetWeeklySchedulesByStudentIDsAndWeekday, nil, 10)
 
 		require.Error(t, err)
 		assert.Nil(t, result)
@@ -157,9 +163,10 @@ func TestPickupScheduleService_UpsertStudentPickupSchedule(t *testing.T) {
 
 		require.NoError(t, err)
 
-		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentPickupScheduleForWeekday, student.ID, timetable.WeekdayMonday)
+		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetWeeklySchedulesByStudentIDsAndWeekday, []int64{student.ID}, timetable.WeekdayMonday)
 		require.NoError(t, err)
-		assert.Equal(t, 15, result.PickupTime.Hour())
+		require.Len(t, result, 1)
+		assert.Equal(t, 15, result[0].PickupTime.Hour())
 	})
 
 	t.Run("fails validation for invalid schedule", func(t *testing.T) {
@@ -276,7 +283,7 @@ func TestPickupScheduleService_DeleteStudentPickupSchedule(t *testing.T) {
 	})
 }
 
-func TestPickupScheduleService_DeleteAllStudentPickupSchedules(t *testing.T) {
+func TestPickupScheduleService_ClearsPlanWithEmptyWeek(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -298,7 +305,7 @@ func TestPickupScheduleService_DeleteAllStudentPickupSchedules(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		err := testpkg.TenantCommand1(t, ctx, db, service.DeleteAllStudentPickupSchedules, student.ID)
+		err := testpkg.TenantCommand2(t, ctx, db, service.UpsertBulkStudentPickupSchedules, student.ID, nil)
 
 		require.NoError(t, err)
 
@@ -311,78 +318,6 @@ func TestPickupScheduleService_DeleteAllStudentPickupSchedules(t *testing.T) {
 // =============================================================================
 // Exception Operations Tests
 // =============================================================================
-
-func TestPickupScheduleService_CreateStudentPickupException(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupPickupScheduleService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("creates exception successfully", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-
-		exception := &careplan.PickupException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(calendar.NewDate(2024, 3, 15)),
-			Reason:        testpkg.StrPtr("Doctor appointment"),
-			CreatedBy:     createPickupServiceTestStaffID(t, db),
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
-
-		require.NoError(t, err)
-		assert.Greater(t, exception.ID, int64(0))
-	})
-
-	t.Run("upserts when exception already exists for date", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-
-		// Use Berlin timezone for consistent date handling
-		exceptionDate := calendar.NewDate(2024, 3, 20)
-		firstPickupTime := time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC)
-		exception1 := &careplan.PickupException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(exceptionDate),
-			PickupTime:    &firstPickupTime,
-			Reason:        testpkg.StrPtr("First exception"),
-			CreatedBy:     createPickupServiceTestStaffID(t, db),
-		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception1)
-		require.NoError(t, err)
-		originalID := exception1.ID
-
-		secondPickupTime := time.Date(2000, 1, 1, 13, 0, 0, 0, time.UTC)
-		exception2 := &careplan.PickupException{
-			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(exceptionDate),
-			PickupTime:    &secondPickupTime,
-			Reason:        testpkg.StrPtr("Changed pickup"),
-			CreatedBy:     createPickupServiceTestStaffID(t, db),
-		}
-
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception2)
-
-		require.NoError(t, err)
-		assert.Equal(t, originalID, exception2.ID, "should update existing exception, not create new")
-		assert.Equal(t, 13, exception2.PickupTime.Hour(), "should have updated pickup time")
-		assert.Equal(t, "Changed pickup", *exception2.Reason, "should have updated reason")
-	})
-
-	t.Run("fails validation for invalid exception", func(t *testing.T) {
-		exception := &careplan.PickupException{
-			StudentID:     0,
-			ExceptionDate: careplan.Date(calendar.NewDate(2024, 3, 15)),
-			Reason:        testpkg.StrPtr("Test"),
-			CreatedBy:     createPickupServiceTestStaffID(t, db),
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
-
-		require.Error(t, err)
-	})
-}
 
 func TestPickupScheduleService_ReclaimGuardianPickupRejectsSharedPartialAbsence(t *testing.T) {
 	t.Parallel()
@@ -439,7 +374,7 @@ func TestPickupScheduleService_ReclaimGuardianPickupRejectsSharedPartialAbsence(
 	assert.Equal(t, careplan.ExceptionSourceGuardian, fresh.Source)
 }
 
-func TestPickupScheduleService_GetStudentPickupExceptions(t *testing.T) {
+func TestPickupScheduleService_DataIncludesExceptions(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -458,63 +393,19 @@ func TestPickupScheduleService_GetStudentPickupExceptions(t *testing.T) {
 				Reason:        testpkg.StrPtr("Exception"),
 				CreatedBy:     createPickupServiceTestStaffID(t, db),
 			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+			err := createPickupExceptionFixture(t, ctx, db, exception)
 			require.NoError(t, err)
 		}
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 
 		require.NoError(t, err)
+		results := data.Exceptions
 		assert.Len(t, results, 5)
 	})
 }
 
-func TestPickupScheduleService_GetUpcomingStudentPickupExceptions(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupPickupScheduleService(t, db, decisionTestClock)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns only upcoming exceptions", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-
-		baseDate := decisionTestToday
-
-		for i := -5; i < 0; i++ {
-			exception := &careplan.PickupException{
-				StudentID:     student.ID,
-				ExceptionDate: careplan.Date(baseDate.AddDays(i)),
-				Reason:        testpkg.StrPtr("Past"),
-				CreatedBy:     createPickupServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
-			require.NoError(t, err)
-		}
-
-		for i := 1; i <= 3; i++ {
-			exception := &careplan.PickupException{
-				StudentID:     student.ID,
-				ExceptionDate: careplan.Date(baseDate.AddDays(i)),
-				Reason:        testpkg.StrPtr("Future"),
-				CreatedBy:     createPickupServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
-			require.NoError(t, err)
-		}
-
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetUpcomingStudentPickupExceptions, student.ID)
-
-		require.NoError(t, err)
-		assert.Len(t, results, 3)
-		for _, result := range results {
-			assert.Equal(t, "Future", *result.Reason)
-		}
-	})
-}
-
-func TestPickupScheduleService_UpdateStudentPickupException(t *testing.T) {
+func TestPickupScheduleService_UpdatesExceptionReason(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -531,17 +422,18 @@ func TestPickupScheduleService_UpdateStudentPickupException(t *testing.T) {
 			Reason:        testpkg.StrPtr("Original reason"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err := createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		exception.Reason = testpkg.StrPtr("Updated reason")
 
-		err = testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentPickupException, exception)
+		_, err = service.UpdateException(ctx, exception.ID, student.ID, calendar.Date(exception.ExceptionDate), exception.Reason, nil, false, nil)
 
 		require.NoError(t, err)
 
-		exceptions, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 		require.NoError(t, err)
+		exceptions := data.Exceptions
 		assert.Len(t, exceptions, 1)
 		assert.Equal(t, "Updated reason", *exceptions[0].Reason)
 	})
@@ -566,7 +458,7 @@ func TestPickupScheduleService_UpdateExceptionPreservesOmittedPickupTime(t *test
 		Reason:        testpkg.StrPtr("Original reason"),
 		CreatedBy:     staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception))
+	require.NoError(t, createPickupExceptionFixture(t, ctx, db, exception))
 
 	updatedReason := "Updated reason"
 	updated, err := service.UpdateException(
@@ -608,7 +500,7 @@ func TestPickupScheduleService_UpdateExceptionClearsPickupTime(t *testing.T) {
 		Reason:        testpkg.StrPtr("Original reason"),
 		CreatedBy:     staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception))
+	require.NoError(t, createPickupExceptionFixture(t, ctx, db, exception))
 	clearReason := ""
 
 	updated, err := service.UpdateException(
@@ -626,7 +518,7 @@ func TestPickupScheduleService_UpdateExceptionClearsPickupTime(t *testing.T) {
 	assert.Nil(t, updated.Reason)
 }
 
-func TestPickupScheduleService_CreateExceptionUpsertDropsPartialOwnershipOnTimeChange(t *testing.T) {
+func TestPickupScheduleService_UpdateExceptionDropsPartialOwnershipOnTimeChange(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -648,27 +540,21 @@ func TestPickupScheduleService_CreateExceptionUpsertDropsPartialOwnershipOnTimeC
 		Source:                careplan.ExceptionSourceStaff,
 		CreatedBy:             staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception))
+	require.NoError(t, createPickupExceptionFixture(t, ctx, db, exception))
 
-	// Collision-update path: a second create for the same date with a different
-	// wall-clock must drop partial ownership so delete cannot wipe the override.
+	// Changing the pickup time relinquishes partial ownership so that deleting
+	// the excusal later cannot wipe the explicit override.
 	newPickup := calendar.NormalizeWallClock(time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC))
-	override := &careplan.PickupException{
-		StudentID:     student.ID,
-		ExceptionDate: careplan.Date(exceptionDate),
-		PickupTime:    &newPickup,
-		Source:        careplan.ExceptionSourceStaff,
-		CreatedBy:     staffID,
-	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, override))
+	_, err := service.UpdateException(ctx, exception.ID, student.ID, exceptionDate, nil, &newPickup, false, nil)
+	require.NoError(t, err)
 
-	fresh, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentPickupExceptionForDate, student.ID, exceptionDate)
+	fresh, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupExceptionByID, exception.ID)
 	require.NoError(t, err)
 	require.NotNil(t, fresh)
 	require.NotNil(t, fresh.PickupTime)
 	assert.Equal(t, "15:00", calendar.NormalizeWallClock(*fresh.PickupTime).Format("15:04"))
 	assert.False(t, fresh.ExcusedOwnsPickupTime,
-		"upsert with a new wall-clock must drop partial ownership of the pickup time")
+		"editing the wall-clock must drop partial ownership of the pickup time")
 	require.NotNil(t, fresh.ExcusedFrom, "partial metadata itself is preserved until explicit delete")
 }
 
@@ -694,7 +580,7 @@ func TestPickupScheduleService_UpdateExceptionSamePickupTimeKeepsPartialOwnershi
 		Source:                careplan.ExceptionSourceStaff,
 		CreatedBy:             staffID,
 	}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception))
+	require.NoError(t, createPickupExceptionFixture(t, ctx, db, exception))
 
 	// Same wall-clock with a different date anchor must not look like a time edit.
 	sameClockDifferentAnchor := time.Date(2024, 4, 3, 13, 30, 0, 0, time.UTC)
@@ -734,15 +620,16 @@ func TestPickupScheduleService_DeleteStudentPickupException(t *testing.T) {
 			Reason:        testpkg.StrPtr("Test"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err := createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		err = testpkg.TenantCommand2(t, ctx, db, service.DeleteStudentPickupException, exception.ID, exception.StudentID)
 
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupExceptions, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 		require.NoError(t, err)
+		results := data.Exceptions
 		assert.Empty(t, results)
 
 		err = testpkg.TenantCommand2(t, ctx, db, service.DeleteStudentPickupException, exception.ID, exception.StudentID)
@@ -764,7 +651,7 @@ func TestPickupScheduleService_DeleteStudentPickupException(t *testing.T) {
 			ExcusedOwnsPickupTime: true,
 			CreatedBy:             staffID,
 		}
-		require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception))
+		require.NoError(t, createPickupExceptionFixture(t, ctx, db, exception))
 
 		err := testpkg.TenantCommand2(t, ctx, db, service.DeleteStudentPickupException, exception.ID, exception.StudentID)
 		require.ErrorIs(t, err, careplan.ErrCareExceptionContainsPartialAbsence)
@@ -805,7 +692,7 @@ func TestPickupScheduleService_GetStudentPickupData(t *testing.T) {
 			Reason:        testpkg.StrPtr("Future exception"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err = createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
@@ -850,7 +737,7 @@ func TestPickupScheduleService_GetEffectivePickupTimeForDate(t *testing.T) {
 			Reason:        testpkg.StrPtr("Early pickup"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err = createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectivePickupTimeForDate, student.ID, testDate)
@@ -964,7 +851,7 @@ func TestPickupScheduleService_GetEffectivePickupTimeForDate(t *testing.T) {
 			Reason:        &blankReason,
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err = createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		result, err := testpkg.TenantQuery2(t, ctx, db, service.GetEffectivePickupTimeForDate, student.ID, testDate)
@@ -1022,7 +909,7 @@ func TestPickupScheduleService_GetBulkEffectivePickupTimesForDate(t *testing.T) 
 			Reason:        testpkg.StrPtr("Doctor appointment"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception2)
+		err = createPickupExceptionFixture(t, ctx, db, exception2)
 		require.NoError(t, err)
 
 		exception3 := &careplan.PickupException{
@@ -1032,7 +919,7 @@ func TestPickupScheduleService_GetBulkEffectivePickupTimesForDate(t *testing.T) 
 			Reason:        testpkg.StrPtr("Sick"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception3)
+		err = createPickupExceptionFixture(t, ctx, db, exception3)
 		require.NoError(t, err)
 
 		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectivePickupTimesForDate, []int64{student1.ID, student2.ID, student3.ID}, testDate)
@@ -1127,7 +1014,7 @@ func TestPickupScheduleService_GetBulkEffectivePickupTimesForDate(t *testing.T) 
 			Reason:        &blankReason,
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
-		err = testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, exception)
+		err = createPickupExceptionFixture(t, ctx, db, exception)
 		require.NoError(t, err)
 
 		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectivePickupTimesForDate, []int64{student.ID}, testDate)
@@ -1226,7 +1113,7 @@ func TestPickupScheduleService_GetStudentPickupNoteByID(t *testing.T) {
 	})
 }
 
-func TestPickupScheduleService_GetStudentPickupNotes(t *testing.T) {
+func TestPickupScheduleService_DataIncludesNotes(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -1249,21 +1136,22 @@ func TestPickupScheduleService_GetStudentPickupNotes(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 
 		require.NoError(t, err)
-		assert.Len(t, results, 3)
+		assert.Len(t, data.Notes, 3)
 	})
 
 	t.Run("returns empty slice when no notes", func(t *testing.T) {
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupNotes, int64(99999999))
+		student := testpkg.CreateTestStudent(t, db, "No", "Notes", "1a")
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 
 		require.NoError(t, err)
-		assert.Empty(t, results)
+		assert.Empty(t, data.Notes)
 	})
 }
 
-func TestPickupScheduleService_GetStudentPickupNotesForDate(t *testing.T) {
+func TestPickupScheduleService_EffectiveTimesIncludeNotesForDate(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -1299,10 +1187,13 @@ func TestPickupScheduleService_GetStudentPickupNotesForDate(t *testing.T) {
 		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupNote, note)
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetStudentPickupNotesForDate, student.ID, targetDate)
+		results, err := testpkg.TenantQuery2(t, ctx, db, service.GetBulkEffectivePickupTimesForDate, []int64{student.ID}, targetDate)
 
 		require.NoError(t, err)
-		assert.Len(t, results, 2)
+		require.Contains(t, results, student.ID)
+		notes := results[student.ID].DayNotes
+		require.Len(t, notes, 2)
+		assert.ElementsMatch(t, []string{"Note 0", "Note 1"}, []string{notes[0].Content, notes[1].Content})
 	})
 }
 
@@ -1340,10 +1231,10 @@ func TestPickupScheduleService_UpdateStudentPickupNote(t *testing.T) {
 		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentPickupNote, &stale, read)
 		require.ErrorIs(t, err, readstate.ErrChanged)
 
-		notes, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 		require.NoError(t, err)
-		assert.Len(t, notes, 1)
-		assert.Equal(t, "Updated content", notes[0].Content)
+		require.Len(t, data.Notes, 1)
+		assert.Equal(t, "Updated content", data.Notes[0].Content)
 	})
 
 	t.Run("fails validation on invalid note", func(t *testing.T) {
@@ -1384,42 +1275,9 @@ func TestPickupScheduleService_DeleteStudentPickupNote(t *testing.T) {
 
 		require.NoError(t, err)
 
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupNotes, student.ID)
+		data, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupData, student.ID)
 		require.NoError(t, err)
-		assert.Empty(t, results)
-	})
-}
-
-func TestPickupScheduleService_DeleteAllStudentPickupNotes(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupPickupScheduleService(t, db, decisionTestClock)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("deletes all notes for student", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
-
-		baseDate := decisionTestToday
-		for i := 1; i <= 5; i++ {
-			note := &careplan.PickupNote{
-				StudentID: student.ID,
-				NoteDate:  careplan.Date(baseDate.AddDays(i)),
-				Content:   "Note",
-				CreatedBy: createPickupServiceTestStaffID(t, db),
-			}
-			err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupNote, note)
-			require.NoError(t, err)
-		}
-
-		err := testpkg.TenantCommand1(t, ctx, db, service.DeleteAllStudentPickupNotes, student.ID)
-
-		require.NoError(t, err)
-
-		results, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentPickupNotes, student.ID)
-		require.NoError(t, err)
-		assert.Empty(t, results)
+		assert.Empty(t, data.Notes)
 	})
 }
 
@@ -1551,7 +1409,7 @@ func TestPickupScheduleService_EffectiveTimeKeepsRegularTime(t *testing.T) {
 
 	t.Run("an exception keeps the regular time next to the new one", func(t *testing.T) {
 		earlier := time.Date(2024, 1, 1, 12, 15, 0, 0, time.UTC)
-		require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.CreateStudentPickupException, &careplan.PickupException{
+		require.NoError(t, createPickupExceptionFixture(t, ctx, db, &careplan.PickupException{
 			StudentID:     student.ID,
 			ExceptionDate: careplan.Date(testDate),
 			PickupTime:    &earlier,

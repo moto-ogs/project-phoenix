@@ -45,7 +45,6 @@ export function DateTimePicker({
   min,
   disabled = false,
   id,
-  className = "",
   dateAriaLabel = "Datum",
   timeAriaLabel = "Uhrzeit",
   invalid,
@@ -55,7 +54,6 @@ export function DateTimePicker({
   // Deadlines usually want the end of the day, openings the start, so the
   // caller decides rather than silently getting midnight.
   defaultTime = "00:00",
-  calendarLayout = "popover",
   hideClearButton = false,
   required = false,
 }: {
@@ -67,7 +65,6 @@ export function DateTimePicker({
   readonly min?: string;
   readonly disabled?: boolean;
   readonly id?: string;
-  readonly className?: string;
   readonly dateAriaLabel?: string;
   readonly timeAriaLabel?: string;
   readonly invalid?: boolean;
@@ -76,7 +73,6 @@ export function DateTimePicker({
   /** Form field name on the date, so a refused field can be focused. */
   readonly name?: string;
   readonly defaultTime?: string;
-  readonly calendarLayout?: "overlay" | "inline" | "popover";
   /** Hide the clear control. Use when the value is required. */
   readonly hideClearButton?: boolean;
   /** Prevents clearing an already selected date from the calendar. */
@@ -120,7 +116,7 @@ export function DateTimePicker({
   };
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+    <div className="flex flex-wrap items-center gap-2">
       <ISODatePicker
         id={id}
         value={day}
@@ -146,7 +142,7 @@ export function DateTimePicker({
         hideClearButton={hideClearButton}
         required={required}
         controlSize="compact"
-        calendarLayout={calendarLayout}
+        calendarLayout="popover"
         ariaLabel={dateAriaLabel}
         ariaDescribedBy={ariaDescribedBy}
         name={name}

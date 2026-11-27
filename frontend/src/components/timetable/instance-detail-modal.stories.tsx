@@ -53,7 +53,6 @@ const meta = {
     onLifecycleAction: async () => undefined,
     staffNames,
     studentNames,
-    editDeferred: true,
   },
 } satisfies Meta<typeof InstanceDetailModal>;
 

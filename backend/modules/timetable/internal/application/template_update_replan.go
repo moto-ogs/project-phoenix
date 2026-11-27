@@ -173,7 +173,7 @@ func (s *TemplateService) replanTemplateOccurrences(ctx context.Context, in Temp
 	if err != nil {
 		return &ports.ScheduleError{Op: replanTemplateOp + ": snapshot deviations", Err: err}
 	}
-	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.ActivityInstanceRepo.Plans, replan.from, &replan.to, &in.TemplateID, false)
+	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.ActivityInstanceRepo.Plans, replan.from, &replan.to, &in.TemplateID)
 	if err != nil {
 		return &ports.ScheduleError{Op: replanTemplateOp + ": delete planned", Err: err}
 	}

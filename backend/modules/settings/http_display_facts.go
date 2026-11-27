@@ -18,10 +18,6 @@ func NewDisplaySettings(source DisplaySettingsSource) DisplaySettings {
 	return DisplaySettings{source: source}
 }
 
-func (s DisplaySettings) PrefetchStudentDisplaySettings(ctx context.Context) context.Context {
-	return PrefetchStudentDisplaySettings(ctx, s.source)
-}
-
 func (s DisplaySettings) StudentPhotosEnabled(ctx context.Context) (bool, error) {
 	return StudentPhotosEnabled(ctx, s.source)
 }

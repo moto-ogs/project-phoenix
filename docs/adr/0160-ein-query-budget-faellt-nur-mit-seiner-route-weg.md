@@ -43,9 +43,9 @@ Freigegeben von Yannick Wenger am 07.11.2026 (Option A in #5972).
    erhält einen vollständigen Counter-Snapshot statt eines nackten SQL-Slices;
    gemessene HTTP-Requests ohne aufgelöstes Muster sind ebenfalls Fehler.
    Eine normale Prüfung vergleicht gespeicherte und gemessene Route und
-   überschreibt nichts. Die initiale Erfassung ist ein ausdrücklicher Lauf
-   nach der Anleitung in `backend/test/query-budgets/README.md` (#6057,
-   Option 1). Szenario, `max`, `exact` und SQL-Messumfang bleiben unverändert.
+   überschreibt nichts. Wie eine Route gesetzt und gegen das Router-Golden
+   geprüft wird, beschreibt `backend/test/query-budgets/README.md` (#6057).
+   Szenario, `max`, `exact` und SQL-Messumfang bleiben unverändert.
 2. **Ein Budget fällt nur mit seiner eigenen Route weg.** Ein Szenario des
    Base-Registers darf fehlen, wenn dieselbe Änderung in
    `backend/architecture/query-budget-retirements.json` einen Eintrag
@@ -104,8 +104,7 @@ Budget; seit #6057 ersetzt das explizite Feld diese Ableitung.
 - Alle API-Budgets sind entweder an ihre tatsächlich gemessene Route gebunden
   oder ausdrücklich als Nicht-HTTP-Szenario begründet. Schwer migrierbare
   HTTP-Tests rechtfertigen keine Ausnahme.
-- Die initiale Erfassung und spätere normale Testläufe sind getrennt. Auch das
-  Backfill-Skript verweigert das Überschreiben einer bestehenden anderen Route.
+- Ein Testlauf schreibt keine Route und ändert das Register nicht.
 - Die günstigen Fixtures prüfen Rename, Mount-Präfixe, Beschreibungen ohne
   Route, Nicht-HTTP-Ausnahmen und die Schutzfälle der Stilllegungsprüfung.
 

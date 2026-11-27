@@ -75,7 +75,7 @@ export function plannedStudentIds(form: EventFormState): string[] {
   return [...seen];
 }
 
-export function sharedRoster(form: EventFormState): WeekdayRosterState {
+function sharedRoster(form: EventFormState): WeekdayRosterState {
   return {
     staffIds: form.staffIds,
     primaryStaffId: form.primaryStaffId,

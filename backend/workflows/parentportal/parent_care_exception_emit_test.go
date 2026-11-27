@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"testing"
-	"time"
 
 	parentportal "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 
@@ -20,92 +19,7 @@ import (
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 )
 
-// TestSubmitCareException_EmitsSelfServiceMirrorPill wires a real emitter into
-// the parent write service so the self-service mirror pill path actually runs:
-// a guardian-authored care exception must drop a "care_exception" mirror pill
-// into the child's thread (the parent's own timeline of what they changed), and
-// deleting it drops a correction pill.
-func TestSubmitCareException_EmitsSelfServiceMirrorPill(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
-	reposMessages := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db))
-	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
-
-	emitter := api.NewParentEventEmitter(testpkg.MustDatabase(db), testpkg.TenantRuntime(t, db), reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(db),
-		parentSettingsStub{boolDefault: true}, testpkg.NewRecordingBroadcaster(), slog.Default())
-	settings := parentSettingsStub{
-		boolValues: map[string]bool{
-			parentportal.KeyParentPickupChangeEnabled: true,
-			parentportal.KeyParentNotesEnabled:        true,
-		},
-	}
-	svc := parentportalcompose.New(parentportalcompose.Dependencies{
-		Memberships:         parentMemberships(t, db),
-		StudentGuardianRepo: guardStudentGuardians(t, db),
-		GuardianProfileRepo: guardProfiles(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
-		DeparturePolicy:     owners.ParentDeparturePolicy(),
-		GuardianPolicy:      owners.NewParentGuardianPolicy(),
-		Fingerprints:        owners.SecurityFingerprints{},
-		Declarations:        owners.ParentDeclarationPolicy(),
-		Locales:             owners.ParentPortalLocales(),
-		Runtime:             owners.ParentPortalRuntime{},
-		MessagingEnabled:    owners.BindParentMessagingGate(settings, slog.Default()),
-		CarePlan:            owners.NewParentCarePlanCommands(repos.CarePlan(), nil),
-		People:              owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)),
-		CareProfiles:        careProfiles(t, db),
-		ChildRepo:           repos.ParentChildReads(),
-		StatusDayRepo:       repos.StudentStatusDay,
-		StudentRepo:         owners.NewParentStudentReads(reposPeople.Student),
-		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
-		Settings:            settings,
-		StudentUpdates:      owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
-		MessageThreadRepo:   owners.BindParentMessageThreadAccess(reposMessages.ParentMessageThread),
-		MessageRepo:         owners.BindParentMessageReads(communicationtest.NewParentMessageRepository(db)),
-		MessageReadRepo:     owners.BindParentMessageInboxReads(reposMessages.ParentMessageRead),
-		Conversations:       api.NewParentConversationCore(reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(db), reposMessages.ParentMessageRead, testpkg.NewRecordingBroadcaster(), slog.Default()),
-		Emitter:             owners.BindParentChildEvents(emitter),
-		Logger:              slog.Default(),
-		Now:                 careFixtureNow,
-
-		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
-
-		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
-	})
-
-	chain := testpkg.CreateTestParentGuardianChain(t, db)
-
-	// A future in-window date; a fixed clock time is fine (wall-clock only).
-	today := careFixtureToday()
-	date := today.AddDays(3)
-	pickup := time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC)
-
-	exc, err := svc.SubmitCareExceptionWithReason(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, &pickup, "Arzttermin")
-	require.NoError(t, err)
-	require.NotNil(t, exc)
-
-	// The mirror pill (care_exception) must be in the thread's timeline.
-	_, msgs := loadThreadPills(t, db, reposMessages, chain)
-	assert.GreaterOrEqual(t, countCareExceptionPills(msgs), 1,
-		"a submitted care exception drops a self-service mirror pill")
-
-	// Deleting the exception drops a correction pill (self-service mirror again).
-	require.NoError(t, svc.DeleteCareException(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date))
-	_, msgs = loadThreadPills(t, db, reposMessages, chain)
-	assert.GreaterOrEqual(t, len(msgs), 2,
-		"deleting the exception drops a correction pill onto the thread")
-}
-
-// TestSubmitCareException_WakesEveryGuardian is the regression guard for the
-// #1725 review finding that a guardian's self-service write only woke the acting
-// guardian: emitSelfServicePill appends a pill to the acting guardian's own
-// thread, and broadcastStudentUpdated is a staff-only tenant event that never
-// reaches the parents SSE stream — so a co-guardian's open child-detail view kept
-// showing a stale pickup time until they refocused or reloaded. The write must
-// now fan a message-independent parent_child_updated wake to EVERY guardian.
-func TestSubmitCareException_WakesEveryGuardian(t *testing.T) {
+func TestDeleteCareException_EmitsCorrectionAndWakesGuardians(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -161,14 +75,16 @@ func TestSubmitCareException_WakesEveryGuardian(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	date := careFixtureToday().AddDays(3)
-	pickup := time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC)
+	seedGuardianPickupException(t, db, chain, date, wallClock(15, 30))
+	require.NoError(t, svc.DeleteCareException(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date))
 
-	_, err := svc.SubmitCareExceptionWithReason(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, &pickup, "Arzttermin")
-	require.NoError(t, err)
+	msgs := loadThreadPills(t, db, reposMessages, chain)
+	require.Len(t, msgs, 1)
+	assert.Equal(t, "care_exception_correction", msgs[0].EventType)
 
 	guardianCalls := emitterBC.CallsByMethod("guardian")
 	require.NotEmpty(t, guardianCalls,
-		"a parent care-exception submit must wake the child's guardians (#1725 review)")
+		"withdrawing a care exception must wake the child's guardians (#1725 review)")
 	woke := false
 	for _, c := range guardianCalls {
 		if c.GuardianID == chain.AccountID {
@@ -184,30 +100,18 @@ func TestSubmitCareException_WakesEveryGuardian(t *testing.T) {
 
 // loadThreadPills reads the (student, guardian) thread messages under the tenant
 // tx (RLS), returning an empty slice when no thread exists.
-func loadThreadPills(t *testing.T, db *bun.DB, repos *api.ParentMessagingSuiteRepositories, c testpkg.ParentChain) (int64, []*parentportal.ParentMessage) {
+func loadThreadPills(t *testing.T, db *bun.DB, repos *api.ParentMessagingSuiteRepositories, c testpkg.ParentChain) []*parentportal.ParentMessage {
 	t.Helper()
-	var threadID int64
 	var msgs []*parentportal.ParentMessage
 	err := testpkg.WithTenantTx(t, testpkg.WithPackageTenantRuntime(context.Background()), db, c.TenantID, func(txCtx context.Context, _ bun.Tx) error {
 		th, ferr := repos.ParentMessageThread.FindByStudentGuardian(txCtx, c.StudentID, c.AccountID, "team")
 		if ferr != nil || th == nil {
 			return ferr
 		}
-		threadID = th.ID
 		ms, merr := api.ParentConversationMessagesFixture(txCtx, communicationtest.NewParentMessageRepository(db), th.ID, 100)
 		msgs = ms
 		return merr
 	})
 	require.NoError(t, err)
-	return threadID, msgs
-}
-
-func countCareExceptionPills(msgs []*parentportal.ParentMessage) int {
-	n := 0
-	for _, m := range msgs {
-		if m.EventType == "care_exception" || m.EventType == "care_exception_correction" {
-			n++
-		}
-	}
-	return n
+	return msgs
 }

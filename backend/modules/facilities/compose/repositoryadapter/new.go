@@ -1,3 +1,5 @@
+//go:build testhooks
+
 package repositoryadapter
 
 import (
@@ -6,6 +8,3 @@ import (
 )
 
 func New(rooms facilities.Capability) *implementation.Repository { return implementation.New(rooms) }
-func NewRecords(rooms facilities.Query) *implementation.Records {
-	return implementation.NewRecords(rooms)
-}

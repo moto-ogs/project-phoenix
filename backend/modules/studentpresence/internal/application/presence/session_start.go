@@ -119,7 +119,7 @@ func (s *service) executeSessionStart(ctx context.Context, activityID, deviceID 
 			return err
 		}
 
-		finalRoomID, err := s.determineRoomIDWithStrategy(txCtx, activityID, roomID, RoomConflictIgnore, false)
+		finalRoomID, err := s.determineRoomID(txCtx, activityID, roomID, false)
 		if err != nil {
 			return err
 		}

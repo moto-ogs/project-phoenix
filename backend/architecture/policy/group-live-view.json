@@ -8,20 +8,6 @@
       "external_test_role": "module-behavior-test"
     },
     {
-      "path": "modules/grouplive/internal/adapters/nameorder",
-      "owner": "group-live-view",
-      "role": "adapter",
-      "internal_test_role": "adapter-test",
-      "external_test_role": "module-behavior-test"
-    },
-    {
-      "path": "modules/grouplive/compose",
-      "owner": "group-live-view",
-      "role": "compose",
-      "internal_test_role": "module-internal-test",
-      "external_test_role": "module-behavior-test"
-    },
-    {
       "path": "modules/grouplive/http",
       "owner": "group-live-view",
       "role": "http",

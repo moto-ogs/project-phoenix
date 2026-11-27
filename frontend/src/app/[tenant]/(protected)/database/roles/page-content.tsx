@@ -345,9 +345,8 @@ function RolesPageContent() {
     if (!selectedRole) return;
     setDeletePending(true);
     deleteErrors.clear();
-    let deleted: boolean;
     try {
-      deleted = await service.remove(selectedRole.id);
+      await service.remove(selectedRole.id);
     } catch (err) {
       // Der Bestätigungsdialog bleibt offen und nennt den Grund.
       void deleteErrors.show(err, {
@@ -358,7 +357,6 @@ function RolesPageContent() {
     } finally {
       setDeletePending(false);
     }
-    if (!deleted) return;
     const removedId = selectedRole.id;
     await mutateRoles(
       (current) => current?.filter((role) => role.id !== removedId),
@@ -421,7 +419,7 @@ function RolesPageContent() {
           <DatabaseFormModal<Role>
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
-            mode="create"
+
             config={rolesConfig}
             onSubmit={handleCreateRole}
             errorPath={createErrors}

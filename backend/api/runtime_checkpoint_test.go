@@ -80,7 +80,7 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 	// the production runtime.
 	var checkpointMaterialization timetableModule.MaterializationCapability
 	var checkpointOutbox *deliveryModule.Worker
-	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, checkpointMaterialization, _, _, _, _, _, _, _, checkpointOutbox, _, err = composeTestRoot(api.db, slog.Default(), currentTestServiceConfig())
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, checkpointMaterialization, _, _, _, _, _, _, _, checkpointOutbox, _, err = composeTestRoot(api.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	db := testpkg.SetupTestDB(t)
 	_, account := testpkg.CreateTestTeacherWithAccount(t, db, "Checkpoint", "Staff")

@@ -49,6 +49,7 @@ import { routes as files } from "./files.generated";
 import { routes as groups } from "./groups.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as holidayExtraDays } from "./holiday-extra-days.generated";
 import { routes as holidayGuests } from "./holiday-guests.generated";
 import { routes as holidayWeeks } from "./holiday-weeks.generated";
 import { routes as importRoutes } from "./import.generated";
@@ -161,6 +162,7 @@ import { routes as traegerHolidayPeriods } from "./traeger-holiday-periods.gener
 import { routes as traegerHolidayQuotes } from "./traeger-holiday-quotes.generated";
 import { routes as traegerHolidayRegistrations } from "./traeger-holiday-registrations.generated";
 import { routes as traegerInvitations } from "./traeger-invitations.generated";
+import { routes as traegerInvoiceJournal } from "./traeger-invoice-journal.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
@@ -409,7 +411,6 @@ export const portalRoutes = {
     traegerExportRecipient["POST /traeger/export-recipient/"],
     traegerExportRecipient["PUT /traeger/export-recipient/formats"],
     traegerExportRecipient["PUT /traeger/export-recipient/{id}"],
-    traegerFamilyBilling["GET /traeger/family-billing/"],
     traegerFamilyBilling["GET /traeger/family-billing/contracts/{id}"],
     traegerFamilyBilling["PUT /traeger/family-billing/"],
     traegerFamilyChildren["DELETE /traeger/family-children/{contractId}"],
@@ -489,6 +490,8 @@ export const portalRoutes = {
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/export"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["DELETE /traeger/master-data/logo"],
     traegerMasterData["DELETE /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"],
@@ -1237,7 +1240,6 @@ export const portalRoutes = {
     guardians["DELETE /api/guardians/{id}"],
     guardians["DELETE /api/guardians/{id}/email-block"],
     guardians["DELETE /api/guardians/{id}/email-stop"],
-    guardians["DELETE /api/guardians/{id}/phone-numbers/{phoneId}"],
     guardians["GET /api/guardians/invitations/pending-approval"],
     guardians["GET /api/guardians/payment-overview"],
     guardians["GET /api/guardians/search"],
@@ -1259,15 +1261,16 @@ export const portalRoutes = {
     guardians["POST /api/guardians/{id}/invite"],
     guardians["POST /api/guardians/{id}/payment/reveal"],
     guardians["POST /api/guardians/{id}/phone-numbers/"],
-    guardians["POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary"],
-    guardians["PUT /api/guardians/relationships/{relationshipId}"],
     guardians["PUT /api/guardians/students/{studentId}/guardians/{guardianId}"],
     guardians["PUT /api/guardians/students/{studentId}/payer"],
-    guardians["PUT /api/guardians/{id}"],
     guardians["PUT /api/guardians/{id}/payment"],
-    guardians["PUT /api/guardians/{id}/phone-numbers/{phoneId}"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    holidayExtraDays["GET /api/holiday-extra-days/"],
+    holidayExtraDays["GET /api/holiday-extra-days/{id}"],
+    holidayExtraDays["POST /api/holiday-extra-days/"],
+    holidayExtraDays["POST /api/holiday-extra-days/{id}/publish"],
+    holidayExtraDays["PUT /api/holiday-extra-days/{id}"],
     holidayGuests["GET /api/holiday-guests/"],
     holidayGuests["GET /api/holiday-guests/groups"],
     holidayGuests["GET /api/holiday-guests/{studentId}"],
@@ -1318,8 +1321,6 @@ export const portalRoutes = {
     mealCaterer["POST /api/meal-caterer/invitations"],
     mealPlan["DELETE /api/meal-plan/days/{date}/cancellation"],
     mealPlan["DELETE /api/meal-plan/participation/{studentId}/days/{date}"],
-    mealPlan["DELETE /api/meal-plan/{date}"],
-    mealPlan["GET /api/meal-plan/"],
     mealPlan["GET /api/meal-plan/cancellations"],
     mealPlan["GET /api/meal-plan/days"],
     mealPlan["GET /api/meal-plan/orders"],
@@ -1333,7 +1334,6 @@ export const portalRoutes = {
     mealPlan["PUT /api/meal-plan/days/{date}/cancellation"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/schedule"],
-    mealPlan["PUT /api/meal-plan/{date}"],
     messages["GET /api/messages/"],
     messages["GET /api/messages/attachments/{attachmentId}/download"],
     messages["GET /api/messages/count-scope"],

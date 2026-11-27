@@ -44,6 +44,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { holidayListBack } from "~/components/traeger/holiday-period-format";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { focusStepHeading } from "~/components/ui/use-step-focus";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -230,8 +231,8 @@ export default function TraegerHolidayAllocationPage() {
     <TenantPage
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
-      backHref={traegerPath("/traeger/ferien")}
-      backLabel="Zurück zu den Ferien"
+      backHref={traegerPath(holidayListBack(period?.kind).path)}
+      backLabel={holidayListBack(period?.kind).label}
       info={
         <p>
           moto sortiert die offenen Anmeldungen jeder Woche nach deinen
@@ -268,6 +269,7 @@ export default function TraegerHolidayAllocationPage() {
         "vergabe",
         period?.registrationCount,
         period?.allocationMode,
+        period?.kind,
       )}
       overflowMenu={byCriteria ? exportItems : undefined}
       actions={

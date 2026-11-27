@@ -510,7 +510,9 @@ describe("CareRequestReviewItem", () => {
       /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuche es später erneut\./,
     );
     expect(onDecided).not.toHaveBeenCalled();
-    expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Lara Beispiel/ }),
+    ).toBeInTheDocument();
   });
 
   it("asks for a reload when the pickup impact changed", async () => {

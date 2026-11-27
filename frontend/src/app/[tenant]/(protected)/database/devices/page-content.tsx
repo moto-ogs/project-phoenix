@@ -341,9 +341,7 @@ function DevicesPageContent() {
     async (data: Partial<Device>) => {
       // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath,
       // eine vergebene Geräte-ID (iot.device_id_taken) markiert das Feld.
-      const payload = devicesConfig.form.transformBeforeSubmit
-        ? devicesConfig.form.transformBeforeSubmit(data)
-        : data;
+      const payload = devicesConfig.form.transformBeforeSubmit(data);
       const created = await service.create(payload);
       toastSuccess(
         `Das Gerät „${created.name ?? created.device_id}“ ist registriert.`,
@@ -360,9 +358,7 @@ function DevicesPageContent() {
     async (data: Partial<Device>, version: string | undefined) => {
       if (!selectedDevice) throw new Error("device is not selected");
       // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
-      const payload = devicesConfig.form.transformBeforeSubmit
-        ? devicesConfig.form.transformBeforeSubmit(data)
-        : data;
+      const payload = devicesConfig.form.transformBeforeSubmit(data);
       // The save carries the version the form was filled from (ADR 0311);
       // after a refusal the form reads the list again (reloadDevice).
       const saved = await service.update(selectedDevice.id, {
@@ -449,8 +445,7 @@ function DevicesPageContent() {
     setDeletePending(true);
     deleteErrors.clear();
     try {
-      const removed = await service.remove(selectedDevice.id);
-      if (!removed) return;
+      await service.remove(selectedDevice.id);
       toastSuccess(
         `Das Gerät „${title}“ ist entfernt. Sein Platz ist wieder frei.`,
       );
@@ -526,7 +521,7 @@ function DevicesPageContent() {
           <DatabaseFormModal<Device>
             isOpen={showCreateModal}
             onClose={handleCloseCreateModal}
-            mode="create"
+
             config={devicesConfig}
             onSubmit={handleCreateDevice}
             errorPath={createErrors}

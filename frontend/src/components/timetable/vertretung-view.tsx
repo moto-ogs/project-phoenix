@@ -837,7 +837,6 @@ function VertretungContent() {
           eingehängter Dialog zöge seinen Kontext in jeden Test dieser Seite. */}
       {canExportBetreuungsplan && exportOpen && (
         <PlanExportModal
-          isOpen
           plan="betreuungsplan"
           weekDay={dayISO}
           isWeekOnScreen={isWeekView}
@@ -1170,7 +1169,7 @@ function VertretungDisabledState() {
  */
 export function VertretungView() {
   return (
-    <Suspense fallback={<VertretungContentSkeleton withBar />}>
+    <Suspense fallback={<VertretungContentSkeleton />}>
       <VertretungContent />
     </Suspense>
   );

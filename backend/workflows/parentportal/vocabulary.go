@@ -53,7 +53,6 @@ type (
 	ReleaseNoticeAudience            = care.ReleaseNoticeAudience
 	ReleaseSchoolsPort               = care.ReleaseSchools
 	ReleaseRecipientsPort            = care.ReleaseRecipients
-	ReleaseFanOutPort                = care.ReleaseFanOut
 	DocumentPushPorts                = care.DocumentPushPorts
 	TraegerDocumentNotifierPort      = care.TraegerDocumentNotifier
 	BillingDocumentReader            = care.BillingDocumentReader
@@ -173,7 +172,6 @@ var (
 	ErrCareDateTooFar                     = care.ErrCareDateTooFar
 	ErrCareExceptionAlreadyLeft           = care.ErrCareExceptionAlreadyLeft
 	ErrCareExceptionConflict              = care.ErrCareExceptionConflict
-	ErrCareExceptionRaced                 = care.ErrCareExceptionRaced
 	ErrCareExceptionReasonRequired        = care.ErrCareExceptionReasonRequired
 	ErrCareExceptionReasonTooLong         = care.ErrCareExceptionReasonTooLong
 	ErrCareRequestAlreadyPending          = care.ErrCareRequestAlreadyPending

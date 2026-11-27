@@ -186,7 +186,7 @@ func TestNightlyCleanupAlertsOncePerFailedRunFromTheThreshold(t *testing.T) {
 		cleanupService:  &mockCleanupService{cleanupResult: &ports.ExpiredVisitCleanup{Success: true}},
 		feedbackCleaner: &fakeFeedbackCleaner{err: errors.New("feedback unavailable")},
 		cleanupRuns:     runs,
-		cleanupClock:    clock.Now,
+		now:             clock.Now,
 		settings: &fakeSettingsResolver{
 			boolValues:   map[string]bool{settingDataCleanupEnabled: true},
 			stringValues: map[string]string{settingDataCleanupTime: "02:00"},
@@ -285,7 +285,7 @@ func TestNightlyCleanupStoresTheStreakOfAnUnreadableSwitch(t *testing.T) {
 	newWorker := func() *Scheduler {
 		return unitScheduler(&unitSchedulerDependencies{
 			logger: slog.Default(), timetableCleanup: cleanup, cleanupRuns: runs,
-			cleanupClock: clock.Now, settings: settings,
+			now: clock.Now, settings: settings,
 		})
 	}
 	s := newWorker()
@@ -362,7 +362,7 @@ func TestNightlyCleanupCountsAnUnreadableCleanupTimeAsFailure(t *testing.T) {
 	cleanup := &fakeTimetableCleanup{}
 	logs := &cleanupLogs{}
 	s := unitScheduler(&unitSchedulerDependencies{
-		logger: logs.logger(), timetableCleanup: cleanup, cleanupRuns: runs, cleanupClock: clock.Now,
+		logger: logs.logger(), timetableCleanup: cleanup, cleanupRuns: runs, now: clock.Now,
 		settings: &stubSettingsResolver{boolVal: true, stringErr: errors.New("cleanup time unreadable"), intVal: 30},
 	})
 	tick := func(at time.Time) {

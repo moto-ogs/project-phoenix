@@ -1,7 +1,6 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import type { Student } from "~/lib/student-helpers";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
-import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import type * as studentsContract from "~/lib/contract/students.generated";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
@@ -379,14 +378,6 @@ export function resolveSupervisionSelection(options: {
     if (ownOpenRoomSession) return sessionTarget(ownOpenRoomSession);
   }
   return { kind: "persist-first" };
-}
-
-export function activeSupervisionRosterKey(options: {
-  readonly selectedTimetableInstanceId: string | null;
-  readonly currentRoomId: string | null | undefined;
-  readonly missingRosterActiveGroupIds: ReadonlySet<string>;
-}): string | null {
-  return tenantDailyKeys.activeSupervisionRoster(options);
 }
 
 /**

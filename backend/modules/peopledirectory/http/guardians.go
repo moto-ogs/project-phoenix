@@ -217,9 +217,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.With(usersRead, withTx).Get("/{id}", rs.getGuardian)
 
 		r.With(usersCreate, withTx).Post("/", rs.createGuardian)
-		// The single-field edits are deprecated (ADR 0311): the staff form saves
-		// a child's guardian as one entry with its version.
-		r.With(usersUpdate, withTx).Put("/{id}", rs.refuseUnversionedEdit)
 		// Read-only preview of a full delete's blast radius (admin-only check in
 		// the handler, #819).
 		r.With(usersDelete, withTx).Get("/{id}/delete-preview", rs.guardianDeletePreview)
@@ -234,7 +231,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		// Atomic create-or-link of one or more guardians (#819).
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians/batch", rs.createStudentGuardians)
 		r.With(usersUpdate, withTx).Put("/students/{studentId}/guardians/{guardianId}", rs.updateStudentGuardian)
-		r.With(usersUpdate, withTx).Put("/relationships/{relationshipId}", rs.refuseUnversionedEdit)
 		r.With(usersUpdate, withTx).Delete("/students/{studentId}/guardians/{guardianId}", rs.removeGuardianFromStudent)
 
 		rs.mountRelatedAccounts(r, withTx)
@@ -252,9 +248,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.Route("/{id}/phone-numbers", func(r chi.Router) {
 			r.With(usersRead, withTx).Get("/", rs.listGuardianPhoneNumbers)
 			r.With(usersUpdate, withTx).Post("/", rs.addPhoneNumber)
-			r.With(usersUpdate, withTx).Put("/{phoneId}", rs.refuseUnversionedEdit)
-			r.With(usersUpdate, withTx).Delete("/{phoneId}", rs.refuseUnversionedEdit)
-			r.With(usersUpdate, withTx).Post("/{phoneId}/set-primary", rs.refuseUnversionedEdit)
 		})
 	})
 	return router

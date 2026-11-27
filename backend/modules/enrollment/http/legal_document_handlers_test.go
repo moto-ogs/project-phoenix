@@ -20,6 +20,7 @@ import (
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/tenant"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type fakeLegalDocumentReferenceRepository struct {
@@ -129,23 +130,22 @@ func TestDeleteLegalDocument_ChecksReferencesInTenantTx(t *testing.T) {
 	_, _ = writeEnrollmentLegalDocument(t, "42_tx-check.pdf")
 	req := httptest.NewRequest(http.MethodDelete, "/enrollment/legal-documents/42_tx-check.pdf", nil)
 	req = withFilenameParam(req, "42_tx-check.pdf")
-	req = req.WithContext(tenant.WithTenantID(req.Context(), 42))
+	ctx := tenant.WithTenantID(req.Context(), 42)
+	req = req.WithContext(tenant.WithUnitOfWork(ctx, testpkg.PassthroughTenantRuntime()))
 	w := httptest.NewRecorder()
 
-	type txContextKey struct{}
 	sawTenantTxContext := false
 	res := &Resource{
-		Now:      resourceTestClock,
-		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
-		uploads:  nativeUploads.UploadFiles{},
+		Now:          resourceTestClock,
+		Failures:     DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
+		uploads:      nativeUploads.UploadFiles{},
+		transactions: true,
 		legalDocumentRefs: fakeLegalDocumentReferenceRepository{
 			referenced: true,
 			checkCtx: func(ctx context.Context) {
-				sawTenantTxContext = ctx.Value(txContextKey{}) == "tenant-tx"
+				assert.Equal(t, int64(42), tenant.FromContext(ctx))
+				_, sawTenantTxContext = testpkg.TransactionFromContext(ctx)
 			},
-		},
-		runInTenantTxForTest: func(r *http.Request, fn func(ctx context.Context) error) error {
-			return fn(context.WithValue(r.Context(), txContextKey{}, "tenant-tx"))
 		},
 	}
 

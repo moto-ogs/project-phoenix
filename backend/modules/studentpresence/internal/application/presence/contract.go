@@ -22,9 +22,6 @@ type (
 	HistorySlotInstance           = studentpresence.HistorySlotInstance
 	HistorySlotAttendance         = studentpresence.HistorySlotAttendance
 	VisitHistoryEntry             = studentpresence.VisitHistoryEntry
-	VisitWithRoom                 = studentpresence.VisitWithRoom
-	VisitRoomGroup                = studentpresence.VisitRoomGroup
-	VisitRoom                     = studentpresence.VisitRoom
 	AttendanceSnapshot            = studentpresence.AttendanceSnapshot
 	AttendanceSyncer              = studentpresence.AttendanceSyncer
 	SchoolCheckinBatchItem        = studentpresence.SchoolCheckinBatchItem

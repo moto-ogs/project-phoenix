@@ -25,8 +25,12 @@ export const HOLIDAY_REGISTRATION_STATUS_TONES: Readonly<
   cancelled: "gray",
 };
 
-/** "04.01. bis 08.01.2027". */
+/**
+ * "04.01. bis 08.01.2027"; a week of a single day, such as an extra care
+ * day (#4817), is that day alone.
+ */
 export function formatHolidayWeek(startsOn: string, endsOn: string): string {
+  if (startsOn === endsOn) return formatDate(endsOn);
   return `${formatDate(startsOn).slice(0, 6)} bis ${formatDate(endsOn)}`;
 }
 

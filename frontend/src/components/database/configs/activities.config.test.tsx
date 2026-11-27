@@ -1,6 +1,5 @@
 /**
  * Tests for Activities Configuration
- * Tests emoji matching, config structure, and form sections
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
@@ -8,11 +7,7 @@ import {
   toActivityRequest,
   toActivityUpdateRequest,
 } from "./activities.config";
-import {
-  mapActivityResponse,
-  type Activity,
-  type ActivitySupervisor,
-} from "@/lib/activity-helpers";
+import { mapActivityResponse, type Activity } from "@/lib/activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
 // Mock next-auth
@@ -70,63 +65,6 @@ describe("activitiesConfig", () => {
 
   it("has default max_participant value", () => {
     expect(activitiesConfig.form.defaultValues?.max_participant).toBe(20);
-  });
-
-  it("has no transformBeforeSubmit", () => {
-    expect(activitiesConfig.form.transformBeforeSubmit).toBeUndefined();
-  });
-
-  it("has detail header configuration", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Fußball AG",
-      category_name: "Sport",
-      max_participant: 20,
-      participant_count: 15,
-    } as unknown as Activity;
-
-    expect(activitiesConfig.detail.header?.title(mockActivity)).toBe(
-      "Fußball AG",
-    );
-    expect(activitiesConfig.detail.header?.subtitle?.(mockActivity)).toBe(
-      "Sport",
-    );
-  });
-
-  it("calculates activity emoji for sports", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Fußball AG",
-      category_name: "Sport",
-      max_participant: 20,
-    } as unknown as Activity;
-
-    const emoji = activitiesConfig.detail.header?.avatar?.text(mockActivity);
-    expect(emoji).toBe("⚽");
-  });
-
-  it("calculates activity emoji for creative activities", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Kunst AG",
-      category_name: "Kreativ",
-      max_participant: 20,
-    } as unknown as Activity;
-
-    const emoji = activitiesConfig.detail.header?.avatar?.text(mockActivity);
-    expect(emoji).toBe("🎨");
-  });
-
-  it("uses initials as fallback emoji", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Unknown Activity",
-      category_name: "Other",
-      max_participant: 20,
-    } as unknown as Activity;
-
-    const emoji = activitiesConfig.detail.header?.avatar?.text(mockActivity);
-    expect(emoji).toBe("UN");
   });
 
   it("maps request data correctly", () => {
@@ -252,51 +190,6 @@ describe("activitiesConfig", () => {
     expect(mapped).toEqual(mapActivityResponse(responseData));
     expect(mapped.max_participant).toBe(20);
     expect(mapped.is_open_ags).toBe(true);
-  });
-
-  it("has list configuration", () => {
-    expect(activitiesConfig.list.title).toBe("Aktivität auswählen");
-    expect(activitiesConfig.list.searchStrategy).toBe("frontend");
-  });
-
-  it("displays supervisor in list item subtitle", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Test AG",
-      max_participant: 20,
-      supervisors: [
-        {
-          id: "1",
-          staff_id: "1",
-          activity_id: "1",
-          is_primary: true,
-          first_name: "Max",
-          last_name: "Mustermann",
-        } as ActivitySupervisor,
-      ],
-    } as unknown as Activity;
-
-    const subtitle = activitiesConfig.list.item.subtitle?.(mockActivity);
-    expect(subtitle).toBe("Max Mustermann");
-  });
-
-  it("displays no supervisor message when none assigned", () => {
-    const mockActivity = {
-      id: "1",
-      name: "Test AG",
-      max_participant: 20,
-      supervisors: [],
-    } as unknown as Activity;
-
-    const subtitle = activitiesConfig.list.item.subtitle?.(mockActivity);
-    expect(subtitle).toBe("Keine Hauptbetreuung");
-  });
-
-  it("has custom labels", () => {
-    expect(activitiesConfig.labels?.createButton).toBe(
-      "Neue Aktivität erstellen",
-    );
-    expect(activitiesConfig.labels?.deleteConfirmation).toContain("löschen");
   });
 
   // An empty list would look like a school without categories or

@@ -20,8 +20,8 @@ func NewClassListImportConfig(deps ports.ClassListImportDeps) ports.ImportConfig
 func NewOpeningBalanceImportConfig(deps ports.OpeningBalanceImportDeps, day calendar.Date, note string, staffID int64) ports.ImportConfig[dataimport.OpeningBalanceImportRow] {
 	return application.NewOpeningBalanceImportConfig(deps, day, note, staffID)
 }
-func NewRelationshipResolver(groups, rooms dataimport.ReferenceLookup) ports.RelationshipResolver {
-	return application.NewRelationshipResolver(groups, rooms)
+func NewRelationshipResolver(groups dataimport.ReferenceLookup) ports.RelationshipResolver {
+	return application.NewRelationshipResolver(groups)
 }
 func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportRuntime) dataimport.RowImporter[T] {
 	return application.NewImportService(config, runtime)

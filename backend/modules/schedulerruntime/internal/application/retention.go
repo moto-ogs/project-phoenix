@@ -54,13 +54,6 @@ func sameLocalDay(a, b time.Time) bool {
 	return a.Year() == b.Year() && a.YearDay() == b.YearDay()
 }
 
-func (s *Scheduler) cleanupNow() time.Time {
-	if s.cleanupClock != nil {
-		return s.cleanupClock()
-	}
-	return s.clock()
-}
-
 // cleanupRunState is the stored state of one cleanup job of a school: its
 // last success, zero while it never succeeded, and the failed runs in a row
 // since with the last of them.

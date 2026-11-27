@@ -8,7 +8,6 @@ import (
 
 type GuardianPickupExceptions interface{ care.GuardianPickupExceptions }
 type GuardianPickupExceptionsCallbacks struct {
-	ApplyGuardianPickupException    func(ctx context.Context, change GuardianPickupChangeSnapshot) error
 	WithdrawGuardianPickupException func(ctx context.Context, change PickupExceptionSnapshot) error
 }
 
@@ -20,9 +19,6 @@ type guardianPickupExceptions struct {
 	callbacks GuardianPickupExceptionsCallbacks
 }
 
-func (a guardianPickupExceptions) ApplyGuardianPickupException(ctx context.Context, change care.GuardianPickupChange) error {
-	return a.callbacks.ApplyGuardianPickupException(ctx, change)
-}
 func (a guardianPickupExceptions) WithdrawGuardianPickupException(ctx context.Context, change care.PickupException) error {
 	return a.callbacks.WithdrawGuardianPickupException(ctx, change)
 }

@@ -664,7 +664,7 @@ describe("ActivitiesPage", () => {
 
   it("calls delete service after confirming deletion from the detail panel", async () => {
     setSelectedActivity("1");
-    mockRemove.mockResolvedValueOnce(true);
+    mockRemove.mockResolvedValueOnce(undefined);
 
     render(<ActivitiesPage />);
 

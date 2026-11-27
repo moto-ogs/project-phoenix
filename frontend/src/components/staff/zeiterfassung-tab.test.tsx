@@ -70,7 +70,6 @@ describe("ZeiterfassungTab Kennzahlen", () => {
       week: null,
       month: null,
       accountBalanceMinutes: null,
-      failed: true,
       error: new ApiError("metrics unavailable", 503, {
         code: "general.unavailable",
         instance: "req-metrics",

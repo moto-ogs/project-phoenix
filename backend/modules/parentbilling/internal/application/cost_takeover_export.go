@@ -208,6 +208,10 @@ func takeoverWeek(position parentbilling.BillingPosition) string {
 	if position.WeekStartsOn == nil || position.WeekEndsOn == nil {
 		return position.TimeModelName
 	}
+	if *position.WeekStartsOn == *position.WeekEndsOn {
+		// A booking of a single day, such as an extra care day (#4817).
+		return position.WeekEndsOn.Format("02.01.2006") + ", " + position.TimeModelName
+	}
 	return position.WeekStartsOn.Format("02.01.") + " bis " + position.WeekEndsOn.Format("02.01.2006") + ", " + position.TimeModelName
 }
 

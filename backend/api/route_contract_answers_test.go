@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 )
 
@@ -36,9 +35,6 @@ import (
 // Collection never reads the file while other packages may still write it.
 // Ambiguous relative patterns validate schemas but do not count as
 // coverage; mount those test routers explicitly to identify their routes.
-//
-// A deprecated route that only refuses (RouteContract.Refuses) has no
-// success answer: a refusal a test sees through its full pattern answers it.
 func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 	t.Parallel()
 	doc, err := ContractDocument()
@@ -55,14 +51,6 @@ func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 		// Without the collected answers there is nothing to hold: one
 		// package answers few routes.
 		return
-	}
-	registrations, err := contractRegistrations()
-	require.NoError(t, err)
-	for _, registration := range registrations {
-		key := registration.Method + " " + registration.Pattern
-		if registration.Refuses != "" && answered[common.RefusedAnswerKey(key)] {
-			answered[key] = true
-		}
 	}
 	existing, err := readBaseRoutes(os.Getenv)
 	require.NoError(t, err)

@@ -13,7 +13,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var validPhoneTypes = map[string]bool{"mobile": true, "home": true, "work": true, "other": true}
@@ -116,14 +115,6 @@ func (rs *GuardianResource) createGuardian(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	rs.succeed(w, r, http.StatusCreated, newGuardianResponse(guardian), "Guardian created successfully")
-}
-
-// refuseUnversionedEdit answers the single-field edit routes the staff form
-// used before it saved a guardian as one entry (ADR 0311). They carry no read
-// state, so a tab opened before the release is refused and shows the stored
-// state; the routes go after one release (ADR 0270, #7953).
-func (rs *GuardianResource) refuseUnversionedEdit(w http.ResponseWriter, r *http.Request) {
-	rs.fail(w, r, FailureConflict, readstate.ErrChanged)
 }
 
 // guardianFullDeleteWarning describes what a full delete WOULD do, so it

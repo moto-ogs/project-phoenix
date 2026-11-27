@@ -58,10 +58,3 @@ export function helpEntriesOf(
       ),
     );
 }
-
-/** Lädt den Index und liefert die Themen dieser Rolle. */
-export async function helpSearchEntries(
-  context: HelpUrlContext,
-): Promise<readonly SearchEntry[]> {
-  return helpEntriesOf(await loadHelpIndex(), context);
-}

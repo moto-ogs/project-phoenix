@@ -32,9 +32,6 @@ func withinAdmin(ctx context.Context, fn func(context.Context) error) error {
 // transaction so the service's repo calls hit the right RLS scope.
 // A bare Resource from a route unit test runs fn on the request context.
 func (rs *Resource) runInTenantTx(r *http.Request, fn func(ctx context.Context) error) error {
-	if rs.runInTenantTxForTest != nil {
-		return rs.runInTenantTxForTest(r, fn)
-	}
 	ctx := r.Context()
 	if !rs.transactions {
 		return fn(ctx)

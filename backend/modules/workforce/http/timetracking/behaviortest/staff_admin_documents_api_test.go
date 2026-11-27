@@ -69,6 +69,13 @@ type documentsAPIContext struct {
 	account int64
 }
 
+func staffDocumentsDir(t *testing.T) string {
+	t.Helper()
+	public, err := nativeUploads.ResolvePublicDir()
+	require.NoError(t, err)
+	return filepath.Join(public, "uploads", "staff-documents", fmt.Sprint(testpkg.Tenant(t)))
+}
+
 func setupDocumentsAPI(t *testing.T) *documentsAPIContext {
 	t.Helper()
 	return setupDocumentsAPIWith(t, nil)
@@ -84,7 +91,7 @@ func setupDocumentsAPIWith(t *testing.T, adjust func(*bun.DB, *timetracking.Staf
 	target := testpkg.CreateTestStaff(t, tc.db, "Dokumente", fmt.Sprintf("API-%d", suffix))
 	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("dokumente-api-%d@example.test", suffix))
 	t.Cleanup(func() {
-		_ = os.RemoveAll(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}))
+		_ = os.RemoveAll(staffDocumentsDir(t))
 	})
 
 	return &documentsAPIContext{tc: tc, staffID: target.ID, account: account.ID}
@@ -230,7 +237,7 @@ func TestStaffDocumentsAPI_ScheduledCleanupRetriesQueuedOrphanWithoutStaff(t *te
 	assert.Empty(t, cleanups, "an in-progress upload must not be picked up by cleanup retries")
 	require.NoError(t, c.tc.resource.StaffDocumentService.ActivateQueuedStaffDocumentFileCleanup(ctx, storedName))
 
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	require.NoError(t, os.MkdirAll(filepath.Dir(filePath), 0o750))
 	require.NoError(t, os.WriteFile(filePath, fakePDF, 0o600))
 
@@ -257,7 +264,7 @@ func TestStaffDocumentsAPI_ScheduledCleanupSkipsUncommittedUpload(t *testing.T) 
 	require.NoError(t, c.tc.resource.StaffDocumentService.QueueStaffDocumentFileCleanup(ctx, orphanStaffID, storedName))
 	require.NoError(t, c.tc.resource.StaffDocumentService.ActivateQueuedStaffDocumentFileCleanup(ctx, storedName))
 
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	require.NoError(t, os.MkdirAll(filepath.Dir(filePath), 0o750))
 	require.NoError(t, os.WriteFile(filePath, fakePDF, 0o600))
 
@@ -315,7 +322,7 @@ func TestStaffDocumentsAPI_ScheduledCleanupRetriesOffboardedStaffDocument(t *tes
 	ctx := testpkg.Ctx(t)
 	var storedName string
 	require.NoError(t, c.tc.db.NewRaw(`SELECT filename_stored FROM users.staff_documents WHERE id = ?`, docID).Scan(ctx, &storedName))
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	_, err := os.Stat(filePath)
 	require.NoError(t, err)
 
@@ -361,7 +368,7 @@ func TestStaffDocumentsAPI_OffboardingCleanupLeaseRetriesFileFailure(t *testing.
 	ctx := testpkg.Ctx(t)
 	var storedName string
 	require.NoError(t, c.tc.db.NewRaw("SELECT filename_stored FROM users.staff_documents WHERE id = ?", docID).Scan(ctx, &storedName))
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	savedPath := filePath + ".saved"
 	require.NoError(t, os.Rename(filePath, savedPath))
 	require.NoError(t, os.Mkdir(filePath, 0700))
@@ -421,7 +428,7 @@ func TestStaffDocumentsAPI_DirectoryRetryRespectsCommittedOffboardingLease(t *te
 		c.tc.resource.RetryQueuedStaffDocumentCleanups(txCtx, "directory")
 		return nil
 	}))
-	_, err = os.Stat(filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName))
+	_, err = os.Stat(filepath.Join(staffDocumentsDir(t), storedName))
 	require.NoError(t, err, "the directory retry must not unlink a different worker's claimed file")
 	var fileDeletedAt *time.Time
 	require.NoError(t, c.tc.db.NewRaw("SELECT file_deleted_at FROM users.staff_documents WHERE id = ?", docID).Scan(ctx, &fileDeletedAt))
@@ -438,7 +445,7 @@ func TestStaffDocumentsAPI_ScheduledCleanupRetriesDeletedActiveStaffDocument(t *
 	ctx := testpkg.Ctx(t)
 	var storedName string
 	require.NoError(t, c.tc.db.NewRaw(`SELECT filename_stored FROM users.staff_documents WHERE id = ?`, docID).Scan(ctx, &storedName))
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	_, err := c.tc.db.NewRaw(`UPDATE users.staff_documents SET deleted_at = NOW(), file_deleted_at = NULL WHERE id = ?`, docID).Exec(ctx)
 	require.NoError(t, err)
 
@@ -468,7 +475,7 @@ func TestStaffDocumentsAPI_SickNoteRetentionRemovesTheFileThroughTheSweep(t *tes
 	ctx := testpkg.Ctx(t)
 	var storedName string
 	require.NoError(t, c.tc.db.NewRaw(`SELECT filename_stored FROM users.staff_documents WHERE id = ?`, docID).Scan(ctx, &storedName))
-	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
+	filePath := filepath.Join(staffDocumentsDir(t), storedName)
 	_, err := os.Stat(filePath)
 	require.NoError(t, err, "the upload stored the file")
 	// Uploaded 400 days before the run on the database clock, which stamps
@@ -535,7 +542,7 @@ func TestStaffDocumentsAPI_SealsSickNotesAndPayslips(t *testing.T) {
 	t.Parallel()
 	c := setupDocumentsAPI(t)
 	base := fmt.Sprintf("/staff/%d/documents", c.staffID)
-	dir := timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{})
+	dir := staffDocumentsDir(t)
 	stored := func(id int64) (string, int64) {
 		var name string
 		var size int64

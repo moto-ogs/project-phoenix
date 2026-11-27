@@ -25,30 +25,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "binding_digest": "898708533b442531816204abf4738cdf",
       "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
@@ -1718,6 +1694,22 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostSchoolNames.HolidayHostSchoolNames",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "46cee501662b6b6f6bf60d434b9fe0a0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostTraeger.HolidayHostTraeger",
+      "binding_digest": "f40b4497afd691812b45706a6da2731c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostTraeger.HolidayHostTraeger",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
     },
     {

@@ -94,54 +94,23 @@ function berlinUtcOffsetSeconds(at: Date): number {
   return Math.round((asUtc - at.getTime()) / 1000);
 }
 
-interface NextChangeDelay {
-  // How long to wait before refetching, in ms.
-  delayMs: number;
-  // Whether the flagged boundary is a genuine future instant. Drives whether the
-  // one-shot timer re-arms itself after firing (see the effect): a boundary that
-  // is still in the future after the refetch — a day-agnostic "24:00" that maps
-  // to the *next* midnight — must recur; one that has fallen into the past is a
-  // spent one-shot for this occurrence.
-  inFuture: boolean;
-}
-
-// nextChangeDelay computes how long to wait before refetching so the refetch
-// lands just after the Berlin wall-clock "HH:MM" the backend flagged as the next
-// time-based change, and whether that boundary is still in the future. Returns
-// null for an unparseable value. When the target is already in the past (clock
-// skew, or the timer resolving at the exact minute) it returns a short delay
-// (inFuture: false) so we refetch promptly rather than a whole day later.
-//
-// Same-day boundaries are HH:MM. A boundary on the following day is an RFC 3339
-// instant, which carries its date and Berlin offset. Keep accepting the legacy
-// 24:00 spelling while clients and servers roll out independently.
-function nextChangeDelay(hhmm: string): NextChangeDelay | null {
+// Same-day boundaries are HH:MM in Berlin. A later day's boundary includes
+// its date and offset. A past boundary gets one prompt refresh, not a loop.
+function nextChangeDelay(hhmm: string): number | null {
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(hhmm)) {
     const targetMs = Date.parse(hhmm);
     if (Number.isNaN(targetMs)) return null;
     const realDeltaMs = targetMs - Date.now();
-    if (realDeltaMs <= 0) {
-      return { delayMs: PAST_BOUNDARY_REFETCH_MS, inFuture: false };
-    }
-    return {
-      delayMs: realDeltaMs + NEXT_CHANGE_BUFFER_MS,
-      inFuture: true,
-    };
+    return realDeltaMs <= 0
+      ? PAST_BOUNDARY_REFETCH_MS
+      : realDeltaMs + NEXT_CHANGE_BUFFER_MS;
   }
   const match = /^(\d{2}):(\d{2})$/.exec(hhmm);
   if (!match) return null;
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
-  if (
-    Number.isNaN(hours) ||
-    Number.isNaN(minutes) ||
-    hours > 24 ||
-    (hours === 24 && minutes > 0) ||
-    minutes > 59
-  ) {
-    return null;
-  }
-  const targetSec = hours * 3600 + minutes * 60; // 24:00 → 86400
+  if (hours > 23 || minutes > 59) return null;
+  const targetSec = hours * 3600 + minutes * 60;
   const now = new Date();
   // wallDeltaSec is a wall-clock delta, but setTimeout counts real elapsed ms.
   // On a Berlin DST-transition day the two diverge by 3600s across the boundary
@@ -154,41 +123,9 @@ function nextChangeDelay(hhmm: string): NextChangeDelay | null {
   const estTarget = new Date(now.getTime() + wallDeltaSec * 1000);
   const offsetTarget = berlinUtcOffsetSeconds(estTarget);
   const realDeltaSec = wallDeltaSec - (offsetTarget - offsetNow);
-  if (realDeltaSec <= 0) {
-    return { delayMs: PAST_BOUNDARY_REFETCH_MS, inFuture: false };
-  }
-  return {
-    delayMs: realDeltaSec * 1000 + NEXT_CHANGE_BUFFER_MS,
-    inFuture: true,
-  };
-}
-
-function scheduleNextChangeRefresh(
-  nextChangeAt: string,
-  refresh: () => unknown,
-): () => void {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const arm = (isReArm: boolean) => {
-    const next = nextChangeDelay(nextChangeAt);
-    if (next === null) return;
-    if (!next.inFuture) {
-      if (!isReArm) {
-        timer = setTimeout(() => {
-          void refresh();
-        }, next.delayMs);
-      }
-      return;
-    }
-    timer = setTimeout(() => {
-      void refresh();
-      arm(true);
-    }, next.delayMs);
-  };
-
-  arm(false);
-  return () => {
-    if (timer) clearTimeout(timer);
-  };
+  return realDeltaSec <= 0
+    ? PAST_BOUNDARY_REFETCH_MS
+    : realDeltaSec * 1000 + NEXT_CHANGE_BUFFER_MS;
 }
 
 // Readers of one scoped key share one event listener and one next_change_at
@@ -283,39 +220,19 @@ export function useReminders() {
     });
   }, [enabled, resource, mutate]);
 
-  // Precise time-based refresh. Time-based reminders cross their threshold with
-  // no backend event, so instead of only catching them on the 60s poll we
-  // schedule a single timer to the exact Berlin wall-clock minute the backend
-  // reported as the next change (a pickup/activity entering or leaving its
-  // window). Because it fires one buffer past the boundary, the server excludes
-  // the just-passed minute and the fresh response carries a later next_change_at
-  // in the normal within-day case — a new string that re-runs this effect for
-  // the following boundary. One timer per scoped key and boundary.
-  //
-  // The one-shot timer RE-ARMS ITSELF after firing rather than relying on that
-  // re-run, because the re-run is not guaranteed: a day-agnostic boundary can
-  // repeat verbatim across midnight (a persistent end-of-day "24:00", or a daily
-  // fixed threshold), and the refetch then returns a payload SWR compares equal
-  // and does not re-render on — so the effect would never re-run and the timer
-  // would never re-arm, silently degrading to the 60s poll from the first
-  // midnight on. Rescheduling in the callback makes the timer self-sustaining.
-  // We only re-arm when the boundary is still in the future (the "24:00" case,
-  // which now maps to the *next* midnight); a boundary that has fallen into the
-  // past is a spent one-shot, and re-arming it would busy-refetch under large
-  // clock skew, so we let the refreshed response drive the next arm instead.
-  //
-  // Backstops for the residual cases: while the tab is hidden the browser
-  // throttles/freezes this timer AND SWR pauses the refreshInterval poll
-  // (refreshWhenHidden defaults off), so neither runs — the
-  // `revalidateOnFocus: true` above is what refetches the moment the tab is
-  // refocused. Client clock skew larger than the buffer is caught by the next
-  // 60s poll once the tab is visible again.
+  // One timer per scoped key and boundary. The refreshed response drives the
+  // next timer. Focus and polling cover suspended tabs and larger clock skew.
   useEffect(() => {
     if (!enabled || resource === null || !nextChangeAt) return;
     return shareRefresh(
       `${resource}:next-change:${nextChangeAt}`,
       mutate,
-      (refresh) => scheduleNextChangeRefresh(nextChangeAt, refresh),
+      (refresh) => {
+        const delay = nextChangeDelay(nextChangeAt);
+        if (delay === null) return () => undefined;
+        const timer = setTimeout(refresh, delay);
+        return () => clearTimeout(timer);
+      },
     );
   }, [enabled, resource, nextChangeAt, mutate]);
 

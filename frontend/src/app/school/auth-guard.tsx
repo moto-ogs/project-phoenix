@@ -50,7 +50,7 @@ export function SchoolAuthGuard({
                   page
                 )}
               </SchoolShell>
-              <PwaInstallHint samsungOnly />
+              <PwaInstallHint />
               <PortalNotificationSetup portal="school" />
             </ShellIntlProvider>
           </BreadcrumbProvider>

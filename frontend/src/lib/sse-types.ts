@@ -5,16 +5,11 @@ export type ConnectionStatus = "connected" | "reconnecting" | "failed" | "idle";
 
 export interface SSEHookOptions {
   onMessage?: (event: SSEEvent) => void;
-  onError?: (error: Event) => void;
-  reconnectInterval?: number;
-  maxReconnectAttempts?: number;
   enabled?: boolean; // when false, do not establish EventSource
   reconnectKey?: string | number; // when this changes, force teardown+reconnect (e.g. tenantId)
 }
 
 export interface SSEHookState {
   isConnected: boolean;
-  error: string | null;
-  reconnectAttempts: number;
   status: ConnectionStatus;
 }

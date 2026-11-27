@@ -1,8 +1,6 @@
 package communication
 
-import (
-	"time"
-)
+import "time"
 
 type PortalDeclarationPolicy interface {
 	PortalCanonicalRecord(pA PortalDeclarationSubmission) []byte
@@ -10,6 +8,5 @@ type PortalDeclarationPolicy interface {
 	Closed(deadline *time.Time, now time.Time) bool
 	ChildState(signers string, deadline *time.Time, eligible []int64, latest map[int64]string, now time.Time) string
 	AllowedActions(deadline *time.Time, canSubmit bool, latest string, now time.Time) []string
-	ActionAllowed(deadline *time.Time, canSubmit bool, latest string, action string, now time.Time) bool
 	OwesAction(deadline *time.Time, canSubmit bool, latest string, state string, now time.Time) bool
 }

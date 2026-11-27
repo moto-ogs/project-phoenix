@@ -64,12 +64,6 @@ type StudentLocationSnapshot struct {
 	YardRoomColor *string
 }
 
-// ResolveStudentLocation converts the cached data into the user-facing location string.
-func (s *StudentLocationSnapshot) ResolveStudentLocation(studentID int64, hasFullAccess bool) string {
-	info := s.ResolveStudentLocationWithTime(studentID, hasFullAccess)
-	return info.Location
-}
-
 // ResolveStudentLocationWithTime converts the cached data into location info including entry time.
 func (s *StudentLocationSnapshot) ResolveStudentLocationWithTime(studentID int64, hasFullAccess bool) StudentLocationInfo {
 	if s == nil {

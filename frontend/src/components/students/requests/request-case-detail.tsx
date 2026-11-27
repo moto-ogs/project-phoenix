@@ -173,7 +173,6 @@ export function RequestCaseDetail({
             <OpenWithdrawalCard
               key={`care_withdrawal:${row.id}`}
               row={row}
-              grouped
               position={childCase.items.length + index + 1}
               total={total}
               finish={finishWithdrawal}

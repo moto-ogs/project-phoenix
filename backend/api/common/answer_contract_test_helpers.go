@@ -32,7 +32,6 @@ import (
 // test.
 func init() {
 	answerObserver = observeAnswerContract
-	refusalObserver = observeRefusal
 	problemDetailsObserver = observeProblemDetailsContract
 }
 
@@ -130,28 +129,6 @@ var loadAnswerContract = sync.OnceValue(func() *answerContract {
 
 func observeAnswerContract(r *http.Request, status int, data any, envelope any) error {
 	return loadAnswerContract().observe(r, status, data, envelope, recordAnswered)
-}
-
-func observeRefusal(r *http.Request) {
-	loadAnswerContract().observeRefusal(r, recordAnswered)
-}
-
-// RefusedAnswerKey is the line the answers file holds for a refusal of the
-// route key: it answers a route that only refuses (RouteContract.Refuses),
-// no other.
-func RefusedAnswerKey(key string) string { return "refused " + key }
-
-// observeRefusal records a refusal of a route a test identified by its full
-// pattern. A route-sized router cannot tell which route refused: an error
-// carries no type to narrow the candidates.
-func (loaded *answerContract) observeRefusal(r *http.Request, record func(string)) {
-	routeContext := chi.RouteContext(r.Context())
-	if routeContext == nil {
-		return
-	}
-	if route, ok := loaded.byKey[answerRouteKey(r.Method, routeContext.RoutePattern())]; ok {
-		record(RefusedAnswerKey(route.Key()))
-	}
 }
 
 func (loaded *answerContract) observe(r *http.Request, status int, data any, envelope any, record func(string)) error {

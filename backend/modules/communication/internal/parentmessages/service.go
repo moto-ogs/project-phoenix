@@ -681,7 +681,7 @@ func (s *Service) notifyGuardianDevice(ctx context.Context, thread *ParentMessag
 			GuardianAccountIDs: optedIn,
 			StudentIDs:         []int64{thread.StudentID},
 		},
-	}.Public())
+	})
 	switch {
 	case s.deliveryPolicy.IsNotificationsDisabled(err), s.deliveryPolicy.IsOutsideActiveWindow(err):
 		s.Logger.Info("messaging: guardian push suppressed by tenant notification gate",

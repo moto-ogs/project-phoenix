@@ -586,7 +586,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
 });
 
 describe("TeamChatInbox (#2517)", () => {
-  it("never shows the empty state for a list that failed to load", async () => {
+  it("shows a retryable error instead of empty state or counts when the inbox fails to load", async () => {
     const api = stubApi();
     api.fetchInbox
       .mockRejectedValueOnce(
@@ -603,43 +603,14 @@ describe("TeamChatInbox (#2517)", () => {
     expect(
       screen.queryByText("Noch keine Nachrichten"),
     ).not.toBeInTheDocument();
+    // The status line splits the count and label; the search badge is unlabeled.
+    expect(document.body).not.toHaveTextContent(/0\s*Unterhaltungen/);
+    expect(screen.queryByText("0", { exact: true })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 
     expect(
       await screen.findByText("Noch keine Nachrichten"),
     ).toBeInTheDocument();
-  });
-
-  it("reports no zero counts for a list that failed to load", async () => {
-    const api = stubApi();
-    api.fetchInbox.mockRejectedValueOnce(
-      new ApiError("inbox kaputt", 503, { code: "general.unavailable" }),
-    );
-    const seen: { stats: ReactNode; count: number | null }[] = [];
-    render(
-      <TeamChatInbox
-        portal={portalFor(api)}
-        frame={(parts) => {
-          seen.push({ stats: parts.stats, count: parts.count });
-          return (
-            <>
-              <p>{parts.stats}</p>
-              {parts.error ? <p>{parts.error.message}</p> : null}
-            </>
-          );
-        }}
-      />,
-      { wrapper: Fresh },
-    );
-
-    expect(
-      await screen.findByText(
-        catalogText("general.unavailable", "die Liste der Unterhaltungen"),
-      ),
-    ).toBeInTheDocument();
-    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
-    expect(document.body).not.toHaveTextContent(/0\s*Unterhaltungen/);
-    expect(seen.at(-1)).toEqual({ stats: null, count: null });
   });
 });

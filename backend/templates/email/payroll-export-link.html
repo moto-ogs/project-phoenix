@@ -1,7 +1,5 @@
 {{define "payroll-export-link.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     {{if .Correction}}
     <h1>Korrektur der Monatsdatei {{.MonthLabel}}</h1>
@@ -17,7 +15,7 @@
     <p>{{.SchoolName}} hat den Monat {{.MonthLabel}} abgeschlossen. Die Zeiten aller Mitarbeitenden liegen für Sie bereit.</p>
     {{end}}
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.LinkURL}}">Datei herunterladen</a>
     </div>
 
@@ -28,10 +26,7 @@
 
     <p>Die Datei hängt aus Datenschutzgründen nicht an dieser E-Mail. Funktioniert der Link nicht mehr, wenden Sie sich bitte an die Schule.</p>
 
-    <div class="link-box">
-        <a href="{{.LinkURL}}">{{.LinkURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .LinkURL}}
 
 {{template "footer" .}}
 {{end}}

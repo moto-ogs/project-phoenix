@@ -27,7 +27,7 @@ import (
 // The existing typed test root supplies PayrollStatus's production Staff.List
 // binding, not the lighter SettingsTestModule personnel callback.
 func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.Database, operatorID int64) (chi.Router, string, error) {
-	_, _, _, _, _, _, identity, _, settings, _, _, _, _, _, _, _, _, _, provisioning, _, _, _, _, _, writes, _, _, err := composeTestRoot(db, slog.Default(), currentTestServiceConfig())
+	_, _, _, _, _, identity, _, settings, _, _, _, _, _, _, _, _, _, provisioning, _, _, _, _, _, writes, _, _, err := composeTestRoot(db, slog.Default(), currentTestServiceConfig())
 	if err != nil {
 		return nil, "", err
 	}

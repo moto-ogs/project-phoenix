@@ -42,7 +42,7 @@ func TestMovementPresenceModeFailurePreservesStateAndRetries(t *testing.T) {
 			perform := func() error {
 				switch operation {
 				case "assign":
-					_, err := svc.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, target.ID)
+					_, err := svc.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)
 					return err
 				default:
 					_, err := svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)
@@ -105,7 +105,7 @@ func TestVisitMoveCreationFailureRollsBackAndRetries(t *testing.T) {
 			}
 			perform := func() error {
 				if operation == "assign" {
-					_, err := svc.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, target.ID)
+					_, err := svc.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)
 					return err
 				}
 				_, err := svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)

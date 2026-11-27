@@ -419,17 +419,6 @@ export interface PhoneNumberCreateRequest {
   is_primary?: boolean;
 }
 
-/** Go: users.StudentGuardianUpdateRequest */
-export interface StudentGuardianUpdateRequest {
-  relationship_type?: string | null;
-  guardian_role?: string | null;
-  is_primary?: boolean | null;
-  is_emergency_contact?: boolean | null;
-  can_pickup?: boolean | null;
-  pickup_notes?: string | null;
-  emergency_priority?: number | null;
-}
-
 /** Go: users.GuardianUpdateRequest */
 export interface GuardianUpdateRequest {
   first_name?: string | null;
@@ -441,6 +430,17 @@ export interface GuardianUpdateRequest {
   preferred_contact_method?: string | null;
   language_preference?: string | null;
   notes?: string | null;
+}
+
+/** Go: users.StudentGuardianUpdateRequest */
+export interface StudentGuardianUpdateRequest {
+  relationship_type?: string | null;
+  guardian_role?: string | null;
+  is_primary?: boolean | null;
+  is_emergency_contact?: boolean | null;
+  can_pickup?: boolean | null;
+  pickup_notes?: string | null;
+  emergency_priority?: number | null;
 }
 
 /** Go: users.GuardianEntryPhone */
@@ -473,15 +473,6 @@ export interface GuardianPaymentRequest {
   expected_version?: string;
 }
 
-/** Go: users.PhoneNumberUpdateRequest */
-export interface PhoneNumberUpdateRequest {
-  phone_number?: string | null;
-  phone_type?: string | null;
-  label?: string | null;
-  is_primary?: boolean | null;
-  priority?: number | null;
-}
-
 export const routes = {
   "DELETE /api/guardians/students/{studentId}/guardians/{guardianId}": {
     method: "DELETE",
@@ -509,13 +500,6 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}/email-stop",
     portals: ["tenant"],
-    response: noData,
-  },
-  "DELETE /api/guardians/{id}/phone-numbers/{phoneId}": {
-    method: "DELETE",
-    pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
-    portals: ["tenant"],
-    deprecated: true,
     response: noData,
   },
   "GET /api/guardians/invitations/pending-approval": {
@@ -656,21 +640,6 @@ export const routes = {
     request: requestBody<PhoneNumberCreateRequest>(),
     response: success(PhoneNumberResponseSchema),
   },
-  "POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary": {
-    method: "POST",
-    pattern: "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
-    portals: ["tenant"],
-    deprecated: true,
-    response: success(PhoneNumberResponseSchema),
-  },
-  "PUT /api/guardians/relationships/{relationshipId}": {
-    method: "PUT",
-    pattern: "/api/guardians/relationships/{relationshipId}",
-    portals: ["tenant"],
-    deprecated: true,
-    request: requestBody<StudentGuardianUpdateRequest>(),
-    response: noData,
-  },
   "PUT /api/guardians/students/{studentId}/guardians/{guardianId}": {
     method: "PUT",
     pattern: "/api/guardians/students/{studentId}/guardians/{guardianId}",
@@ -685,27 +654,11 @@ export const routes = {
     request: requestBody<StudentPayerRequest>(),
     response: noData,
   },
-  "PUT /api/guardians/{id}": {
-    method: "PUT",
-    pattern: "/api/guardians/{id}",
-    portals: ["tenant"],
-    deprecated: true,
-    request: requestBody<GuardianUpdateRequest>(),
-    response: success(GuardianResponseSchema),
-  },
   "PUT /api/guardians/{id}/payment": {
     method: "PUT",
     pattern: "/api/guardians/{id}/payment",
     portals: ["tenant"],
     request: requestBody<GuardianPaymentRequest>(),
     response: noData,
-  },
-  "PUT /api/guardians/{id}/phone-numbers/{phoneId}": {
-    method: "PUT",
-    pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
-    portals: ["tenant"],
-    deprecated: true,
-    request: requestBody<PhoneNumberUpdateRequest>(),
-    response: success(PhoneNumberResponseSchema),
   },
 } as const;

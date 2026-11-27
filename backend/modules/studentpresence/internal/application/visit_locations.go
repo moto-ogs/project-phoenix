@@ -11,7 +11,7 @@ import (
 func (s *Service) ListVisitLocations(ctx context.Context, filter studentpresence.VisitLocationFilter) ([]studentpresence.VisitLocation, error) {
 	var rows []ports.VisitLocation
 	err := s.runWrite(ctx, "list_visit_locations", func(ctx context.Context) (ports.Stats, error) {
-		if filter.ForUpdate || filter.Limit < 0 || filter.Offset < 0 {
+		if filter.Limit < 0 || filter.Offset < 0 {
 			return ports.Stats{}, errors.New("student presence: invalid visit location query")
 		}
 		var stats ports.Stats

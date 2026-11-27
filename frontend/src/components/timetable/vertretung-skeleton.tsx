@@ -6,47 +6,34 @@ import { SectionCard } from "~/components/ui/section-card";
 
 /**
  * Ladezustand der Vertretung: der Zweiteiler aus Störungsliste (links) und
- * Tagesraster (rechts) als Platzhalter. Die PlanningContextBar rendert im
- * eingebauten Zustand bereits echt, deshalb ist die Kopfzeile hier optional
- * (`withBar`) und nur für die Suspense-Grenze gedacht, hinter der auch die
- * Kopfzeile noch nicht existiert.
+ * Tagesraster (rechts) als Platzhalter, mit der Kopfzeile der Seite.
  */
-export function VertretungContentSkeleton({
-  withBar = false,
-}: {
-  readonly withBar?: boolean;
-}) {
-  const content = (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label="Vertretung wird geladen"
-      data-testid="vertretung-content-skeleton"
-      className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
-    >
-      <SectionCard bodyClassName="space-y-3">
-        <Skeleton shape="control" className="h-8 w-44" />
-        {[0, 1, 2, 3].map((row) => (
-          <Skeleton key={row} shape="inner" className="h-16 w-full" />
-        ))}
-      </SectionCard>
-      <SectionCard bodyClassName="space-y-3">
-        <Skeleton shape="control" className="h-8 w-32" />
-        <Skeleton shape="inner" className="h-96 w-full" />
-      </SectionCard>
-    </div>
-  );
-
-  if (!withBar) return content;
-
+export function VertretungContentSkeleton() {
   return (
     <div className="w-full space-y-6" data-testid="vertretung-page-skeleton">
       <PlanningContextBarSkeleton
         ariaLabel="Vertretungs-Kopfzeile wird geladen"
         testId="vertretung-header-skeleton"
       />
-      {content}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="Vertretung wird geladen"
+        data-testid="vertretung-content-skeleton"
+        className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
+      >
+        <SectionCard bodyClassName="space-y-3">
+          <Skeleton shape="control" className="h-8 w-44" />
+          {[0, 1, 2, 3].map((row) => (
+            <Skeleton key={row} shape="inner" className="h-16 w-full" />
+          ))}
+        </SectionCard>
+        <SectionCard bodyClassName="space-y-3">
+          <Skeleton shape="control" className="h-8 w-32" />
+          <Skeleton shape="inner" className="h-96 w-full" />
+        </SectionCard>
+      </div>
     </div>
   );
 }

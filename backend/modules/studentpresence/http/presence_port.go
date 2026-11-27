@@ -19,7 +19,6 @@ type StudentPresence interface {
 	studentpresence.StudentLocationReader
 	GetStudentAttendanceStatus(ctx context.Context, studentID int64) (*studentpresence.DailyAttendanceStatus, error)
 	GetStudentCurrentVisit(ctx context.Context, studentID int64) (*studentpresence.Visit, error)
-	FindVisitsByStudentID(ctx context.Context, studentID int64) ([]studentpresence.Visit, error)
 	ListStudentsPresentToday(ctx context.Context) ([]int64, error)
 	ListStudentsInTransit(ctx context.Context) ([]int64, error)
 	ListStudentsPresentInRoom(ctx context.Context, roomID int64) ([]int64, error)

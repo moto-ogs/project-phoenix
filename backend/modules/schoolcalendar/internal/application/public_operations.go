@@ -301,49 +301,53 @@ func (s *Service) DeleteDateframe(ctx context.Context, id int64) error {
 		return err
 	})
 }
-func (s *Service) ListHolidays(ctx context.Context, region, from, to string) (result []schoolcalendar.Holiday, err error) {
+func (*Service) ValidHolidayRegion(region string) bool {
+	return ValidHolidayRegion(region)
+}
+
+func (s *Service) ListHolidays(_ context.Context, region, from, to string) (result []schoolcalendar.Holiday, err error) {
 	if err := validateHolidayWindow(from, to); err != nil {
 		return nil, err
 	}
-	err = s.observeOperation("list_holidays", func(ctx context.Context, stats *domain.OperationStats) error {
-		result, err = s.CalendarAlgorithms.ListHolidays(ctx, region, from, to)
+	err = s.observeOperation("list_holidays", func(_ context.Context, stats *domain.OperationStats) error {
+		result, err = HolidaysInRange(region, from, to)
 		stats.Rows = int64(len(result))
 		return err
 	})
 	return result, err
 }
-func (s *Service) HolidayDates(ctx context.Context, region, from, to string) (result map[string]bool, err error) {
+func (s *Service) HolidayDates(_ context.Context, region, from, to string) (result map[string]bool, err error) {
 	if err := validateHolidayWindow(from, to); err != nil {
 		return nil, err
 	}
-	err = s.observeOperation("holiday_dates", func(ctx context.Context, stats *domain.OperationStats) error {
-		result, err = s.CalendarAlgorithms.HolidayDates(ctx, region, from, to)
+	err = s.observeOperation("holiday_dates", func(_ context.Context, stats *domain.OperationStats) error {
+		result, err = HolidayDates(region, from, to)
 		stats.Rows = int64(len(result))
 		return err
 	})
 	return result, err
 }
-func (s *Service) RenderCalendar(ctx context.Context, name string, events []schoolcalendar.CalendarEvent) (result string, err error) {
+func (s *Service) RenderCalendar(_ context.Context, name string, events []schoolcalendar.CalendarEvent) (result string, err error) {
 	for _, event := range events {
 		if err := validateCalendarEvent(event); err != nil {
 			return "", err
 		}
 	}
-	err = s.observeOperation("render_calendar", func(ctx context.Context, stats *domain.OperationStats) error {
-		result, err = s.CalendarAlgorithms.RenderCalendar(ctx, name, events)
+	err = s.observeOperation("render_calendar", func(_ context.Context, stats *domain.OperationStats) error {
+		result = RenderCalendar(name, events)
 		stats.Rows = int64(len(events))
-		return err
+		return nil
 	})
 	return result, err
 }
-func (s *Service) RenderCalendarObject(ctx context.Context, event schoolcalendar.CalendarEvent) (result string, err error) {
+func (s *Service) RenderCalendarObject(_ context.Context, event schoolcalendar.CalendarEvent) (result string, err error) {
 	if err := validateCalendarEvent(event); err != nil {
 		return "", err
 	}
-	err = s.observeOperation("render_calendar_object", func(ctx context.Context, stats *domain.OperationStats) error {
-		result, err = s.CalendarAlgorithms.RenderCalendarObject(ctx, event)
+	err = s.observeOperation("render_calendar_object", func(_ context.Context, stats *domain.OperationStats) error {
+		result = RenderCalendarObject(event)
 		stats.Rows = 1
-		return err
+		return nil
 	})
 	return result, err
 }

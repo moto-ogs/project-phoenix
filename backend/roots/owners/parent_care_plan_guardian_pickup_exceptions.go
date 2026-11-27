@@ -11,9 +11,7 @@ func NewParentGuardianPickupExceptions(source careplan.GuardianPickupExceptions)
 	if source == nil {
 		return nil
 	}
-	return parentportal.NewGuardianPickupExceptions(parentportal.GuardianPickupExceptionsCallbacks{ApplyGuardianPickupException: func(ctx context.Context, change parentportal.GuardianPickupChangeSnapshot) error {
-		return source.ApplyGuardianPickupException(ctx, parentCarePlanToOwnerGuardianPickupChange(change))
-	},
+	return parentportal.NewGuardianPickupExceptions(parentportal.GuardianPickupExceptionsCallbacks{
 		WithdrawGuardianPickupException: func(ctx context.Context, change parentportal.PickupExceptionSnapshot) error {
 			return source.WithdrawGuardianPickupException(ctx, parentCarePlanToOwnerPickupException(change))
 		},

@@ -72,7 +72,7 @@ export function NotificationFeedList({
   const markingAll = useRef(false);
 
   const { loadMore, loadingMore, hasMore } = feed;
-  const sentinel = useOnVisible(
+  const sentinelRef = useOnVisible(
     () => void loadMore(),
     hasMore && !loadingMore && !feed.error,
   );
@@ -155,7 +155,7 @@ export function NotificationFeedList({
         </ul>
       ) : null}
       {hasMore && !feed.loading ? (
-        <div ref={sentinel.ref} className="p-2">
+        <div ref={sentinelRef} className="p-2">
           <Button
             type="button"
             variant="ghost"

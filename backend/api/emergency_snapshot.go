@@ -20,7 +20,6 @@ import (
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/emergencysnapshot"
-	emergencysnapshotCompose "github.com/moto-ogs/project-phoenix/modules/emergencysnapshot/compose"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -95,7 +94,7 @@ func newEmergencySnapshot(sources emergencySnapshotSources) (emergencysnapshot.Q
 		sources.Renderer == nil || sources.AccessLog == nil {
 		return nil, errEmergencySnapshotSources
 	}
-	projection, err := emergencysnapshotCompose.New(emergencysnapshot.Dependencies{
+	projection, err := emergencysnapshot.New(emergencysnapshot.Dependencies{
 		Presence:  emergencySnapshotPresenceReads{facade: sources.Presence, mode: sources.PresenceMode},
 		Rooms:     emergencySnapshotRoomNames{facade: sources.Rooms},
 		Students:  emergencySnapshotStudentRecords{repo: sources.Students},

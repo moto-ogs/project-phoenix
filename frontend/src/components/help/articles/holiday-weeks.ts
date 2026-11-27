@@ -43,6 +43,7 @@ export function holidayWeeksTopic(): HelpTopic {
     result:
       "Du weißt, wie viele Kinder in welcher Zeit kommen und woher sie kommen.",
     notes: [
+      "Auch ein `Zusatztag` des Trägers steht hier, zum Beispiel ein Brückentag. Er zeigt statt einer Woche den einen Tag.",
       "Die Woche steht auch im `Betreuungsplan` und im `Dienstplan`: im Kopf jedes Tages mit `Ferienbetreuung`, der Zahl der Kinder und der Betreuungszeit. Ein Klick darauf öffnet diese Seite.",
       "Über das Menü mit den drei Punkten lädst du die Liste `Als Excel herunterladen` oder `Als CSV herunterladen`.",
       "Bei Tagesbuchung nennt die Spalte `Tage` die gebuchten Tage. Das gilt auch für Excel und CSV.",

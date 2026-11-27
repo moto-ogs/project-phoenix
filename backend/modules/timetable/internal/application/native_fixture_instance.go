@@ -86,10 +86,6 @@ func (f nativeFixtureInstances) CompleteActiveByActiveGroupIDs(ctx context.Conte
 	return completeSessionInstances(ctx, f.rows.Sessions, activeGroupIDs, completedAt)
 }
 
-func (f nativeFixtureInstances) DeletePlannedNonSpontaneousInWindow(ctx context.Context, from calendar.Date, to *calendar.Date, groupID *int64, preserveDeviations bool) (int64, error) {
-	return deletePlannedInstancesInWindow(ctx, f.rows.Plans, from, to, groupID, preserveDeviations)
-}
-
 func (f nativeFixtureInstances) PropagateListKindToFutureInstances(ctx context.Context, groupID int64, previousKind, newKind *string, after calendar.Date) (int64, error) {
 	return propagateInstanceListKind(ctx, f.rows.Plans, groupID, previousKind, newKind, after)
 }

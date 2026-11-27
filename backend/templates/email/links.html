@@ -1,0 +1,10 @@
+{{define "link-box"}}
+<div class="link-box">
+    <a href="{{.}}">{{.}}</a>
+</div>
+{{end}}
+
+{{define "copy-link-hint"}}
+<p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
+{{template "link-box" .}}
+{{end}}

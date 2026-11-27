@@ -118,7 +118,6 @@ describe("staff-session-table.targets", () => {
         accountStartDatePending={props.accountStartDatePending ?? false}
         accountStartDateError={props.accountStartDateError ?? false}
         today={today}
-        isAdminView
       />,
     );
   }
@@ -208,7 +207,6 @@ describe("staff-session-table.targets", () => {
           accountStartDatePending={false}
           accountStartDateError={false}
           today={today}
-          isAdminView
         />,
       );
 
@@ -427,7 +425,6 @@ describe("staff-session-table.targets", () => {
           holidays={props.holidays}
           closingDays={props.closingDays}
           today={today}
-          isAdminView
           accountStartDatePending={false}
           accountStartDateError={false}
         />
@@ -523,7 +520,6 @@ describe("staff-session-table.targets", () => {
           accountStartDatePending={false}
           accountStartDateError={false}
           today={new Date(2026, 0, 9)}
-          isAdminView
         />,
       );
 
@@ -591,7 +587,6 @@ describe("staff-session-table.targets", () => {
           accountStartDatePending={false}
           accountStartDateError={false}
           today={today}
-          isAdminView
         />,
       );
     }
@@ -844,7 +839,6 @@ describe("staff-session-table.blocks", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={props?.today ?? today}
-        isAdminView
         onEditDay={props?.onEditDay}
       />
     );
@@ -1122,7 +1116,6 @@ describe("staff-session-table.blocks", () => {
             accountStartDatePending={false}
             accountStartDateError={false}
             today={today}
-            isAdminView
             fetchEdits={fetchEdits}
           />,
           { wrapper: FreshCache },
@@ -1265,7 +1258,6 @@ describe("staff-session-table.edit", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={today}
-        isAdminView
       />,
     );
   }
@@ -1437,7 +1429,6 @@ describe("staff-session-table.backfill", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={props.today ?? today}
-        isAdminView
         onBackfillAbsence={props.onBackfillAbsence}
       />,
     );
@@ -1596,7 +1587,6 @@ describe("staff-session-table.override", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={new Date(2026, 5, 15)}
-        isAdminView
       />,
     );
   }
@@ -1711,7 +1701,6 @@ describe("staff-session-table.credit", () => {
         accountStartDatePending={false}
         accountStartDateError={false}
         today={new Date(2026, 5, 15)}
-        isAdminView
       />,
     );
   }

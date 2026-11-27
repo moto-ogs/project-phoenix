@@ -20498,7 +20498,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "f0418889b0a76505cc1917ddbc7af4a3",
+      "binding_digest": "aadc7365f83d4d24996a726343c0bd00",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
@@ -20522,7 +20522,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "7be3b60b99935db14b250520b8c3c6c4",
+      "binding_digest": "e603ad2406e271c22e258219304fbdeb",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
@@ -20530,7 +20530,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "abad705d87eaa1e01c3c77a5d8441381",
+      "binding_digest": "19fd62c032a387d15160d60f75aaf33c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
@@ -20538,7 +20538,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "a24ada80a01d154d55fa371d6a90eaa5",
+      "binding_digest": "951b30da7d51ea484963c685685b9a70",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
@@ -20554,7 +20554,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "afeaca6c3ebb0298066d0cb6e7d36e45",
+      "binding_digest": "dcd0d126060091fec1802d0bf75a1c92",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -20562,7 +20562,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "18c18b3aab96c0fd8970faa8425d5a9c",
+      "binding_digest": "378b7c1c0aa563c9f00a112c2a480079",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -20570,7 +20570,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "binding_digest": "d9183117e42bcb16ee3f3f0f598a9bb7",
+      "binding_digest": "5265a4d3c7f7130bc6d05460d1840e8c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
@@ -20778,7 +20778,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "f0418889b0a76505cc1917ddbc7af4a3",
+      "binding_digest": "aadc7365f83d4d24996a726343c0bd00",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
@@ -20802,7 +20802,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "7be3b60b99935db14b250520b8c3c6c4",
+      "binding_digest": "e603ad2406e271c22e258219304fbdeb",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
@@ -20810,7 +20810,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "abad705d87eaa1e01c3c77a5d8441381",
+      "binding_digest": "19fd62c032a387d15160d60f75aaf33c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
@@ -20826,7 +20826,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "a24ada80a01d154d55fa371d6a90eaa5",
+      "binding_digest": "951b30da7d51ea484963c685685b9a70",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
@@ -20842,7 +20842,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "afeaca6c3ebb0298066d0cb6e7d36e45",
+      "binding_digest": "dcd0d126060091fec1802d0bf75a1c92",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -20850,7 +20850,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "18c18b3aab96c0fd8970faa8425d5a9c",
+      "binding_digest": "378b7c1c0aa563c9f00a112c2a480079",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -20858,7 +20858,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "binding_digest": "d9183117e42bcb16ee3f3f0f598a9bb7",
+      "binding_digest": "5265a4d3c7f7130bc6d05460d1840e8c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
@@ -26098,7 +26098,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "f0418889b0a76505cc1917ddbc7af4a3",
+      "binding_digest": "aadc7365f83d4d24996a726343c0bd00",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
@@ -26122,7 +26122,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "7be3b60b99935db14b250520b8c3c6c4",
+      "binding_digest": "e603ad2406e271c22e258219304fbdeb",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
@@ -26130,7 +26130,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "abad705d87eaa1e01c3c77a5d8441381",
+      "binding_digest": "19fd62c032a387d15160d60f75aaf33c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
@@ -26138,7 +26138,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "a24ada80a01d154d55fa371d6a90eaa5",
+      "binding_digest": "951b30da7d51ea484963c685685b9a70",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
@@ -26154,7 +26154,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "afeaca6c3ebb0298066d0cb6e7d36e45",
+      "binding_digest": "dcd0d126060091fec1802d0bf75a1c92",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -26162,7 +26162,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "18c18b3aab96c0fd8970faa8425d5a9c",
+      "binding_digest": "378b7c1c0aa563c9f00a112c2a480079",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -26170,7 +26170,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "binding_digest": "d9183117e42bcb16ee3f3f0f598a9bb7",
+      "binding_digest": "5265a4d3c7f7130bc6d05460d1840e8c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
@@ -26569,38 +26569,6 @@
       "target_owner": "care-plan"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeleteArrivalExceptionsByStudent",
-      "binding_digest": "dfd401723ba458706f0969912df2a4ac",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalExceptionsByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.DeleteArrivalExceptionsByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeleteArrivalExceptionsByStudent",
-      "binding_digest": "707c0732e594b7e5eb7348c9b7497547",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalExceptionsByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.DeleteArrivalExceptionsByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeleteArrivalNotesByStudent",
-      "binding_digest": "27206751c5df49d27a96edeb1d44617b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalNotesByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.DeleteArrivalNotesByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeleteArrivalNotesByStudent",
-      "binding_digest": "ea0f2f2c7bc1f50e0fbcd2d18c3c88aa",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalNotesByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.DeleteArrivalNotesByStudent",
-      "target_owner": "care-plan"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeleteArrivalSchedulesByStudent",
       "binding_digest": "bc78c2d7d50bd67c9e4555b15abb3a64",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalSchedulesByStudent",
@@ -26614,38 +26582,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeleteArrivalSchedulesByStudent",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.DeleteArrivalSchedulesByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeletePickupExceptionsByStudent",
-      "binding_digest": "a84406b629fd6e0a9031e0bcaac55423",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeletePickupExceptionsByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.DeletePickupExceptionsByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeletePickupExceptionsByStudent",
-      "binding_digest": "30df9a715072816e5e1b269c4a7c7c0a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeletePickupExceptionsByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.DeletePickupExceptionsByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeletePickupNotesByStudent",
-      "binding_digest": "178147d48ae7f6ad736f2952515e27f6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeletePickupNotesByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.DeletePickupNotesByStudent",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.carePlanRecords.DeletePickupNotesByStudent",
-      "binding_digest": "2b673d5c10866081f4b0fe4f31b381b9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePlanRecords.DeletePickupNotesByStudent",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.DeletePickupNotesByStudent",
       "target_owner": "care-plan"
     },
     {

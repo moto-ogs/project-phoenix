@@ -505,10 +505,7 @@ func TestStaffWelcomeTemplateRendersHelpLink(t *testing.T) {
 func renderWelcomeTemplate(t *testing.T, msg *testpkg.EmailMessage) string {
 	t.Helper()
 	dir := filepath.Join("..", "..", "..", "templates", "email")
-	tmpl, err := template.ParseFiles(
-		filepath.Join(dir, "styles.html"), filepath.Join(dir, "header.html"),
-		filepath.Join(dir, "footer.html"), filepath.Join(dir, msg.Template),
-	)
+	tmpl, err := template.ParseGlob(filepath.Join(dir, "*.html"))
 	require.NoError(t, err)
 	var buf bytes.Buffer
 	require.NoError(t, tmpl.ExecuteTemplate(&buf, msg.Template, msg.Content))
