@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { StaffSessionTable } from "~/components/staff/staff-session-table";
 import { Monatskarte } from "~/components/time-tracking/monatskarte";
 import { DataTableSkeleton } from "~/components/ui/data-table";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SkeletonRegion } from "~/components/ui/page-skeletons";
 import { SectionCard } from "~/components/ui/section-card";
+import {
+  AppDayList,
+  type AppDayFacts,
+} from "~/components/time-tracking/time-tracking-app";
 import { ApiError } from "~/lib/api-error";
 import type { OwnTimePeriodView } from "~/lib/contract/time-tracking.generated";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
@@ -34,6 +38,8 @@ export interface OwnPeriodEdit {
   readonly absence: OwnAbsence | null;
   readonly laborDay?: WorkDayLaborHint;
   readonly reloadDay: () => Promise<unknown>;
+  /** App (#8070): die Angaben der Tageszeile für das Blatt des Tages. */
+  readonly facts?: AppDayFacts;
 }
 
 const unavailableShifts = new ApiError(
@@ -63,7 +69,19 @@ export function OwnPeriod({
   isSessionOpen,
   setTargetHref,
   onEdit,
+  app = false,
+  rangeBar,
+  dienstplanHref,
 }: {
+  /** App-Oberfläche (#8070): Tagesliste statt Tabelle. */
+  readonly app?: boolean;
+  /**
+   * App (#8070): die Wochen- bzw. Monatswahl als Kopf der Tagesliste, in
+   * derselben Karte statt als eigene Karte darüber.
+   */
+  readonly rangeBar?: ReactNode;
+  /** App: „Mein Dienstplan“ als letzte Zeile der Tagesliste. */
+  readonly dienstplanHref?: string;
   readonly view: OwnTimePeriodView;
   readonly start: string;
   readonly today: string;
@@ -115,6 +133,79 @@ export function OwnPeriod({
     [data],
   );
   const reload = () => revalidateOrThrow(read);
+
+  if (app) {
+    const monthCard =
+      data && view === "month" ? (
+        <Monatskarte
+          summary={data.monthSummary}
+          isLoading={false}
+          plannedShiftState={data.plannedShiftState}
+          isCurrentMonth={isCurrent}
+          isPreAccountMonth={
+            data.accountStart !== "" &&
+            start.slice(0, 7) < data.accountStart.slice(0, 7)
+          }
+          accountStartsInFuture={data.accountStart > today}
+          accountStartDate={data.accountStart}
+          setTargetHref={setTargetHref}
+        />
+      ) : null;
+    return (
+      <div className="flex flex-col gap-4 [&>*]:shrink-0" data-app-time-days="">
+        <LoadErrorAlert error={loadError} />
+        {!data && !error ? (
+          <SectionCard>
+            {rangeBar}
+            <SkeletonRegion label="Einträge werden geladen…">
+              <DataTableSkeleton rows={7} columns={2} />
+            </SkeletonRegion>
+          </SectionCard>
+        ) : !data ? (
+          <SectionCard padding="none">{rangeBar}</SectionCard>
+        ) : (
+          <AppDayList
+            header={rangeBar}
+            dienstplanHref={dienstplanHref}
+            from={from}
+            to={to}
+            today={parseISODate(today)}
+            sessions={data.sessions}
+            absences={data.absences}
+            shifts={data.shifts ?? []}
+            projection={data.dailyProjection}
+            holidays={data.holidays}
+            closingDays={data.closingDays}
+            onEdit={(date, block, facts) => {
+              const dateKey = toISODate(date);
+              const session = block
+                ? (data.sessions.find((entry) => entry.id === block.id) ?? null)
+                : null;
+              const absence =
+                data.absences.find(
+                  (entry) =>
+                    entry.dateStart <= dateKey && entry.dateEnd >= dateKey,
+                ) ?? null;
+              // Der Arbeitstag eines Blocks ist der Tag, an dem er begann.
+              const workday = session
+                ? berlinTodayISO(new Date(session.checkInTime))
+                : dateKey;
+              onEdit({
+                staffId: data.staffId,
+                date,
+                session,
+                absence,
+                laborDay: data.laborDays.find((day) => day.date === workday),
+                reloadDay: reload,
+                facts,
+              });
+            }}
+          />
+        )}
+        {monthCard}
+      </div>
+    );
+  }
 
   return (
     <SectionCard title="Zeiterfassung">

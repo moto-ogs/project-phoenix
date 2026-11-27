@@ -18,7 +18,9 @@ import NavigationLink, {
 } from "~/components/ui/navigation-link";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
-const ITEM = `relative ${Z_LAYER.raised} flex min-h-[44px] items-center justify-center gap-2.5 rounded-full py-2.5 transition-colors duration-200`;
+// Rückmeldung beim Antippen (#8070): nur mit Finger kurz kleiner und
+// blasser, ohne den grauen Tipp-Blitz von iOS.
+const ITEM = `relative ${Z_LAYER.raised} flex min-h-[44px] items-center justify-center gap-2.5 rounded-full py-2.5 transition-[color,background-color,scale,opacity] duration-200 app:[-webkit-tap-highlight-color:transparent] app:active:scale-[0.96] app:active:opacity-70 app:active:duration-75`;
 const ITEM_ACTIVE = "bg-gray-100 text-gray-900";
 const ITEM_IDLE = "text-gray-500 hover:text-gray-700";
 const ITEM_IDLE_QUIET = "text-gray-500 hover:text-gray-600";
@@ -138,8 +140,13 @@ function bottomNavItemClassName({
   return `${ITEM} ${paddingClassName} ${active ? ITEM_ACTIVE : idle}`;
 }
 
+/**
+ * In der App (#8070) schrumpft nie das aktive Feld: sein Kurzname steht
+ * immer ganz da („Gruppe“ statt „Grup…“). Platz geben die ruhenden Felder ab,
+ * deren Fläche dabei nur unsichtbaren Rand verliert.
+ */
 function bottomNavItemShrink(active: boolean): string {
-  return active ? "min-w-0" : "shrink-0";
+  return active ? "min-w-0 app:shrink-0" : "shrink-0 app:shrink app:min-w-0";
 }
 
 /** Ein `<button>` füllt sein `<li>` nicht von selbst, sonst schrumpft er nicht mit. */
@@ -231,6 +238,8 @@ export function PortalBottomNav({
   fade = true,
   indicator,
   className = "",
+  hidden = false,
+  look = "pill",
 }: {
   /** Die Felder (`PortalBottomNavLink`, `PortalBottomNavButton`), jedes in einem `<li>`. */
   readonly children: ReactNode;
@@ -245,7 +254,19 @@ export function PortalBottomNav({
   /** Die gleitende Fläche aus `usePortalBottomNavIndicator`. */
   readonly indicator?: PortalBottomNavIndicator;
   readonly className?: string;
+  /**
+   * Blendet die Leiste auf dieser Seite aus (#8070, Register `hidesPill`):
+   * etwa im Chat-Verlauf, wo das Schreibfeld unten klebt.
+   */
+  readonly hidden?: boolean;
+  /**
+   * `card`: die Leiste als Karte wie die `ActionBar` (#8070), mit demselben
+   * Rand, Radius und Schatten; sonst die runde Pille.
+   */
+  readonly look?: "pill" | "card";
 }) {
+  if (hidden) return null;
+  const card = look === "card";
   return (
     <nav
       aria-label={label}
@@ -264,16 +285,20 @@ export function PortalBottomNav({
       ) : null}
       <div className="relative px-4 pb-4">
         <div
-          className={`rounded-full border border-gray-200/50 bg-white ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)]`}
+          className={
+            card
+              ? `moto-content-surface rounded-2xl border ${barClassName} py-2`
+              : `rounded-full border border-gray-200/50 bg-white ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)]`
+          }
         >
           <ul
             ref={indicator?.listRef}
-            className={`relative flex items-center justify-around ${listClassName}`}
+            className={`relative flex items-center justify-around ${card ? "[&_a]:min-w-11 [&_a]:rounded-xl [&_button]:min-w-11 [&_button]:rounded-xl" : ""} ${listClassName}`}
           >
             {indicator?.position ? (
               <li
                 aria-hidden="true"
-                className={`absolute top-0 left-0 h-full rounded-full bg-gray-100 ${
+                className={`absolute top-0 left-0 h-full ${card ? "rounded-xl" : "rounded-full"} bg-gray-100 ${
                   indicator.animated
                     ? "transition-transform duration-150 ease-out"
                     : ""
@@ -329,6 +354,8 @@ export function PortalBottomNavLink({
     <li className={shrinkActive ? bottomNavItemShrink(active) : undefined}>
       <NavigationLink
         {...linkProps}
+        // Ein Reiterwechsel schiebt nichts herein (#8070).
+        pageTransition="none"
         data-active={active ? "true" : "false"}
         aria-current={active ? "page" : undefined}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
@@ -425,6 +452,8 @@ export function PortalNavSheetLink({
   return (
     <NavigationLink
       {...linkProps}
+      // Das Blatt schließt beim Wechsel; ein Schieben darunter wäre doppelt.
+      pageTransition="none"
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       data-active={active ? "true" : "false"}
       aria-current={active ? "page" : undefined}

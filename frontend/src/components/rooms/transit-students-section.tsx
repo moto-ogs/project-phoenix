@@ -107,6 +107,12 @@ interface TransitStudentsSectionProps {
   readonly dayStatus?: "comes_today" | "not_coming_today";
   readonly fromReferrer?: string;
   readonly collapsible?: boolean;
+  /**
+   * Aufgeklappt von außen steuern (`collapsible`): Die App-Aufsicht öffnet
+   * die Karte über „N unterwegs“ im Kopf der Kinderliste.
+   */
+  readonly expanded?: boolean;
+  readonly onExpandedChange?: (expanded: boolean) => void;
 }
 
 export function TransitStudentsSection({
@@ -115,6 +121,8 @@ export function TransitStudentsSection({
   dayStatus,
   fromReferrer: fromReferrerOverride,
   collapsible = false,
+  expanded,
+  onExpandedChange,
 }: TransitStudentsSectionProps) {
   const router = useTenantRouter();
   const { data: session } = useSession();
@@ -131,7 +139,12 @@ export function TransitStudentsSection({
   const canTargetOpenRooms = showAllTargets || schoolWideMoves;
   const sectionSearchParams = useSearchParams();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [collapsibleExpanded, setCollapsibleExpanded] = useState(false);
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const collapsibleExpanded = expanded ?? ownExpanded;
+  const setCollapsibleExpanded = (next: boolean) => {
+    setOwnExpanded(next);
+    onExpandedChange?.(next);
+  };
   const isExpanded = !collapsible || collapsibleExpanded;
   const [targetValue, setTargetValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -441,9 +454,12 @@ export function TransitStudentsSection({
         {collapsible ? (
           <button
             type="button"
-            onClick={() => setCollapsibleExpanded((current) => !current)}
+            onClick={() => setCollapsibleExpanded(!collapsibleExpanded)}
+            // Auf- und Zuklappen ist kein Ausklappmenü: Die Karte hebt sich
+            // dabei nicht über Aktionsleiste und Pill (globals.css).
+            data-section-collapse-toggle=""
             aria-expanded={isExpanded}
-            className="group flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
+            className="group app:min-h-11 flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             <ConceptIconTile
               concept={transitConcept}

@@ -13,6 +13,11 @@ import {
   buildDefaultPresets,
   DateRangePicker,
 } from "~/components/ui/date-range-picker";
+import {
+  PhoneTableSort,
+  type PhoneSortOption,
+  usePhoneTableSort,
+} from "~/components/students/phone-table-sort";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
@@ -139,6 +144,34 @@ const COLUMNS: DataTableColumn<CareTimeDay>[] = [
   },
 ];
 
+/** Die Sortierungen der Spaltenköpfe am Computer, am Telefon als Auswahl. */
+const PHONE_SORTS: readonly PhoneSortOption[] = [
+  {
+    value: "tag",
+    label: "Tag, ältester zuerst",
+    sortKey: "date",
+    direction: "asc",
+  },
+  {
+    value: "tag-neu",
+    label: "Tag, neuester zuerst",
+    sortKey: "date",
+    direction: "desc",
+  },
+  {
+    value: "abweichung",
+    label: "Größte Abweichung zuerst",
+    sortKey: "deviation",
+    direction: "desc",
+  },
+  {
+    value: "hinweis",
+    label: "Überschreitungen zuerst",
+    sortKey: "state",
+    direction: "asc",
+  },
+];
+
 export function StudentCareTimesSection({
   studentId,
   active,
@@ -163,6 +196,7 @@ export function StudentCareTimesSection({
       : currentMonthRange(parseISODate(berlinTodayISO())),
   );
   const presets = useMemo(() => monthPresets(today), [today]);
+  const phoneSort = usePhoneTableSort(PHONE_SORTS);
 
   const fromISO = range.from ? toISODate(range.from) : null;
   const toISO = range.to ? toISODate(range.to) : null;
@@ -245,11 +279,23 @@ export function StudentCareTimesSection({
             </DataField>
           </DataGrid>
         ) : null}
+        {phoneSort.app && (data?.days.length ?? 0) > 1 ? (
+          <PhoneTableSort
+            id="betreuungszeiten-sortierung"
+            options={PHONE_SORTS}
+            value={phoneSort.value}
+            onChange={phoneSort.setValue}
+          />
+        ) : null}
         <DataTable
+          // Am Telefon fehlen die Spaltenköpfe; die Auswahl darüber setzt
+          // dieselbe Sortierung (neu aufgebaut je Wahl).
+          key={phoneSort.selected?.value}
           columns={COLUMNS}
           rows={data?.days ?? []}
           getRowKey={(day) => day.date}
-          defaultSortKey="date"
+          defaultSortKey={phoneSort.selected?.sortKey ?? "date"}
+          defaultSortDirection={phoneSort.selected?.direction}
           isLoading={loading}
           pageSize={31}
           paginationResetKey={`${fromISO}-${toISO}`}

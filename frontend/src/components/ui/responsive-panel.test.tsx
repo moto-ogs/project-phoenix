@@ -162,6 +162,16 @@ describe("ResponsivePanel ab sm", () => {
 describe("ResponsivePanel unter sm", () => {
   usePhoneViewport();
 
+  it("hat wie jedes Blatt der App ein X, das schließt", async () => {
+    const onOpenChange = vi.fn();
+    render(<Panel onOpenChange={onOpenChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Menü" }));
+    await screen.findByRole("dialog", { name: "Weitere Aktionen" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Blatt schließen" }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("öffnet als Dialog mit Fokus auf dem ersten Eintrag; Escape schließt und gibt den Fokus zurück", async () => {
     const onOpenChange = vi.fn();
     render(<Panel onOpenChange={onOpenChange} />);

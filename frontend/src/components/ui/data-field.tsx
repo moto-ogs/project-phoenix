@@ -38,7 +38,17 @@ interface DataGridProps {
    * Default `2` is the detail-view layout (BAUARTEN-SPEC Bauart 2 Regel 2).
    */
   readonly columns?: 1 | 2 | 4;
+  /**
+   * App am Telefon (#8070): die Felder als Liste mit Trennlinien, Label
+   * links und Wert rechts; breite Felder (`fullWidth`) bleiben zweizeilig.
+   * iPad und Desktop wie `columns`: zwei Spalten, Wert direkt unter dem
+   * Label (kurzer Blickweg).
+   */
+  readonly appRows?: boolean;
 }
+
+const APP_ROWS =
+  "phone:flex! phone:flex-col phone:gap-0! phone:divide-y phone:divide-gray-100 phone:[&>div]:py-2.5 phone:[&>div:first-child]:pt-0 phone:[&>div:not([class*=col-span])]:flex phone:[&>div:not([class*=col-span])]:items-baseline phone:[&>div:not([class*=col-span])]:justify-between phone:[&>div:not([class*=col-span])]:gap-4 phone:[&>div:not([class*=col-span])>dd]:mt-0 phone:[&>div:not([class*=col-span])>dd]:text-right";
 
 const gridColumnClasses: Record<
   NonNullable<DataGridProps["columns"]>,
@@ -50,8 +60,22 @@ const gridColumnClasses: Record<
 };
 
 /** Grid layout for DataField components; see `columns`. */
-export function DataGrid({ children, columns = 2 }: DataGridProps) {
-  return <dl className={gridColumnClasses[columns]}>{children}</dl>;
+export function DataGrid({
+  children,
+  columns = 2,
+  appRows = false,
+}: DataGridProps) {
+  return (
+    <dl
+      className={
+        appRows
+          ? `${gridColumnClasses[columns]} ${APP_ROWS}`
+          : gridColumnClasses[columns]
+      }
+    >
+      {children}
+    </dl>
+  );
 }
 
 /**

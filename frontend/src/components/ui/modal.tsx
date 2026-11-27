@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
+  APP_FOOTER_ROW,
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_PANEL_STYLE,
@@ -26,6 +27,8 @@ import { ModalCancelButton, ModalFrameContext } from "./modal-frame";
 import { useScrollRegion } from "./hooks/useScrollRegion";
 import { FIXED_LAYER_SHIFT_INSET } from "./hooks/useFixedLayersFollowViewport";
 import { MODAL_CLOSE_DELAY_MS, MODAL_MOTION_STYLE } from "./motion";
+import { useIsApp } from "~/lib/device-context";
+import { SheetSessionProvider, useSheetSession } from "./sheet-session";
 
 const DEFAULT_CLOSE_LABEL = "Modal schließen";
 // Neutral: Ob Eingaben verloren gehen, entscheidet der Inhalt, nicht das X.
@@ -235,6 +238,14 @@ export function Modal({
     }, MODAL_CLOSE_DELAY_MS);
   }, [isDismissDisabledRef, onCloseRef]);
 
+  // In der App ist das Blatt ein Schritt im Verlauf: Zurück schließt es, und
+  // ein zweites Blatt ersetzt es (#8070). Auf dem Desktop bleibt es aus.
+  // In der App wird auch ein mittiges Fenster zum Blatt: am Telefon von
+  // unten, am iPad als Karte unten in der Mitte (wie `OverlaySheet`).
+  const isApp = useIsApp();
+  const appSheet = isApp;
+  const sheetSessionId = useSheetSession(isOpen, handleClose, appSheet);
+
   // Cancel an in-flight dismissal as soon as dismissal gets locked, and bring
   // the dialog back from its exit animation.
   useEffect(() => {
@@ -258,9 +269,10 @@ export function Modal({
   const frame = React.useMemo(
     () => ({
       isDismissDisabled,
-      stackedSheetFooter: mobileSheet && sheetFooter === "stacked",
+      // In der App steht die Fußleiste jedes Blatts als Reihe (#8070).
+      stackedSheetFooter: mobileSheet && !appSheet && sheetFooter === "stacked",
     }),
-    [isDismissDisabled, mobileSheet, sheetFooter],
+    [isDismissDisabled, mobileSheet, appSheet, sheetFooter],
   );
 
   // Keeps focus in the dialog while a busy footer is disabled (#6533).
@@ -316,7 +328,7 @@ export function Modal({
       id={titleId}
       ref={titleRef}
       tabIndex={focusTitleOnOpen ? -1 : undefined}
-      className="min-w-0 flex-1 py-0.5 text-lg font-semibold wrap-anywhere text-gray-900 outline-none sm:text-xl pointer-coarse:py-2"
+      className="app:text-base min-w-0 flex-1 py-0.5 text-lg font-semibold wrap-anywhere text-gray-900 outline-none sm:text-xl pointer-coarse:py-2"
     >
       {title}
     </TitleHeading>
@@ -329,157 +341,171 @@ export function Modal({
     // trap). Without this, taps on inputs inside this modal are stolen back
     // by the drawer because the modal is portaled to document.body and counts
     // as "outside" the drawer's scope.
-    <InOverlayContext.Provider value={true}>
-      <FocusScope
-        asChild
-        loop={!suspended}
-        trapped={!suspended}
-        onMountAutoFocus={
-          initialFocusRef
-            ? (event) => {
-                event.preventDefault();
-                initialFocusRef.current?.focus();
-              }
-            : focusTitleOnOpen && title
+    <SheetSessionProvider value={appSheet ? sheetSessionId : null}>
+      <InOverlayContext.Provider value={true}>
+        <FocusScope
+          asChild
+          loop={!suspended}
+          trapped={!suspended}
+          onMountAutoFocus={
+            initialFocusRef
               ? (event) => {
                   event.preventDefault();
-                  titleRef.current?.focus();
+                  initialFocusRef.current?.focus();
                 }
-              : undefined
-        }
-      >
-        <div
-          {...MODAL_SCOPE_PROPS}
-          className={`fixed inset-0 ${Z_LAYER.modal} ${FIXED_LAYER_SHIFT_INSET} ${suspended ? "hidden" : "flex"} justify-center ${
-            mobileSheet ? "items-end sm:items-center" : "items-center"
-          }`}
-          aria-hidden={suspended || undefined}
-          // pointerEvents: 'auto' is required when this modal is rendered while
-          // a Radix/Vaul dialog (e.g. the mobile master/detail drawer) has set
-          // `document.body { pointer-events: none }`. Without this, the modal
-          // is portaled to body and inherits `none`, leaving inputs unclickable.
-          style={{
-            ...MODAL_MOTION_STYLE,
-            // top/bottom come from FIXED_LAYER_SHIFT_INSET: it moves the
-            // dialog with the installed app's viewport shift without becoming
-            // the containing block of the date pickers portaled in here.
-            position: "fixed",
-            left: 0,
-            right: 0,
-            pointerEvents: "auto",
-          }}
+              : focusTitleOnOpen && title
+                ? (event) => {
+                    event.preventDefault();
+                    titleRef.current?.focus();
+                  }
+                : undefined
+          }
         >
-          {/* Backdrop button - dismiss-on-tap target. Excluded from the tab
+          <div
+            {...MODAL_SCOPE_PROPS}
+            className={`fixed inset-0 ${Z_LAYER.modal} ${FIXED_LAYER_SHIFT_INSET} ${suspended ? "hidden" : "flex"} justify-center ${
+              appSheet
+                ? "items-end"
+                : mobileSheet
+                  ? "items-end sm:items-center"
+                  : "items-center"
+            }`}
+            aria-hidden={suspended || undefined}
+            // pointerEvents: 'auto' is required when this modal is rendered while
+            // a Radix/Vaul dialog (e.g. the mobile master/detail drawer) has set
+            // `document.body { pointer-events: none }`. Without this, the modal
+            // is portaled to body and inherits `none`, leaving inputs unclickable.
+            style={{
+              ...MODAL_MOTION_STYLE,
+              // top/bottom come from FIXED_LAYER_SHIFT_INSET: it moves the
+              // dialog with the installed app's viewport shift without becoming
+              // the containing block of the date pickers portaled in here.
+              position: "fixed",
+              left: 0,
+              right: 0,
+              pointerEvents: "auto",
+            }}
+          >
+            {/* Backdrop button - dismiss-on-tap target. Excluded from the tab
             order (tabIndex=-1) so the FocusScope auto-focus doesn't land on
             this invisible control; ESC is the keyboard equivalent. */}
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={handleClose}
-            disabled={isDismissDisabled || isBackdropDismissDisabled}
-            aria-label={backdropLabel}
-            // Tint and blur fade in together, as before #7252.
-            className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} ${OVERLAY_BACKDROP_BLUR_CLASS} transition-opacity duration-200 ease-out ${
-              isAnimating && !isExiting ? "opacity-100" : "opacity-0"
-            }`}
-          />
-          {/* Dialog container */}
-          <div
-            className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
-              mobileSheet
-                ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
-                : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
-            } ${getModalAnimationClass(isAnimating, isExiting)}`}
-            {...dialogAriaProps}
-            ref={panelRef}
-            // Focus target while a busy dialog has disabled its own controls.
-            tabIndex={busy ? -1 : undefined}
-            aria-labelledby={title ? titleId : undefined}
-            aria-label={title ? undefined : ariaLabel}
-            aria-describedby={title && description ? descriptionId : undefined}
-            aria-busy={busy || undefined}
-            style={{ ...OVERLAY_PANEL_STYLE, pointerEvents: "auto" }}
-          >
-            {/* Header with close button - only show border if title exists */}
-            {title ? (
-              <div className="flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
-                {icon ? <div className="shrink-0">{icon}</div> : null}
-                {/* Das Polster hebt die 28-px-Zeile auf die Höhe des X (32 px
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={handleClose}
+              disabled={isDismissDisabled || isBackdropDismissDisabled}
+              aria-label={backdropLabel}
+              // Tint and blur fade in together, as before #7252.
+              className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} ${OVERLAY_BACKDROP_BLUR_CLASS} transition-opacity duration-200 ease-out ${
+                isAnimating && !isExiting ? "opacity-100" : "opacity-0"
+              }`}
+            />
+            {/* Dialog container */}
+            <div
+              className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
+                appSheet
+                  ? `tablet:mx-4 tablet:mb-[calc(1rem+env(safe-area-inset-bottom))] tablet:w-[calc(100%-2rem)] tablet:max-w-[35rem] tablet:rounded-2xl max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl`
+                  : mobileSheet
+                    ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
+                    : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
+              } ${getModalAnimationClass(isAnimating, isExiting)}`}
+              {...dialogAriaProps}
+              ref={panelRef}
+              // Focus target while a busy dialog has disabled its own controls.
+              tabIndex={busy ? -1 : undefined}
+              aria-labelledby={title ? titleId : undefined}
+              aria-label={title ? undefined : ariaLabel}
+              aria-describedby={
+                title && description ? descriptionId : undefined
+              }
+              aria-busy={busy || undefined}
+              style={{ ...OVERLAY_PANEL_STYLE, pointerEvents: "auto" }}
+            >
+              {/* Header with close button - only show border if title exists */}
+              {title ? (
+                <div className="app:border-b-0 app:pb-1 flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
+                  {icon ? <div className="shrink-0">{icon}</div> : null}
+                  {/* Das Polster hebt die 28-px-Zeile auf die Höhe des X (32 px
                   mit Maus, 44 px unter Fingerbedienung): eine Zeile steht
                   mittig neben dem X, lange Titel brechen darunter um. */}
-                {description ? (
-                  <div className="min-w-0 flex-1">
-                    {heading}
-                    <p id={descriptionId} className="text-sm text-gray-500">
-                      {description}
-                    </p>
-                  </div>
-                ) : (
-                  heading
-                )}
+                  {description ? (
+                    <div className="min-w-0 flex-1">
+                      {heading}
+                      <p id={descriptionId} className="text-sm text-gray-500">
+                        {description}
+                      </p>
+                    </div>
+                  ) : (
+                    heading
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClose}
+                    disabled={isDismissDisabled}
+                    className="shrink-0"
+                    aria-label={closeName}
+                    tooltip={closeHint}
+                    data-overlay-close=""
+                  >
+                    <CloseIcon />
+                  </Button>
+                </div>
+              ) : (
+                /* X button positioned absolutely in top-right when no title */
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
                   disabled={isDismissDisabled}
-                  className="shrink-0"
+                  className={`absolute top-4 right-4 ${Z_LAYER.raised}`}
                   aria-label={closeName}
                   tooltip={closeHint}
                   data-overlay-close=""
                 >
                   <CloseIcon />
                 </Button>
-              </div>
-            ) : (
-              /* X button positioned absolutely in top-right when no title */
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                disabled={isDismissDisabled}
-                className={`absolute top-4 right-4 ${Z_LAYER.raised}`}
-                aria-label={closeName}
-                tooltip={closeHint}
-                data-overlay-close=""
-              >
-                <CloseIcon />
-              </Button>
-            )}
+              )}
 
-            {/* Content area with hidden scrollbar; it fades in with the panel */}
-            {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
-            <div
-              ref={bodyRef}
-              className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600"
-              {...SCROLL_AREA_PROPS}
-              tabIndex={bodyScrolls ? 0 : undefined}
-              role={bodyScrolls ? "region" : undefined}
-              aria-labelledby={bodyScrolls && title ? titleId : undefined}
-              aria-label={bodyScrolls && !title ? ariaLabel : undefined}
-            >
-              <div className="p-4 leading-relaxed text-gray-700 md:p-6">
-                {children}
-              </div>
-            </div>
-
-            {/* Footer if provided */}
-            {footer && (
+              {/* Content area with hidden scrollbar; it fades in with the panel */}
+              {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
               <div
-                className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${getModalFooterClass(
-                  mobileSheet ? sheetFooter : null,
-                )}`}
+                ref={bodyRef}
+                className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600"
+                {...SCROLL_AREA_PROPS}
+                tabIndex={bodyScrolls ? 0 : undefined}
+                role={bodyScrolls ? "region" : undefined}
+                aria-labelledby={bodyScrolls && title ? titleId : undefined}
+                aria-label={bodyScrolls && !title ? ariaLabel : undefined}
               >
-                <ModalFrameContext.Provider value={frame}>
-                  {footer}
-                </ModalFrameContext.Provider>
+                <div className="p-4 leading-relaxed text-gray-700 md:p-6">
+                  {children}
+                </div>
               </div>
-            )}
+
+              {/* Footer if provided */}
+              {footer && (
+                <div
+                  className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${
+                    // In der App eine Reihe, Hauptaktion rechts, auf jedem
+                    // Gerät gleich (#8070).
+                    appSheet
+                      ? `${getModalFooterClass("row")} ${APP_FOOTER_ROW}`
+                      : getModalFooterClass(mobileSheet ? sheetFooter : null)
+                  }`}
+                >
+                  <ModalFrameContext.Provider value={frame}>
+                    {footer}
+                  </ModalFrameContext.Provider>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </FocusScope>
-    </InOverlayContext.Provider>
+        </FocusScope>
+      </InOverlayContext.Provider>
+    </SheetSessionProvider>
   );
 
   // Render to body to avoid any positioning issues

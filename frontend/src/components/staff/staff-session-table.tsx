@@ -1285,11 +1285,12 @@ export function StaffSessionTable({
 // Lazy-loads the audit trail for one session when expanded. Kept in its own
 // component so the fetch is scoped to the row and reset cleanly when the user
 // expands a different day.
-function SessionEditHistory({
+export function SessionEditHistory({
   staffId,
   sessionId,
   onEdit,
   fetchEdits,
+  plain = false,
 }: {
   readonly staffId: string;
   readonly sessionId: string | undefined;
@@ -1298,6 +1299,8 @@ function SessionEditHistory({
     staffId: string,
     sessionId: string,
   ) => Promise<WorkSessionEdit[]>;
+  /** App: schlichte Liste im Blatt (`EditHistoryAccordion`). */
+  readonly plain?: boolean;
 }) {
   // Ohne eigenen Abrufer liest die Leitung über die Admin-Route; die eigene
   // Sicht auf /time-tracking reicht ihren Abrufer herein (#1842 AC8).
@@ -1330,6 +1333,7 @@ function SessionEditHistory({
       edits={history.data ?? NO_EDITS}
       isLoading={sessionId != null && !history.data}
       onEdit={onEdit}
+      plain={plain}
     />
   );
 }

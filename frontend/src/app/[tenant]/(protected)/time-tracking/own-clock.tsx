@@ -44,6 +44,7 @@ import {
   TargetOriginChip,
 } from "~/components/staff/staff-time-views";
 import { TodayAssignmentsCard } from "~/components/time-tracking/betreuungsplan-heute-card";
+import { AppClockPanel } from "~/components/time-tracking/time-tracking-app";
 import {
   berlinClockFromISO,
   berlinDayStart,
@@ -85,7 +86,7 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { rfidConcept } from "~/lib/concepts/rfid";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { ModalActions } from "./absence-and-session-dialogs";
-import { clockMetrics, readOwnClock } from "./own-clock-read";
+import { clockMetrics, readOwnClock } from "~/lib/own-clock-read";
 
 const logger = createLogger({ component: "OwnClock" });
 const unavailable = new ApiError("Own clock part unavailable", undefined, {
@@ -111,18 +112,36 @@ const WeekChart = dynamic(() => import("./week-chart"), {
 function PlannedShiftsInfo({
   plannedShifts,
   cancelledShifts,
+  className = "-mt-3 mb-5 space-y-1 text-sm text-gray-500",
+  app = false,
 }: {
   readonly plannedShifts?: readonly PlanShift[];
   readonly cancelledShifts?: readonly PlanShift[];
+  /** App (#8070): ohne den Versatz unter den Titel der Desktop-Karte. */
+  readonly className?: string;
+  /**
+   * App (#8070): Zeit und Pause bleiben zusammen; am schmalen Telefon bricht
+   * sonst „· Pause 30 min“ allein in die nächste Zeile.
+   */
+  readonly app?: boolean;
 }) {
   const active = plannedShifts ?? [];
   const cancelled = cancelledShifts ?? [];
   if (active.length === 0 && cancelled.length === 0) return null;
   return (
-    <div className="-mt-3 mb-5 space-y-1 text-sm text-gray-500">
+    <div className={className}>
       {active.map((shift) => (
-        <div key={shift.id} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-gray-500">Geplant:</span>
+        <div
+          key={shift.id}
+          // App: 4 px Abstand, damit „Geplant“, Schichtart und Zeit am SE
+          // in eine Zeile passen (Runde 15).
+          className={
+            app
+              ? "flex flex-wrap items-center gap-1"
+              : "flex flex-wrap items-center gap-1.5"
+          }
+        >
+          <span className="text-gray-500">{app ? "Geplant" : "Geplant:"}</span>
           {shift.shiftTypeName && (
             // Schichtart pill: the color is tenant-defined data the backend
             // embeds (#1844), not a brand hue; without one the pill falls
@@ -132,16 +151,31 @@ function PlannedShiftsInfo({
               color={shift.shiftTypeColor ?? LOCATION_COLORS.HOME}
             />
           )}
-          <span className="tabular-nums">
-            {shift.startTime}–{shift.endTime}
-          </span>
-          {shift.originShiftId && (
-            <StatusBadge label="Vertretung" tone="blue" compact />
-          )}
-          {shift.breakMinutes > 0 && (
-            <span className="text-gray-500">
-              · Pause {shift.breakMinutes} min
-            </span>
+          {app ? (
+            <>
+              {shift.originShiftId && (
+                <StatusBadge label="Vertretung" tone="blue" compact />
+              )}
+              {/* Runde 15: Die Pause steht in der Zeile von heute in der
+                  Woche darunter; so bleibt der Dienst am SE eine Zeile. */}
+              <span className="whitespace-nowrap tabular-nums">
+                {shift.startTime}–{shift.endTime}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="tabular-nums">
+                {shift.startTime}–{shift.endTime}
+              </span>
+              {shift.originShiftId && (
+                <StatusBadge label="Vertretung" tone="blue" compact />
+              )}
+              {shift.breakMinutes > 0 && (
+                <span className="text-gray-500">
+                  · Pause {shift.breakMinutes} min
+                </span>
+              )}
+            </>
           )}
         </div>
       ))}
@@ -445,7 +479,16 @@ function ClockInCard({
   saving = false,
   laborDays,
   setTargetHref,
+  app = false,
+  headSlot,
+  compactSlot,
 }: {
+  /** App-Oberfläche (#8070): Zustand oben, Hauptaktion in der ActionBar. */
+  readonly app?: boolean;
+  /** Telefon (Runde 17): Platz der Stempeluhr in der Kopfkarte. */
+  readonly headSlot?: HTMLElement | null;
+  /** Telefon (Runde 21): Kurzstatus im schmalen Kopf. */
+  readonly compactSlot?: HTMLElement | null;
   readonly currentSession: ClockSession | null;
   readonly breaks: WorkSessionBreak[];
   readonly onCheckIn: (status: SessionStatus) => Promise<void>;
@@ -808,6 +851,61 @@ function ClockInCard({
       </Button>
     </>
   );
+
+  if (app) {
+    let appState: "idle" | "working" | "break" | "done" = "idle";
+    if (isOnBreak) appState = "break";
+    else if (isCheckedIn) appState = "working";
+    else if (isCheckedOut) appState = "done";
+    return (
+      <AppClockPanel
+        state={appState}
+        saving={saving}
+        sessionStatus={currentSession?.status}
+        checkInTime={currentSession?.checkInTime ?? null}
+        checkOutTime={currentSession?.checkOutTime ?? null}
+        todayMinutes={isCheckedIn ? displayMinutes : completedTodayMinutes}
+        breakMinutes={isCheckedIn ? liveBreakMins : breakMins}
+        plannedShifts={plannedShifts ?? []}
+        plannedInfo={
+          (plannedShifts?.length ?? 0) + (cancelledShifts?.length ?? 0) > 0 ? (
+            <PlannedShiftsInfo
+              plannedShifts={plannedShifts}
+              cancelledShifts={cancelledShifts}
+              className="space-y-1 text-sm text-gray-500"
+              app
+            />
+          ) : undefined
+        }
+        laborHints={laborHints}
+        breakCountdownSecs={
+          plannedBreakDurationMins ? countdownRemainingSecs : null
+        }
+        breakEndsAt={activeBreak?.plannedEndTime ?? null}
+        breakElapsedSecs={activeBreakElapsedSecs}
+        disabled={stampingDisabled}
+        busy={actionLoading}
+        terminalOnly={terminalOnly}
+        onCheckIn={(next) => {
+          if (stampingDisabled || terminalOnly) return;
+          setActionLoading(true);
+          void onCheckIn(next).finally(() => setActionLoading(false));
+        }}
+        onCheckOut={() => void handleCheckOut()}
+        onStartBreak={() =>
+          void handleSelectBreakDuration(individualBreakMinutes)
+        }
+        onEndBreak={() => void handleEndBreakEarly()}
+        onAddAbsence={onAddAbsence}
+        breakStepper={breakDurationStepper}
+        breakSheetOpen={breakMenuOpen && !isOnBreak}
+        onBreakSheetOpenChange={setBreakMenuOpen}
+        headSlot={headSlot}
+        compactSlot={compactSlot}
+        nowClock={berlinClockFromISO(now.toISOString())}
+      />
+    );
+  }
 
   return (
     <SectionCard
@@ -1879,6 +1977,67 @@ export function OwnClockCards({
       )}
       {!data && !clock.error && <Skeleton className="h-48 w-full" />}
     </>
+  );
+}
+
+/**
+ * App (#8070): die Stempeluhr allein, für die Spalte „Erfassen“ der App.
+ * Woche und Einsätze stehen dort an eigener Stelle (`OwnAppTodayCard`).
+ */
+export function OwnAppClockCard({
+  clock,
+  onAddAbsence,
+  setTargetHref,
+  headSlot,
+  compactSlot,
+}: {
+  readonly clock: Clock;
+  readonly onAddAbsence: () => void;
+  readonly setTargetHref?: string;
+  readonly headSlot?: HTMLElement | null;
+  readonly compactSlot?: HTMLElement | null;
+}) {
+  const { data, metrics } = clock;
+  if (!data) {
+    return clock.error ? null : <Skeleton className="h-24 w-full" />;
+  }
+  return (
+    <ClockInCard
+      app
+      headSlot={headSlot}
+      compactSlot={compactSlot}
+      currentSession={clock.currentSession}
+      breaks={clock.currentSession?.id === data.session?.id ? data.breaks : []}
+      onCheckIn={clock.handleCheckIn}
+      onCheckOut={clock.handleCheckOut}
+      onStartBreak={clock.handleStartBreak}
+      onEndBreak={clock.handleEndBreak}
+      completedTodayMinutes={data.completedToday}
+      laborDays={data.laborDays}
+      onAddAbsence={onAddAbsence}
+      metrics={metrics}
+      plannedShifts={data.plannedShifts}
+      cancelledShifts={data.cancelledShifts}
+      stampingDisabled={!clock.canStamp}
+      terminalOnly={data.terminalOnlyStamping}
+      saving={clock.saving}
+      setTargetHref={setTargetHref}
+    />
+  );
+}
+
+/** App (#8070): die heutigen Einsätze als Liste in der Karte. */
+export function OwnAppTodayCard({ clock }: { readonly clock: Clock }) {
+  const { data } = clock;
+  if (!data) return null;
+  return (
+    <TodayAssignmentsCard
+      app
+      today={clock.today}
+      assignments={data.assignments}
+      failed={data.assignmentsUnavailable}
+      error={clock.assignmentError}
+    />
   );
 }
 

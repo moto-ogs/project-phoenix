@@ -2736,6 +2736,8 @@ const KIT_PURE_LIB_MODULES = new Set([
   "src/lib/constants/input-limits",
   "src/lib/date-helpers",
   "src/lib/date-picker-labels",
+  // Gerätekontext (#8070): nur Media Queries, kein Wissen über Schulen.
+  "src/lib/device-context",
   "src/lib/file-format",
   "src/lib/format-utils",
   "src/lib/hooks/use-berlin-today",
@@ -2747,7 +2749,16 @@ const KIT_PURE_LIB_MODULES = new Set([
   // Infrastructure, not domain: frontend/CLAUDE.md requires createLogger for
   // every log line. It reads the portal only to pick its ingest path.
   "src/lib/logger",
+  // Navigationsmodell der App (#8070): Verlauf, Reiter-Stack, Übergänge.
+  // Kein Mandanten- oder Fachwissen, keine Daten.
+  "src/lib/mobile-navigation/history-stack",
+  "src/lib/mobile-navigation/use-keyboard-flag",
+  "src/lib/mobile-navigation/page-transition",
+  "src/lib/mobile-navigation/use-navigation-stack",
+  "src/lib/mobile-navigation/more-parent",
   "src/lib/search-fold",
+  // Blatt-Verlauf (#8070): nur eine Ereignis-Markierung, kein Fachwissen.
+  "src/lib/sheet-history-events",
   "src/lib/use-clipboard-copy",
   "src/lib/utils",
 ]);

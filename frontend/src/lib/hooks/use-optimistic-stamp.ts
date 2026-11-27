@@ -8,6 +8,7 @@ import {
 } from "~/lib/swr/optimistic";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { STAMP_REFUSALS } from "~/lib/everyday-action-refusals";
+import { noteCheckInRefusal } from "~/lib/hooks/check-in-lock";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import type { WorkSession } from "~/lib/time-tracking-helpers";
 
@@ -32,7 +33,7 @@ export function useOptimisticStamp(
     const startedAt = Date.now();
     const now = new Date(startedAt).toISOString(); // Instant only, never a calendar date.
     try {
-      return await action.run({
+      const outcome = await action.run({
         optimistic: (current, { id }) =>
           status === null
             ? current && { ...current, checkOutTime: now }
@@ -67,6 +68,11 @@ export function useOptimisticStamp(
             key.startsWith("time-tracking-") && key !== "time-tracking-config",
         },
       });
+      // „Einstempeln erst kurz vor Schichtbeginn“: Die Ablehnung nennt, ab
+      // wann es heute geht; jeder Einstempel-Knopf sperrt sich bis dahin.
+      if (status !== null && outcome.status === "failed")
+        noteCheckInRefusal(outcome.error, today);
+      return outcome;
     } finally {
       inFlight.current = false;
     }

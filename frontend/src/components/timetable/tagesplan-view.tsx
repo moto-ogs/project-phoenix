@@ -31,6 +31,14 @@ import {
   useState,
 } from "react";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  TagesplanApp,
+  TagesplanDayBar,
+  tagesplanAppStats,
+  tagesplanAppTitle,
+  tagesplanCompactDate,
+} from "~/components/timetable/tagesplan-app";
+import { useDeviceContext } from "~/lib/device-context";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
@@ -49,7 +57,11 @@ import {
   groupParallelBlocks,
 } from "~/components/timetable/tagesplan-groups";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { blockChildrenLabel, blockEndLine } from "~/lib/block-children";
+import {
+  blockChildrenLabel,
+  blockEndLine,
+  hasOpenEnd,
+} from "~/lib/block-children";
 import {
   formatDate,
   formatStatusDate,
@@ -449,8 +461,14 @@ function ParallelGroup({
       >
         Gleichzeitig · {span}
       </p>
+      {/* `relative`: Der Scrollbereich ist Bezugsrahmen für absolut
+          positionierte Kinder (das „Mein Block“ für Vorleseprogramme). Ohne
+          ihn entkam der Text der dritten Spalte dem Scrollbereich und machte
+          das Dokument am Telefon breiter als den Bildschirm (#8070). */}
       <div
-        className={scrolls ? "overflow-x-auto overflow-y-hidden" : undefined}
+        className={
+          scrolls ? "relative overflow-x-auto overflow-y-hidden" : undefined
+        }
       >
         <ul
           aria-labelledby={captionId}
@@ -485,6 +503,8 @@ export function TagesplanView() {
   const overviewScope = useOperationalOverviewScope();
   const weekendOpen = useWeekendFollowsFriday();
   const now = useMinuteClock();
+  // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
+  const { isApp, isSplit } = useDeviceContext();
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -524,6 +544,42 @@ export function TagesplanView() {
     () => groupParallelBlocks(instances ?? [], isToday ? nowHHMM : null),
     [instances, isToday, nowHHMM],
   );
+
+  // App (#8070): ein spontaner Block ohne Ende zählt nur bei seinem Beginn,
+  // und die Jetzt-Linie steht nach Beginn zwischen den Blöcken: über ihr,
+  // was schon begonnen hat, unter ihr, was noch kommt.
+  // Ein spontan gestarteter Block ohne Ende („seit 01:20“) läuft bis jetzt:
+  // Er steht direkt über der Jetzt-Linie statt vor dem ersten Block des
+  // Tages, damit die Zeitfolge und die Jetzt-Linie zusammenpassen.
+  const appGroups = useMemo(() => {
+    if (!isApp) return [];
+    const grouped = groupParallelBlocks(
+      instances ?? [],
+      isToday ? nowHHMM : null,
+      "point",
+    );
+    if (!isToday) return grouped;
+    const runsUntilNow = (group: (typeof grouped)[number]) =>
+      group.cells.length === 1 &&
+      group.cells[0]!.instance.status === "active" &&
+      hasOpenEnd(group.cells[0]!.instance);
+    const moved = grouped.filter(runsUntilNow);
+    if (moved.length === 0) return grouped;
+    const rest = grouped.filter((group) => !runsUntilNow(group));
+    // Vor der ersten Gruppe, in der noch etwas beginnt: Steht die
+    // Jetzt-Linie mitten in einer Gruppe „Gleichzeitig“, steht der Block
+    // über dieser Gruppe.
+    const at = rest.findIndex((group) =>
+      group.cells.some((cell) => cell.instance.startTime > nowHHMM),
+    );
+    const index = at === -1 ? rest.length : at;
+    return [...rest.slice(0, index), ...moved, ...rest.slice(index)];
+  }, [isApp, instances, isToday, nowHHMM]);
+  const appNowIndex = useMemo(() => {
+    if (!isToday || appGroups.length === 0) return -1;
+    const index = appGroups.findIndex((group) => group.startTime > nowHHMM);
+    return index === -1 ? appGroups.length : index;
+  }, [isToday, appGroups, nowHHMM]);
 
   // "Jetzt"-Markierung: vor der ersten Gruppe, die noch nicht vorbei ist.
   const nowIndex = useMemo(() => {
@@ -655,6 +711,81 @@ export function TagesplanView() {
           keepContent: true,
         }
       : listLoadError;
+
+  if (isApp) {
+    // Der Titel nennt den Tag in Worten („Heute“), das Datum steht nur in
+    // der Tagesleiste. Die Chips zählen die Blöcke des Tages. Am iPad quer
+    // steht die Leiste über der Listenspalte (in `TagesplanApp`), damit sie
+    // die Detailspalte nie verdeckt; ohne Blöcke bleibt sie im Kopf.
+    const showMine = overviewScope === "all_staff";
+    const appStats = tagesplanAppStats(instances ?? [], showMine, scopeHint);
+    const dayBar = (
+      <TagesplanDayBar
+        day={day}
+        today={today}
+        onSelect={goToDay}
+        onPrevious={() => goToDay(previousCareDayISO(day, weekendOpen, today))}
+        onNext={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
+      />
+    );
+    const barInList = isSplit && groups.length > 0;
+    return (
+      <TenantPage
+        title={tagesplanAppTitle(day, today)}
+        info={TAGESPLAN_INFO}
+        stats={
+          appStats.length > 0 ? <TenantPageStats items={appStats} /> : undefined
+        }
+        // Die Kennzahlen stehen am Telefon in der Titelzeile: der Kopf
+        // bleibt am SE unter 20 % der Höhe.
+        appStatsInline
+        // Eingeklappt nennt der schmale Kopf den Tag („Heute“ allein sagt
+        // nicht, welcher) und was gerade läuft; die übrigen Zahlen stehen
+        // oben auf der Seite.
+        appCompactStats={
+          <span className="whitespace-nowrap tabular-nums">
+            {tagesplanCompactDate(day)}
+          </span>
+        }
+        // Eine Regel für den schmalen Kopf auf jedem Telefon (#8070 R21):
+        // Die Tagesleiste rollt mit der Kopfkarte weg, beim Rollen bleiben
+        // Titel, Datum und „…“. Vorher klappte sie erst nach 160 px ein, am
+        // iPhone 15 also nie (die Seite war kürzer).
+        appToolbarScrollsAway
+        searchSlot={barInList ? undefined : dayBar}
+        searchSlotHeight="natural"
+        loading={showSkeleton}
+        error={pageError}
+        empty={
+          instances != null && listError == null && groups.length === 0
+            ? {
+                title: isToday
+                  ? "Heute ist keine Betreuung geplant"
+                  : "An diesem Tag ist keine Betreuung geplant",
+                description:
+                  overviewScope === "all_staff"
+                    ? "Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier."
+                    : "Für diesen Tag bist du im Betreuungsplan nicht eingeteilt. Die Einteilung machen die Admins deiner Schule.",
+              }
+            : null
+        }
+      >
+        <TagesplanApp
+          day={day}
+          today={today}
+          nowHHMM={nowHHMM}
+          now={now}
+          groups={appGroups}
+          nowIndex={appNowIndex}
+          showMine={showMine}
+          startBusyId={startBusyId}
+          onOpenSession={openSession}
+          onStart={(entry) => void handleStart(entry)}
+          dayBar={dayBar}
+        />
+      </TenantPage>
+    );
+  }
 
   return (
     <TenantPage

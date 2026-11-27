@@ -34,7 +34,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/page-header/FilterPanel.tsx",
-    lines: [240],
+    lines: [241],
     reason: "Auswahloptionen eines Filters, kein Knopf",
   },
   {
@@ -52,7 +52,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/portal-bottom-nav.tsx",
-    lines: [426, 468],
+    lines: [453, 497],
     reason: "Navigationszeilen im „Mehr“-Blatt der unteren Leiste",
   },
   {
@@ -94,7 +94,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-button-override",
     file: "src/app/[tenant]/(protected)/time-tracking/own-clock.tsx",
-    lines: [713, 750, 878, 1076],
+    lines: [756, 793, 976, 1174],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },

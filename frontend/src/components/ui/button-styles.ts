@@ -21,9 +21,22 @@ export type ButtonVariant =
   | "disclosure"
   | "day_chip"
   | "day_chip_stacked"
-  | "count_badge";
+  | "count_badge"
+  | "chip";
 export type ButtonSize =
   "sm" | "md" | "field" | "base" | "lg" | "xl" | "compact" | "icon" | "card";
+
+/**
+ * Trefferfläche per Finger (#8070, #7790): ein unsichtbares `::before`,
+ * mittig über dem Element und mindestens 44 × 44 px. Für Kit-Knöpfe, Chips
+ * und Zeilen, deren sichtbare Höhe kleiner bleiben soll.
+ */
+export const TOUCH_HIT_AREA =
+  "app:in-flow:relative app:before:absolute app:before:top-1/2 app:before:left-1/2 app:before:size-full app:before:min-h-11 app:before:min-w-11 app:before:-translate-1/2 app:before:content-['']";
+
+/** Sichtbare Rückmeldung beim Antippen (#7794), ohne den iOS-Blitz. */
+const TOUCH_FEEDBACK =
+  "app:[-webkit-tap-highlight-color:transparent] app:active:opacity-75";
 
 // Ruhiger Knopf ohne Fläche; `segment` und `disclosure` bauen darauf auf.
 const GHOST =
@@ -64,7 +77,7 @@ export function buttonStyles({
       "h-8 gap-1.5 rounded-md px-2.5 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
     // `aspect-square` statt `w-8`: erzwingt die Kopfkarte ihre Bedienhöhe
     // (40/44 px), folgt die Breite — sonst wird der quadratische Knopf oval.
-    icon: "aspect-square h-8 rounded-md pointer-coarse:min-w-11 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
+    icon: "aspect-square h-8 rounded-md pointer-coarse:min-w-11 app:min-w-auto disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
     card: "w-full rounded-2xl p-4",
   };
   const variantStyles: Record<ButtonVariant, string> = {
@@ -145,23 +158,32 @@ export function buttonStyles({
     // (per Finger 44 px wie jeder Kit-Knopf).
     // Der gewählte Tag (`aria-pressed`) ist dunkel gefüllt.
     day_chip:
-      "h-9 gap-1 rounded-md px-2.5 py-0 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-pressed:hover:bg-gray-900 aria-pressed:hover:text-white",
+      "h-9 gap-1 rounded-md px-2.5 py-0 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-pressed:hover:bg-gray-900 aria-pressed:hover:text-white",
     // Derselbe Tag zweizeilig im Tagesstreifen am Telefon (`PlanningDayChip
     // stacked`): Kürzel, Datum und Zustand untereinander.
     day_chip_stacked:
-      "h-auto flex-col justify-start gap-0.5 rounded-lg px-1 py-1.5 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 aria-pressed:bg-gray-900 aria-pressed:text-white aria-pressed:hover:bg-gray-900",
+      "h-auto flex-col justify-start gap-0.5 rounded-lg px-1 py-1.5 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-pressed:hover:bg-gray-900",
     // Zahl an der Ecke einer Kachel, die etwas öffnet (#6486): die Fläche ist
     // durchsichtig, die sichtbare Zahl ist ein `NotificationBadge` im Knopf.
     // 32 px Trefferfläche, per Finger 44 px. Bringt sein Maß selbst mit.
     count_badge:
       "h-8 min-w-8 rounded-full p-0 bg-transparent shadow-none pointer-coarse:min-w-11 hover:opacity-90 focus-visible:ring-moto-blue",
+    // Reiter-Chip der App-Leiste (#8070): runde 32-px-Pille (Trefferfläche 44 px), gewählt
+    // (`aria-pressed`, `aria-current`) dunkel gefüllt. Bringt sein Maß mit.
+    chip: "h-8 shrink-0 gap-1.5 rounded-full px-3.5 py-0 whitespace-nowrap border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 aria-pressed:border-gray-900 aria-[current=page]:border-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-[current=page]:bg-gray-900 aria-[current=page]:text-white",
   };
   // Fingerregel (#5531): Bei Bedienung per Finger ist jeder Kit-Knopf
   // mindestens 44 px hoch (Apple HIG 44 pt), `icon` auch 44 px breit. Mit Maus
   // bleibt es bei den Kit-Maßen. Kein Knopf braucht dafür ein eigenes
   // `min-h-11`. Kein `transform` im Übergang: das Kit skaliert nicht.
-  const baseStyles =
-    "inline-flex items-center justify-center font-medium transition-[background-color,box-shadow,color,opacity] duration-200 pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none disabled:opacity-50 aria-disabled:opacity-50";
+  //
+  // Am Telefon (`app:`, #8070) ist die 44-px-Fläche eine Trefferfläche, keine sichtbare
+  // Höhe; Desktop und iPad behalten die sichtbaren 44 px (Epic: „44 px als Trefferfläche, nicht als sichtbare Höhe“): Ein
+  // unsichtbares `::before`, mittig und mindestens 44 × 44 px, nimmt den
+  // Finger an; der Knopf behält sein Kit-Maß. Positionierte Knöpfe
+  // (`absolute`, `fixed`, `sticky`) behalten ihre Lage. Beim Antippen
+  // dunkelt der Knopf kurz ab (#7794), ohne den grauen iOS-Blitz.
+  const baseStyles = `inline-flex items-center justify-center font-medium transition-[background-color,box-shadow,color,opacity] duration-200 pointer-coarse:min-h-11 app:min-h-auto ${TOUCH_HIT_AREA} ${TOUCH_FEEDBACK} focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none disabled:opacity-50 aria-disabled:opacity-50`;
 
   // Die Variante steht hinter der Größe: Varianten mit eigenem Maß (`fab`,
   // `filter`, `day_chip` …) setzen sich so auch bei der Schriftgröße durch.

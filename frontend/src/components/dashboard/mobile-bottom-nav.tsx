@@ -7,7 +7,13 @@ import dynamic from "next/dynamic";
 import { Alert } from "~/components/ui/alert";
 import { SectionLabel } from "~/components/ui/section-label";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
-import React, { useRef, useCallback, useState, useMemo } from "react";
+import React, {
+  useRef,
+  useCallback,
+  useState,
+  useMemo,
+  useEffect,
+} from "react";
 import {
   PortalBottomNavLink,
   PortalNavSheetLink,
@@ -123,6 +129,11 @@ import {
   useIsStaffSettingsPage,
 } from "./staff-settings-nav";
 import { supervisionConcept } from "~/lib/concepts/supervision";
+import { usePillTabs } from "~/lib/mobile-navigation/use-pill-tabs";
+import { MORE_PAGE_HREF, MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
+import { usePillHidden } from "~/lib/mobile-navigation/use-pill-hidden";
+import { setUnderMore } from "~/lib/mobile-navigation/more-parent";
+import { useIsApp } from "~/lib/device-context";
 
 // Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
 // und nach dem ersten Zeichnen, nicht in jedem Bündel der unteren Leiste.
@@ -148,7 +159,7 @@ const Icon = ({ path, className }: { path: string; className?: string }) => (
   </svg>
 );
 
-function MobileNavIcon({
+export function MobileNavIcon({
   item,
   active,
   className,
@@ -546,7 +557,13 @@ export function MobileBottomNav(props: MobileBottomNavProps) {
   );
 }
 
-function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
+/**
+ * Das Navigationsmodell des Personal-Portals unten: Reiter der Pill und die
+ * Zeilen hinter „Mehr“, mit denselben Rechte- und Modulregeln wie die
+ * Seitenleiste. Geteilt von der Pill und der Seite „Mehr“ (#8070), damit
+ * nichts doppelt steht.
+ */
+export function useStaffBottomNavModel() {
   // Ungelesene Anmeldungen (#3778) an der Zeile „Anmeldungen" im Menü.
   const { unreadCount: enrollmentsUnreadCount } = useEnrollmentsUnread();
   // „Neu für dich“: geteilte Notizen (#6854) und geänderte Abholzeiten
@@ -576,16 +593,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Dieselbe Hilfe-Adresse wie in der Seitenleiste: Rolle, Schuleinstellungen
   // und `return_to`, damit die Hilfe nicht erneut fragt (#3575).
   const helpHref = useHelpHref();
-  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
-  // Unter lg gibt es keine Shell-Kopfzeile mehr (Eltern-App-Muster), also
-  // auch keinen Avatar mit Profilmenü: Profil und Abmelden wohnen hier im
-  // „Mehr"-Menü, wie in der Eltern-App.
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [staffPreviewModalOpen, setStaffPreviewModalOpen] = useState(false);
-
-  // Refs for sliding indicator
-  const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Get session for role checking
   const { data: session } = useSession();
@@ -663,10 +670,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     },
     [pathname, searchParams, isViewingSharedOpenRoom],
   );
-
-  const closeOverflowMenu = () => {
-    setIsOverflowMenuOpen(false);
-  };
 
   // Compute main navigation items per role and mode
   // operatorPath is deterministic for the page lifetime, memoize to avoid per-render churn.
@@ -927,16 +930,115 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     (group) => group.items,
   );
 
+  // Zielauflösung einer Menüzeile: Hilfe mit Kontext, Mandantenseiten mit
+  // Präfix, sonst der Einstieg des Bereichs.
+  const resolveItemHref = (item: AdditionalNavItem) =>
+    item.href === STAFF_FLAT_PAGES.help.href
+      ? helpHref
+      : TENANT_SCOPED_HREFS.has(item.href)
+        ? tenantPath(navigationEntryTarget(item.href))
+        : navigationEntryTarget(item.href);
+
+  return {
+    enrollmentsUnreadCount,
+    staffNews,
+    pathname,
+    tenantPath,
+    helpHref,
+    isGroupOpen,
+    toggleGroup,
+    mode,
+    isSessionExpired,
+    canStartStaffPreview,
+    profileUrl,
+    feedUnreadCount,
+    openNotificationsSheet,
+    moreBadgeCount,
+    traegerReturnHref,
+    isActiveRoute,
+    displayMainItems,
+    visibleDrawerGroups,
+    displayAdditionalItems,
+    simpleNav,
+    resolveItemHref,
+  };
+}
+
+export type StaffBottomNavModel = ReturnType<typeof useStaffBottomNavModel>;
+
+function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
+  const {
+    enrollmentsUnreadCount,
+    staffNews,
+    tenantPath,
+    isGroupOpen,
+    toggleGroup,
+    mode,
+    isSessionExpired,
+    canStartStaffPreview,
+    profileUrl,
+    feedUnreadCount,
+    openNotificationsSheet,
+    moreBadgeCount,
+    traegerReturnHref,
+    isActiveRoute,
+    displayMainItems,
+    displayAdditionalItems,
+    visibleDrawerGroups,
+    simpleNav,
+    resolveItemHref,
+    pathname,
+  } = useStaffBottomNavModel();
+  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
+  // Unter lg gibt es keine Shell-Kopfzeile mehr (Eltern-App-Muster), also
+  // auch keinen Avatar mit Profilmenü: Profil und Abmelden wohnen hier im
+  // „Mehr"-Menü, wie in der Eltern-App.
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [staffPreviewModalOpen, setStaffPreviewModalOpen] = useState(false);
+  // Refs for sliding indicator
+  const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  const closeOverflowMenu = () => {
+    setIsOverflowMenuOpen(false);
+  };
+  // Reiter-Modell (#8070): Der aktive Reiter kommt aus dem Register und dem
+  // Verlaufseintrag (ein Detail gehört zum Reiter, aus dem es kam); bis der
+  // Eintrag bekannt ist, gilt die bisherige Pfad-Regel.
+  const pillTabs = usePillTabs(displayMainItems);
+  const isApp = useIsApp();
+  // Im Chat-Verlauf ohne Pill (#8070, Register `hidesPill`).
+  const pillHidden = usePillHidden();
+  // Das Reiter-Gedächtnis gilt nur am Telefon; iPad und Desktop behalten die
+  // heutige Pfad-Regel.
+  const activeTab = isApp ? pillTabs.activeHref : null;
+  const isMainItemActive = (item: NavItem) =>
+    activeTab === null
+      ? isActiveRoute(item.href, item.activePaths)
+      : activeTab === item.href;
+
   // Check if any additional nav item is active
-  const isAnyAdditionalNavActive = displayAdditionalItems.some((item) =>
-    isActiveRoute(item.href, item.activePaths),
-  );
+  const isAnyAdditionalNavActive =
+    activeTab === null
+      ? displayAdditionalItems.some((item) =>
+          isActiveRoute(item.href, item.activePaths),
+        )
+      : activeTab === MORE_TAB;
+
+  // Seiten hinter „Mehr“ (nicht „Mehr“ selbst) bekommen im Seitenkopf den
+  // Zurück-Pfeil zu „Mehr“ (#8070).
+  const underMore =
+    isApp &&
+    mode === "teacher" &&
+    isAnyAdditionalNavActive &&
+    !pathname.endsWith(MORE_PAGE_HREF);
+  useEffect(() => {
+    setUnderMore(underMore);
+    return () => setUnderMore(false);
+  }, [underMore]);
 
   // Die Fläche liegt unter dem aktiven Reiter oder, wenn das Ziel im Menü
   // steht, unter „Mehr"; ohne aktives Ziel fehlt sie.
-  const activeMainIndex = displayMainItems.findIndex((item) =>
-    isActiveRoute(item.href, item.activePaths),
-  );
+  const activeMainIndex = displayMainItems.findIndex(isMainItemActive);
   const indicator = usePortalBottomNavIndicator(
     () => {
       if (activeMainIndex !== -1) {
@@ -952,7 +1054,11 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind fixed nav */}
-      <div className="h-16 lg:hidden" />
+      {/* `split:block`: das iPad quer bekommt die Pill der App (#8070). */}
+      {/* Am Telefon hält `PortalShell` den Platz der Pill frei (#8070). */}
+      {pillHidden ? null : (
+        <div className="split:block app:hidden h-16 lg:hidden" />
+      )}
 
       <LogoutModal
         isOpen={logoutModalOpen}
@@ -968,13 +1074,28 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
       ) : null}
 
       <PortalMoreBottomNav
-        listClassName="gap-1"
-        barClassName="px-2"
+        // Am Telefon enger, damit jedes Feld auch am iPhone SE 44 px breit bleibt.
+        listClassName={isApp ? "gap-0.5" : "gap-1"}
+        barClassName={isApp ? "px-1" : "px-2"}
         fade={false}
+        // Dieselbe Karte wie die Aktionsleiste darüber (#8070).
+        look={isApp ? "card" : "pill"}
         indicator={indicator}
-        className={className}
+        hidden={pillHidden}
+        // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.
+        className={`split:block tablet:px-[calc(50vw-22rem)] ${className}`}
         open={isOverflowMenuOpen}
         onOpenChange={setIsOverflowMenuOpen}
+        // In der App ist „Mehr“ eine eigene Seite (#8070, Vorschlag); im
+        // Operator-Portal bleibt das Blatt.
+        moreHref={
+          isApp && mode === "teacher"
+            ? tenantPath(pillTabs.hrefFor(MORE_TAB, MORE_PAGE_HREF))
+            : undefined
+        }
+        onMoreLinkClick={(event) =>
+          pillTabs.onTabClick(MORE_TAB, MORE_PAGE_HREF, event)
+        }
         moreItemActive={isAnyAdditionalNavActive}
         more={{
           ref: moreButtonRef,
@@ -991,10 +1112,21 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
               <NotificationBadge
                 count={moreBadgeCount}
                 tone="red"
+                // Neues und Ungelesenes zählt am Telefon blau, Rot bleibt
+                // Dringendem (Farbregel in `NotificationBadge`, Runde 17).
+                appTone="blue"
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
                 ariaLabel={`${moreBadgeCount} neu für dich`}
-                className="absolute -top-1 -right-2"
+                // Telefon (Runde 11): oben rechts am Symbol und über seine
+                // Oberkante gehoben, so verdeckt „9+“ weder das Symbol (Runde
+                // 10) noch das „M“ von „Mehr“ (Runde 9). iPad und Desktop
+                // behalten die heutige Lage. Auf der Seite „Mehr“ selbst
+                // stehen dieselben Zahlen je Zeile („Neu für dich“,
+                // „Benachrichtigungen“): Dort entfällt die Summe am Reiter.
+                className={`app:-top-4 app:-right-3 absolute -top-1 -right-2 ${
+                  pathname.endsWith(MORE_PAGE_HREF) ? "app:hidden" : ""
+                }`}
               />
             ) : null,
           paddingClassName: ITEM_PADDING,
@@ -1097,12 +1229,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                               item.href,
                               item.activePaths,
                             );
-                            const href =
-                              item.href === STAFF_FLAT_PAGES.help.href
-                                ? helpHref
-                                : TENANT_SCOPED_HREFS.has(item.href)
-                                  ? tenantPath(navigationEntryTarget(item.href))
-                                  : navigationEntryTarget(item.href);
+                            const href = resolveItemHref(item);
 
                             return (
                               <PortalNavSheetLink
@@ -1281,11 +1408,17 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         }
       >
         {displayMainItems.map((item, index) => {
-          const isActive = isActiveRoute(item.href, item.activePaths);
+          const isActive = isMainItemActive(item);
+          const rootHref = navigationEntryTarget(item.href);
           return (
             <PortalBottomNavLink
               key={item.href}
-              href={navigationEntryTarget(item.href)}
+              href={isApp ? pillTabs.hrefFor(item.href, rootHref) : rootHref}
+              onClick={
+                isApp
+                  ? (event) => pillTabs.onTabClick(item.href, rootHref, event)
+                  : undefined
+              }
               ref={(el: HTMLAnchorElement | null) => {
                 navRefs.current[index] = el;
               }}

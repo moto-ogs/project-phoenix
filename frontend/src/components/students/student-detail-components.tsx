@@ -14,7 +14,7 @@ import { schoolClassLabel } from "~/lib/school-class-label";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
-import { AlertTriangle, Check, Clock, Info } from "lucide-react";
+import { AlertTriangle, Check, Clock, Info, Pencil } from "lucide-react";
 import { LocationBadge } from "@/components/students/presence/location-badge";
 import type { Student } from "~/lib/student-helpers";
 import { isNotCheckedInLocation } from "~/lib/location-helper";
@@ -56,6 +56,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   companionDisplayName,
@@ -67,6 +68,7 @@ import {
 } from "~/lib/student-companion-api";
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { useDeviceContext } from "~/lib/device-context";
 import {
   VisibilityBadge,
   ParentVisibilityLegend,
@@ -376,6 +378,7 @@ export function StudentHeaderLocation({
   isArrivalException,
   isArrivalAbsent,
   todayArrivalNote,
+  showLocationSince = true,
 }: Readonly<
   Pick<
     StudentHeaderProps,
@@ -387,7 +390,10 @@ export function StudentHeaderLocation({
     | "isArrivalException"
     | "isArrivalAbsent"
     | "todayArrivalNote"
-  >
+  > & {
+    /** „seit …“ unter dem Ort; der App-Kopf nennt die Zeit als Chip. */
+    showLocationSince?: boolean;
+  }
 >) {
   // The page reads today's arrival from the child's arrival schedule, not from
   // the student row; the badge reads today's plan from these fields itself.
@@ -431,7 +437,7 @@ export function StudentHeaderLocation({
       supervisedRooms={mySupervisedRooms}
       variant="modern"
       size="md"
-      showLocationSince={true}
+      showLocationSince={showLocationSince}
     />
   );
 }
@@ -646,6 +652,8 @@ function TodayTimeStatusInlineRow({
   absentReason?: string;
 }>) {
   const now = useMinuteClock();
+  const device = useDeviceContext();
+  const isApp = device.resolved && device.isApp;
 
   if (isAbsent) {
     return (
@@ -675,6 +683,14 @@ function TodayTimeStatusInlineRow({
 
   const plannedDisplay = plannedTime?.slice(0, 5);
   const showPlannedHint = Boolean(plannedTime && actualTime);
+  // Handy (#8070): „früher als geplant: 09:15“ statt „-475 min früh“; die
+  // Minutenzahl liest sich als Rohwert. Der Desktop bleibt wie heute.
+  const relation =
+    status.diffMinutes === undefined || status.diffMinutes === 0
+      ? null
+      : status.diffMinutes < 0
+        ? "früher"
+        : "später";
 
   return (
     <span
@@ -696,7 +712,13 @@ function TodayTimeStatusInlineRow({
         >
           {status.displayTime ?? "–"}
         </span>
-        {showPlannedHint && plannedDisplay && (
+        {showPlannedHint && plannedDisplay && isApp ? (
+          <span className="ml-1 text-gray-500">
+            ({relation ? `${relation} als geplant` : "geplant"}:{" "}
+            {plannedDisplay})
+          </span>
+        ) : null}
+        {showPlannedHint && plannedDisplay && !isApp && (
           <span className="ml-1 text-gray-500">
             (geplant: {plannedDisplay}
             {status.detailAnnotation ? `, ${status.detailAnnotation}` : ""})
@@ -833,6 +855,11 @@ export function PersonalInfoReadOnly({
   onEditClick,
   showCompanions = true,
 }: Readonly<PersonalInfoReadOnlyProps>) {
+  const device = useDeviceContext();
+  const appLayout = device.resolved && device.isApp;
+  // App ab iPad (#8070): lange Angaben im Zweierraster statt über die ganze
+  // Breite, sonst bleibt die rechte Hälfte leer.
+  const halfWidthFields = appLayout && device.layout !== "phone";
   const enrollmentExtraLoadError = useSwrLoadError(
     enrollmentExtraError,
     "die Angaben aus der Anmeldung",
@@ -899,18 +926,42 @@ export function PersonalInfoReadOnly({
   return (
     <SectionCard
       title="Persönliche Informationen"
-      leading={<IconTile tone="green" icon={<PersonIcon />} />}
+      // App (#8070): ohne Symbolkachel, der Kopf bleibt eine schmale Zeile.
+      leading={
+        appLayout ? undefined : <IconTile tone="green" icon={<PersonIcon />} />
+      }
+      inlineActions={appLayout}
+      // App: Der Stift ist 40 px hoch; mit gleicher Zeilenhöhe steht der
+      // Titel auf derselben Mitte statt oben bündig darüber.
+      titleClassName={
+        appLayout && showEditButton && onEditClick ? "leading-10" : undefined
+      }
       action={
         showEditButton && onEditClick ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={onEditClick}
-            tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
-          >
-            Bearbeiten
-          </Button>
+          appLayout ? (
+            // App (#8070): ein Stift neben dem Titel statt einer eigenen
+            // Knopfzeile mitten im Fluss.
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Angaben bearbeiten"
+              onClick={onEditClick}
+              tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
+            >
+              <Pencil className="size-5" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onEditClick}
+              tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
+            >
+              Bearbeiten
+            </Button>
+          )
         ) : (
           <ViewOnlyBadge />
         )
@@ -918,11 +969,12 @@ export function PersonalInfoReadOnly({
     >
       <ParentVisibilityLegend
         hint={PARENT_VISIBLE_DEFAULT_HINT}
-        className="mb-4"
+        className={appLayout ? "-mt-2 mb-3" : "mb-4"}
+        appShort
       />
       {/* Feldgitter aus dem Kit (`DataGrid`/`DataField`), kein eigenes
           Feldraster: dieselbe Anatomie wie in jeder anderen Objektansicht. */}
-      <DataGrid>
+      <DataGrid appRows>
         <DataField label="Vollständiger Name">
           <ParentVisibleValue hint={PARENT_VISIBLE_HINTS.name}>
             {student.name}
@@ -946,16 +998,17 @@ export function PersonalInfoReadOnly({
           </ParentVisibleValue>
         </DataField>
         {addressDisplay && (
-          <DataField label="Adresse" fullWidth>
+          <DataField label="Adresse" fullWidth={!halfWidthFields}>
             {addressDisplay}
           </DataField>
         )}
         {student.without_care_place ? null : (
-          <DataField label="Erlaubte Heimwege" fullWidth>
+          <DataField label="Erlaubte Heimwege" fullWidth={!halfWidthFields}>
             <div className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <div className="inline-flex items-start gap-1.5">
                   <AllowedDepartureModesDisplay
+                    grouped={appLayout}
                     value={
                       student.allowed_departure_modes ??
                       allowedDepartureModesFromDeparture(
@@ -1017,7 +1070,10 @@ export function PersonalInfoReadOnly({
           </DataField>
         )}
         {student.health_info && (
-          <DataField label="Gesundheitsinformationen" fullWidth>
+          <DataField
+            label="Gesundheitsinformationen"
+            fullWidth={!halfWidthFields}
+          >
             <div className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <div className="inline-flex w-full max-w-full min-w-0 items-start gap-1.5">
@@ -1040,7 +1096,7 @@ export function PersonalInfoReadOnly({
           </DataField>
         )}
         {student.extra_info && (
-          <DataField label="Elternnotizen" fullWidth>
+          <DataField label="Elternnotizen" fullWidth={!halfWidthFields}>
             <span className="flex items-start gap-1.5">
               <span className="min-w-0 flex-1">{student.extra_info}</span>
               <FieldHistoryInfo
@@ -1050,14 +1106,37 @@ export function PersonalInfoReadOnly({
             </span>
           </DataField>
         )}
-        <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+        {appLayout ? null : (
+          <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+        )}
         {enrollmentExtraLoadError ? (
           <DataField label="Angaben aus der Anmeldung" fullWidth>
             <LoadErrorAlert error={enrollmentExtraLoadError} />
           </DataField>
         ) : null}
       </DataGrid>
+      {/* App (#8070): Antworten aus dem Anmeldeformular unter eigener
+          Überschrift. Ihre Beschriftungen sind Fragen der Schule an die
+          Eltern („Mein Kind darf schwimmen.“), keine Felder der Akte. */}
+      {appLayout && hasEnrollmentExtraValues(enrollmentExtraGroups) ? (
+        <section className="mt-4 space-y-2 border-t border-gray-100 pt-3">
+          <SectionLabel as="h3">Von den Eltern bei der Anmeldung</SectionLabel>
+          <DataGrid appRows>
+            <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+          </DataGrid>
+        </section>
+      ) : null}
     </SectionCard>
+  );
+}
+
+function hasEnrollmentExtraValues(
+  groups: StudentEnrollmentExtraFieldGroup[],
+): boolean {
+  return groups.some((group) =>
+    (group.fields ?? []).some(
+      (field) => formatCustomValue(field.value, field) !== null,
+    ),
   );
 }
 
@@ -1256,6 +1335,8 @@ export function StudentHistorySection({
   canManageRoomHistoryStop = false,
   onNavigate,
 }: Readonly<StudentHistorySectionProps>) {
+  const device = useDeviceContext();
+  const appLayout = device.resolved && device.isApp;
   const attendanceDisabled = readOnly || !attendanceLogEnabled;
   const feedbackDisabled = readOnly || !feedbackEnabled;
   const changeHistoryDisabled = readOnly || !canViewChangeHistory;
@@ -1286,10 +1367,84 @@ export function StudentHistorySection({
       )
     ) : undefined;
 
+  const historyRows = (
+    <>
+      <HistoryButton
+        concept={roomsConcept}
+        title="Anwesenheitsprotokoll"
+        description={
+          readOnly
+            ? "Nur für Gruppenbetreuer"
+            : !attendanceLogEnabled
+              ? "Für deine Schule deaktiviert"
+              : stop.stopped
+                ? appLayout
+                  ? "Angebote, ohne Räume"
+                  : "Anwesenheit pro Betreuungsangebot, ohne Räume"
+                : appLayout
+                  ? "Angebote und besuchte Räume"
+                  : "Anwesenheit pro Betreuungsangebot und besuchte Räume"
+        }
+        disabled={attendanceDisabled}
+        onClick={
+          !attendanceDisabled
+            ? () => onNavigate(`/students/${studentId}/room-history`)
+            : undefined
+        }
+      />
+      <HistoryButton
+        concept={feedbackConcept}
+        title="Feedbackhistorie"
+        description={
+          readOnly
+            ? "Nur für Gruppenbetreuer"
+            : !feedbackEnabled
+              ? "Für deine Schule deaktiviert"
+              : stop.stopped
+                ? "Neue Stimmung wird nicht gespeichert"
+                : "Feedback und Bewertungen"
+        }
+        disabled={feedbackDisabled}
+        onClick={
+          !feedbackDisabled
+            ? () => onNavigate(`/students/${studentId}/feedback-history`)
+            : undefined
+        }
+      />
+      {/* App (#8070): ohne die noch leere Zeile „Mensaverlauf“, die wie
+          ein Ziel aussieht, aber nichts öffnet. */}
+      {appLayout ? null : (
+        <HistoryButton
+          concept={mealPlanConcept}
+          title="Mensaverlauf"
+          description="Mahlzeiten und Bestellungen"
+          disabled
+        />
+      )}
+      <HistoryButton
+        concept={changeHistoryConcept}
+        title="Änderungsverlauf"
+        description={
+          changeHistoryDisabled
+            ? "Nur für Gruppenbetreuer"
+            : "Wer hat was geändert"
+        }
+        disabled={changeHistoryDisabled}
+        onClick={
+          !changeHistoryDisabled
+            ? () => onNavigate(`/students/${studentId}/change-history`)
+            : undefined
+        }
+      />
+    </>
+  );
+
   return (
     <SectionCard
       title="Historien"
-      concept={changeHistoryConcept}
+      // App (#8070): schmaler Kopf ohne Symbolkachel, wie „Persönliche
+      // Informationen“; Titel wie heute.
+      concept={appLayout ? undefined : changeHistoryConcept}
       action={stopAction}
     >
       {stop.loadError ? <LoadErrorAlert error={stop.loadError} /> : null}
@@ -1304,67 +1459,16 @@ export function StudentHistorySection({
           />
         </div>
       ) : null}
-      <FramedList>
-        <HistoryButton
-          concept={roomsConcept}
-          title="Anwesenheitsprotokoll"
-          description={
-            readOnly
-              ? "Nur für Gruppenbetreuer"
-              : !attendanceLogEnabled
-                ? "Für deine Schule deaktiviert"
-                : stop.stopped
-                  ? "Anwesenheit pro Betreuungsangebot, ohne Räume"
-                  : "Anwesenheit pro Betreuungsangebot und besuchte Räume"
-          }
-          disabled={attendanceDisabled}
-          onClick={
-            !attendanceDisabled
-              ? () => onNavigate(`/students/${studentId}/room-history`)
-              : undefined
-          }
-        />
-        <HistoryButton
-          concept={feedbackConcept}
-          title="Feedbackhistorie"
-          description={
-            readOnly
-              ? "Nur für Gruppenbetreuer"
-              : !feedbackEnabled
-                ? "Für deine Schule deaktiviert"
-                : stop.stopped
-                  ? "Neue Stimmung wird nicht gespeichert"
-                  : "Feedback und Bewertungen"
-          }
-          disabled={feedbackDisabled}
-          onClick={
-            !feedbackDisabled
-              ? () => onNavigate(`/students/${studentId}/feedback-history`)
-              : undefined
-          }
-        />
-        <HistoryButton
-          concept={mealPlanConcept}
-          title="Mensaverlauf"
-          description="Mahlzeiten und Bestellungen"
-          disabled
-        />
-        <HistoryButton
-          concept={changeHistoryConcept}
-          title="Änderungsverlauf"
-          description={
-            changeHistoryDisabled
-              ? "Nur für Gruppenbetreuer"
-              : "Wer hat was geändert"
-          }
-          disabled={changeHistoryDisabled}
-          onClick={
-            !changeHistoryDisabled
-              ? () => onNavigate(`/students/${studentId}/change-history`)
-              : undefined
-          }
-        />
-      </FramedList>
+      {/* App (#8070): die Zeilen direkt in der Karte, ohne zweiten Rahmen,
+          mit demselben Rand wie Titel und Feldlisten der anderen Karten:
+          Symbol und Trennlinien beginnen an der Inhaltskante. */}
+      {appLayout ? (
+        <ul className="divide-y divide-gray-100 [&>li>*]:px-0">
+          {historyRows}
+        </ul>
+      ) : (
+        <FramedList>{historyRows}</FramedList>
+      )}
       {stop.confirming ? (
         // Der bisherige Raumverlauf ist danach unwiderruflich weg:
         // Texteingabe-Stufe (BAUARTEN-SPEC Bauart 2 Regel 6).

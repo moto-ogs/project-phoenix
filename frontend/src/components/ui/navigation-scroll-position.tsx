@@ -78,6 +78,21 @@ function restoreScrollPosition(top: number, onStop: () => void): () => void {
   return stop;
 }
 
+/**
+ * Schlüssel der gemerkten Position: der Verlaufseintrag (Navigation API,
+ * #8070), sonst wie bisher der Pfad. Zweimal dieselbe Liste im Verlauf behält
+ * so zwei Positionen; Zurück landet dort, wo man diesen Eintrag verließ.
+ */
+function scrollKeyNow(): string {
+  const navigation = (
+    window as unknown as {
+      navigation?: { currentEntry?: { key: string } | null };
+    }
+  ).navigation;
+  const key = navigation?.currentEntry?.key;
+  return key ? `entry:${key}` : window.location.pathname;
+}
+
 function currentAddressWithHash() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
@@ -94,7 +109,7 @@ function currentAddressWithHash() {
  * Zurück und Vor stellt der Browser wieder her, aber nicht zuverlässig: Steht
  * das Dokument auf einer kurzen Seite oben, begrenzt er die Position auf deren
  * Höhe und versucht es nicht erneut. Deshalb merkt sich die Hülle die Position
- * je Pfad und holt sie nach. Ein Verlaufsschritt kann den Pfad bestätigen,
+ * je Verlaufseintrag (ohne Navigation API je Pfad) und holt sie nach. Ein Verlaufsschritt kann den Pfad bestätigen,
  * bevor `popstate` ankommt. Deshalb wartet der normale Reset bis zum nächsten
  * Frame; `popstate` ersetzt ihn dann noch ohne sichtbaren Sprung durch die
  * Wiederherstellung.
@@ -112,6 +127,8 @@ export function NavigationScrollPosition({
   const searchParams = useSearchParams();
   const search = searchParams?.toString() ?? "";
   const committedPathname = useRef(pathname);
+  // Schlüssel des bestätigten Eintrags; gesetzt mit `committedPathname`.
+  const committedKey = useRef<string>(pathname);
   const committedUrl = useRef<string | undefined>(undefined);
   const awaitingPathTraversal = useRef(false);
   const traversalBeforeCommit = useRef(false);
@@ -128,6 +145,7 @@ export function NavigationScrollPosition({
 
   useEffect(() => {
     committedUrl.current = currentAddressWithHash();
+    committedKey.current = scrollKeyNow();
     const handleScroll = () => {
       lastScrollY.current = window.scrollY;
       // Nach einem Wechsel kann Next den Zielpfad schon bestätigen, bevor ein
@@ -135,7 +153,7 @@ export function NavigationScrollPosition({
       // eintreffendes Scroll-Ereignis gehört zur verlassenen Seite und darf
       // deren gemerkte Position nicht unter dem Zielpfad überschreiben.
       if (!isRestoring.current && !awaitingPathTraversal.current) {
-        scrollPositions.set(committedPathname.current, lastScrollY.current);
+        scrollPositions.set(committedKey.current, lastScrollY.current);
       }
     };
     // Die Capture-Phase liegt vor dem Link-Handler. So merken wir auch einen
@@ -152,7 +170,7 @@ export function NavigationScrollPosition({
         awaitingPathTraversal.current &&
         targetUrl === committedUrl.current;
       if (beforeCommit && !isRestoring.current) {
-        scrollPositions.set(committedPathname.current, lastScrollY.current);
+        scrollPositions.set(committedKey.current, lastScrollY.current);
       }
       traversalBeforeCommit.current = beforeCommit;
       if (beforeCommit) {
@@ -178,7 +196,7 @@ export function NavigationScrollPosition({
         cancelAnimationFrame(resetFrame.current);
         resetFrame.current = undefined;
       }
-      const position = scrollPositions.get(target);
+      const position = scrollPositions.get(scrollKeyNow());
       stopRestore.current?.();
       isRestoring.current = false;
       // Sprungmarken sind eine ausdrückliche Zielposition und gewinnen gegen
@@ -243,6 +261,10 @@ export function NavigationScrollPosition({
       stopRestore.current = undefined;
       isRestoring.current = false;
     }
+    // Ein Query-Wechsel per Push ist ein eigener Eintrag mit eigener Position.
+    if (committedPathname.current === pathname) {
+      committedKey.current = scrollKeyNow();
+    }
     committedUrl.current = url;
   }, [pathname, search]);
 
@@ -257,9 +279,10 @@ export function NavigationScrollPosition({
       (pathname !== window.location.pathname ||
         pathname === traversalTargetPathname.current);
     if (!isTraversal) {
-      scrollPositions.set(committedPathname.current, lastScrollY.current);
+      scrollPositions.set(committedKey.current, lastScrollY.current);
     }
     committedPathname.current = pathname;
+    committedKey.current = scrollKeyNow();
     committedUrl.current = currentAddressWithHash();
 
     if (isTraversal) {

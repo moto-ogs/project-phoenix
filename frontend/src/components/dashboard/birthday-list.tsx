@@ -134,7 +134,7 @@ function groupByDay(
  * colleague's row says "Team" and nothing else: publishing a colleague's age
  * is exactly what the personal opt-out exists to prevent.
  */
-function describeCelebration(
+export function describeCelebration(
   celebration: BirthdayCelebration,
   today: string,
 ): string {
@@ -157,7 +157,7 @@ function describeCelebration(
 const SHORT_WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
 
 /** "Mo, 28.09.": the weekday alone would leave the reader counting. */
-function dayLabel(isoDate: string): string {
+export function dayLabel(isoDate: string): string {
   const weekday = SHORT_WEEKDAYS[parseISODate(isoDate).getDay()];
   return weekday
     ? `${weekday}, ${dayMonthLabel(isoDate)}`

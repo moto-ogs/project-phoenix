@@ -26,8 +26,12 @@ export const CARD_TITLE_SIZES = {
   display: "text-2xl leading-tight tracking-tight break-words sm:text-[28px]",
 } as const;
 
-/** Hebt eine Karte beim Überfahren an (`globals.css`). */
-export const CARD_HOVER = "moto-hover-elevated";
+/**
+ * Hebt eine Karte beim Überfahren an (`globals.css`); per Finger blendet sie
+ * beim Antippen kurz ab (#7794), ohne den grauen iOS-Blitz.
+ */
+export const CARD_HOVER =
+  "moto-hover-elevated app:[-webkit-tap-highlight-color:transparent] app:active:opacity-80";
 
 /**
  * Fokusring einer klickbaren Karte, in moto-blue für 3:1 Kontrast (#6565).

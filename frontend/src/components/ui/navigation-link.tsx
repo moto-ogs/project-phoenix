@@ -6,6 +6,10 @@ import { forwardRef, useContext, type ComponentProps } from "react";
 import { PortalScrollContext } from "./navigation-progress-store";
 import { useNavigationLinkProgress } from "./use-navigation-link-progress";
 import { isInternalPath, portalManagesScroll } from "./navigation-url";
+import {
+  startPageTransition,
+  type PageTransitionDirection,
+} from "~/lib/mobile-navigation/page-transition";
 
 export type NavigationLinkProps = Omit<
   ComponentProps<typeof NextLink>,
@@ -16,6 +20,12 @@ export type NavigationLinkProps = Omit<
   readonly prefetch?: false;
   /** Verlässt das App-Dokument, etwa für die öffentliche Hilfe. */
   readonly nativeAnchor?: boolean;
+  /**
+   * Seitlicher Übergang in der App (#8070): `forward` (Standard) schiebt die
+   * neue Seite von rechts herein, `back` von links, `none` wechselt ohne
+   * Bewegung (Reiter der Pill). Der Desktop animiert nie.
+   */
+  readonly pageTransition?: PageTransitionDirection | "none";
 };
 
 /**
@@ -36,12 +46,26 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       scroll,
       onClick,
       onNavigate,
+      pageTransition = "forward",
       children,
       ...anchorProps
     },
     ref,
   ) {
-    const progress = useNavigationLinkProgress(href, onClick, onNavigate);
+    const progress = useNavigationLinkProgress(href, onClick, (event) => {
+      let cancelled = false;
+      onNavigate?.({
+        preventDefault: () => {
+          cancelled = true;
+          event.preventDefault();
+        },
+      });
+      // `onNavigate` kommt nur für einen Wechsel im Router, nicht für
+      // einen neuen Tab oder Mittelklick.
+      if (!cancelled && pageTransition !== "none") {
+        startPageTransition(pageTransition, href);
+      }
+    });
     const portalScroll = useContext(PortalScrollContext);
     if (nativeAnchor) {
       return (

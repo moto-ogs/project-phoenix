@@ -38,16 +38,30 @@ export function BadgeDisplay({
 }
 
 /**
- * Compact badge for mobile views (no label shown)
+ * Compact badge for mobile views; a label only when the page passes one.
+ * With a label the word names the count, so the icon steps aside and the
+ * search field keeps its width.
  */
 export function BadgeDisplayCompact({
   count,
   icon,
-}: Readonly<{ count: number | string; icon?: React.ReactNode }>) {
+  label,
+}: Readonly<{
+  count: number | string;
+  icon?: React.ReactNode;
+  label?: string;
+}>) {
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-2 py-1.5">
-      {icon && <span className="text-gray-500">{icon}</span>}
-      <span className="text-sm font-semibold text-gray-900">{count}</span>
+    <div
+      className={`flex items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 py-1.5 ${label ? "px-3" : "px-2"}`}
+    >
+      {icon && !label && <span className="text-gray-500">{icon}</span>}
+      <span className="text-sm font-semibold text-gray-900">
+        {count}
+        {label ? (
+          <span className="ml-1 font-normal text-gray-600">{label}</span>
+        ) : null}
+      </span>
     </div>
   );
 }

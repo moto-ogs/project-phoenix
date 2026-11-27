@@ -81,6 +81,11 @@ interface DayCardProps {
    * bleibt die gewohnte zweizeilige Form der Zeiterfassung.
    */
   readonly dense?: boolean;
+  /**
+   * App-Fassung der Zeiterfassung (#8070): die Einsätze als Liste in der
+   * Karte statt als Raster aus Feldern (keine Karte in der Karte).
+   */
+  readonly app?: boolean;
 }
 
 export function BetreuungsplanHeuteCard(props: DayCardProps) {
@@ -108,6 +113,7 @@ export function TodayAssignmentsCard({
   href,
   maxRows,
   dense = false,
+  app = false,
   today,
   assignments,
   failed,
@@ -191,7 +197,7 @@ export function TodayAssignmentsCard({
   // ließe bei ein bis vier Einsätzen rechts die halbe Karte leer. Dort stehen
   // die Einsätze als Raster nebeneinander, je einer in einem Feld (#4363).
   // Nur als Anzeige: anklickbare Zeilen und die Startseite bleiben Liste.
-  const grid = !onHome && !dense && !href;
+  const grid = !onHome && !dense && !href && !app;
   const rows = shown.map((block) => (
     <AssignmentRow
       key={block.instanceId}
@@ -199,6 +205,7 @@ export function TodayAssignmentsCard({
       href={href}
       dense={compact}
       tile={grid}
+      inline={app}
       // Der Zustand relativ zur Uhr gehört auf die Startseite, wo die
       // Karte den Moment trägt. Auf der Zeiterfassung steht der ganze Tag,
       // und „vorbei" wäre an jedem zweiten Einsatz nur Rauschen.
@@ -209,7 +216,8 @@ export function TodayAssignmentsCard({
   return (
     <SectionCard
       title={title}
-      concept={carePlanConcept}
+      // App: schmaler Kopf ohne Symbolkachel, die Einsätze stehen einzeilig.
+      concept={app ? undefined : carePlanConcept}
       {...CARD_LAYOUT}
       inlineActions
       actions={
@@ -265,8 +273,11 @@ function AssignmentRow({
   href,
   dense,
   tile = false,
+  inline = false,
   now,
 }: {
+  /** App: Zeit und Aufgabe nebeneinander, auch am Telefon (eine Zeile weniger). */
+  readonly inline?: boolean;
   readonly block: OwnAssignment;
   readonly href?: string;
   readonly dense: boolean;
@@ -285,8 +296,9 @@ function AssignmentRow({
   // dem Raum unter der Aufgabe. Auf der Startseite hat die Karte eine feste
   // Höhe — zweizeilige Einträge lassen dort nur einen ganz hineinpassen, und
   // ein einzelner Einsatz ist kein Tag.
-  const rowClass =
-    "flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-4";
+  const rowClass = inline
+    ? "flex flex-row items-baseline gap-3 py-2.5 first:pt-0 last:pb-0"
+    : "flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-4";
   const secondary = [
     block.roomName,
     block.groupName !== block.title ? block.groupName : "",
@@ -296,13 +308,27 @@ function AssignmentRow({
   const content = (
     <>
       <span
-        className={`${dense ? "w-24" : "w-28"} flex-shrink-0 text-sm font-medium tabular-nums ${
+        className={`${dense || inline ? "w-24" : "w-28"} flex-shrink-0 text-sm font-medium tabular-nums ${
           dimmed ? "text-gray-500 line-through" : "text-gray-900"
         }`}
       >
         {block.startTime}–{block.endTime}
       </span>
-      {dense ? (
+      {inline ? (
+        // App: Raum und Gruppe brechen als Ganzes in die nächste Zeile um,
+        // statt abgeschnitten („OGS-Rau…“) oder mitten im Namen getrennt zu
+        // werden („OGS-“ / „Raum 2“).
+        <p className="flex min-w-0 flex-1 flex-wrap gap-x-2 text-sm">
+          <span
+            className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}
+          >
+            {block.title}
+          </span>
+          {secondary && (
+            <span className="whitespace-nowrap text-gray-500">{secondary}</span>
+          )}
+        </p>
+      ) : dense ? (
         <p className="min-w-0 flex-1 truncate text-sm">
           <span
             className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}
@@ -341,8 +367,8 @@ function AssignmentRow({
           tone; they never appear on the same block. */}
       <div
         className={`flex flex-wrap items-center gap-1.5 ${
-          dense ? "shrink-0 justify-end" : ""
-        } ${tile ? "empty:hidden" : ""}`}
+          dense || inline ? "shrink-0 justify-end" : ""
+        } ${tile || inline ? "empty:hidden" : ""}`}
       >
         {block.isSubstitute && <StatusBadge tone="blue" label="Vertretung" />}
         {/* Dieselben Wörter wie im Tagesplan und in der Jetzt-Zone: „Läuft"

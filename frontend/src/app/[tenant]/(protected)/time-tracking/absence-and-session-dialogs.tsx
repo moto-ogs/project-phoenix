@@ -71,6 +71,13 @@ import {
 } from "~/components/staff/use-absence-type-options";
 import { absenceRequestFor, selectValueFor } from "~/lib/absence-type-select";
 import { createLogger } from "~/lib/logger";
+import { SectionLabel } from "~/components/ui/section-label";
+import { SessionEditHistory } from "~/components/staff/staff-session-table";
+import {
+  AppDayFactsPanel,
+  type AppDayFacts,
+} from "~/components/time-tracking/time-tracking-app";
+import { timeTrackingService } from "~/lib/time-tracking-api";
 import type { OwnAbsence, OwnBlock } from "~/lib/own-time-tracking-view";
 
 type SessionStatus = OwnBlock["status"];
@@ -150,7 +157,13 @@ export function ModalActions({
   confirmDisabled = false,
   confirmDisabledReason,
   cancelDisabled = false,
+  hideCancel = false,
 }: {
+  /**
+   * App (#8070): das Blatt schließt über sein X im Kopf; im Fuß steht nur
+   * die Hauptaktion.
+   */
+  readonly hideCancel?: boolean;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
   readonly confirmLabel: string;
@@ -162,19 +175,37 @@ export function ModalActions({
   readonly confirmDisabledReason?: string;
   readonly cancelDisabled?: boolean;
 }) {
+  const reasonShown = Boolean(
+    hideCancel && confirmDisabled && confirmDisabledReason,
+  );
   return (
     <div className="flex w-full flex-col-reverse gap-3 sm:flex-row">
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        onClick={onCancel}
-        disabled={cancelDisabled}
-        noTooltip="Schließt nur das Fenster, ohne etwas zu speichern."
-        className="flex-1"
-      >
-        {cancelLabel}
-      </Button>
+      {hideCancel ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          onClick={onCancel}
+          disabled={cancelDisabled}
+          noTooltip="Schließt nur das Fenster, ohne etwas zu speichern."
+          className="flex-1"
+        >
+          {cancelLabel}
+        </Button>
+      )}
+      {/* App (#8070): ohne Abbrechen ist Platz für den Grund, warum
+          Speichern noch nicht geht – sichtbar, nicht erst beim Antippen. */}
+      {reasonShown ? (
+        // Runde 19: Der Satz bekommt zwei Drittel der Breite, „Speichern“
+        // das letzte Drittel; so bricht er am Telefon nicht um. Inline,
+        // weil der Fuß des Blatts jedem Kind `flex-1` gibt.
+        <p
+          className="min-w-0 self-center text-sm leading-5 text-gray-600"
+          style={{ flex: "2 1 0%" }}
+        >
+          {confirmDisabledReason}
+        </p>
+      ) : null}
       <Button
         type="button"
         variant="primary"
@@ -190,6 +221,10 @@ export function ModalActions({
     </div>
   );
 }
+
+/** Eigene Änderungshistorie ohne time_tracking:manage (#1842 AC8). */
+const fetchOwnSessionEdits = (_staffId: string, sessionId: string) =>
+  timeTrackingService.getSessionEdits(sessionId);
 
 /** Get modal footer based on context */
 function getEditModalFooter(
@@ -284,7 +319,14 @@ export function EditSessionModal({
   timesLocked = false,
   ownStaffId,
   laborDay,
+  app = false,
+  facts,
 }: {
+  /** App (#8070): Plan, Soll, Ist, Saldo und Quelle des Tages wie in der
+   *  Tabellenzeile des Desktops. */
+  readonly facts?: AppDayFacts;
+  /** App (#8070): der Hinweis ohne Eintrag kommt als Blatt von unten. */
+  readonly app?: boolean;
   /**
    * Die Schule lässt diese Person nur am NFC-Terminal stempeln (#8024): Start,
    * Ende und Pause ändert dann nur die Leitung, Ort und Grund bleiben offen.
@@ -460,8 +502,14 @@ export function EditSessionModal({
         isOpen={isOpen}
         onClose={onClose}
         title="Kein Eintrag vorhanden"
+        mobileSheet={app}
         footer={<BackfillFooter onClose={onClose} onBackfill={onBackfill} />}
       >
+        {app && facts ? (
+          <div className="mb-4">
+            <AppDayFactsPanel facts={facts} />
+          </div>
+        ) : null}
         <MissingSessionHint date={date} canManage={onBackfill !== null} />
       </Modal>
     );
@@ -508,7 +556,7 @@ export function EditSessionModal({
     ? undefined
     : !startTime || hasInvalidTimeRange || hasUnresolvableTime
       ? "Prüfe zuerst die markierten Uhrzeiten."
-      : "Wähle oder schreibe zuerst einen Grund.";
+      : "Gib zuerst einen Grund an.";
 
   const handleBreakDurationChange = (breakId: string, minutes: number) => {
     setBreakDurations((prev) => {
@@ -662,8 +710,13 @@ export function EditSessionModal({
       : "session";
 
   // Footer: tab-aware for dual-section, standard for single-section
+  const reasonPresets: readonly string[] = timesLocked
+    ? LOCKED_TIMES_REASON_PRESETS
+    : EDIT_REASON_PRESETS;
+
   const sessionFooter = (
     <ModalActions
+      hideCancel={app}
       onCancel={onClose}
       onConfirm={handleSave}
       confirmLabel={saving ? "Speichern…" : "Speichern"}
@@ -685,6 +738,7 @@ export function EditSessionModal({
 
   const absenceFooter = (
     <ModalActions
+      hideCancel={app}
       onCancel={onClose}
       onConfirm={handleAbsenceSave}
       confirmLabel={absenceSaving ? "Speichern…" : "Speichern"}
@@ -731,9 +785,10 @@ export function EditSessionModal({
         </SlideOverHeader>
         <div
           ref={formAreaRef}
-          className="flex-1 space-y-4 overflow-y-auto px-5 py-4"
+          className="app:px-4 flex-1 space-y-4 overflow-y-auto px-5 py-4"
         >
           <FormErrorAlert message={formErrors.error} />
+          {app && facts ? <AppDayFactsPanel facts={facts} /> : null}
           {/* Section switcher for a session or a backfillable half-day alongside
             an absence. The kit
             SegmentedControl, NOT ui/Tabs: Radix tabs activate on mousedown, and
@@ -763,7 +818,16 @@ export function EditSessionModal({
                   message="Start, Ende und Pause ändert nur die Leitung. Bitte melde dich dort, wenn eine Zeit nicht stimmt."
                 />
               )}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* App (Runde 11): Start und Ende, Pause und Ort je
+                  nebeneinander, damit der Pflicht-Grund am kleinen Telefon
+                  ohne Scrollen in Sicht kommt. */}
+              <div
+                className={
+                  app
+                    ? "grid grid-cols-2 gap-3"
+                    : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                }
+              >
                 <Input
                   id="edit-start"
                   name="check_in_time"
@@ -798,7 +862,13 @@ export function EditSessionModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div
+                className={
+                  app && !hasIndividualBreaks
+                    ? "grid grid-cols-2 gap-3"
+                    : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                }
+              >
                 {/* Break section */}
                 <div>
                   {hasIndividualBreaks ? (
@@ -849,14 +919,22 @@ export function EditSessionModal({
                   ) : (
                     <CustomSelect
                       id="edit-break"
-                      label="Pause (Min)"
+                      // App: der Wert nennt die Einheit schon („38 min“).
+                      label={app ? "Pause" : "Pause (Min)"}
                       disabled={timesLocked}
                       value={breakMins}
                       onChange={setBreakMins}
-                      options={[0, 15, 30, 45, 60].map((m) => ({
-                        value: m.toString(),
-                        label: `${m} min`,
-                      }))}
+                      // Eine gestempelte Pause wie 38 min steht nicht in der
+                      // Auswahl; ohne eigene Option zeigte das Feld „Bitte
+                      // wählen“, obwohl die Pause gespeichert ist.
+                      options={[
+                        ...new Set([0, 15, 30, 45, 60, Number(breakMins) || 0]),
+                      ]
+                        .sort((a, b) => a - b)
+                        .map((m) => ({
+                          value: m.toString(),
+                          label: `${m} min`,
+                        }))}
                     />
                   )}
                 </div>
@@ -881,20 +959,38 @@ export function EditSessionModal({
                 >
                   Grund der Änderung
                 </FieldLabel>
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {(timesLocked
-                    ? LOCKED_TIMES_REASON_PRESETS
-                    : EDIT_REASON_PRESETS
-                  ).map((reason) => (
-                    <ToggleChip
-                      key={reason}
-                      pressed={notes === reason}
-                      onPressedChange={() => setNotes(reason)}
-                    >
-                      {reason}
-                    </ToggleChip>
-                  ))}
-                </div>
+                {app ? (
+                  // App (#8070, Runde 9): eine Auswahl wie Pause und Ort
+                  // darüber statt Chips, die am Telefon ungleich umbrachen.
+                  <CustomSelect
+                    id="edit-reason-preset"
+                    ariaLabel="Häufiger Grund"
+                    placeholder="Häufigen Grund wählen"
+                    value={
+                      (reasonPresets as readonly string[]).includes(notes)
+                        ? notes
+                        : ""
+                    }
+                    onChange={setNotes}
+                    options={reasonPresets.map((reason) => ({
+                      value: reason,
+                      label: reason,
+                    }))}
+                    className="mb-2 w-full"
+                  />
+                ) : (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {reasonPresets.map((reason) => (
+                      <ToggleChip
+                        key={reason}
+                        pressed={notes === reason}
+                        onPressedChange={() => setNotes(reason)}
+                      >
+                        {reason}
+                      </ToggleChip>
+                    ))}
+                  </div>
+                )}
                 <Textarea
                   id="edit-notes"
                   name="notes"
@@ -919,6 +1015,20 @@ export function EditSessionModal({
                   </p>
                 </div>
               )}
+
+              {/* App (#8070): die Änderungshistorie, die der Desktop beim
+                  Aufklappen der Zeile zeigt. */}
+              {app && session && session.editCount > 0 && ownStaffId ? (
+                <div className="space-y-2" data-app-edit-history="">
+                  <SectionLabel as="h3">Bisherige Änderungen</SectionLabel>
+                  <SessionEditHistory
+                    staffId={ownStaffId}
+                    sessionId={session.id}
+                    fetchEdits={fetchOwnSessionEdits}
+                    plain
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 

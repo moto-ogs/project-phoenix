@@ -5,7 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -61,6 +61,20 @@ interface SpontaneousActivityStartProps {
   readonly isStarting?: boolean;
   readonly occupiedRoomIds?: readonly string[];
   readonly onStart: (payload: SpontaneousActivityStartPayload) => void;
+  /**
+   * Eigener Auslöser statt der Karte (App, #8070): ein Knopf am Listenende
+   * oder in der Aktionsleiste. Der Dialog bleibt derselbe.
+   */
+  readonly renderTrigger?: (trigger: {
+    open: () => void;
+    disabled: boolean;
+  }) => ReactNode;
+  /**
+   * Von außen geöffnet (App, #8070): der Auslöser steht im „…“-Menü der
+   * Seite. Ohne die beiden Props hält die Komponente den Zustand selbst.
+   */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }
 
 function normalizeRooms(rooms: roomsContract.RoomResponse[]): RoomOption[] {
@@ -125,8 +139,13 @@ export function SpontaneousActivityStart({
   isStarting = false,
   occupiedRoomIds = EMPTY_OCCUPIED_ROOM_IDS,
   onStart,
+  renderTrigger,
+  open: openProp,
+  onOpenChange,
 }: SpontaneousActivityStartProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenState, setIsOpenState] = useState(false);
+  const isOpen = openProp ?? isOpenState;
+  const setIsOpen = onOpenChange ?? setIsOpenState;
   const [activityInput, setActivityInput] = useState("");
   const [roomId, setRoomId] = useState("");
   const [additionalStaffIds, setAdditionalStaffIds] = useState<string[]>([]);
@@ -318,32 +337,39 @@ export function SpontaneousActivityStart({
 
   return (
     <>
-      <SectionCard className="mb-4">
-        <Button
-          type="button"
-          disabled={disabled || isStarting}
-          onClick={() => setIsOpen(true)}
-          variant="surface_success"
-          size="card"
-          className="w-full justify-start gap-3 text-left"
-          tooltip="Öffnet die Auswahl für eine spontane Aktivität."
-        >
-          <IconTile
-            shape="round"
-            tone="greenFill"
-            icon={<Plus aria-hidden="true" />}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-gray-900">
-              Spontane Aktivität starten
+      {renderTrigger ? (
+        renderTrigger({
+          open: () => setIsOpen(true),
+          disabled: disabled || isStarting,
+        })
+      ) : (
+        <SectionCard className="mb-4">
+          <Button
+            type="button"
+            disabled={disabled || isStarting}
+            onClick={() => setIsOpen(true)}
+            variant="surface_success"
+            size="card"
+            className="w-full justify-start gap-3 text-left"
+            tooltip="Öffnet die Auswahl für eine spontane Aktivität."
+          >
+            <IconTile
+              shape="round"
+              tone="greenFill"
+              icon={<Plus aria-hidden="true" />}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-gray-900">
+                Spontane Aktivität starten
+              </span>
+              <span className="block text-sm text-gray-600">
+                {disabledReason ??
+                  "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
+              </span>
             </span>
-            <span className="block text-sm text-gray-600">
-              {disabledReason ??
-                "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
-            </span>
-          </span>
-        </Button>
-      </SectionCard>
+          </Button>
+        </SectionCard>
+      )}
 
       {/* oxlint-disable-next-line ui-kit/form-modal-pending -- übergibt die Auswahl synchron an onStart und schließt; gespeichert wird danach außerhalb des Dialogs. */}
       <FormModal

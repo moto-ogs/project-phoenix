@@ -37,7 +37,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { CalendarRange, Download, FileText, Search } from "lucide-react";
+import {
+  CalendarRange,
+  Download,
+  FileText,
+  ListChecks,
+  Search,
+} from "lucide-react";
 // SSE is handled globally by TenantAuthWrapper - real-time updates work automatically
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -63,6 +69,7 @@ import {
   type FilterOption,
   type ActiveFilter,
   type FilterSection,
+  type OverflowMenuEntry,
 } from "~/components/ui/page-header/types";
 import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
@@ -74,7 +81,9 @@ import { answerQuestionLabel } from "~/lib/school-search";
 import { hasPermission } from "~/lib/auth-utils";
 import type { Student } from "~/lib/student-helpers";
 import type { Group, Room } from "~/lib/api";
+import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { Button } from "~/components/ui/button";
+import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { DatePicker } from "~/components/ui/date-picker";
 import {
   berlinTodayISO,
@@ -117,6 +126,9 @@ import {
   trackingColumn,
 } from "~/components/students/student-table";
 import { StudentSelectionScope } from "~/components/students/student-selection-scope";
+import { StudentListApp } from "~/components/students/student-list-app";
+import { ActionBar } from "~/components/ui/action-bar";
+import { useDeviceContext } from "~/lib/device-context";
 import {
   CollectionViewSwitch,
   columnMenuEntries,
@@ -266,6 +278,13 @@ function enrollmentAnswerAccessOf(
 // offers a reload instead (#3374).
 const LOADING_STALL_MS = 10_000;
 
+// Tag-Knöpfe im Filter: am Handy dieselben Chips wie die Reiter der App
+// (gewählt = `aria-pressed`), am Desktop wie heute Knopf und Umrandung.
+function dayChoice(selected: boolean, app: boolean) {
+  return app
+    ? ({ variant: "chip", size: "md", "aria-pressed": selected } as const)
+    : ({ variant: selected ? "primary" : "outline", size: "compact" } as const);
+}
 function SearchPageContent() {
   const router = useTenantRouter();
   // Use required: true to auto-redirect unauthenticated users (same pattern as /active-supervisions)
@@ -1499,6 +1518,10 @@ function SearchPageContent() {
     [],
   );
 
+  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
+  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
+  const device = useDeviceContext();
+  const appView = device.resolved && device.isApp;
   const filterConfigs: FilterConfig[] = useMemo(
     () => [
       // Stufe / Klasse / Gruppe are multi-selects (#2218). None of them carries
@@ -1643,11 +1666,12 @@ function SearchPageContent() {
         className: "md:col-span-2",
         render: (
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
+            {/* Telefon (#8070): 8 px zwischen den Tag-Knöpfen wie zwischen
+                allen Chips der App. */}
+            <div className="app:gap-2 flex flex-wrap gap-1.5">
               <Button
                 type="button"
-                size="compact"
-                variant={isToday ? "primary" : "outline"}
+                {...dayChoice(isToday, appView)}
                 onClick={() => updateSelectedDate(todayIso)}
                 tooltip="Zeigt, wo die Kinder heute gerade sind."
               >
@@ -1659,8 +1683,7 @@ function SearchPageContent() {
               {tomorrowIso <= maxDateIso && (
                 <Button
                   type="button"
-                  size="compact"
-                  variant={selectedDate === tomorrowIso ? "primary" : "outline"}
+                  {...dayChoice(selectedDate === tomorrowIso, appView)}
                   onClick={() => updateSelectedDate(tomorrowIso)}
                   tooltip="Zeigt, welche Kinder morgen laut Plan kommen."
                 >
@@ -1706,7 +1729,9 @@ function SearchPageContent() {
         onChange: (value: string | string[]) =>
           updateAttendanceFilter(value as StatusFilter),
         options: [
-          { value: "all", label: "Alle Status" },
+          // Handy: Das Blatt nennt den Abschnitt „Status“ schon; „Alle
+          // Status“ läse sich dort doppelt.
+          { value: "all", label: appView ? "Alle" : "Alle Status" },
           ...(isToday ? LIVE_STATUS_FILTER_OPTIONS : []),
           ...PLANNED_ABSENCE_STATUS_FILTER_OPTIONS,
         ],
@@ -1807,6 +1832,7 @@ function SearchPageContent() {
         : []),
     ],
     [
+      appView,
       selectedYears,
       selectedSchoolClasses,
       selectedGroupIds,
@@ -2200,7 +2226,13 @@ function SearchPageContent() {
     if (!rowsLoaded) return null;
     const total = students.length;
     if (!isToday) {
-      return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
+      // App (#8070): Die Gesamtzahl steht wie am Desktop als Zähler in der
+      // Suchzeile; ohne Tageszahlen bleibt die Titelzeile frei.
+      if (appView) return null;
+      return {
+        summary: `${total} ${total === 1 ? "Kind" : "Kinder"}`,
+        compact: null,
+      };
     }
     // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
     // ist (Ort vor Status, #6371). Entschuldigt oder auf Klassenfahrt zählt
@@ -2238,16 +2270,33 @@ function SearchPageContent() {
         inCare += 1;
       }
     }
-    return (
+    // App (#8070): Die Chips stehen in der Titelzeile neben „Alle Kinder“,
+    // also kurz: „16 von 118 da · 0 krank“. Die Gesamtzahl steht im ersten
+    // Chip statt als zweiter, knopfartiger Zähler neben dem Filter. „krank“
+    // steht wie am Desktop immer im Kopf, auch mit 0 (Runde 21).
+    const summary = (
       <TenantPageStats
-        items={[
-          { value: total, label: total === 1 ? "Kind" : "Kinder" },
-          { value: inCare, label: "in der OGS" },
-          { value: sick, label: "krank" },
-        ]}
+        items={
+          appView
+            ? [
+                { value: inCare, label: `von ${total} da` },
+                { value: sick, label: "krank" },
+              ]
+            : [
+                { value: total, label: total === 1 ? "Kind" : "Kinder" },
+                { value: inCare, label: "in der OGS" },
+                { value: sick, label: "krank" },
+              ]
+        }
       />
     );
-  }, [isToday, students, rowsLoaded]);
+    // Schmaler Kopf beim Rollen: ein Kurzstatus, die Zahl der Kinder, die
+    // da sind; daneben brauchen Lupe und Filter ihren Platz.
+    const compact = appView ? (
+      <TenantPageStats items={[{ value: inCare, label: "da" }]} />
+    ) : null;
+    return { summary, compact };
+  }, [isToday, students, rowsLoaded, appView]);
 
   const selectedStudentsForBulk = useMemo(
     () =>
@@ -2449,6 +2498,7 @@ function SearchPageContent() {
   // Die Spaltenwahl wirkt nur am Computer: auf dem Handy zeigt die Liste
   // je Kind eine Zeile mit Name, Status und Gehzeit (#3834).
   const isPhone = useMediaQuery(BELOW_MD);
+  const appList = appView && !(checkinModeAvailable && schoolCheckin.isActive);
   const changeView = useCallback(
     (next: "tiles" | "table") => {
       if (next === collectionView.view) return;
@@ -2540,101 +2590,127 @@ function SearchPageContent() {
   // only the results region skeletonizes while the session resolves. Note:
   // with required: true, unauthenticated users are auto-redirected to login.
 
+  // Die Einträge des „⋮“ am Computer. Am Telefon stehen sie direkt im „…“
+  // der Kopfkarte, statt als zweites Menü darin (#8070, Erreichbarkeit).
+  const searchMenuItems: OverflowMenuEntry[] = [
+    ...childScope.menuItems,
+    {
+      // Abwesenheits-Übersicht (#2288): bewusst kein eigener
+      // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
+      // ohnehin nach einem Kind sucht.
+      label: "Abwesenheiten",
+      description: "Öffnet die Übersicht, welche Kinder wann fehlen.",
+      icon: <CalendarRange className="h-4 w-4" aria-hidden />,
+      onClick: () => router.push("/absences"),
+    },
+    // Der Export verlangt users:read; der Gast hat es nicht.
+    ...(canExportStudents(session)
+      ? [
+          {
+            label: "Exportieren",
+            description:
+              "Öffnet den Export der Kinder aus der aktuellen Filterung.",
+            icon: <Download className="h-4 w-4" aria-hidden />,
+            onClick: () => setIsExportOpen(true),
+            disabled: awaitsSearchFilters,
+            badge: rowsLoaded ? filteredStudents.length : undefined,
+          },
+        ]
+      : []),
+    // Nur mit vollständig geladenen, sichtbaren Kindern: ein
+    // Brief an eine abgeschnittene Liste würde Empfänger
+    // auslassen.
+    ...(parentAnnouncementsAvailable &&
+    rowsLoaded &&
+    !isSearchResultValidating &&
+    !hasLoadError &&
+    truncatedTotal === null &&
+    filteredStudents.length > 0
+      ? [
+          {
+            label: "Elternbrief schreiben",
+            description:
+              "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
+            icon: <FileText className="h-4 w-4" aria-hidden />,
+            onClick: writeParentLetter,
+            badge: filteredStudents.length,
+          },
+        ]
+      : []),
+    // Die Spaltenwahl der Liste (#3834) steht hier und nicht
+    // als eigener Knopf neben dem Umschalter.
+    ...(showTable && !isPhone
+      ? columnMenuEntries(
+          tableColumns,
+          collectionView.hiddenColumns,
+          collectionView.setColumnVisible,
+        )
+      : []),
+    ...(showTable && isPhone
+      ? phoneDetailMenuEntries(
+          tableColumns,
+          collectionView.phoneDetail,
+          collectionView.setPhoneDetail,
+        )
+      : []),
+  ];
+
   return (
     <>
       {/* Kopfkarte wie auf jeder Tenant-Seite: Titel, Statuszeile, Aktionen,
           darunter Suche und Filter. */}
       <TenantPage
         title="Alle Kinder"
+        appStatsInline
+        // Beim Rollen schrumpft der Kopf wie auf den anderen Seiten auf eine
+        // Zeile; die Lupe darin führt zurück ins Suchfeld (Runde 19).
+        appShrinkToTitle
         info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
-        stats={studentSummary}
+        stats={studentSummary?.summary}
+        appCompactStats={studentSummary?.compact ?? undefined}
         statsLoading={!hasFetchedOnce || isDateTransition}
+        overflowMenu={appView ? searchMenuItems : undefined}
+        // Am Telefon gibt es nur die Zeilenliste (kein Umschalter), und die
+        // Menüeinträge stehen direkt im „…“ (`overflowMenu`).
         actions={
-          <>
-            <CollectionViewSwitch
-              value={collectionView.view}
-              onChange={changeView}
-            />
-            {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
+          appView ? undefined : (
+            <>
+              <CollectionViewSwitch
+                value={collectionView.view}
+                onChange={changeView}
+              />
+              {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
                 dieses Menü erreicht man die Aufsicht, wenn die Schule Kinder
                 nur hier finden lässt (#1321). */}
-            <OverflowMenu
-              tourTarget="child-search-menu"
-              items={[
-                ...childScope.menuItems,
-                {
-                  // Abwesenheits-Übersicht (#2288): bewusst kein eigener
-                  // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
-                  // ohnehin nach einem Kind sucht.
-                  label: "Abwesenheiten",
-                  description:
-                    "Öffnet die Übersicht, welche Kinder wann fehlen.",
-                  icon: <CalendarRange className="h-4 w-4" aria-hidden />,
-                  onClick: () => router.push("/absences"),
-                },
-                // Der Export verlangt users:read; der Gast hat es nicht.
-                ...(canExportStudents(session)
-                  ? [
-                      {
-                        label: "Exportieren",
-                        description:
-                          "Öffnet den Export der Kinder aus der aktuellen Filterung.",
-                        icon: <Download className="h-4 w-4" aria-hidden />,
-                        onClick: () => setIsExportOpen(true),
-                        disabled: awaitsSearchFilters,
-                        badge: rowsLoaded ? filteredStudents.length : undefined,
-                      },
-                    ]
-                  : []),
-                // Nur mit vollständig geladenen, sichtbaren Kindern: ein
-                // Brief an eine abgeschnittene Liste würde Empfänger
-                // auslassen.
-                ...(parentAnnouncementsAvailable &&
-                rowsLoaded &&
-                !isSearchResultValidating &&
-                !hasLoadError &&
-                truncatedTotal === null &&
-                filteredStudents.length > 0
-                  ? [
-                      {
-                        label: "Elternbrief schreiben",
-                        description:
-                          "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
-                        icon: <FileText className="h-4 w-4" aria-hidden />,
-                        onClick: writeParentLetter,
-                        badge: filteredStudents.length,
-                      },
-                    ]
-                  : []),
-                // Die Spaltenwahl der Liste (#3834) steht hier und nicht
-                // als eigener Knopf neben dem Umschalter.
-                ...(showTable && !isPhone
-                  ? columnMenuEntries(
-                      tableColumns,
-                      collectionView.hiddenColumns,
-                      collectionView.setColumnVisible,
-                    )
-                  : []),
-                ...(showTable && isPhone
-                  ? phoneDetailMenuEntries(
-                      tableColumns,
-                      collectionView.phoneDetail,
-                      collectionView.setPhoneDetail,
-                    )
-                  : []),
-              ]}
-              ariaLabel="Weitere Aktionen"
-            />
-          </>
+              <OverflowMenu
+                tourTarget="child-search-menu"
+                items={searchMenuItems}
+                ariaLabel="Weitere Aktionen"
+              />
+            </>
+          )
         }
         // Der Zähler ändert sich mit der Filterung und gehört deshalb in
         // die Filterzeile, nicht in die Titelzeile.
         badge={
-          rowsLoaded
+          // Handy: Ungefiltert nennt der Chip der Titelzeile die Gesamtzahl
+          // („16 von 118 da“); der Zähler erscheint erst, wenn Suche oder
+          // Filter die Liste verkleinern („3 Kinder“).
+          rowsLoaded &&
+          !(appView && isToday && filteredStudents.length === students.length)
             ? {
                 count: filteredStudents.length,
                 icon: <MotoConceptIcon concept={childrenConcept} size={20} />,
+                // Telefon (#8070): Die Titelzeile trägt nur „da“ und
+                // „krank“; die Gesamtzahl steht hier beschriftet wie am
+                // Desktop („118 Kinder“), nicht als nackte Zahl.
+                ...(appView
+                  ? {
+                      compactLabel:
+                        filteredStudents.length === 1 ? "Kind" : "Kinder",
+                    }
+                  : {}),
               }
             : undefined
         }
@@ -2669,7 +2745,31 @@ function SearchPageContent() {
         activeFilters={activeFilters}
         // Sechs Filter sprengen die Zeile bis hinauf zu Tablet-Breiten; die
         // Filterschaltfläche sammelt sie hinter einer Fläche mit Abschnitten.
-        filterPanel={{ sections: filterSections }}
+        // Handy (#8070): „Anwesenheit“ (Tag, Status) ist der häufigste
+        // Filter und steht im Blatt zuerst, auch am iPhone SE ohne Rollen.
+        filterPanel={{
+          sections: appView
+            ? [
+                // Handy: Ein Haken vor „Anwesenheit“ las sich wie „gewählt“;
+                // ein Kalender sagt, dass es um den Tag geht.
+                ...filterSections
+                  .filter((section) => section.title === "Anwesenheit")
+                  .map((section) => ({
+                    ...section,
+                    icon: (
+                      <MotoDuotoneIcon
+                        icon={CalendarBlankIcon}
+                        tone="blue"
+                        size="100%"
+                      />
+                    ),
+                  })),
+                ...filterSections.filter(
+                  (section) => section.title !== "Anwesenheit",
+                ),
+              ]
+            : filterSections,
+        }}
         onClearAllFilters={clearAllFilters}
         // Ein Ladefehler ist der Fehlerzustand des Gerüsts. Fehlende Rechte
         // stehen als eingebetteter Standardzustand im Inhalt.
@@ -2872,7 +2972,7 @@ function SearchPageContent() {
           Check-in toggles TODAY's attendance, so it hides on other dates. */}
           {/* In der Liste markieren die Kästchen; der Modus gehört zu den
               Kacheln (#3834). */}
-          {checkinModeAvailable && !showTable && (
+          {checkinModeAvailable && !showTable && !appList && (
             <div className="mb-3 md:hidden">
               <SchoolCheckinModeMobile
                 isActive={schoolCheckin.isActive}
@@ -2955,6 +3055,46 @@ function SearchPageContent() {
               {(() => {
                 if (showGridSkeleton) {
                   return <StudentCardGridSkeleton />;
+                }
+                if (appList) {
+                  return (
+                    <>
+                      <StudentListApp
+                        students={sortedStudents}
+                        groups={groupedStudents}
+                        alphabetic={
+                          effectiveGroupMode === "none" && sortMode === "name"
+                        }
+                        isToday={isToday}
+                        studentHref={(student) =>
+                          `/students/${student.id}?from=${fromParam}`
+                        }
+                        classLabel={holidayGuestLabel}
+                        userGroups={myGroups}
+                        groupRooms={myGroupRooms}
+                        supervisedRooms={mySupervisedRooms}
+                        trackingData={trackingData}
+                      />
+                      {/* App (#8070): An- und Abmelden als beschriftete
+                          Aktion in Daumennähe. */}
+                      {checkinModeAvailable ? (
+                        <ActionBar>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            className="gap-2"
+                            onClick={schoolCheckin.toggleActive}
+                            disabled={schoolCheckin.isBulkRunning}
+                            tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
+                          >
+                            <ListChecks className="size-5" aria-hidden="true" />
+                            Kinder an- und abmelden
+                          </Button>
+                        </ActionBar>
+                      ) : null}
+                    </>
+                  );
                 }
                 if (showTable) {
                   return (
@@ -3053,23 +3193,26 @@ function SearchPageContent() {
           whose filter panel switches to desktop at `xl`. Both the filter sheet and the FAB
           live under the same boundary so iPad Air gets the consistent
           tablet UX. */}
-      {checkinModeAvailable && !schoolCheckin.isActive && !showTable && (
-        <div className="hidden md:block xl:hidden">
-          <SchoolCheckinFab
-            variant="floating"
-            floatingUntil="xl"
-            isActive={schoolCheckin.isActive}
-            onToggle={schoolCheckin.toggleActive}
-            successCount={
-              schoolCheckin.selectionActive
-                ? selectedStudentsForBulk.length
-                : schoolCheckin.successCount
-            }
-            pendingCount={schoolCheckin.pendingIds.size}
-            disabled={schoolCheckin.isBulkRunning}
-          />
-        </div>
-      )}
+      {checkinModeAvailable &&
+        !schoolCheckin.isActive &&
+        !showTable &&
+        !appView && (
+          <div className="hidden md:block xl:hidden">
+            <SchoolCheckinFab
+              variant="floating"
+              floatingUntil="xl"
+              isActive={schoolCheckin.isActive}
+              onToggle={schoolCheckin.toggleActive}
+              successCount={
+                schoolCheckin.selectionActive
+                  ? selectedStudentsForBulk.length
+                  : schoolCheckin.successCount
+              }
+              pendingCount={schoolCheckin.pendingIds.size}
+              disabled={schoolCheckin.isBulkRunning}
+            />
+          </div>
+        )}
     </>
   );
 }

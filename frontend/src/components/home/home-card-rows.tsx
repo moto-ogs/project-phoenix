@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 
+import { ChevronRight } from "lucide-react";
+
 import { ButtonLink } from "~/components/ui/button";
 import Link from "~/components/ui/navigation-link";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
@@ -43,6 +45,23 @@ export function HomeCardLink({
     >
       {children}
     </ButtonLink>
+  );
+}
+
+/**
+ * Rechts in einer Zeile, die woandershin führt („Alle anzeigen“, „Zur
+ * Gruppe“, „Heute öffnen“): Zusatz und der Pfeil › wie in „Mehr“
+ * (`ListRowLink`), damit jede Link-Zeile der App gleich aussieht.
+ */
+export function LinkRowMeta({ children }: { readonly children?: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {children}
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-gray-500"
+        aria-hidden="true"
+      />
+    </span>
   );
 }
 

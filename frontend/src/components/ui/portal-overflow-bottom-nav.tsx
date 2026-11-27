@@ -75,7 +75,10 @@ export function PortalOverflowBottomNav({
   activeInMore = false,
   moreIcon,
   search,
+  className,
 }: {
+  /** Zusätzliche Klassen der Leiste (iPad quer im Personal-Portal, #8070). */
+  readonly className?: string;
   readonly items: readonly PortalOverflowNavItem[];
   /** Das Attribut, das jeden Eintrag für Touren und Tests benennt. */
   readonly navItemAttribute: `data-${string}`;
@@ -174,7 +177,11 @@ export function PortalOverflowBottomNav({
   };
 
   if (!crowded) {
-    return <PortalBottomNav listClassName="gap-0">{barLinks}</PortalBottomNav>;
+    return (
+      <PortalBottomNav listClassName="gap-0" className={className}>
+        {barLinks}
+      </PortalBottomNav>
+    );
   }
 
   const shownInMore = activeInMore
@@ -183,6 +190,7 @@ export function PortalOverflowBottomNav({
 
   return (
     <PortalMoreBottomNav
+      className={className}
       listClassName="gap-0"
       open={moreOpen}
       onOpenChange={setMoreOpen}

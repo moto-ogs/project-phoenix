@@ -582,7 +582,7 @@ export function ToastProvider({
       {children}
 
       <div
-        className={`pointer-events-none fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9000] mx-auto flex max-h-[70vh] max-w-sm flex-col gap-2 overflow-y-auto md:hidden ${FIXED_LAYER_SHIFT}`}
+        className={`app:bottom-[calc(5.75rem+env(safe-area-inset-bottom)+var(--app-action-bar-space,0px))] app:flex pointer-events-none fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9000] mx-auto flex max-h-[70vh] max-w-sm flex-col gap-2 overflow-y-auto md:hidden ${FIXED_LAYER_SHIFT}`}
       >
         {isMobile &&
           items.map((item) => (
@@ -598,7 +598,7 @@ export function ToastProvider({
       </div>
 
       <div
-        className={`pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex ${FIXED_LAYER_SHIFT}`}
+        className={`app:hidden pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex ${FIXED_LAYER_SHIFT}`}
       >
         {!isMobile &&
           items.map((item) => (

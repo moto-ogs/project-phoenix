@@ -1,9 +1,16 @@
 "use client";
 
 import { getStatusDayRange, type StatusDayRange } from "./status-day-range";
-
+import { cn } from "~/lib/utils";
 import type * as studentsContract from "~/lib/contract/students.generated";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { HolidayGuestSection } from "~/components/students/holiday-guest-section";
@@ -78,7 +85,10 @@ import { ParentMessagesCard } from "~/components/students/parent-messages-card";
 import { StudentEnrollmentsTab } from "~/components/students/student-enrollments-tab";
 import { StudentDokumenteTab } from "~/components/students/dokumente-tab";
 import { StudentNotizenTab } from "~/components/students/student-notizen-tab";
-import { StudentPermanentNotesCard } from "~/components/students/student-permanent-notes-card";
+import {
+  PERMANENT_NOTES_DESCRIPTION,
+  StudentPermanentNotesCard,
+} from "~/components/students/student-permanent-notes-card";
 import {
   AggregatedRequestList,
   type AggregatedRequestFilters,
@@ -86,7 +96,30 @@ import {
 import { FamilyProtectionControl } from "~/components/students/family-protection-control";
 import { StudentConsentsReadOnly } from "~/components/students/student-consents-read-only";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+import {
+  attendanceActorLabel,
+  type AttendanceActor,
+} from "~/lib/attendance-actor";
+import { schoolClassLabel } from "~/lib/school-class-label";
+import { OverlaySheet } from "~/components/ui/overlay-sheet";
+import { useMinuteClock } from "~/lib/pickup-helpers";
+import { getStudentTimeStatus } from "~/lib/student-time-status";
+import { useDeviceContext } from "~/lib/device-context";
+import {
+  StudentAppActionBar,
+  StudentAppQuickActionRow,
+  studentAppQuickActions,
+} from "~/components/students/student-app-action-bar";
+import { StudentSplitFrame } from "~/components/students/student-split-frame";
+import {
+  RequestedQuickAction,
+  STUDENT_QUICK_ACTION_PARAM,
+  isStudentQuickAction,
+} from "~/components/students/requested-quick-action";
 import {
   StudentCheckoutSection,
   StudentCheckinSection,
@@ -124,7 +157,11 @@ import {
 } from "~/lib/student-status-days-api";
 import { parseISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
+import {
+  useAttendanceWebEnabled,
+  useModuleBooked,
+  useWeekendFollowsFriday,
+} from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
 import {
@@ -346,9 +383,14 @@ const PARENT_DATA_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
 /**
  * Reiter der Kindakte für die Kopfkarte. Alle Reiter stehen nebeneinander;
  * was nicht in die Zeile passt, räumt das Seitengerüst gemessen unter „Mehr".
+ * Die App (#8070) behält die Namen von heute („Stammdaten“ …): Wer die Akte
+ * kennt, findet sie am Telefon wieder.
  */
 function buildStudentTabItems(tabs: StudentTabId[]) {
-  return tabs.map((tab) => ({ value: tab as string, label: TAB_LABELS[tab] }));
+  return tabs.map((tab) => ({
+    value: tab as string,
+    label: TAB_LABELS[tab],
+  }));
 }
 
 // A detail tab mounts its readers on first opening, including deep links.
@@ -430,6 +472,7 @@ export default function StudentDetailPage() {
 }
 
 function StudentDetailPageContent() {
+  const attendanceWebEnabled = useAttendanceWebEnabled();
   const tenantMutate = useTenantMutate();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -446,6 +489,11 @@ function StudentDetailPageContent() {
   // dem aktuellen Stand, etwa einer inzwischen geänderten Notiz.
   const dialogErrors = useApiFormError();
   const { data: session, status: sessionStatus } = useSession();
+  // App (#8070): Kopf mit Chips und Aktionsleiste statt Statuszeilen und
+  // Kachelreihe. Vor der Hydration gilt der Desktop-Zweig.
+  const device = useDeviceContext();
+  const appHead = device.resolved && device.isApp;
+  const requestedAction = searchParams.get(STUDENT_QUICK_ACTION_PARAM);
   const weekendFollowsFriday = useWeekendFollowsFriday();
   const berlinToday = useBerlinToday();
 
@@ -1459,17 +1507,150 @@ function StudentDetailPageContent() {
   // RENDER
   // =============================================================================
 
-  return (
+  // Ohne eine einzige Schnellaktion bliebe eine leere Zeile im Kopf.
+  const quickActions: ReactNode = hasQuickActions ? (
+    <StudentQuickActions
+      student={student}
+      showCheckout={showCheckout}
+      showCheckin={showCheckin}
+      hasAbsenceWriteAccess={hasAbsenceWriteAccess}
+      hasSickExcusedWriteAccess={hasSickExcusedWriteAccess}
+      onCheckoutClick={() => {
+        setCheckoutNote("");
+        setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+        setShowConfirmCheckout(true);
+      }}
+      onCheckinClick={() => setShowConfirmCheckin(true)}
+      onSickClick={handleSickClick}
+      sickLoading={sickLoading}
+      isQuickExcused={isQuickExcused}
+      onExcusedClick={handleExcusedClick}
+      excusedLoading={excusedLoading}
+      onClassTripClick={() => setPlannedStatusModal("class_trip")}
+      plannedStatusLoading={plannedStatusLoading}
+    />
+  ) : undefined;
+
+  const appQuickActions = studentAppQuickActions(
+    {
+      showCheckout,
+      showCheckin,
+      canSickExcused: hasSickExcusedWriteAccess,
+      canPlanAbsence: hasAbsenceWriteAccess,
+      isSick: student.sick ?? false,
+      isExcused: isQuickExcused,
+      isClassTrip: student.class_trip ?? false,
+      onCheckout: () => {
+        setCheckoutNote("");
+        setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+        setShowConfirmCheckout(true);
+      },
+      onCheckin: () => setShowConfirmCheckin(true),
+      onSick: handleSickClick,
+      onExcused: handleExcusedClick,
+      onClassTrip: () => setPlannedStatusModal("class_trip"),
+      sickLoading,
+      excusedLoading,
+      plannedStatusLoading,
+    },
+    attendanceWebEnabled,
+  );
+
+  // App (#8070): Das „…“ im Kopf trägt nur die seltenen Wege der Akte. Die
+  // Tagesaktionen stehen sichtbar in der Leiste (Hauptaktion) und in der
+  // Kachelzeile unter der Kopfkarte (Feedback 27.11.).
+  const fullRecord = hasFullAccess && !isHolidayGuest;
+  const appMenuEntries: OverflowMenuEntry[] = [
+    ...(fullRecord && hasWriteAccess
+      ? [
+          {
+            label: "Stammdaten bearbeiten",
+            description: "Name, Klasse, Gruppe, Heimwege und Gesundheit.",
+            onClick: () => {
+              handleTabChange("stammdaten");
+              setShowPersonalInfoEdit(true);
+            },
+          },
+        ]
+      : []),
+    // Anwesenheitsprotokoll und Änderungsverlauf stehen nur unter
+    // „Historien“: ein Ort, ein Name.
+  ];
+
+  // Die ganze Statuszeile des Desktops (Klasse, Gruppe, geplante und
+  // tatsächliche Zeiten, wer an- und abgemeldet hat, Gründe). Die App zeigt
+  // sie im Blatt „Heute“ hinter der Chip-Zeile (#8070, kein
+  // Informationsverlust am Handy).
+  const headStatus = (
+    <span className="block">
+      <span className="mb-1 flex flex-wrap items-center gap-2">
+        <StudentHeaderLocation
+          student={student}
+          myGroups={myGroups}
+          myGroupRooms={myGroupRooms}
+          mySupervisedRooms={mySupervisedRooms}
+          todayArrivalPlannedTime={todayArrival.time}
+          isArrivalException={todayArrival.isException}
+          todayArrivalNote={todayArrival.note}
+          isArrivalAbsent={todayArrival.isAbsent}
+        />
+      </span>
+      <StudentHeaderStats
+        student={student}
+        todayPickupPlannedTime={todayPickup.time}
+        todayPickupActualTime={student.actual_pickup_time}
+        todayPickupNote={todayPickup.note}
+        todayCheckoutNote={student.actual_pickup_note}
+        isPickupException={todayPickup.isException}
+        todayArrivalPlannedTime={todayArrival.time}
+        todayArrivalActualTime={student.actual_arrival_time}
+        isArrivalException={todayArrival.isException}
+        todayArrivalNote={todayArrival.note}
+        isArrivalAbsent={todayArrival.isAbsent}
+        sickReason={currentSickReason}
+        todayArrivalBy={student.actual_arrival_by}
+        todayPickupBy={student.actual_pickup_by}
+      />
+    </span>
+  );
+
+  // App (#8070): Orts-Abzeichen ohne „seit …“ für Kopf und schmalen Kopf.
+  const appLocation = (
+    <StudentHeaderLocation
+      student={student}
+      myGroups={myGroups}
+      myGroupRooms={myGroupRooms}
+      mySupervisedRooms={mySupervisedRooms}
+      todayArrivalPlannedTime={todayArrival.time}
+      isArrivalException={todayArrival.isException}
+      todayArrivalNote={todayArrival.note}
+      isArrivalAbsent={todayArrival.isAbsent}
+      showLocationSince={false}
+    />
+  );
+
+  const page = (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
           Aufenthaltsort als Aktion und die Schnellaktionen darunter. */
     <TenantPage
-      back
+      // iPad quer (#8070): Die Liste steht daneben, ein Zurück-Pfeil führte
+      // nur zu ihr.
+      back={!(appHead && device.isSplit)}
       backHref={referrer}
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
-      info={isHolidayGuest ? undefined : STUDENT_DETAIL_INFO}
+      info={
+        isHolidayGuest
+          ? undefined
+          : appHead
+            ? // Am Telefon steht hier auch der Erklärsatz der Karte
+              // „Dauerhafte Hinweise“ (Runde 19).
+              `${STUDENT_DETAIL_INFO} Dauerhafte Hinweise: ${PERMANENT_NOTES_DESCRIPTION}`
+            : STUDENT_DETAIL_INFO
+      }
+      overflowMenu={appHead ? appMenuEntries : undefined}
       actions={
         canManageRecord ? (
           <StudentRecordActions
@@ -1480,67 +1661,40 @@ function StudentDetailPageContent() {
           />
         ) : undefined
       }
-      stats={
-        // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
-        // Statuszeile des Identitätskopfes und nicht im Aktionsplatz, wo er
-        // wie eine Schaltfläche gelesen würde.
-        <span className="block">
-          <span className="mb-1 flex flex-wrap items-center gap-2">
-            <StudentHeaderLocation
-              student={student}
-              myGroups={myGroups}
-              myGroupRooms={myGroupRooms}
-              mySupervisedRooms={mySupervisedRooms}
-              todayArrivalPlannedTime={todayArrival.time}
-              isArrivalException={todayArrival.isException}
-              todayArrivalNote={todayArrival.note}
-              isArrivalAbsent={todayArrival.isAbsent}
-            />
-          </span>
-          <StudentHeaderStats
+      // Beim Rollen bleibt wie auf jeder Seite nur die schmale Titelzeile;
+      // die Reiter rollen mit der Kopfkarte weg. Klebten sie darunter,
+      // lag die Kante einer Karte darunter wie ein Rest des Kopfes
+      // (Runde 19).
+      appShrinkToTitle
+      appCompactStats={
+        appHead ? (
+          <AppStudentCompactStatus
+            location={appLocation}
             student={student}
-            todayPickupPlannedTime={todayPickup.time}
-            todayPickupActualTime={student.actual_pickup_time}
-            todayPickupNote={todayPickup.note}
-            todayCheckoutNote={student.actual_pickup_note}
-            isPickupException={todayPickup.isException}
-            todayArrivalPlannedTime={todayArrival.time}
-            todayArrivalActualTime={student.actual_arrival_time}
-            isArrivalException={todayArrival.isException}
-            todayArrivalNote={todayArrival.note}
-            isArrivalAbsent={todayArrival.isAbsent}
-            sickReason={currentSickReason}
-            todayArrivalBy={student.actual_arrival_by}
-            todayPickupBy={student.actual_pickup_by}
-          />
-        </span>
-      }
-      searchSlotHeight="natural"
-      // Ohne eine einzige Schnellaktion bliebe eine leere Zeile im Kopf.
-      searchSlot={
-        hasQuickActions ? (
-          <StudentQuickActions
-            student={student}
-            showCheckout={showCheckout}
-            showCheckin={showCheckin}
-            hasAbsenceWriteAccess={hasAbsenceWriteAccess}
-            hasSickExcusedWriteAccess={hasSickExcusedWriteAccess}
-            onCheckoutClick={() => {
-              setCheckoutNote("");
-              setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
-              setShowConfirmCheckout(true);
-            }}
-            onCheckinClick={() => setShowConfirmCheckin(true)}
-            onSickClick={handleSickClick}
-            sickLoading={sickLoading}
-            isQuickExcused={isQuickExcused}
-            onExcusedClick={handleExcusedClick}
-            excusedLoading={excusedLoading}
-            onClassTripClick={() => setPlannedStatusModal("class_trip")}
-            plannedStatusLoading={plannedStatusLoading}
+            plannedArrival={todayArrival.time}
+            plannedPickup={todayPickup.time}
           />
         ) : undefined
       }
+      stats={
+        appHead ? (
+          <AppStudentHeadStatus
+            location={appLocation}
+            student={student}
+            plannedArrival={todayArrival.time}
+            plannedPickup={todayPickup.time}
+            details={headStatus}
+          />
+        ) : (
+          // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
+          // Statuszeile des Identitätskopfes und nicht im Aktionsplatz, wo er
+          // wie eine Schaltfläche gelesen würde.
+          headStatus
+        )
+      }
+      searchSlotHeight="natural"
+      // Ohne eine einzige Schnellaktion bliebe eine leere Zeile im Kopf.
+      searchSlot={appHead ? undefined : quickActions}
       tabs={
         isHolidayGuest
           ? undefined
@@ -1554,6 +1708,32 @@ function StudentDetailPageContent() {
       }
       overlays={
         <>
+          {/* App (#8070): die Schnellaktionen in Daumennähe über der
+              Pill statt als Kachelreihe im Kopf. */}
+          {appHead ? <StudentAppActionBar entries={appQuickActions} /> : null}
+          {/* Aktion aus dem Kind-Blatt der Liste (#8070): öffnet hier
+              denselben Dialog wie die Kachel. */}
+          {requestedAction && isStudentQuickAction(requestedAction) ? (
+            <RequestedQuickAction
+              action={requestedAction}
+              run={{
+                abmelden: showCheckout
+                  ? () => {
+                      setCheckoutNote("");
+                      setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+                      setShowConfirmCheckout(true);
+                    }
+                  : undefined,
+                anmelden: showCheckin
+                  ? () => setShowConfirmCheckin(true)
+                  : undefined,
+                krank: hasSickExcusedWriteAccess ? handleSickClick : undefined,
+                entschuldigen: hasSickExcusedWriteAccess
+                  ? handleExcusedClick
+                  : undefined,
+              }}
+            />
+          ) : null}
           {/* Checkout Confirmation Modal */}
           <Modal
             isOpen={showConfirmCheckout}
@@ -1785,6 +1965,9 @@ function StudentDetailPageContent() {
     >
       <LoadErrorAlert error={recordAfterWrite.error} />
       <LoadErrorAlert error={statusDaysLoad.error} />
+      {/* App (#8070): die übrigen Tagesaktionen sichtbar unter der Kopfkarte,
+          wie die Kachelreihe am Desktop; die Hauptaktion steht in der Leiste. */}
+      {appHead ? <StudentAppQuickActionRow entries={appQuickActions} /> : null}
       {careWithdrawalLoad.error ? (
         <div>
           <LoadErrorAlert error={careWithdrawalLoad.error} />
@@ -1895,6 +2078,12 @@ function StudentDetailPageContent() {
       )}
     </TenantPage>
   );
+  // iPad quer (#8070): Kinderliste ⅓ links, Akte ⅔ rechts.
+  return (
+    <StudentSplitFrame studentId={studentId} from={searchParams.get("from")}>
+      {page}
+    </StudentSplitFrame>
+  );
 }
 
 // =============================================================================
@@ -1955,7 +2144,7 @@ function StudentQuickActions({
     // laesst -- die Zeile lief rechts aus dem Bild, das Menue war gar nicht
     // erreichbar. Ab sm stehen sie wieder in einer Reihe.
     <div
-      className="grid grid-cols-2 gap-3 sm:flex sm:gap-4"
+      className="app:flex app:gap-1.5! grid grid-cols-2 gap-3 sm:flex sm:gap-4"
       aria-label="Schnellaktionen"
     >
       {showCheckout && (
@@ -1987,6 +2176,349 @@ function StudentQuickActions({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Rote Zeit der Kindakte in der App (#8070): eine überschrittene Ankunft oder
+ * Abholung, dieselbe Rechnung wie „Heutige Abholung … (Überfällig …)“ am
+ * Desktop; ein krankes oder entschuldigtes Kind ist nie überfällig.
+ */
+function useAppStudentDay(
+  student: Student,
+  plannedArrival?: string,
+  plannedPickup?: string,
+) {
+  const now = useMinuteClock();
+  const arrived = Boolean(student.actual_arrival_time);
+  const pickedUp = Boolean(student.actual_pickup_time);
+  const day = {
+    plannedArrival,
+    actualArrival: student.actual_arrival_time,
+    plannedPickup,
+    actualPickup: student.actual_pickup_time,
+    checkedIn: !isNotCheckedInLocation(student.current_location),
+  };
+  const absence = {
+    sick: student.sick,
+    classTrip: student.class_trip,
+    excused: student.excused,
+    currentLocation: student.current_location,
+  };
+  const overdue = (kind: "arrival" | "pickup", plannedTime?: string) => {
+    const status = getStudentTimeStatus({
+      plannedTime,
+      actualTime:
+        kind === "arrival"
+          ? student.actual_arrival_time
+          : student.actual_pickup_time,
+      now,
+      kind,
+      day,
+      ...absence,
+    });
+    return status.state === "very-overdue" ||
+      status.state === "slightly-overdue"
+      ? status
+      : null;
+  };
+  const arrivalLate = arrived ? null : overdue("arrival", plannedArrival);
+  const pickupLate = pickedUp ? null : overdue("pickup", plannedPickup);
+  const late = pickupLate ?? arrivalLate;
+  return { now, day, arrived, pickedUp, late, pickupLate };
+}
+
+function AppStudentLateBadge({
+  late,
+  pickup,
+  short = false,
+}: Readonly<{
+  late: ReturnType<typeof getStudentTimeStatus>;
+  pickup: boolean;
+  /**
+   * Zweizeilig klein („Abholung 16:00“ über „überfällig“), für den schmalen
+   * Kopf neben dem Namen: Er sagt, was überfällig ist, und lässt dem Namen
+   * auch am iPhone SE seinen Platz (Runde 19).
+   */
+  short?: boolean;
+}>) {
+  if (short) {
+    return (
+      <span
+        className={cn(
+          "flex flex-col items-end text-xs leading-4 font-medium",
+          late.state === "very-overdue"
+            ? "text-moto-red-strong"
+            : "text-moto-orange-strong",
+        )}
+      >
+        <span>{`${pickup ? "Abholung" : "Ankunft"} ${late.displayTime ?? ""}`}</span>
+        <span>überfällig</span>
+      </span>
+    );
+  }
+  return (
+    <StatusBadge
+      tone={late.state === "very-overdue" ? "red" : "orange"}
+      // Im schmalen Kopf trägt das Wort die Warnung; ohne Warnzeichen
+      // bleibt der Name daneben am iPhone SE ganz stehen.
+      icon={
+        short ? undefined : (
+          <AlertTriangle className="size-3.5" aria-hidden="true" />
+        )
+      }
+      label={
+        short
+          ? `${late.displayTime ?? ""} überfällig`
+          : `${pickup ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`
+      }
+    />
+  );
+}
+
+/**
+ * Schmaler Kopf beim Rollen (#8070): Ort und, falls nötig, die rote Zeit
+ * bleiben neben dem Namen stehen.
+ */
+function AppStudentCompactStatus({
+  location,
+  student,
+  plannedArrival,
+  plannedPickup,
+}: Readonly<{
+  location: ReactNode;
+  student: Student;
+  plannedArrival?: string;
+  plannedPickup?: string;
+}>) {
+  const { late, pickupLate, arrived, pickedUp } = useAppStudentDay(
+    student,
+    plannedArrival,
+    plannedPickup,
+  );
+  // Mit roter Zeit nur sie, kurz mit dem Wort „überfällig“ (eine Uhrzeit
+  // allein sagte nicht, was mit ihr ist): Der Name braucht den Platz, der
+  // volle Satz steht im Kopf darüber. Sonst genau ein Kurzstatus wie auf
+  // jeder Seite (Runde 21): die nächste Zeit des Tages („Geht 16:00“), ohne
+  // sie der Ort. Beides zusammen kürzte am iPhone SE den Namen; der Ort
+  // steht im Kopf darüber.
+  let nextTime: string | null = null;
+  if (!late && !arrived && plannedArrival) nextTime = `Kommt ${plannedArrival}`;
+  else if (!late && !pickedUp && plannedPickup)
+    nextTime = `Geht ${plannedPickup}`;
+  return (
+    <span className="flex max-w-44 min-w-0 items-center gap-1.5 overflow-hidden [&_*]:whitespace-nowrap">
+      {late ? (
+        <AppStudentLateBadge late={late} pickup={late === pickupLate} short />
+      ) : nextTime ? (
+        <TenantPageStats items={[{ label: nextTime }]} />
+      ) : (
+        location
+      )}
+    </span>
+  );
+}
+
+/**
+ * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
+ * Tages als eine Chip-Zeile, die bei Platzmangel seitlich scrollt. Die
+ * Schnellaktionen stehen in der Aktionsleiste über der Pill.
+ */
+function AppStudentHeadStatus({
+  location,
+  student,
+  plannedArrival,
+  plannedPickup,
+  details,
+}: Readonly<{
+  location: ReactNode;
+  student: Student;
+  plannedArrival?: string;
+  plannedPickup?: string;
+  /** Die ganze Statuszeile des Desktops, im Blatt „Heute“. */
+  details: ReactNode;
+}>) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const { now, day, arrived, pickedUp, late, pickupLate } = useAppStudentDay(
+    student,
+    plannedArrival,
+    plannedPickup,
+  );
+
+  // Erste Zeile: Ort, dann eine rote Zeit oder die geplanten Zeiten des
+  // Tages. Eine rote Zeit verdrängt die übrigen Zeit-Chips, damit die Zeile
+  // auch am iPhone SE eine Zeile bleibt.
+  const items: { label: string }[] = [];
+  if (!late && !arrived && plannedArrival)
+    items.push({ label: `Kommt ${plannedArrival}` });
+  // Ist das Kind gegangen, nennt die zweite Zeile Zeit und Plan.
+  if (!late && !pickedUp && plannedPickup)
+    items.push({ label: `Geht ${plannedPickup}` });
+  // Zweite Zeile (#8070): wann das Kind kam, wie weit das vom Plan abwich
+  // und wer es angemeldet hat, wie „Heutige Ankunft: 21:27 (geplant: 11:45,
+  // +582 min)“ und „Angemeldet: am Gerät“ am Desktop; danach Klasse und
+  // Gruppe. Was nicht mehr ganz passt, rutscht in eine verborgene Folgezeile
+  // statt mitten im Wort abgeschnitten zu werden; alles steht im Blatt „Heute“.
+  const actor = (value: AttendanceActor | null | undefined) => {
+    const label = attendanceActorLabel(value ?? null);
+    if (!label) return null;
+    return value?.kind === "staff" ? `von ${label}` : label;
+  };
+  const planned = (kind: "arrival" | "pickup", plannedTime?: string) => {
+    const actualTime =
+      kind === "arrival"
+        ? student.actual_arrival_time
+        : student.actual_pickup_time;
+    if (!plannedTime || !actualTime) return null;
+    const status = getStudentTimeStatus({
+      plannedTime,
+      actualTime,
+      now,
+      kind,
+      day,
+    });
+    // „früher als geplant (09:15)“ wie im Kind-Blatt, nicht „-475 min
+    // früh“: eine Minutenzahl mit Vorzeichen liest sich als Rohwert.
+    const plan = plannedTime.slice(0, 5);
+    const diff = status.diffMinutes ?? 0;
+    if (diff === 0) return `wie geplant`;
+    return `${diff < 0 ? "früher" : "später"} als geplant (${plan})`;
+  };
+  // Kurz „Da seit“/„Gegangen“ wie die Chips, damit Zeit und Plan auch am
+  // iPhone SE in eine Zeile passen; wer gebucht hat, folgt als eigene Angabe.
+  const doneFact = pickedUp
+    ? {
+        time: `Gegangen ${student.actual_pickup_time}`,
+        plan: planned("pickup", plannedPickup),
+        by: actor(student.actual_pickup_by),
+        verb: "abgemeldet",
+      }
+    : arrived
+      ? {
+          time: `Da seit ${student.actual_arrival_time}`,
+          plan: planned("arrival", plannedArrival),
+          by: actor(student.actual_arrival_by),
+          verb: "angemeldet",
+        }
+      : null;
+  // Die Abweichung vom Plan ist eine eigene Angabe („, früher als geplant
+  // (09:15)“): Passt sie am iPhone SE nicht neben die Chips, fällt nur sie
+  // weg, die Ankunftszeit bleibt stehen.
+  const facts = [
+    doneFact ? { text: doneFact.time, sep: "" } : null,
+    doneFact?.plan ? { text: doneFact.plan, sep: ", " } : null,
+    doneFact?.by
+      ? { text: `${doneFact.verb} ${doneFact.by}`, sep: "· " }
+      : null,
+    student.school_class
+      ? { text: schoolClassLabel(student.school_class), sep: "· " }
+      : null,
+    student.group_name ? { text: student.group_name, sep: "· " } : null,
+  ]
+    .filter((fact): fact is { text: string; sep: string } => Boolean(fact))
+    .map((fact, index) => (index === 0 ? { ...fact, sep: "" } : fact));
+  // Eine Zeile auf jedem Telefon (#8070): Chips und Angaben teilen sich die
+  // Zeile, damit die Kopfkarte unter 20 % der Höhe bleibt und am iPhone SE
+  // dasselbe zeigt wie am iPhone 15. Was nicht mehr passt, fällt als ganze
+  // Angabe weg (die Zeile bricht in eine verborgene Folgezeile um) und
+  // steht im Blatt „Heute“, das „Details“ am Zeilenende öffnet.
+  // Mit roter Zeit ist die erste Zeile voll (Ort und „Abholung überfällig
+  // 16:00“). Die heutige Ankunft steht dann in einer zweiten Zeile, statt
+  // nur hinter „Details“ (Runde 19); ohne rote Zeit passt sie in die erste.
+  const twoLines = Boolean(late) && facts.length > 0;
+  const factNodes = facts.map((fact, index) => (
+    <span
+      key={fact.text}
+      // Die erste Angabe ist die wichtigste: passt sie allein nicht,
+      // endet sie mit „…“ statt zu verschwinden. Ein Komma hängt
+      // ohne Lücke an der Angabe davor.
+      className={
+        index === 0
+          ? "max-w-full min-w-0 truncate"
+          : fact.sep.startsWith(",")
+            ? "-ml-1.5"
+            : undefined
+      }
+    >
+      {fact.sep}
+      {fact.text}
+    </span>
+  ));
+  const factsLine = (extra?: ReactNode) => (
+    <span
+      data-testid="app-head-facts"
+      className="flex h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap"
+    >
+      {extra}
+      {factNodes}
+    </span>
+  );
+  const chips = (
+    <>
+      <span className="shrink-0">{location}</span>
+      {late ? (
+        <span className="shrink-0">
+          <AppStudentLateBadge late={late} pickup={late === pickupLate} />
+        </span>
+      ) : null}
+      {items.length > 0 ? (
+        <span className="contents [&>*]:contents">
+          <TenantPageStats items={items} />
+        </span>
+      ) : null}
+    </>
+  );
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setDetailsOpen(true)}
+        aria-haspopup="dialog"
+        // Sichtbar 24 px (zweizeilig 48 px) hoch, dicht unter dem Namen. Die
+        // Trefferfläche reicht 20 px nach oben über den Titeltext (kein
+        // Bedienelement) und bis an die Reiter: so ist sie 44 px hoch, ohne
+        // Zurück-Pfeil links oder „…“ rechts zu überdecken.
+        data-app-head-status-tight=""
+        className={cn(
+          // Nur die Trefferfläche liegt über der Titelzeile (sonst fängt die
+          // Überschrift sie ab); der Knopf selbst bleibt unter „…“, dessen
+          // Trefferfläche in diese Zeile hineinreicht. 3 statt 4 px Überlappung
+          // mit den Reitern: so reicht die Fläche nach unten auf 44 px.
+          "relative -mb-[3px] flex max-w-full min-w-full cursor-pointer gap-2 text-left before:absolute before:-top-5 before:right-12 before:-bottom-2 before:left-9 before:z-10 before:content-['']",
+          twoLines ? "h-12 items-start" : "h-6 items-center",
+        )}
+      >
+        {twoLines ? (
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="flex h-6 min-w-0 items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap">
+              {chips}
+            </span>
+            {factsLine()}
+          </span>
+        ) : (
+          factsLine(chips)
+        )}
+        <span className="flex shrink-0 items-center text-sm leading-6 text-gray-500">
+          Details
+          <ChevronRight className="size-4" aria-hidden="true" />
+        </span>
+        <span className="sr-only">: alle Angaben zu heute</span>
+      </button>
+      <OverlaySheet
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        title="Heute"
+        closeLabel="Heute schließen"
+      >
+        {/* Das Orts-Abzeichen steht am Desktop rechtsbündig über „seit …“;
+            im Blatt beginnt es links wie alle Zeilen darunter. */}
+        {/* Bricht eine Zeile um, bleiben die Symbole 16 px breit: Die
+            Texte stehen bündig untereinander. */}
+        <div className="text-sm text-gray-700 [&_.items-end]:items-start [&_svg]:shrink-0">
+          {details}
+        </div>
+      </OverlaySheet>
+    </>
   );
 }
 
@@ -2207,6 +2739,14 @@ function FullAccessView({
     error: enrollmentExtraError,
     reload: reloadEnrollmentExtra,
   } = useStudentEnrollmentExtraFields(studentId, true);
+  // In der App stehen die dauerhaften Hinweise (Allergien, Absprachen) vor
+  // den Stammdaten: Wer die Akte am Telefon öffnet, sieht das, was für das
+  // Kind immer gilt, im ersten Bild (#8070). Der Desktop bleibt, wie er ist.
+  const device = useDeviceContext();
+  const notesFirst = device.resolved && device.isApp;
+  const permanentNotes = tabs.includes("notizen") ? (
+    <StudentPermanentNotesCard studentId={studentId} />
+  ) : null;
   return (
     <>
       <StudentTabPanel
@@ -2214,6 +2754,7 @@ function FullAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
+        {notesFirst ? permanentNotes : null}
         {/* Bearbeitet wird am Objekt: der Reiter wechselt in den
             Bearbeiten-Zustand und zurück, kein Dialog über der Akte. */}
         {hasWriteAccess && showPersonalInfoEdit ? (
@@ -2239,9 +2780,7 @@ function FullAccessView({
           />
         )}
         {/* Die Hinweise sind Notizen: wie der Reiter nur mit users:read. */}
-        {tabs.includes("notizen") ? (
-          <StudentPermanentNotesCard studentId={studentId} />
-        ) : null}
+        {notesFirst ? null : permanentNotes}
         <StudentConsentsReadOnly consents={student.consents} />
         {canManageFamilyProtection ? (
           <SectionCard

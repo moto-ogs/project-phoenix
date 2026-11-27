@@ -78,6 +78,15 @@ function trackModality() {
   document.addEventListener("focusin", cancelPendingHoverHints, true);
 }
 
+/** Das Hauptzeigegerät kann nicht schweben (Finger statt Maus). */
+function lacksHover(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: none)").matches
+  );
+}
+
 function isBlockedActivation(event: Readonly<{ type: string; key?: string }>) {
   if (!event.type.startsWith("key")) return true;
   return event.key === "Enter" || event.key === " " || event.key === "Spacebar";
@@ -273,6 +282,10 @@ export function ActionHint({
         onPointerEnter: (event) => {
           props.onPointerEnter?.(event);
           if (event.pointerType !== "mouse") return;
+          // Ein Gerät ohne Hover (Telefon, Tablet ohne Maus) meldet einen
+          // Tipp mitunter als Maus-Zeiger, der danach auf dem Knopf
+          // stehen bleibt. Dort zeigt nur der Tastaturfokus die Blase.
+          if (lacksHover()) return;
           const target = event.currentTarget;
           cancel();
           pendingHoverCancels.add(cancel);

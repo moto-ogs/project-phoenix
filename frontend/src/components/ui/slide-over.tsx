@@ -73,9 +73,17 @@ import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
+import { useIsApp } from "~/lib/device-context";
+import {
+  SheetSessionProvider,
+  useParentSheetId,
+  useSheetCovered,
+  useSheetSession,
+} from "./sheet-session";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
 import {
+  APP_FOOTER_ROW,
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
@@ -83,6 +91,7 @@ import {
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
 import { FOCUSABLE_SELECTOR, useScrollRegion } from "./hooks/useScrollRegion";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
+import { SHEET_TABLET_CARD_CLASSES } from "./drawer";
 
 /**
  * Unter sm fährt das Panel von unten ein, darüber von rechts. Im Server-Render
@@ -98,8 +107,11 @@ function useSlideOverDirection(): {
   isResolved: boolean;
 } {
   const belowSm = useResolvedMediaQuery(BELOW_SM);
+  // In der App (auch iPad hoch und quer) ist das Panel das eine Blatt der
+  // App: von unten, am iPad als Karte (#8070). Der Desktop behält die Seite.
+  const app = useIsApp();
   return {
-    direction: belowSm === true ? "bottom" : "right",
+    direction: belowSm === true || app ? "bottom" : "right",
     isResolved: belowSm !== null,
   };
 }
@@ -315,29 +327,40 @@ const SlideOver = ({
     [dismissLocked, onOpenChange],
   );
 
+  // In der App hängt das Panel am Verlauf: Zurück schließt es, ein zweites
+  // Blatt ersetzt es (#8070). Auf dem Desktop bleibt die Sitzung aus.
+  const isApp = useIsApp();
+  const sheetSessionId = useSheetSession(
+    open,
+    () => handleOpenChange(false),
+    isApp,
+  );
+
   return (
-    <SlideOverDirectionContext.Provider value={direction}>
-      <SlideOverBusyContext.Provider value={busy}>
-        <SlideOverDismissLockedContext.Provider value={dismissLocked}>
-          <SlideOverOpenContext.Provider value={open}>
-            <SlideOverReturnFocusContext.Provider value={returnFocusRef}>
-              <DrawerPrimitive.Root
-                // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
-                // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
-                // geänderten Breakpoint neu auf.
-                key={direction}
-                direction={direction}
-                shouldScaleBackground={shouldScaleBackground}
-                open={open}
-                onOpenChange={handleOpenChange}
-                dismissible={!dismissLocked}
-                {...props}
-              />
-            </SlideOverReturnFocusContext.Provider>
-          </SlideOverOpenContext.Provider>
-        </SlideOverDismissLockedContext.Provider>
-      </SlideOverBusyContext.Provider>
-    </SlideOverDirectionContext.Provider>
+    <SheetSessionProvider value={isApp ? sheetSessionId : null}>
+      <SlideOverDirectionContext.Provider value={direction}>
+        <SlideOverBusyContext.Provider value={busy}>
+          <SlideOverDismissLockedContext.Provider value={dismissLocked}>
+            <SlideOverOpenContext.Provider value={open}>
+              <SlideOverReturnFocusContext.Provider value={returnFocusRef}>
+                <DrawerPrimitive.Root
+                  // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
+                  // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
+                  // geänderten Breakpoint neu auf.
+                  key={direction}
+                  direction={direction}
+                  shouldScaleBackground={shouldScaleBackground}
+                  open={open}
+                  onOpenChange={handleOpenChange}
+                  dismissible={!dismissLocked}
+                  {...props}
+                />
+              </SlideOverReturnFocusContext.Provider>
+            </SlideOverOpenContext.Provider>
+          </SlideOverDismissLockedContext.Provider>
+        </SlideOverBusyContext.Provider>
+      </SlideOverDirectionContext.Provider>
+    </SheetSessionProvider>
   );
 };
 SlideOver.displayName = "SlideOver";
@@ -424,9 +447,11 @@ const SlideOverContent = React.forwardRef<
     // Keeps focus in the panel while the save disables its own button.
     useBusyFocus(sheetRef, busy);
     const returnFocus = React.useContext(SlideOverReturnFocusContext);
+    // Ein Blatt, das im Panel aufgeht, ersetzt es sichtbar (#8070).
+    const covered = useSheetCovered(useParentSheetId());
     return (
       <SlideOverPortal>
-        <SlideOverOverlay />
+        <SlideOverOverlay className={covered ? "app:opacity-0" : undefined} />
         <DrawerPrimitive.Content
           ref={(node: HTMLDivElement | null) => {
             sheetRef.current = node;
@@ -443,7 +468,8 @@ const SlideOverContent = React.forwardRef<
             isSheet
               ? // Blatt von unten: an drei Kanten bündig, oben abgerundet, nie
                 // höher als 90vh — der Rest der Seite bleibt als Kontext sichtbar.
-                "inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl"
+                // Am iPad schwebt es als Karte wie jedes Blatt der App.
+                `inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl ${SHEET_TABLET_CARD_CLASSES}`
               : // `max-w-full` fängt den einen Frame vor dem matchMedia-Effect ab:
                 // ein per Deep-Link (?block=…) sofort offenes Panel würde sonst
                 // kurz mit 420px auf einem schmaleren Display stehen.
@@ -451,6 +477,7 @@ const SlideOverContent = React.forwardRef<
                   "top-0 right-0 h-full w-[420px] max-w-full",
                   isSlideOverWidth(size) ? SLIDE_OVER_WIDTH[size] : undefined,
                 ),
+            covered && "app:pointer-events-none app:invisible",
             className,
           )}
           // `dismissible={false}` an der Wurzel wäre für einen reinen
@@ -663,7 +690,7 @@ const SlideOverHeader = ({
 }: SlideOverHeaderProps) => (
   <div
     className={cn(
-      "flex flex-row items-start justify-between gap-3 border-b border-slate-200 px-5 py-4",
+      "app:border-b-0 app:px-4 app:pb-1 flex flex-row items-start justify-between gap-3 border-b border-slate-200 px-5 py-4",
       className,
     )}
     {...props}
@@ -704,7 +731,7 @@ const SlideOverBody = React.forwardRef<HTMLDivElement, SlideOverBodyProps>(
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard; it joins the tab order only while it scrolls
         tabIndex={scrolls ? 0 : undefined}
         className={cn(
-          "flex-1 overflow-y-auto px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
+          "app:px-4 flex-1 overflow-y-auto px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
           className,
         )}
         {...props}
@@ -734,8 +761,9 @@ const SlideOverFooter = ({
       {...props}
       locked={busy || !open}
       className={cn(
-        "flex-row border-t border-slate-200 bg-slate-50 px-5 py-4",
+        "app:px-4 flex-row border-t border-slate-200 bg-slate-50 px-5 py-4",
         className,
+        APP_FOOTER_ROW,
       )}
     />
   );
@@ -748,7 +776,10 @@ const SlideOverTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
     ref={ref}
-    className={cn("text-lg leading-tight font-bold text-slate-900", className)}
+    className={cn(
+      "app:text-base app:font-semibold text-lg leading-tight font-bold text-slate-900",
+      className,
+    )}
     {...props}
   />
 ));

@@ -155,7 +155,8 @@ function SearchBarContent({
   const describedBy = inputProps?.["aria-describedby"];
   const sizeClasses = {
     // By finger 16 px: smaller text makes iOS zoom into the field.
-    sm: "py-2 pl-9 pr-3 text-sm pointer-coarse:text-base",
+    // By finger 44 px high (9 + 24 + 9 + border), the hit area of a field.
+    sm: "py-2 pl-9 pr-3 text-sm app:py-[9px] pointer-coarse:text-base",
     md: "py-2.5 pl-9 pr-3 text-sm pointer-coarse:text-base md:pl-10 md:pr-10",
     lg: "py-3 pl-10 pr-10 text-base",
   };

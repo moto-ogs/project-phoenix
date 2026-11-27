@@ -18,6 +18,7 @@ import {
   HomeBoard,
   preloadHomeBoardEditor,
 } from "~/components/home/home-board";
+import { HomeApp, HomeHeadStatus } from "~/components/home/home-app";
 import { NowStrip } from "~/components/home/now-strip";
 import { PickupExtensionTodos } from "~/components/home/pickup-extension-todos";
 import { BookingLeftoverTodos } from "~/components/home/booking-leftover-todos";
@@ -30,6 +31,7 @@ import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { DeviceSwitch, useDeviceContext } from "~/lib/device-context";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { getGreetingName, leadsSchool } from "~/lib/auth-utils";
 import { fetchBirthdayOverviewClient } from "~/lib/birthdays-api";
@@ -414,6 +416,11 @@ function HomeContent() {
     retryResetRef.current = () => void restoreDefault();
   });
 
+  // App (#8070): „Anpassen“ steht im „…“-Menü der Kopfkarte statt als
+  // umrandeter Symbolknopf neben dem flachen „…“.
+  const device = useDeviceContext();
+  const appHead = device.resolved && device.isApp;
+
   if (status === "authenticated" && session && !hasSessionAccess(session)) {
     logger.info("invalid session, redirecting to login");
     redirect(tenantPath("/"));
@@ -442,86 +449,10 @@ function HomeContent() {
     tenantPath,
   };
 
-  return (
-    <TenantPage
-      title={
-        editing
-          ? "Startseite anpassen"
-          : firstName
-            ? `${greeting}, ${firstName}`
-            : greeting
-      }
-      prominent
-      stats={editing ? undefined : headerStats}
-      info={
-        editing
-          ? "Karte ziehen, um sie zu verschieben. Anklicken, um Breite zu ändern oder sie zu entfernen."
-          : undefined
-      }
-      error={
-        loadError
-          ? {
-              message: loadError.message,
-              action: errorAlertActions(loadError),
-              keepContent: dashboardData !== undefined,
-            }
-          : null
-      }
-      actions={
-        editing ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={saving}
-              onClick={cancelEditing}
-              tooltip="Verwirft deine Änderungen an der Startseite."
-            >
-              Abbrechen
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              disabled={saving}
-              onClick={save}
-              tooltip="Speichert die neue Anordnung deiner Startseite."
-            >
-              Fertig
-            </Button>
-          </>
-        ) : (
-          // Auf allen Breiten nur das Symbol (#4346): als Textknopf war
-          // „Anpassen" größer als alles, wofür man die Startseite öffnet.
-          // Der Name sagt „Anpassen", der Tooltip die Folge (#6755). Die Kopfkarte gibt dem
-          // Symbolknopf dieselbe Höhe wie „Abbrechen" und „Fertig".
-          // Die Blase steht rechtsbündig, weil der Knopf am rechten Rand
-          // sitzt. Zeigen, Fokus oder Antippen laden das Anpassen schon vor
-          // dem Klick (#6469); die Hülle trägt das, weil ein gesperrter Knopf
-          // keine Zeiger-Ereignisse meldet. Als reines Symbol (`ICON_ONLY`)
-          // bleibt sie unter sm in der Titelzeile.
-          <div
-            {...ICON_ONLY}
-            onPointerEnter={preloadHomeBoardEditor}
-            onPointerDown={preloadHomeBoardEditor}
-            onFocus={preloadHomeBoardEditor}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Anpassen"
-              tooltip={EDIT_HOME_TOOLTIP}
-              disabled={!homeLayoutReady}
-              onClick={startEditing}
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
-        )
-      }
-    >
+  // Der heutige Inhalt der Startseite: der Desktop und das Anpassen in der
+  // App zeigen ihn unverändert.
+  const boardContent = (
+    <>
       {showsLeadershipNotices && !editing ? <PhaseExpiryWarnings /> : null}
 
       {/* Geräte-PIN (#7175): ohne eigene PIN fallen die Tablets aus oder
@@ -604,6 +535,199 @@ function HomeContent() {
           )}
         </HomeBoard>
       )}
+    </>
+  );
+
+  return (
+    <TenantPage
+      title={
+        editing
+          ? "Startseite anpassen"
+          : firstName
+            ? `${greeting}, ${firstName}`
+            : greeting
+      }
+      prominent
+      // Beim Rollen nennt der schmale Kopf neben dem Gruß den Tag.
+      appCompactStats={
+        appHead && !editing ? (
+          <span className="whitespace-nowrap tabular-nums">
+            {headerStats.replace(
+              /^(\S{2})\S*, (\d{2}\.\d{2}\.)\d{4}$/,
+              "$1, $2",
+            )}
+          </span>
+        ) : undefined
+      }
+      stats={
+        editing ? undefined : appHead ? (
+          // Telefon: Datum und Jetzt in der Kopfkarte statt einer zweiten
+          // Karte unter dem Gruß (#8070).
+          <HomeHeadStatus
+            access={access}
+            context={blockContext}
+            date={headerStats}
+          />
+        ) : (
+          headerStats
+        )
+      }
+      overflowMenu={
+        appHead && !editing
+          ? [
+              {
+                label: "Startseite anpassen",
+                description: EDIT_HOME_TOOLTIP,
+                icon: (
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                ),
+                disabled: !homeLayoutReady,
+                onClick: startEditing,
+              },
+            ]
+          : undefined
+      }
+      info={
+        editing
+          ? "Karte ziehen, um sie zu verschieben. Anklicken, um Breite zu ändern oder sie zu entfernen."
+          : undefined
+      }
+      error={
+        loadError
+          ? {
+              message: loadError.message,
+              action: errorAlertActions(loadError),
+              keepContent: dashboardData !== undefined,
+            }
+          : null
+      }
+      actions={
+        editing ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              disabled={saving}
+              onClick={cancelEditing}
+              tooltip="Verwirft deine Änderungen an der Startseite."
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              disabled={saving}
+              onClick={save}
+              tooltip="Speichert die neue Anordnung deiner Startseite."
+            >
+              Fertig
+            </Button>
+          </>
+        ) : appHead ? undefined : (
+          // Auf allen Breiten nur das Symbol (#4346): als Textknopf war
+          // „Anpassen" größer als alles, wofür man die Startseite öffnet.
+          // Der Name sagt „Anpassen", der Tooltip die Folge (#6755). Die Kopfkarte gibt dem
+          // Symbolknopf dieselbe Höhe wie „Abbrechen" und „Fertig".
+          // Die Blase steht rechtsbündig, weil der Knopf am rechten Rand
+          // sitzt. Zeigen, Fokus oder Antippen laden das Anpassen schon vor
+          // dem Klick (#6469); die Hülle trägt das, weil ein gesperrter Knopf
+          // keine Zeiger-Ereignisse meldet. Als reines Symbol (`ICON_ONLY`)
+          // bleibt sie unter sm in der Titelzeile.
+          <div
+            {...ICON_ONLY}
+            onPointerEnter={preloadHomeBoardEditor}
+            onPointerDown={preloadHomeBoardEditor}
+            onFocus={preloadHomeBoardEditor}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Anpassen"
+              tooltip={EDIT_HOME_TOOLTIP}
+              disabled={!homeLayoutReady}
+              onClick={startEditing}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        )
+      }
+    >
+      <DeviceSwitch
+        desktop={boardContent}
+        app={
+          editing ? (
+            boardContent
+          ) : (
+            // Die App-Fassung der Übersicht (#8070): Jetzt, Zu erledigen,
+            // Vorschauen.
+            <HomeApp
+              access={access}
+              context={blockContext}
+              placed={placements.map((placement) => placement.key)}
+              birthdays={birthdays}
+              birthdaysState={{
+                loading: birthdaysLoading,
+                error: birthdaysError,
+                retry: () => mutateBirthdays(),
+              }}
+              notices={
+                <>
+                  {showsLeadershipNotices && !editing ? (
+                    <PhaseExpiryWarnings />
+                  ) : null}
+
+                  {/* Geräte-PIN (#7175): ohne eigene PIN fallen die Tablets aus oder
+          bleiben leicht zu öffnen. Der Hinweis bleibt, bis die PIN steht. */}
+                  {showsLeadershipNotices && !editing ? (
+                    <DevicePinWarning />
+                  ) : null}
+
+                  {/* Spätere Abholzeit ohne Termin (#3261): eine Aufgabe, keine
+          Kennzahl, deshalb fest über dem Brett wie die Hinweise davor. */}
+                  {!editing ? (
+                    <PickupExtensionTodos
+                      enabled={
+                        timetableEnabled && access.has("schedules:manage")
+                      }
+                    />
+                  ) : null}
+
+                  {/* Regeltermine, die von den Anmeldungen abweichen (#5103): eine
+          Aufgabe für Planende, deshalb fest über dem Brett. */}
+                  {!editing &&
+                  timetableEnabled &&
+                  access.has("schedules:manage") ? (
+                    <RosterDeviationTodos enabled />
+                  ) : null}
+
+                  {/* Regeltermine in den nächsten Schulferien (#5345): eine Aufgabe für
+          Planende, deshalb fest über dem Brett. */}
+                  {!editing &&
+                  timetableEnabled &&
+                  access.has("schedules:manage") ? (
+                    <SchoolVacationHintsCore enabled />
+                  ) : null}
+
+                  {/* Kinder, die eine Buchungsänderung von Hand eingeplant zurückließ
+          (#5102): dieselbe Aufgabe für Planende. */}
+                  {!editing &&
+                  timetableEnabled &&
+                  access.has("schedules:manage") ? (
+                    <BookingLeftoverTodos enabled />
+                  ) : null}
+                </>
+              }
+              renderBlock={(key) => (
+                <HomeBlockContent blockKey={key} data={blockData} />
+              )}
+            />
+          )
+        }
+      />
     </TenantPage>
   );
 }

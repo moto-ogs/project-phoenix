@@ -346,6 +346,8 @@ const EXACT_HELP_TOPICS: Readonly<Record<string, HelpTopicId>> = {
   "/time-tracking": HELP_TOPICS.trackWorkTime,
   "/mein-dienstplan": HELP_TOPICS.ownShiftPlan,
   "/profile": HELP_TOPICS.ownProfile,
+  // Seite „Mehr“ der App (#8070): der Überblick über alle Bereiche.
+  "/mehr": HELP_TOPICS.appOverview,
   "/reminders": HELP_TOPICS.staffReminders,
   "/substitutions": HELP_TOPICS.dailyHandovers,
   "/settings": HELP_TOPICS.settings,

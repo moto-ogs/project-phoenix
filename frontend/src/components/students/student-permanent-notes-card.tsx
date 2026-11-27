@@ -16,6 +16,7 @@ import {
   type StudentNote,
 } from "~/lib/student-notes-api";
 import { NOTE_SHARED_WITH_SCHOOL_BADGE } from "~/components/students/note-badges";
+import { useDeviceContext } from "~/lib/device-context";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
@@ -26,6 +27,10 @@ import { studentKeys } from "~/lib/swr/portal-keys";
 // Read-only on purpose. Writing happens where the chronicle is, so there is
 // one place that owns a note and one form that writes it; this card carries no
 // button, no chevron and no pointer, per the Missverständnis-Check.
+
+/** Was die Karte ist; am Telefon im „…“-Blatt der Kindakte. */
+export const PERMANENT_NOTES_DESCRIPTION =
+  "Was für dieses Kind immer gilt. Neue Hinweise schreibst du im Reiter Notizen.";
 
 const VISIBILITY_LABELS: Record<string, string> = {
   care_team: "Betreuungsteam",
@@ -65,6 +70,8 @@ export function StudentPermanentNotesCard({
 }: {
   readonly studentId: string;
 }) {
+  const device = useDeviceContext();
+  const appHead = device.resolved && device.isApp;
   const { data, isLoading, error, mutate } = useSWRAuth<StudentNote[]>(
     studentKeys.permanentNotes(studentId),
     () => studentNotesService.list(studentId, NOTE_KIND_PERMANENT),
@@ -86,7 +93,9 @@ export function StudentPermanentNotesCard({
   return (
     <SectionCard
       title="Dauerhafte Hinweise"
-      description="Was für dieses Kind immer gilt. Neue Hinweise schreibst du im Reiter Notizen."
+      // Am Telefon steht der Erklärsatz im „…“-Blatt unter „Über diese
+      // Seite“: Im ersten Bild zählen die Hinweise selbst (Runde 19).
+      description={appHead ? undefined : PERMANENT_NOTES_DESCRIPTION}
     >
       {isLoading ? (
         <div className="space-y-2">

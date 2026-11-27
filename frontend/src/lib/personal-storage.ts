@@ -77,6 +77,10 @@ export const PERSONAL_STORAGE_PREFIXES: readonly string[] = [
   // Nach dem Räumen meldet die nächste Anmeldung einmal mehr; das Backend
   // schreibt dann nur last_seen_at derselben Zeile neu (#2189).
   "moto-pwa-usage-reported.",
+  // App-Navigation (#8070): Verlauf der besuchten Adressen samt Filtern und
+  // die zuletzt offene Seite je Reiter. Adressen nennen Kinder und Räume.
+  "moto:nav-stack:",
+  "moto:tab-memory:",
   // Wem die Einträge gerade gehören (bindPersonalStorage).
   OWNER_KEY,
 ];
@@ -94,6 +98,7 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.*.notification-setup.v1*", // Geräte-Einrichtung erledigt oder später
   "parent-first-steps:v1:*", // Fortschritt der ersten Schritte, Elternportal
   "simple-staff-nav-show-all:*", // „Alle Seiten anzeigen“ gewählt (#6956)
+  "mehr-closed-groups:*", // zugeklappte Abschnitte der Seite „Mehr“ (#8070)
   // Gewählte Sprache, die das Elternportal noch speichern muss.
   "phoenix_parent_unsynced_locale*",
   // Gerätelayout.

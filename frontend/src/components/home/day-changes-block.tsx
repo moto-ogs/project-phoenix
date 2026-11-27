@@ -156,13 +156,13 @@ function DayChangesSkeleton() {
 }
 
 /** Was die Übersicht zeigt: nur Arten, für die das Frontend einen Satz hat. */
-function shownEntries(overview: DayChangesOverview): DayChange[] {
+export function shownEntries(overview: DayChangesOverview): DayChange[] {
   // Welche Arten einen Satz haben, hängt nicht vom Tag ab.
   return overview.entries.filter((entry) => dayChangeText(entry) !== null);
 }
 
 /** Eine Änderung mit Uhrzeit, deren Ende vorbei ist. */
-function isDone(entry: DayChange, now: number): boolean {
+export function isDone(entry: DayChange, now: number): boolean {
   if (!entry.endsAt || now === 0) return false;
   const end = Date.parse(entry.endsAt);
   return !Number.isNaN(end) && end <= now;
@@ -276,14 +276,26 @@ function DayChangesContent({
   overview,
   day,
   onChanged,
+  omit,
+  capSchool = true,
 }: {
   readonly overview: DayChangesOverview;
   readonly day: DayChangesDay;
   /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
   readonly onChanged: () => Promise<unknown>;
+  /**
+   * Einträge, die an anderer Stelle schon stehen. Die App-Startseite (#8070)
+   * zeigt offene Kenntnisnahmen unter „Zu erledigen“ und hier nicht noch
+   * einmal.
+   */
+  readonly omit?: (entry: DayChange) => boolean;
+  /** Im Blatt der App gibt es keine Kappung der Schule auf dem Telefon. */
+  readonly capSchool?: boolean;
 }) {
   const now = useCurrentTimestamp();
-  const shown = shownEntries(overview);
+  const shown = omit
+    ? shownEntries(overview).filter((entry) => !omit(entry))
+    : shownEntries(overview);
   const mine = shown.filter((entry) => entry.section === "you");
   const school = shown.filter((entry) => entry.section !== "you");
   const failures = overview.failedSources.map((source) => (
@@ -330,7 +342,7 @@ function DayChangesContent({
           date={overview.date}
           now={now}
           onChanged={onChanged}
-          folds
+          folds={capSchool}
         />
       ) : null}
     </div>
@@ -569,7 +581,7 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
   });
 }
 
-function withKeys(
+export function withKeys(
   entries: readonly DayChange[],
 ): (readonly [string, DayChange])[] {
   const keys = dayChangeKeys(entries);

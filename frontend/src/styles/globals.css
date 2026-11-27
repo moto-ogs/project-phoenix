@@ -36,6 +36,30 @@
 @custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)));
 
 /*
+ * Gerätekontext (Prototyp Mobile-Zielbild, #8070). Ein Begriff statt
+ * verstreuter Breakpoints; JS-Gegenstück: `lib/device-context.tsx`.
+ *
+ *   - `app:`   App-Oberfläche: nur das Telefon (schmaler als `sm`, 640 px).
+ *              Pill, Blätter, Seitenmuster.
+ *   - `desk:`  Alles andere, also Desktop und iPad: der heutige Code.
+ *   - `phone:` gleich `app:`.
+ *   - `tablet:`, `split:` treffen nie zu. Das iPad behält die heutige
+ *              Oberfläche (Entscheid nach dem Prototyp); die Varianten
+ *              bleiben stehen, damit die Bausteine nicht umgebaut werden.
+ *
+ * Genau eine von `app:`/`desk:` trifft zu. Desktop und iPad sehen keine
+ * `app:`-Regel, deshalb bleiben sie pixelgleich.
+ */
+@custom-variant app (@media (width < 40rem));
+/* Im Fluss: nicht absolut, fest oder klebend positioniert. Die Trefferfläche
+   (`TOUCH_HIT_AREA`) macht nur solche Knöpfe zum Bezugsrahmen. */
+@custom-variant in-flow (&:where(:not(.absolute, .fixed, .sticky)));
+@custom-variant desk (@media (width >= 40rem));
+@custom-variant phone (@media (width < 40rem));
+@custom-variant tablet (@media not all);
+@custom-variant split (@media not all);
+
+/*
  * moto brand tokens
  *
  * Green, blue, and orange mirror the public website design system in
@@ -397,6 +421,53 @@
     transparent 0
   );
   background-size: 14px 14px;
+}
+
+/* Liste neben Detail am iPad quer (#8070, `SplitView`): Die Seite steht,
+   die Spalten scrollen je für sich. Die Spalte, in der die ActionBar steht,
+   endet über ihr; ohne Zuordnung enden beide Spalten über ihr. */
+html[data-split-page] {
+  overflow: hidden;
+}
+
+/* Eine Spalte, unter der noch Inhalt folgt, läuft unten auf 2,5 rem weich
+   aus; nur der Inhalt, nicht eine unten klebende Aktion der Spalte
+   (`--split-fade-inset` = deren Höhe, gesetzt von `SplitView`). */
+[data-split-view] > [data-more-below] {
+  --split-fade-end: calc(100% - var(--split-fade-inset, 0px));
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(var(--split-fade-end) - 2.5rem),
+    transparent var(--split-fade-end),
+    black var(--split-fade-end)
+  );
+}
+
+html[data-action-bar-column="list"] [data-split-view] > [data-split-list],
+html[data-action-bar-column="detail"] [data-split-view] > [data-split-detail],
+html[data-action-bar-column="all"] [data-split-view] > * {
+  max-height: calc(100% - var(--app-action-bar-space, 0px));
+}
+
+/* Deckende Zonen der App (#8070): hinter der schmalen Kopfkarte, der
+   klebenden Leiste und zwischen ActionBar und Pill. Gleicher Grund wie die
+   Seite; das Muster hängt am Fenster und läuft so mit dem Seitenmuster. */
+.moto-app-backdrop {
+  background: var(--color-gray-50);
+}
+
+.moto-app-backdrop::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(17, 24, 39, 0.12) 1px,
+    transparent 0
+  );
+  background-size: 14px 14px;
+  background-attachment: fixed;
 }
 
 .moto-dotted-background--fixed {
@@ -951,6 +1022,15 @@ html[data-chat-page-lock] body {
   overflow: hidden;
 }
 
+/* Ohne Pill (#8070, `usePillHidden`, z. B. im Chat-Verlauf) hält `<main>`
+   unten nur die Safe Area frei statt der Fläche der Pill. Nur in der App;
+   der Desktop setzt das Attribut nie. */
+@media (width < 40rem) {
+  html[data-pill-hidden] #hauptinhalt {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* iOS vergrößert die ganze Seite, sobald jemand in ein Feld mit Schrift unter
    16 px tippt, und lässt sie danach vergrößert stehen: Der Chat verschwand
    dabei über dem oberen Rand, jede andere Seite sprang. Auf Touch-Geräten
@@ -1219,6 +1299,100 @@ html[data-chat-page-lock] body {
 @media (prefers-reduced-motion: reduce) {
   .moto-loading-delayed {
     animation-duration: 1ms;
+  }
+}
+
+/*
+ * Seitenübergang der App (#8070, lib/mobile-navigation/page-transition.ts).
+ * Nur in der App ohne reduced-motion; der Desktop startet nie einen
+ * Übergang. Die Seite ist der Wurzel-Schnappschuss (das, was man sieht);
+ * Pill und Safe-Area-Streifen haben eigene Namen und bleiben stehen.
+ * Selektoren auf vorhandene Elemente, damit der Desktop kein neues
+ * Attribut und keine neue Klasse bekommt.
+ */
+@media (width < 40rem) {
+  @media (prefers-reduced-motion: no-preference) {
+    nav.fixed.bottom-0 {
+      view-transition-name: moto-pill;
+    }
+    [data-staff-safe-area-top] {
+      view-transition-name: moto-safe-area-top;
+    }
+    html[data-nav-direction]::view-transition-group(root) {
+      animation-duration: 280ms;
+    }
+    html[data-nav-direction="forward"]::view-transition-old(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-out-left;
+    }
+    html[data-nav-direction="forward"]::view-transition-new(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-in-right;
+    }
+    html[data-nav-direction="back"]::view-transition-old(root) {
+      z-index: 1;
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-out-right;
+    }
+    html[data-nav-direction="back"]::view-transition-new(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-in-left;
+    }
+    /* Pill und Streifen: kein Überblenden, sie stehen einfach. */
+    html[data-nav-direction]::view-transition-old(moto-pill),
+    html[data-nav-direction]::view-transition-old(moto-safe-area-top) {
+      animation: none;
+      opacity: 0;
+    }
+    html[data-nav-direction]::view-transition-new(moto-pill),
+    html[data-nav-direction]::view-transition-new(moto-safe-area-top) {
+      animation: none;
+    }
+  }
+}
+
+@keyframes moto-page-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes moto-page-out-left {
+  to {
+    transform: translateX(-30%);
+    opacity: 0.6;
+  }
+}
+@keyframes moto-page-in-left {
+  from {
+    transform: translateX(-30%);
+    opacity: 0.6;
+  }
+}
+@keyframes moto-page-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Home-Screen-Betrieb der App (#8070).
+ * - Tastatur offen (`data-keyboard-open`, useKeyboardFlag): die Pill weicht.
+ * - iPhone quer reicht mit viewport-fit=cover unter die Notch: Inhalt und
+ *   Pill rücken um den seitlichen Safe-Area-Rand ein (sonst 0).
+ * - Standalone: kein Gummiband-Überscrollen am Dokument (iOS wirkt nur am
+ *   html); im Safari-Tab bleibt es.
+ */
+@media (width < 40rem) {
+  html[data-keyboard-open] nav.fixed.bottom-0 {
+    display: none;
+  }
+  /* margin, nicht padding: diese Regel ist ungeschichtet und würde das
+     Tailwind-Padding von main und der Pill überstimmen. */
+  #hauptinhalt,
+  nav.fixed.bottom-0 {
+    margin-left: env(safe-area-inset-left);
+    margin-right: env(safe-area-inset-right);
+  }
+  @media (display-mode: standalone) {
+    html {
+      overscroll-behavior-y: none;
+    }
   }
 }
 

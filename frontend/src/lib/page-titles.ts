@@ -96,6 +96,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/lists": "Tageslisten",
     "/meal-plan": "Speiseplan",
     "/meal-plan/freigabe": "Mensa-Freigabe",
+    "/mehr": "Mehr",
     "/mein-dienstplan": "Mein Dienstplan",
     "/messages": "Nachrichten",
     "/messages/:threadId": "Unterhaltung",

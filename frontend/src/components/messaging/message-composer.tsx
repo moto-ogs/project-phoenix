@@ -404,7 +404,11 @@ export function MessageComposer({
                   disabledReason={atLimit ? labels.tooMany : undefined}
                   aria-label={labels.attach}
                   tooltip={labels.attachHint}
-                  className="shrink-0"
+                  // Am Handy ist die Zeile 44 px hoch, der Knopf 32 px: 6 px
+                  // Abstand unten stellen die Büroklammer auf dieselbe
+                  // Mittellinie wie Text und Senden-Knopf (statt 6 px
+                  // darunter); bei mehreren Zeilen bleibt sie an der letzten.
+                  className="app:mb-1.5 shrink-0"
                 >
                   <Paperclip className="h-5 w-5" aria-hidden="true" />
                 </Button>

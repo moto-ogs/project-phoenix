@@ -3,6 +3,7 @@ import { resolvePresence, type PresenceStudent } from "@/lib/presence-status";
 import {
   PresenceBadgeView,
   type PresenceBadgeSize,
+  type PresenceBadgePart,
   type PresenceBadgeVariant,
 } from "./presence-badge-view";
 
@@ -18,6 +19,8 @@ interface LocationBadgeProps {
   readonly size?: PresenceBadgeSize;
   /** Show "seit XX:XX Uhr" below the badge where the status allows it. Default: false */
   readonly showLocationSince?: boolean;
+  /** Pill only, or pill and hint (default). */
+  readonly part?: PresenceBadgePart;
 }
 
 /**
@@ -35,6 +38,7 @@ export function LocationBadge({
   variant = "modern",
   size = "md",
   showLocationSince = false,
+  part,
 }: LocationBadgeProps) {
   const presence = resolvePresence(student, {
     mode: "detailed",
@@ -51,6 +55,7 @@ export function LocationBadge({
       size={size}
       variant={variant}
       showLocationSince={showLocationSince}
+      part={part}
     />
   );
 }

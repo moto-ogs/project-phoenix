@@ -96,7 +96,13 @@ interface BrandTenantSwitcherProps {
   readonly hideLabelBelow?: "md" | "lg";
   /** Träger der Schule als zweite Zeile, siehe `BrandTraegerLine`. */
   readonly traegerName?: string | null;
+  /** Volle Breite statt der Kopfzeilen-Höchstbreite, siehe `BrandLink`. */
+  readonly wide?: boolean;
 }
+
+/** Breite des Auslösers in der Kopfzeile. */
+const SWITCHER_TRIGGER_WIDTH =
+  "max-w-[200px] sm:max-w-[260px] lg:max-w-[300px]" as const;
 
 /**
  * Brand area (logo + facility name) that doubles as the tenant switcher.
@@ -118,6 +124,7 @@ export function BrandTenantSwitcher({
   label,
   hideLabelBelow,
   traegerName,
+  wide = false,
 }: BrandTenantSwitcherProps) {
   // The tenant layout preloads the list on the server (#2973); without a
   // seed the list is fetched once the session is authenticated.
@@ -282,6 +289,7 @@ export function BrandTenantSwitcher({
         label={label}
         hideLabelBelow={hideLabelBelow}
         traegerName={traegerName}
+        wide={wide}
       />
     );
   }
@@ -332,7 +340,7 @@ export function BrandTenantSwitcher({
         triggerTooltip="Zeigt deine Einrichtungen, ein Eintrag wechselt dorthin."
         onOpen={() => setSchoolPortalHint(null)}
         wrapperClassName="min-w-0 block"
-        triggerClassName="-mx-1.5 max-w-[200px] min-w-0 gap-2.5 rounded-lg px-1.5 py-1 hover:bg-gray-100 disabled:opacity-50 sm:max-w-[260px] lg:max-w-[300px]"
+        triggerClassName={`-mx-1.5 min-w-0 gap-2.5 rounded-lg px-1.5 py-1 hover:bg-gray-100 disabled:opacity-50 ${wide ? "min-h-11 w-full" : SWITCHER_TRIGGER_WIDTH}`}
         triggerContent={
           <>
             <BrandLogo />

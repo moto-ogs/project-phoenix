@@ -7,6 +7,7 @@ import {
   isUnloadConfirmed,
   registerNavigationBlocker,
 } from "~/lib/hooks/navigation-guard-store";
+import { isSheetHistoryEvent } from "~/lib/sheet-history-events";
 
 interface NavigationGuard {
   /** The destination of an intercepted navigation, or null when none is pending. */
@@ -108,7 +109,10 @@ export function useNavigationGuard(shouldBlock: boolean): NavigationGuard {
     window.history.pushState(null, "", window.location.href);
     armedRef.current = true;
 
-    const onPopState = () => {
+    const onPopState = (event: PopStateEvent) => {
+      // Back closed an app sheet (or a sheet removed its own entry): the
+      // page stays, nothing to confirm (#8070).
+      if (isSheetHistoryEvent(event)) return;
       // Ignore the popstate we triggered ourselves on confirm.
       if (bypassPopRef.current) {
         bypassPopRef.current = false;

@@ -282,6 +282,34 @@ die Kosten einer Desktop-Karte in einer 390-px-Spalte. Das entscheidet
   und zwei Radien standen übereinander. Kein `max-sm:rounded-*` auf einer
   Karte.
 
+## App (Telefon und iPad, #8070): eigener Kopf, gleiche Daten
+
+In der App (`app:`, `useDeviceContext().isApp`) rendert `TenantPage` statt
+der Desktop-Kopfkarte `AppTenantHead` (`tenant-page-app-head.tsx`). Die Seite
+übergibt dieselben Props; der Desktop-Zweig bleibt unverändert
+(`DeviceSwitch`).
+
+- **Kopfkarte bleibt Karte, aber einzeilig:** Zurück-Pfeil (mit `back`,
+  über `TenantBackLink`), Titel in einer Zeile mit Auslassung, höchstens
+  zwei Symbol-Aktionen (`data-icon-only` aus `actions`), dann „…“.
+- **„…“ öffnet ein Blatt** (`OverlaySheet`) mit allem, was nicht in die
+  Zeile passt: Textknöpfe aus `actions`, das Kebab der Seite („Weitere
+  Aktionen“), `overflowMenu`, `info` („Über diese Seite“) und die Hilfe.
+- **Kennzahlen als Chip-Leiste:** `TenantPageStats` rendert im App-Kopf
+  Chips, die seitlich scrollen; eine Zeile.
+- **Klebende Leiste unter der Karte:** Reiter als Chips, darunter Suche und
+  Filter (`search`, `filters`, `filterPanel`, `badge`, `primaryAction`) oder
+  der `searchSlot`. Der Filter öffnet sein Blatt.
+- **Budget:** Kopf ≤ 20 % der Höhe; iPhone 15 (393 × 852) ≤ 170 px bis zum
+  Inhalt ohne Reiter.
+- **Schrumpfen beim Scrollen:** Ist die Kopfkarte weggescrollt, schwebt oben
+  eine schmale Kopfkarte (48 px, weiß, `rounded-2xl`, Rand und Schatten wie
+  die Pill, Abstand zu Rand und Safe Area) mit Zurück, Titel und „…“; die
+  Leiste klebt darunter. Kein flacher Large Title, keine randlose Leiste.
+- **Übergänge:** Kopf `[data-app-page-head]`, schmale Kopfkarte
+  `[data-app-page-head-compact]`, Leiste `[data-app-page-toolbar]` sind die
+  Haken für `view-transition-name`.
+
 ## `compact`: die Dichte-Stufe kleiner und flacher Bildschirme
 
 Zwischen Telefon und grossem Monitor liegt eine dritte Stufe (#2824). Sie

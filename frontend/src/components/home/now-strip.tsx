@@ -17,6 +17,7 @@ import { fetchDashboardAnalyticsClient } from "~/lib/dashboard-api";
 import type { DashboardAnalytics } from "~/lib/dashboard-helpers";
 import { formatStatusDate } from "~/lib/date-helpers";
 import type { HomeBlockAccess, HomeBlockContext } from "~/lib/home-blocks";
+import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { formatMinutesAhead } from "~/lib/home-clock";
 import { blockEndLine, blockTimeRange } from "~/lib/block-children";
 import {
@@ -42,26 +43,11 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 const logger = createLogger({ component: "HomeNowStrip" });
 
 /**
- * Die Jetzt-Zone der Startseite (#2180): die eine Zeile, die den Moment
- * trägt. Uhrzeit, was gerade läuft oder als Nächstes kommt, und der eine
- * Weg, der jetzt naheliegt.
- *
- * Sie steht fest über dem Brett und ist kein Baustein: „Was steht jetzt an"
- * ist die Frage, für die es die Startseite gibt, und die Antwort darf nicht
- * davon abhängen, ob jemand eine Karte entfernt hat. Alles darunter bleibt
- * frei anordenbar.
- *
- * Die Abfragen teilen ihre Schlüssel mit den Karten darunter („Mein Tag",
- * „Betreuungsplan heute", Kennzahlen): steht die Karte auf der Fläche, kostet
- * die Zone keine zweite Abfrage.
+ * Die Daten der Jetzt-Zone (#2180), aus `NowStrip` gezogen, damit die
+ * App-Fassung der Startseite (#8070) dieselben Abfragen, Schlüssel und Regeln
+ * nutzt. Reines Verschieben: die Desktop-Zone rendert unverändert.
  */
-export function NowStrip({
-  access,
-  context,
-}: {
-  readonly access: HomeBlockAccess;
-  readonly context: HomeBlockContext;
-}) {
+export function useHomeNow(access: HomeBlockAccess, context: HomeBlockContext) {
   const tenantPath = useTenantAwarePath();
   const today = useBerlinToday();
   const now = useBerlinClock();
@@ -161,6 +147,59 @@ export function NowStrip({
       ? analytics.data?.studentsPresent
       : undefined;
 
+  return {
+    tenantPath,
+    today,
+    now,
+    loading,
+    state,
+    actions,
+    start,
+    busyId,
+    presentCount,
+    analytics,
+    ownSupervision: ownSupervision === true,
+    /** Der eigene Block, der jetzt starten darf (auch neben einer laufenden Aufsicht). */
+    startable,
+    /** Der Tag laut Plan (`homeKeys.dayFlow()`), wie „Mein Tag“. */
+    dayBlocks: wantsDay && !day.error ? day.data : undefined,
+  };
+}
+
+/**
+ * Die Jetzt-Zone der Startseite (#2180): die eine Zeile, die den Moment
+ * trägt. Uhrzeit, was gerade läuft oder als Nächstes kommt, und der eine
+ * Weg, der jetzt naheliegt.
+ *
+ * Sie steht fest über dem Brett und ist kein Baustein: „Was steht jetzt an"
+ * ist die Frage, für die es die Startseite gibt, und die Antwort darf nicht
+ * davon abhängen, ob jemand eine Karte entfernt hat. Alles darunter bleibt
+ * frei anordenbar.
+ *
+ * Die Abfragen teilen ihre Schlüssel mit den Karten darunter („Mein Tag",
+ * „Betreuungsplan heute", Kennzahlen): steht die Karte auf der Fläche, kostet
+ * die Zone keine zweite Abfrage.
+ */
+export function NowStrip({
+  access,
+  context,
+}: {
+  readonly access: HomeBlockAccess;
+  readonly context: HomeBlockContext;
+}) {
+  const {
+    tenantPath,
+    today,
+    now,
+    loading,
+    state,
+    actions,
+    start,
+    busyId,
+    presentCount,
+    analytics,
+  } = useHomeNow(access, context);
+
   return (
     <SectionCard testId="home-now">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -243,20 +282,52 @@ export function NowStrip({
   );
 }
 
-function NowText({
+export function NowText({
   state,
   analytics,
   today,
+  wrap = false,
+  lead,
+  extra,
+  aside,
+  withoutDate = false,
+  head = false,
 }: {
   readonly state: HomeNowState;
+  /**
+   * App (#8070): eine Zeile in der Kopfkarte statt einer eigenen Karte;
+   * bricht nur zwischen den Teilen um.
+   */
+  readonly head?: boolean;
+  /**
+   * App (#8070): die Kopfkarte nennt das Datum schon. Ohne eigenen Einsatz
+   * steht dann die Zahl der Kinder als Überschrift statt des Datums.
+   */
+  readonly withoutDate?: boolean;
   readonly analytics: DashboardAnalytics | undefined;
   readonly today: string;
+  /** App: steht vor der Überschrift (die Uhrzeit). */
+  readonly lead?: ReactNode;
+  /** App: steht am Ende der Angabenzeile (Stempelzustand). */
+  readonly extra?: ReactNode;
+  /** App: steht rechts in der Titelzeile (Kinder da). */
+  readonly aside?: ReactNode;
+  /**
+   * App (#8070): nie kürzen; die Angaben brechen nur zwischen den Teilen um
+   * („Aula · Ende offen ·“ / „danach 12:00 Mittagessen“).
+   */
+  readonly wrap?: boolean;
 }) {
   switch (state.kind) {
     case "own_running": {
       const { block, next } = state;
       return (
         <Lines
+          head={head}
+          wrap={wrap}
+          lead={lead}
+          extra={extra}
+          aside={aside}
           headline={block.title}
           badges={
             <>
@@ -278,18 +349,26 @@ function NowText({
           detail={[
             block.roomName ? (
               <Fragment key="room">
-                <MotoConceptIcon
-                  concept={roomsConcept}
-                  size={14}
-                  className="mr-1 inline-block align-[-2px]"
-                />
+                {/* App: ohne Symbol wie die Zeilen von „Mein Tag“; so passen
+                    Raum, Ende und „danach …“ am SE in eine Zeile. */}
+                {wrap ? null : (
+                  <MotoConceptIcon
+                    concept={roomsConcept}
+                    size={14}
+                    className="mr-1 inline-block align-[-2px]"
+                  />
+                )}
                 {block.roomName}
               </Fragment>
             ) : null,
             blockEndLine(block),
             next
               ? `danach ${next.startTime} ${next.title}`
-              : "danach ist für heute nichts mehr geplant",
+              : // App: Ohne Folgeblock entfällt der Satz, die Karte bleibt
+                // zweizeilig. Der Desktop sagt ihn weiter.
+                wrap || head
+                ? null
+                : "danach ist für heute nichts mehr geplant",
           ]}
         />
       );
@@ -298,6 +377,11 @@ function NowText({
       const { block, minutesAhead } = state;
       return (
         <Lines
+          head={head}
+          wrap={wrap}
+          lead={lead}
+          extra={extra}
+          aside={aside}
           headline={`Als Nächstes: ${block.title}`}
           badges={
             <>
@@ -329,6 +413,11 @@ function NowText({
     case "own_done":
       return (
         <Lines
+          head={head}
+          wrap={wrap}
+          lead={lead}
+          extra={extra}
+          aside={aside}
           headline="Für heute ist alles erledigt"
           detail={[
             state.count === 1
@@ -354,6 +443,11 @@ function NowText({
               : "Heute ist keine Betreuung geplant";
       return (
         <Lines
+          head={head}
+          wrap={wrap}
+          lead={lead}
+          extra={extra}
+          aside={aside}
           headline={headline}
           badges={
             notStarted > 0 ? (
@@ -376,18 +470,82 @@ function NowText({
     case "plain":
       return (
         <Lines
-          headline={formatStatusDate(today)}
+          head={head}
+          wrap={wrap}
+          lead={lead}
+          extra={extra}
+          aside={aside}
+          headline={
+            withoutDate && analytics
+              ? childrenPresent(analytics.studentsPresent)
+              : formatStatusDate(today)
+          }
           detail={
             analytics
-              ? [
-                  childrenPresent(analytics.studentsPresent),
-                  staffOnDuty(analytics.supervisorsToday),
-                ]
+              ? withoutDate
+                ? [staffOnDuty(analytics.supervisorsToday)]
+                : [
+                    childrenPresent(analytics.studentsPresent),
+                    staffOnDuty(analytics.supervisorsToday),
+                  ]
               : []
           }
         />
       );
   }
+}
+
+/**
+ * App (#8070): der eigene Block, der laut Tagesplan gerade läuft, auch wenn
+ * er in den Einsätzen des Dienstplans fehlt (ein spontan gestarteter Block
+ * „seit 00:03“). Sonst sagte die Karte „Für heute ist alles erledigt“,
+ * während „Mein Tag“ darunter „Läuft“ zeigt.
+ */
+export function NowRunningText({
+  block,
+  next,
+  lead,
+  extra,
+  aside,
+  head = false,
+}: {
+  readonly block: PlannedTimetableInstance;
+  /** Eine Zeile in der Kopfkarte (siehe `NowText`). */
+  readonly head?: boolean;
+  /** Der nächste eigene Einsatz, falls einer kommt. */
+  readonly next: { readonly startTime: string; readonly title: string } | null;
+  readonly lead?: ReactNode;
+  readonly extra?: ReactNode;
+  readonly aside?: ReactNode;
+}) {
+  return (
+    <Lines
+      wrap
+      head={head}
+      lead={lead}
+      extra={extra}
+      aside={aside}
+      headline={block.title}
+      badges={
+        <>
+          <StatusBadge tone="green" label="Läuft" />
+          {block.isSubstitute ? (
+            <StatusBadge tone="blue" label="Vertretung" />
+          ) : null}
+        </>
+      }
+      detail={[
+        // In der Kopfkarte steht keine Uhr davor: „seit 16:30“ sagt, wann
+        // der Block begann.
+        head ? `seit ${block.startTime}` : null,
+        block.roomName,
+        blockEndLine(block),
+        // Ohne Folgeblock kein Satz: „Mein Tag“ darunter zeigt den Tag, und
+        // die Kopfkarte bleibt am SE bei zwei Zeilen unter dem Gruß.
+        next ? `danach ${next.startTime} ${next.title}` : null,
+      ]}
+    />
+  );
 }
 
 function childrenPresent(count: number): string {
@@ -404,13 +562,94 @@ function Lines({
   headline,
   badges,
   detail,
+  wrap = false,
+  head = false,
+  lead,
+  extra,
+  aside,
 }: {
+  readonly wrap?: boolean;
+  readonly head?: boolean;
+  readonly lead?: ReactNode;
+  readonly extra?: ReactNode;
+  readonly aside?: ReactNode;
   readonly headline: string;
   readonly badges?: ReactNode;
   // Raumangaben tragen ihr Symbol wie in den Blockzeilen (#4350).
   readonly detail: readonly ReactNode[];
 }) {
   const parts = detail.filter(Boolean);
+  if (head) {
+    // Kopfkarte (App): eine Zeile, die nur zwischen den Teilen umbricht.
+    // Titel und Zustand vorn, dann Beginn, Raum, Ende, was danach kommt;
+    // die Kinder da und der Stempelzustand stehen in der Zeile darüber.
+    // Der Trenner steht vor jedem Teil und fällt am Zeilenanfang in den
+    // abgeschnittenen Rand, damit keine Zeile auf „·“ endet.
+    return (
+      <div className="overflow-hidden">
+        <p className="-ml-3 flex flex-wrap items-center leading-6">
+          <span className="relative min-w-0 pl-3 font-semibold text-gray-900">
+            {headline}
+          </span>
+          {badges ? (
+            <span className="ml-1.5 inline-flex items-center gap-1">
+              {badges}
+            </span>
+          ) : null}
+          {parts.map((part, index) => (
+            <span
+              key={index}
+              className="relative min-w-0 pl-3 before:absolute before:left-1 before:content-['·']"
+            >
+              {part}
+            </span>
+          ))}
+        </p>
+      </div>
+    );
+  }
+  if (wrap) {
+    // App (#8070): zwei feste Zeilen. Oben Uhrzeit, Titel und Zustand, rechts
+    // die Kinder da; darunter Raum, Ende und was danach kommt. Bricht die
+    // Angabenzeile um, beginnt die neue Zeile ohne Trenner und keine endet
+    // auf „·“: Der Punkt steht vor jedem Teil und fällt am Zeilenanfang in
+    // den abgeschnittenen Rand (`-ml-3` in `overflow-hidden`).
+    const items = extra ? [...parts, extra] : parts;
+    return (
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-3">
+          <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-base leading-6 font-semibold text-gray-900">
+            {lead}
+            <span className="min-w-0">{headline}</span>
+            {badges ? (
+              <span className="inline-flex items-center gap-1 self-center font-normal">
+                {badges}
+              </span>
+            ) : null}
+          </p>
+          {aside ? (
+            <span className="shrink-0 text-sm leading-6 text-gray-500">
+              {aside}
+            </span>
+          ) : null}
+        </div>
+        {items.length > 0 ? (
+          <div className="mt-0.5 overflow-hidden text-sm leading-6 text-gray-500">
+            <p className="-ml-3 flex flex-wrap items-center">
+              {items.map((part, index) => (
+                <span
+                  key={index}
+                  className="relative min-w-0 pl-3 before:absolute before:left-1 before:content-['·']"
+                >
+                  {part}
+                </span>
+              ))}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
   const text =
     parts.length > 0
       ? parts.flatMap((part, index) => (index === 0 ? [part] : [" · ", part]))

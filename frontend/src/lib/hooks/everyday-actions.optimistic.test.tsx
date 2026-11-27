@@ -35,6 +35,7 @@ vi.mock("~/lib/home-layout-api", () => ({
   saveHomeBlockPolicies: mocks.policies,
 }));
 vi.mock("~/lib/time-tracking-api", () => ({
+  PLANNED_START_NOT_REACHED_CODE: "iot.planned_start_not_reached",
   timeTrackingService: {
     getCurrentSession: mocks.current,
     checkIn: mocks.checkIn,
@@ -59,6 +60,7 @@ import type { WorkSession } from "~/lib/time-tracking-helpers";
 import type { MealParticipation } from "~/lib/parent-api";
 import { useHomeLayout } from "./use-home-layout";
 import { useOptimisticStamp } from "./use-optimistic-stamp";
+import { _resetCheckInLockForTests, useCheckInOpensAt } from "./check-in-lock";
 import { useMealParticipation } from "./use-meal-participation";
 
 const opened: WorkSession = {
@@ -439,6 +441,32 @@ it("clears the current session after checkout and permits another check-in", asy
   expect(result.current.reader.data?.id).toBe("session-2");
   expect(mocks.checkIn).toHaveBeenCalledOnce();
   expect(mocks.current).toHaveBeenCalledOnce();
+  unmount();
+});
+
+it("remembers a check-in refused before the planned start for every stamp button", async () => {
+  _resetCheckInLockForTests();
+  mocks.checkIn.mockRejectedValue(
+    new ApiError("planned start not reached", 422, {
+      code: "iot.planned_start_not_reached",
+      details: { planned_start_time: "07:55", current_time: "07:10" },
+    }),
+  );
+  const { result, unmount } = renderHook(
+    () => ({
+      stamp: useIn(),
+      opensAt: useCheckInOpensAt("2026-09-09", "07:10"),
+    }),
+    { wrapper: Wrapper },
+  );
+  await waitFor(() => expect(result.current.stamp.ready).toBe(true));
+  expect(result.current.opensAt).toBeNull();
+  await act(async () => {
+    const outcome = await result.current.stamp.run();
+    expect(outcome.status).toBe("failed");
+  });
+  expect(result.current.opensAt).toBe("07:55");
+  _resetCheckInLockForTests();
   unmount();
 });
 

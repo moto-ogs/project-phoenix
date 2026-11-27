@@ -47,6 +47,16 @@ import {
   HEAD_TITLE_SIZE,
 } from "./control-geometry";
 import { cn } from "~/lib/utils";
+import { DeviceSwitch } from "~/lib/device-context";
+import { useUnderMore } from "~/lib/mobile-navigation/more-parent";
+
+/** Rückweg der Seiten hinter „Mehr“ in der App (#8070). */
+const MORE_BACK_HREF = "/mehr";
+import {
+  AppTenantHead,
+  AppTenantTabs,
+  useInAppHeadStats,
+} from "./tenant-page-app-head";
 
 /**
  * Das Seitengerüst des Tenant-Portals. JEDE Seite unter
@@ -98,6 +108,39 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
   readonly stats?: ReactNode;
   /** Zeigt statt der Statuszeile ein Skelett. */
   readonly statsLoading?: boolean;
+  /**
+   * App (#8070): Die Kennzahlen stehen in der Titelzeile statt in einer
+   * eigenen Zeile. Für Listen, die jede Zeile für Einträge brauchen; Titel
+   * und Chips müssen dann kurz sein.
+   */
+  readonly appStatsInline?: boolean;
+  /**
+   * App (#8070): Kurzstatus, der beim Rollen im schmalen Kopf neben dem
+   * Titel stehen bleibt (etwa Ort und rote Zeit eines Kindes). Ohne ihn
+   * bleiben dort nur Kennzahlen aus `appStatsInline`.
+   */
+  readonly appCompactStats?: ReactNode;
+  /**
+   * App (#8070, Runde 17): Symbol-Aktionen im schmalen Kopf beim Rollen,
+   * etwa die Lupe. `true` behält die Symbol-Aktionen aus `actions` (wie oben
+   * höchstens zwei), ein Element ersetzt sie dort (etwa eine Lupe, die nach
+   * oben zum Suchfeld der Leiste springt). Ohne Angabe bleibt der schmale
+   * Kopf wie bisher: Titel, Kurzstatus, „…“.
+   */
+  readonly appCompactActions?: true | ReactNode;
+  /**
+   * App (#8070, Runde 19): Suche und Reiter rollen mit der Kopfkarte weg,
+   * statt unter dem schmalen Kopf zu kleben. Für Seiten, deren Suche selten
+   * gebraucht wird (Mehr); eine Lupe über `appCompactActions` führt zurück.
+   */
+  readonly appToolbarScrollsAway?: boolean;
+  /**
+   * App (#8070, Runde 19): Reiter, Suche und Filter rollen mit der
+   * Kopfkarte weg, statt unter der schmalen Kopfkarte zu kleben; beim
+   * Rollen bleibt nur die schmale Titelzeile. Mit Suche zeigt sie eine
+   * Lupe, die nach oben ins Suchfeld springt.
+   */
+  readonly appShrinkToTitle?: boolean;
   /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
@@ -356,6 +399,8 @@ export function TenantPageStats({
 }>) {
   const kitDefault = useKitDefault();
   const shown = items.slice(0, MAX_STATS_ITEMS);
+  const asChips = useInAppHeadStats();
+  if (asChips) return <AppStatsChips items={shown} />;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       {shown.map((item, index) => {
@@ -400,6 +445,56 @@ export function TenantPageStats({
               )}
             </span>
           </Fragment>
+        );
+      })}
+    </span>
+  );
+}
+
+/** Kennzahlen im App-Kopf als Chip-Leiste, die seitlich scrollt (#8070). */
+function AppStatsChips({
+  items,
+}: Readonly<{
+  items: readonly {
+    readonly value?: ReactNode;
+    readonly label: string;
+    readonly onSelect?: () => void;
+    readonly selectLabel?: string;
+  }[];
+}>) {
+  return (
+    <span className="flex gap-1.5 whitespace-nowrap">
+      {items.map((item, index) => {
+        const pair = (
+          <>
+            {item.value === undefined ? null : (
+              <span className="font-semibold text-gray-900 tabular-nums">
+                {item.value}
+              </span>
+            )}
+            {item.label ? <span>{item.label}</span> : null}
+          </>
+        );
+        const chip =
+          "tablet:h-7 tablet:px-3 tablet:text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2.5 text-xs text-gray-700";
+        return (
+          <span key={`${index}-${item.label}`} className={chip}>
+            {item.onSelect ? (
+              <Button
+                type="button"
+                variant="link"
+                size="md"
+                className="gap-1 underline decoration-gray-300 underline-offset-4"
+                aria-label={item.selectLabel}
+                tooltip="Filtert die Liste auf genau diese Einträge."
+                onClick={item.onSelect}
+              >
+                {pair}
+              </Button>
+            ) : (
+              pair
+            )}
+          </span>
         );
       })}
     </span>
@@ -577,6 +672,11 @@ function TenantPageView({
   title,
   stats,
   statsLoading = false,
+  appStatsInline = false,
+  appCompactStats,
+  appCompactActions,
+  appToolbarScrollsAway = false,
+  appShrinkToTitle,
   info,
   actions,
   leading,
@@ -606,6 +706,7 @@ function TenantPageView({
   testId,
 }: TenantPageProps) {
   usePageTitleSection(addressedTabLabel(tabs));
+  const underMore = useUnderMore();
   const hasOverflowMenu = (overflowMenu?.length ?? 0) > 0;
   const titleHasLongWord = hasLongTitleWord(title);
   const searchRowHasControls =
@@ -657,163 +758,209 @@ function TenantPageView({
           Grund. Die spezielle Klasse überschreibt die ungeschichtete
           Flächenklasse auch dann zuverlässig, wenn Tailwind-Utilities in
           einer CSS-Layer stehen. */}
-      <header
-        ref={headRef}
-        className={cn(
-          "moto-content-surface rounded-2xl border",
-          HEAD_PADDING,
-          tabsCloseHead && "compact:pb-0 sm:pb-0",
-          printHideHeader && "print:hidden",
-        )}
-      >
-        {back && <TenantBackLink href={backHref} label={backLabel} />}
-        {/* `max-sm:justify-end`: Rückt ein Symbolknopf (Kebab, Status) unter
-            dem Titel in eine eigene Zeile, steht er rechts wie auf dem
-            Desktop, nicht verloren am linken Rand (#7649). In der ersten
-            Zeile nimmt der Titelblock (`flex-1`) den freien Platz, dort
-            ändert sich nichts. */}
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 max-sm:justify-end max-sm:gap-x-2">
-          {/* `flex-1 basis-0`: der Titelblock nimmt, was die Aktionen übrig
-              lassen, statt mit seiner natürlichen Breite zu ringen. Vorher
-              schob eine zweizeilige Statuszeile auf dem Telefon selbst das
-              einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
-              die Kopfkarte wuchs um genau den toten Streifen, den sie auf
-              dem Desktop nicht mehr hat.
-              Titel mit ausschließlich kurzen Wörtern nutzen unter `sm` ihre
-              tatsächliche Mindestbreite: Auch ungewöhnlich breite Wörter
-              bleiben so ganz. Ein langer Titel darf mit `wrap-anywhere`
-              schrumpfen; das betrifft nur Wörter ab 14 Graphem-Clustern.
-              Unter 320 CSS-Pixeln wird jede Mindestbreite begrenzt, damit
-              der Kopf auch bei starkem Zoom nicht seitlich überläuft. Hilfe,
-              Status und Kebab rücken dann in die nächste Zeile, statt den
-              Titel auf die frühere 6-rem-Breite zu drücken („Anmel|dung“,
-              #7649). */}
-          <div
+      {/* Desktop: die Kopfkarte wie bisher. App (#8070): einzeiliger Kopf
+          mit klebender Leiste und schmaler Kopfkarte beim Scrollen. */}
+      <DeviceSwitch
+        desktop={
+          <header
+            ref={headRef}
             className={cn(
-              "flex min-w-0 flex-1 basis-0 items-center gap-3",
-              titleHasLongWord
-                ? "max-sm:min-w-[min(100%,calc(14ch+6rem))]"
-                : "max-[319px]:min-w-[min(100%,calc(14ch+6rem))] max-sm:min-w-min",
+              "moto-content-surface rounded-2xl border",
+              HEAD_PADDING,
+              tabsCloseHead && "compact:pb-0 sm:pb-0",
+              printHideHeader && "print:hidden",
             )}
           >
-            {leading}
-            <div
-              className={cn(
-                "min-w-0",
-                !titleHasLongWord && "max-[319px]:min-w-0 max-sm:min-w-min",
-              )}
-            >
-              <div className="flex items-center gap-1">
-                <h1
-                  // Ein Tageszeit-Gruß kann zwischen Server-Render und
-                  // Hydration genau die Stunde wechseln (12 oder 17 Uhr);
-                  // React behält dann den Servertext, statt die Seite zu
-                  // verwerfen (greeting.ts).
-                  suppressHydrationWarning
+            {back && <TenantBackLink href={backHref} label={backLabel} />}
+            {/* `max-sm:justify-end`: Rückt ein Symbolknopf (Kebab, Status) unter
+                dem Titel in eine eigene Zeile, steht er rechts wie auf dem
+                Desktop, nicht verloren am linken Rand (#7649). In der ersten
+                Zeile nimmt der Titelblock (`flex-1`) den freien Platz, dort
+                ändert sich nichts. */}
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 max-sm:justify-end max-sm:gap-x-2">
+              {/* `flex-1 basis-0`: der Titelblock nimmt, was die Aktionen übrig
+                  lassen, statt mit seiner natürlichen Breite zu ringen. Vorher
+                  schob eine zweizeilige Statuszeile auf dem Telefon selbst das
+                  einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
+                  die Kopfkarte wuchs um genau den toten Streifen, den sie auf
+                  dem Desktop nicht mehr hat.
+                  Titel mit ausschließlich kurzen Wörtern nutzen unter `sm` ihre
+                  tatsächliche Mindestbreite: Auch ungewöhnlich breite Wörter
+                  bleiben so ganz. Ein langer Titel darf mit `wrap-anywhere`
+                  schrumpfen; das betrifft nur Wörter ab 14 Graphem-Clustern.
+                  Unter 320 CSS-Pixeln wird jede Mindestbreite begrenzt, damit
+                  der Kopf auch bei starkem Zoom nicht seitlich überläuft. Hilfe,
+                  Status und Kebab rücken dann in die nächste Zeile, statt den
+                  Titel auf die frühere 6-rem-Breite zu drücken („Anmel|dung“,
+                  #7649). */}
+              <div
+                className={cn(
+                  "flex min-w-0 flex-1 basis-0 items-center gap-3",
+                  titleHasLongWord
+                    ? "max-sm:min-w-[min(100%,calc(14ch+6rem))]"
+                    : "max-[319px]:min-w-[min(100%,calc(14ch+6rem))] max-sm:min-w-min",
+                )}
+              >
+                {leading}
+                <div
                   className={cn(
-                    "font-semibold tracking-tight text-balance break-words text-gray-900",
-                    titleHasLongWord
-                      ? "min-w-0 max-sm:wrap-anywhere"
-                      : "min-w-0 max-[319px]:min-w-0 max-[319px]:wrap-anywhere max-sm:min-w-min",
-                    // Neben Info, Status und Kebab bleibt dem Titel auf dem
-                    // Telefon oft weniger als ein langes Wort. Dann trennt er
-                    // nach Silben („Ferienbe-treuung“) statt mitten im Wort;
-                    // nur Wörter ab 14 Zeichen, kürzere wandern ganz in die
-                    // nächste Zeile (#7417).
-                    "hyphens-auto [hyphenate-limit-chars:14_7_7]",
-                    // Auch auf dem Telefon sichtbar: unter lg gibt es keine
-                    // Shell-Kopfzeile mehr (wie in der Eltern-App), die
-                    // Kopfkarte ist die einzige Trägerin des Seitennamens.
-                    // Der Desktop-Grad ist der Grundwert, Telefon und die
-                    // Dichte-Stufe kleiner Bildschirme ziehen ihn je eine
-                    // Stufe herunter (#2824). Beide Varianten schliessen
-                    // einander aus, es gilt also immer genau eine.
-                    HEAD_TITLE_SIZE[prominent ? "prominent" : "standard"],
+                    "min-w-0",
+                    !titleHasLongWord && "max-[319px]:min-w-0 max-sm:min-w-min",
                   )}
                 >
-                  {title}
-                </h1>
-                {info != null && (
-                  <TenantPageInfo title={title}>{info}</TenantPageInfo>
+                  <div className="flex items-center gap-1">
+                    <h1
+                      // Ein Tageszeit-Gruß kann zwischen Server-Render und
+                      // Hydration genau die Stunde wechseln (12 oder 17 Uhr);
+                      // React behält dann den Servertext, statt die Seite zu
+                      // verwerfen (greeting.ts).
+                      suppressHydrationWarning
+                      className={cn(
+                        "font-semibold tracking-tight text-balance break-words text-gray-900",
+                        titleHasLongWord
+                          ? "min-w-0 max-sm:wrap-anywhere"
+                          : "min-w-0 max-[319px]:min-w-0 max-[319px]:wrap-anywhere max-sm:min-w-min",
+                        // Neben Info, Status und Kebab bleibt dem Titel auf dem
+                        // Telefon oft weniger als ein langes Wort. Dann trennt er
+                        // nach Silben („Ferienbe-treuung“) statt mitten im Wort;
+                        // nur Wörter ab 14 Zeichen, kürzere wandern ganz in die
+                        // nächste Zeile (#7417).
+                        "hyphens-auto [hyphenate-limit-chars:14_7_7]",
+                        // Auch auf dem Telefon sichtbar: unter lg gibt es keine
+                        // Shell-Kopfzeile mehr (wie in der Eltern-App), die
+                        // Kopfkarte ist die einzige Trägerin des Seitennamens.
+                        // Der Desktop-Grad ist der Grundwert, Telefon und die
+                        // Dichte-Stufe kleiner Bildschirme ziehen ihn je eine
+                        // Stufe herunter (#2824). Beide Varianten schliessen
+                        // einander aus, es gilt also immer genau eine.
+                        HEAD_TITLE_SIZE[prominent ? "prominent" : "standard"],
+                      )}
+                    >
+                      {title}
+                    </h1>
+                    {info != null && (
+                      <TenantPageInfo title={title}>{info}</TenantPageInfo>
+                    )}
+                  </div>
+                  {/* Ein div, kein p: `stats` ist beliebiges ReactNode, und
+                      Seiten setzen Blockelemente hinein (das LocationBadge der
+                      Kinderseite rendert ein div). In einem p wäre das ungültiges
+                      HTML und ein Hydration-Fehler. */}
+                  {statusLine != null && (
+                    <div className="mt-1 w-full text-sm leading-5 text-gray-600 max-sm:wrap-anywhere max-sm:[&_*]:min-w-0 max-sm:[&_*]:[overflow-wrap:anywhere] max-sm:[&_*]:whitespace-normal">
+                      {statusLine}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Unter lg setzt die Portalhülle hier das „?“ der Seitenhilfe ein:
+                  als erstes Element rechts neben dem Titel, vor Aktionen und
+                  Kebab. Es steht außerhalb der Aktionsgruppe und bricht deshalb
+                  nicht mit ihr in eine eigene Zeile um. So steht es auf jeder
+                  Seite an derselben Stelle (#7568, WCAG 3.2.6). */}
+              <div className={cn("contents", HEAD_CONTROL_HEIGHT)}>
+                <MobilePageHelpTarget />
+              </div>
+              {/* Eine Bedienhöhe und eine gemeinsame Mitte für Seitenaktionen.
+                  Symbolhüllen sind flex, damit die Text-Grundlinie keinen
+                  zusätzlichen Abstand unter dem Knopf erzeugt. */}
+              <div
+                className={cn(
+                  // Die Aktionen stehen neben dem Titel, solange sie neben
+                  // seiner Mindestbreite (unter sm: längstes Wort) Platz haben; sonst
+                  // brechen sie als Gruppe in eine eigene Zeile um und stehen
+                  // dort rechts (`ml-auto`), wie auf dem Desktop. Linksbündig
+                  // stand der tote Raum rechts neben den Knöpfen. `max-w-full`:
+                  // Sind die Knöpfe zusammen breiter als der Kopf, brechen sie
+                  // in der Gruppe um, statt die Seite seitlich scrollen zu
+                  // lassen (#4975).
+                  hasHeadActions
+                    ? "ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2"
+                    : "contents",
+                  // Unter sm gilt: JEDE Zeile ist voll. Ein einzelner Textknopf
+                  // rechtsbündig neben Leerraum las sich als toter Bereich.
+                  HEAD_ACTIONS_LAYOUT,
+                  HEAD_CONTROL_HEIGHT,
+                )}
+              >
+                {actions}
+                {kebabInTitleRow && overflowMenu && (
+                  <OverflowMenu items={overflowMenu} />
                 )}
               </div>
-              {/* Ein div, kein p: `stats` ist beliebiges ReactNode, und
-                  Seiten setzen Blockelemente hinein (das LocationBadge der
-                  Kinderseite rendert ein div). In einem p wäre das ungültiges
-                  HTML und ein Hydration-Fehler. */}
-              {statusLine != null && (
-                <div className="mt-1 w-full text-sm leading-5 text-gray-600 max-sm:wrap-anywhere max-sm:[&_*]:min-w-0 max-sm:[&_*]:[overflow-wrap:anywhere] max-sm:[&_*]:whitespace-normal">
-                  {statusLine}
-                </div>
-              )}
             </div>
-          </div>
-          {/* Unter lg setzt die Portalhülle hier das „?“ der Seitenhilfe ein:
-              als erstes Element rechts neben dem Titel, vor Aktionen und
-              Kebab. Es steht außerhalb der Aktionsgruppe und bricht deshalb
-              nicht mit ihr in eine eigene Zeile um. So steht es auf jeder
-              Seite an derselben Stelle (#7568, WCAG 3.2.6). */}
-          <div className={cn("contents", HEAD_CONTROL_HEIGHT)}>
-            <MobilePageHelpTarget />
-          </div>
-          {/* Eine Bedienhöhe und eine gemeinsame Mitte für Seitenaktionen.
-              Symbolhüllen sind flex, damit die Text-Grundlinie keinen
-              zusätzlichen Abstand unter dem Knopf erzeugt. */}
-          <div
-            className={cn(
-              // Die Aktionen stehen neben dem Titel, solange sie neben
-              // seiner Mindestbreite (unter sm: längstes Wort) Platz haben; sonst
-              // brechen sie als Gruppe in eine eigene Zeile um und stehen
-              // dort rechts (`ml-auto`), wie auf dem Desktop. Linksbündig
-              // stand der tote Raum rechts neben den Knöpfen. `max-w-full`:
-              // Sind die Knöpfe zusammen breiter als der Kopf, brechen sie
-              // in der Gruppe um, statt die Seite seitlich scrollen zu
-              // lassen (#4975).
-              hasHeadActions
-                ? "ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2"
-                : "contents",
-              // Unter sm gilt: JEDE Zeile ist voll. Ein einzelner Textknopf
-              // rechtsbündig neben Leerraum las sich als toter Bereich.
-              HEAD_ACTIONS_LAYOUT,
-              HEAD_CONTROL_HEIGHT,
-            )}
-          >
-            {actions}
-            {kebabInTitleRow && overflowMenu && (
-              <OverflowMenu items={overflowMenu} />
-            )}
-          </div>
-        </div>
 
-        {/* Der Reiter bestimmt, WAS man ansieht; die Suche filtert DARIN.
-            Deshalb steht er über der Suchzeile — darunter liest er sich als
-            ein weiteres Filterelement. */}
-        {tabs && <TenantPageTabs {...tabs} />}
+            {/* Der Reiter bestimmt, WAS man ansieht; die Suche filtert DARIN.
+                Deshalb steht er über der Suchzeile — darunter liest er sich als
+                ein weiteres Filterelement. */}
+            {tabs && <TenantPageTabs {...tabs} />}
 
-        {hasRowBelowTabs && (
-          <div
-            className={cn(
-              "compact:mt-3 mt-4 max-sm:mt-3",
-              searchSlotHeight === "controls" && HEAD_CONTROL_HEIGHT,
+            {hasRowBelowTabs && (
+              <div
+                className={cn(
+                  "compact:mt-3 mt-4 max-sm:mt-3",
+                  searchSlotHeight === "controls" && HEAD_CONTROL_HEIGHT,
+                )}
+              >
+                {searchSlot}
+                {!searchSlot && hasSearchRow && (
+                  <TenantPageSearchRow
+                    search={search}
+                    filters={filters}
+                    activeFilters={activeFilters}
+                    onClearAllFilters={onClearAllFilters}
+                    overflowMenu={overflowMenu}
+                    badge={badge}
+                    filterPanel={filterPanel}
+                    primaryAction={primaryAction}
+                    primaryActionDesktopOnly={primaryActionDesktopOnly}
+                  />
+                )}
+              </div>
             )}
-          >
-            {searchSlot}
-            {!searchSlot && hasSearchRow && (
-              <TenantPageSearchRow
-                search={search}
-                filters={filters}
-                activeFilters={activeFilters}
-                onClearAllFilters={onClearAllFilters}
-                overflowMenu={overflowMenu}
-                badge={badge}
-                filterPanel={filterPanel}
-                primaryAction={primaryAction}
-                primaryActionDesktopOnly={primaryActionDesktopOnly}
-              />
-            )}
-          </div>
-        )}
-      </header>
+          </header>
+        }
+        app={
+          <AppTenantHead
+            title={title}
+            headRef={headRef}
+            backLink={
+              back ? (
+                <TenantBackLink href={backHref} label={backLabel} />
+              ) : underMore ? (
+                <TenantBackLink href={MORE_BACK_HREF} label="Zurück zu Mehr" />
+              ) : undefined
+            }
+            leading={leading}
+            info={info}
+            actions={actions}
+            overflowMenu={overflowMenu}
+            statusLine={statusLine}
+            statsInline={appStatsInline}
+            compactStats={appCompactStats}
+            compactActions={appCompactActions}
+            toolbarScrollsAway={appToolbarScrollsAway}
+            shrinkToTitle={appShrinkToTitle}
+            printHideHeader={printHideHeader}
+            tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
+            toolbar={
+              searchSlot ??
+              (hasSearchRow ? (
+                <TenantPageSearchRow
+                  search={search}
+                  filters={filters}
+                  activeFilters={activeFilters}
+                  onClearAllFilters={onClearAllFilters}
+                  badge={badge}
+                  filterPanel={filterPanel}
+                  primaryAction={primaryAction}
+                  primaryActionDesktopOnly={primaryActionDesktopOnly}
+                />
+              ) : undefined)
+            }
+          />
+        }
+      />
 
       {/* Der Rumpf füllt die Höhe des Bildschirms: seine letzte Fläche
           wächst bis zur Unterkante (`.moto-tenant-body` in globals.css).

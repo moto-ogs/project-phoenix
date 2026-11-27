@@ -216,36 +216,67 @@ export function BlockRowBody({
  * die Zeit bis zum Beginn statt eines „Geplant", das nichts sagt. „Mein Tag"
  * nutzt dieselbe Marke, damit beide Karten dieselbe Sprache sprechen.
  */
-export function BlockState({
-  block,
-  now,
-}: {
-  readonly block: PlannedTimetableInstance;
-  readonly now: string;
-}) {
+/**
+ * Das Wort des Zustands, wie `BlockState` es zeigt; `null`, wo es kein
+ * Abzeichen gibt. Für zugängliche Namen, die das Abzeichen mitnennen.
+ */
+export function blockStateLabel(
+  block: PlannedTimetableInstance,
+  now: string,
+): string | null {
+  return blockStateBadge(block, now)?.label ?? null;
+}
+
+function blockStateBadge(
+  block: PlannedTimetableInstance,
+  now: string,
+): {
+  tone: "red" | "green" | "gray" | "warning" | "blue";
+  label: string;
+} | null {
   const { running, cancelled, isDuty } = blockRowState(block, now);
-  if (cancelled) {
-    return <StatusBadge tone="red" label="Fällt aus" />;
-  }
-  if (running) {
-    return <StatusBadge tone="green" label="Läuft" />;
-  }
-  if (block.status === "completed") {
-    return <StatusBadge tone="gray" label="Beendet" />;
-  }
+  if (cancelled) return { tone: "red", label: "Fällt aus" };
+  if (running) return { tone: "green", label: "Läuft" };
+  if (block.status === "completed") return { tone: "gray", label: "Beendet" };
   // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
   if (isDuty && (block.isOverdue || block.startTime <= now)) {
     return null;
   }
   if (block.isOverdue || (now !== "" && block.startTime <= now)) {
-    return <StatusBadge tone="warning" label="Nicht gestartet" />;
+    return { tone: "warning", label: "Nicht gestartet" };
   }
   // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
   if (now === "") return null;
-  return (
-    <StatusBadge
-      tone="blue"
-      label={formatMinutesAhead(minutesBetween(now, block.startTime))}
-    />
-  );
+  return {
+    tone: "blue",
+    label: formatMinutesAhead(minutesBetween(now, block.startTime)),
+  };
+}
+
+/**
+ * Der Abstand bis zum Beginn („in 2 Std 5 Min“), sonst `null`. Am Telefon
+ * trägt ihn nur der nächste Block; an jedem Block brach das Abzeichen lange
+ * Titel auf eine eigene Zeile um.
+ */
+export function blockAheadLabel(
+  block: PlannedTimetableInstance,
+  now: string,
+): string | null {
+  const badge = blockStateBadge(block, now);
+  return badge?.tone === "blue" ? badge.label : null;
+}
+
+export function BlockState({
+  block,
+  now,
+  size,
+}: {
+  readonly block: PlannedTimetableInstance;
+  readonly now: string;
+  /** App (#8070): kleines Abzeichen hinter dem Titel. */
+  readonly size?: "xs";
+}) {
+  const badge = blockStateBadge(block, now);
+  if (!badge) return null;
+  return <StatusBadge size={size} tone={badge.tone} label={badge.label} />;
 }
