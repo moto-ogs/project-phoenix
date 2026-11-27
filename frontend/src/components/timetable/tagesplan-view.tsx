@@ -503,7 +503,6 @@ export function TagesplanView() {
   const now = useMinuteClock();
   // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
   const { isApp, isSplit } = useDeviceContext();
-  const collapsedDayBar = useCollapsedDayBar(isApp && !isSplit);
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -714,9 +713,6 @@ export function TagesplanView() {
     // die Detailspalte nie verdeckt; ohne Blöcke bleibt sie im Kopf.
     const showMine = overviewScope === "all_staff";
     const appStats = tagesplanAppStats(instances ?? [], showMine, scopeHint);
-    const compactRunning = appStats.filter(
-      (item) => item.label === "läuft" || item.label === "laufen",
-    );
     const dayBar = (
       <TagesplanDayBar
         day={day}
@@ -727,10 +723,6 @@ export function TagesplanView() {
       />
     );
     const barInList = isSplit && groups.length > 0;
-    // Telefon, weit gescrollt: Die Wochenleiste klappt ein, der schmale
-    // Kopf trägt nur Titel und Kennzahlen (an einem anderen Tag als heute
-    // das Datum). Oben auf der Seite steht sie wieder.
-    const dayBarCollapsed = collapsedDayBar && !isSplit;
     return (
       <TenantPage
         title={tagesplanAppTitle(day, today)}
@@ -745,18 +737,16 @@ export function TagesplanView() {
         // nicht, welcher) und was gerade läuft; die übrigen Zahlen stehen
         // oben auf der Seite.
         appCompactStats={
-          dayBarCollapsed ? (
-            <span className="flex items-center gap-2">
-              <span className="whitespace-nowrap tabular-nums">
-                {tagesplanCompactDate(day)}
-              </span>
-              {compactRunning.length > 0 ? (
-                <TenantPageStats items={compactRunning} />
-              ) : null}
-            </span>
-          ) : undefined
+          <span className="whitespace-nowrap tabular-nums">
+            {tagesplanCompactDate(day)}
+          </span>
         }
-        searchSlot={barInList || dayBarCollapsed ? undefined : dayBar}
+        // Eine Regel für den schmalen Kopf auf jedem Telefon (#8070 R21):
+        // Die Tagesleiste rollt mit der Kopfkarte weg, beim Rollen bleiben
+        // Titel, Datum und „…“. Vorher klappte sie erst nach 160 px ein, am
+        // iPhone 15 also nie (die Seite war kürzer).
+        appToolbarScrollsAway
+        searchSlot={barInList ? undefined : dayBar}
         searchSlotHeight="natural"
         loading={showSkeleton}
         error={pageError}
@@ -872,56 +862,4 @@ export function TagesplanView() {
       </SectionCard>
     </TenantPage>
   );
-}
-
-/** Ab hier (px gescrollt) klappt die Wochenleiste am Telefon ein … */
-const DAY_BAR_COLLAPSE_AT = 160;
-/** … und erst ganz oben wieder auf (Abstand gegen Flattern). */
-const DAY_BAR_EXPAND_AT = 24;
-
-/**
- * Ob die Wochenleiste am Telefon eingeklappt ist. Beim Einklappen fällt
- * die klebende Leiste aus dem Fluss; die Seite rückt um ihre Höhe zurück,
- * damit der Inhalt im Bild nicht springt.
- */
-function useCollapsedDayBar(enabled: boolean): boolean {
-  const [collapsed, setCollapsed] = useState(false);
-  // Höhe der Leiste und Scrollstand beim Einklappen.
-  const shift = useRef<{ height: number; y: number } | null>(null);
-  useEffect(() => {
-    if (!enabled) {
-      setCollapsed(false);
-      return undefined;
-    }
-    const onScroll = () => {
-      const y = window.scrollY;
-      setCollapsed((current) => {
-        if (!current && y > DAY_BAR_COLLAPSE_AT) {
-          const bar = document.querySelector<HTMLElement>(
-            "[data-app-page-toolbar]",
-          );
-          shift.current = { height: bar?.offsetHeight ?? 0, y };
-          return true;
-        }
-        if (current && y < DAY_BAR_EXPAND_AT) return false;
-        return current;
-      });
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [enabled]);
-  useLayoutEffect(() => {
-    const pending = shift.current;
-    shift.current = null;
-    if (!collapsed || !pending || pending.height === 0) return;
-    // Hat der Browser schon ausgeglichen (Scroll-Verankerung) oder stand
-    // die Seite am Ende und rückte dort nach, wäre ein zweites Zurückrücken
-    // doppelt: am SE stand „Läuft jetzt“ dann unter der Pill. Deshalb auf
-    // den Zielwert setzen statt relativ zu rücken.
-    const target = Math.max(0, pending.y - pending.height);
-    if (window.scrollY !== pending.y) return;
-    window.scrollTo({ top: target });
-  }, [collapsed]);
-  return collapsed;
 }
