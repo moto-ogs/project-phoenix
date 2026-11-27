@@ -89,9 +89,10 @@ func (loaded *answerContract) checkPartialDetails(method, pattern, code string, 
 const answersFileEnv = "CONTRACT_ANSWERS_FILE"
 
 type answerContract struct {
-	doc     contractmodel.Document
-	byKey   map[string]contractmodel.Route
-	goTypes map[string]string
+	doc       contractmodel.Document
+	validator contractmodel.AnswerValidator
+	byKey     map[string]contractmodel.Route
+	goTypes   map[string]string
 }
 
 var loadAnswerContract = sync.OnceValue(func() *answerContract {
@@ -106,8 +107,12 @@ var loadAnswerContract = sync.OnceValue(func() *answerContract {
 			if err := json.Unmarshal(raw, &loaded.doc); err != nil {
 				panic("answer contract: " + err.Error())
 			}
+			loaded.validator = loaded.doc.AnswerValidator()
 			for _, route := range loaded.doc.Routes {
-				loaded.byKey[route.Key()] = route
+				key := answerRouteKey(route.Method, route.Pattern)
+				if _, exists := loaded.byKey[key]; !exists {
+					loaded.byKey[key] = route
+				}
 			}
 			for _, object := range loaded.doc.Types {
 				loaded.goTypes[object.Name] = object.GoType
@@ -144,12 +149,8 @@ func (loaded *answerContract) observeRefusal(r *http.Request, record func(string
 	if routeContext == nil {
 		return
 	}
-	pattern := strings.TrimSuffix(routeContext.RoutePattern(), "/")
-	for _, route := range loaded.doc.Routes {
-		if route.Method == r.Method && strings.TrimSuffix(route.Pattern, "/") == pattern {
-			record(RefusedAnswerKey(route.Key()))
-			return
-		}
+	if route, ok := loaded.byKey[answerRouteKey(r.Method, routeContext.RoutePattern())]; ok {
+		record(RefusedAnswerKey(route.Key()))
 	}
 }
 
@@ -176,7 +177,7 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		return err
 	}
 	for _, route := range routes {
-		violations := loaded.doc.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
+		violations := loaded.validator.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
 		if len(violations) == 0 {
 			continue
 		}
@@ -236,16 +237,20 @@ func readsAnUntypedBody(r *http.Request, route contractmodel.Route) bool {
 // answer with the Go type of data. chi reports a pattern without its
 // trailing slash.
 func (c *answerContract) candidates(method, pattern string, data any) ([]contractmodel.Route, bool) {
+	if route, ok := c.byKey[answerRouteKey(method, pattern)]; ok {
+		return []contractmodel.Route{route}, true
+	}
 	var routes []contractmodel.Route
 	for _, route := range c.doc.Routes {
-		if route.Method == method && strings.TrimSuffix(route.Pattern, "/") == strings.TrimSuffix(pattern, "/") {
-			return []contractmodel.Route{route}, true
-		}
 		if route.Method == method && mountedAt(route.Pattern, pattern) && c.answersWith(route, data) {
 			routes = append(routes, route)
 		}
 	}
 	return routes, false
+}
+
+func answerRouteKey(method, pattern string) string {
+	return method + " " + strings.TrimSuffix(pattern, "/")
 }
 
 // mountedAt reports whether full is relative below some mount. The root of
