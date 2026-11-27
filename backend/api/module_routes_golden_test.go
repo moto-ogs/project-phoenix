@@ -197,7 +197,7 @@ func checkModuleBookingGate(t *testing.T, api *goldenRuntime) {
 		method string
 		path   string
 	}{
-		{settings.ModuleMittagessen, http.MethodGet, "/api/meal-plan/?week_start=2026-10-19"},
+		{settings.ModuleMittagessen, http.MethodGet, "/api/meal-plan/days?week_start=2026-10-19"},
 		{settings.ModuleMittagessen, http.MethodGet, "/api/meal-caterer/"},
 		{settings.ModuleElternApp, http.MethodGet, "/api/messages/unread-count"},
 		{settings.ModuleElternApp, http.MethodGet, "/api/guardians/invitations/pending-approval"},
@@ -235,10 +235,10 @@ func checkModuleBookingGate(t *testing.T, api *goldenRuntime) {
 		setBooked(cancelled, settings.ModuleMittagessen, true)
 		t.Cleanup(func() { setBooked(cancelled, settings.ModuleMittagessen, false) })
 
-		status, body := request(bookedToken, http.MethodGet, "/api/meal-plan/?week_start=2026-10-19", "")
+		status, body := request(bookedToken, http.MethodGet, "/api/meal-plan/days?week_start=2026-10-19", "")
 		require.Equalf(t, http.StatusForbidden, status, "school B cancelled: %v", body)
 		require.Equal(t, common.CodeModuleNotBooked, body["code"])
-		status, body = request(cancelledToken, http.MethodGet, "/api/meal-plan/?week_start=2026-10-19", "")
+		status, body = request(cancelledToken, http.MethodGet, "/api/meal-plan/days?week_start=2026-10-19", "")
 		require.Equalf(t, http.StatusOK, status, "school A booked again: %v", body)
 	})
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Ruft `onVisible` auf, sobald das Element mit der zurückgegebenen Ref in den
@@ -8,28 +8,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Der Rahmen einer scrollenden Liste zählt mit: ein IntersectionObserver ohne
  * `root` schneidet mit jedem scrollenden Vorfahren.
  *
- * `supported` ist false, wo es keinen IntersectionObserver gibt (alte
- * WebViews, jsdom). Der Aufrufer bietet dann einen Knopf an; er sollte ihn
- * ohnehin anbieten, denn mit der Tastatur scrollt niemand ein Ende ins Bild.
- * Mit `enabled` false beobachtet der Hook nichts, etwa solange eine Seite lädt.
+ * Ohne IntersectionObserver oder mit `enabled` false beobachtet der Hook
+ * nichts. Der Aufrufer bietet immer einen Knopf an, auch für die Tastatur.
  */
 export function useOnVisible(
   onVisible: () => void,
   enabled: boolean,
-): {
-  readonly ref: (node: Element | null) => void;
-  readonly supported: boolean;
-} {
+): (node: Element | null) => void {
   const [node, setNode] = useState<Element | null>(null);
   const onVisibleRef = useRef(onVisible);
   useEffect(() => {
     onVisibleRef.current = onVisible;
   });
-  const supported =
-    typeof window !== "undefined" && "IntersectionObserver" in window;
-
   useEffect(() => {
-    if (!enabled || !node || !supported) return;
+    if (!enabled || !node || typeof IntersectionObserver !== "function") {
+      return;
+    }
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         onVisibleRef.current();
@@ -37,8 +31,7 @@ export function useOnVisible(
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [enabled, node, supported]);
+  }, [enabled, node]);
 
-  const ref = useCallback((element: Element | null) => setNode(element), []);
-  return { ref, supported };
+  return setNode;
 }

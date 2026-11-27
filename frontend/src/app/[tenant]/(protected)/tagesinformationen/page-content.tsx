@@ -357,11 +357,7 @@ function TagesinformationenContent() {
             Für heute liegen keine Hinweise vor.
           </p>
         ) : (
-          <TodayNoticeList
-            notices={todayNotices}
-            onChanged={mutateToday}
-            layout="grid"
-          />
+          <TodayNoticeList notices={todayNotices} onChanged={mutateToday} />
         )}
       </SectionCard>
 

@@ -158,7 +158,7 @@ func TestChildFeatures_ReflectsPermissionsAndOpenRequest(t *testing.T) {
 	assert.True(t, flags.NotesEnabled, "default guardian holds notes.write with messaging on")
 
 	// File a care-schedule request; the open-request badge now lights up.
-	_, err = svc.CreateCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload())
+	_, err = svc.CreateSignedCareScheduleRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 
 	flags, err = svc.ChildFeatures(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
@@ -179,7 +179,7 @@ func TestChildFeatures_HidesAnotherGuardiansRequestUntilNamedShare(t *testing.T)
 	`, author.StudentID, recipient.GuardianProfileID)
 	require.NoError(t, err)
 
-	created, err := svc.CreateCareScheduleRequest(ctx, author.AccountID, author.StudentID, carePayload())
+	created, err := svc.CreateSignedCareScheduleRequest(ctx, author.AccountID, author.StudentID, carePayload(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, created.PendingRequest)
 	flags, err := svc.ChildFeatures(ctx, recipient.AccountID, author.StudentID)

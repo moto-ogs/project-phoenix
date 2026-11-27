@@ -55,13 +55,13 @@ func presenceVisitSnapshot(row *studentpresence.Visit) *studentpresence.Visit {
 	return &visit
 }
 
-func (s *service) currentPresenceVisits(ctx context.Context, studentIDs []int64, lock bool) (map[int64]*studentpresence.Visit, error) {
+func (s *service) currentPresenceVisits(ctx context.Context, studentIDs []int64) (map[int64]*studentpresence.Visit, error) {
 	result := make(map[int64]*studentpresence.Visit, len(studentIDs))
 	if len(studentIDs) == 0 {
 		return result, nil
 	}
 	visits, err := s.SchoolPresence.ListVisits(ctx, studentpresence.VisitFilter{
-		StudentIDs: studentIDs, OpenOnly: true, NewestFirst: true, StudentOrder: true, ForUpdate: lock,
+		StudentIDs: studentIDs, OpenOnly: true, NewestFirst: true, StudentOrder: true,
 	})
 	if err != nil {
 		return nil, err

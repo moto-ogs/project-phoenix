@@ -174,11 +174,6 @@ func (s *Backend) stat(ctx context.Context, key string) (minio.ObjectInfo, error
 	return info, objectError(ctx, "stat", err)
 }
 
-func (s *Backend) ObjectSize(ctx context.Context, key string) (int64, error) {
-	info, err := s.stat(ctx, key)
-	return info.Size, err
-}
-
 func (s *Backend) ReplaceObject(ctx context.Context, key string, content []byte) error {
 	info, err := s.stat(ctx, key)
 	if err != nil {

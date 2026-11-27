@@ -14,9 +14,6 @@ import { groupKeys } from "./groups-keys";
 
 import { shellResourceKeys } from "./shell-keys";
 
-export { announcementKeys, dashboardKeys } from "./shell-keys";
-export { parentKeys } from "./parent-keys";
-
 const operatorSummaryPrefixes = [
   "operator-school-summaries",
   "operator-organization-summaries",
@@ -343,12 +340,9 @@ export const databaseKeys = {
   counts: () => "database-stats",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
-  /** The id/name options of one API list for a select, per query. */
   /** The choice of one loaded select field of a database form, by resource. */
   formFieldOptions: (resource: string) =>
     `database-form-options-${encodeURIComponent(resource)}`,
-  entityOptions: (entityType: string, query: string) =>
-    `database-entity-options-${entityType}-${encodeURIComponent(query)}`,
 } as const;
 
 export const homeLayoutKeys = {

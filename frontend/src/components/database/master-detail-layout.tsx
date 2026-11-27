@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useModal } from "~/components/ui/modal-context";
 import { SectionCard } from "~/components/ui/section-card";
@@ -25,14 +25,10 @@ interface MasterDetailLayoutProps {
   detail: ReactNode;
   selectedId: string | null;
   onDeselect: () => void;
-  listWidth?: number;
   mobileDrawerTitle?: string;
-  className?: string;
-  /** Breathing room below the split view (e.g. to clear surrounding padding). */
-  bottomOffset?: number;
   /**
    * How the desktop layout behaves when nothing is selected.
-   * - `"placeholder"` (default): list keeps `listWidth`, detail renders the passed node (typically an empty state).
+   * - `"placeholder"` (default): list keeps its width, detail renders the passed node (typically an empty state).
    * - `"expand"`: list takes the full width and the detail pane is not rendered.
    */
   unselectedBehavior?: "placeholder" | "expand";
@@ -43,16 +39,12 @@ export function MasterDetailLayout({
   detail,
   selectedId,
   onDeselect,
-  listWidth = 440,
   mobileDrawerTitle = "Details",
-  className,
-  bottomOffset = 32,
   unselectedBehavior = "placeholder",
 }: MasterDetailLayoutProps) {
   const isMobile = useMediaQuery(BELOW_MD);
   const { isModalOpen } = useModal();
-  const { ref: containerRef, height } =
-    useFillHeight<HTMLDivElement>(bottomOffset);
+  const { ref: containerRef, height } = useFillHeight<HTMLDivElement>();
 
   if (isMobile) {
     // Auf dem Telefon scrollt die Seite, nicht die Karte: keine feste Höhe,
@@ -61,7 +53,7 @@ export function MasterDetailLayout({
     // Navigationsleiste, und zwei Scrollflächen ineinander sind auf dem
     // Touchscreen mühsam (#3330).
     return (
-      <div className={cn("flex w-full flex-col", className)}>
+      <div className="flex w-full flex-col">
         <SectionCard
           padding="none"
           className="min-h-0 flex-1"
@@ -109,23 +101,12 @@ export function MasterDetailLayout({
     // den Ausstieg machte die Wachstumsregel aus globals.css diese Zeile zur
     // Spalte und gäbe der Objektansicht `flex: 1 0 auto`. Sie schrumpfte
     // dann nicht mehr und lief über den rechten Rand hinaus (#3330).
-    // Die Listenbreite reist als CSS-Variable, weil die Kit-Karte kein
-    // `style` annimmt.
-    <div
-      ref={containerRef}
-      style={
-        {
-          height,
-          "--master-detail-list-width": `${listWidth}px`,
-        } as CSSProperties
-      }
-      className={cn("flex w-full gap-4", className)}
-    >
+    <div ref={containerRef} style={{ height }} className="flex w-full gap-4">
       <SectionCard
         padding="none"
         className={cn(
           "moto-scroll-surface",
-          showDetail ? "w-(--master-detail-list-width) shrink-0" : "flex-1",
+          showDetail ? "w-[440px] shrink-0" : "flex-1",
         )}
         bodyClassName="flex h-full flex-col"
       >

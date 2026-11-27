@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface EnrollmentPublicUrlParams {
   readonly tenantSlug: string | null | undefined;
@@ -18,39 +18,6 @@ interface BrowserLocationSnapshot {
  * In subdomain mode the public route is /anmeldung[/phaseId]. In path mode the
  * tenant slug must stay in the URL: /{tenantSlug}/anmeldung[/phaseId].
  */
-export function buildEnrollmentPublicUrl({
-  tenantSlug,
-  phaseId,
-}: EnrollmentPublicUrlParams): string;
-export function buildEnrollmentPublicUrl(
-  { tenantSlug, phaseId }: EnrollmentPublicUrlParams,
-  location: BrowserLocationSnapshot,
-): string;
-export function buildEnrollmentPublicUrl(
-  { tenantSlug, phaseId }: EnrollmentPublicUrlParams,
-  location?: BrowserLocationSnapshot,
-): string {
-  const loc =
-    location ??
-    (typeof window !== "undefined"
-      ? {
-          origin: window.location.origin,
-          hostname: window.location.hostname,
-        }
-      : null);
-  if (!loc || !tenantSlug) return "";
-
-  const path = phaseId
-    ? `/anmeldung/${encodeURIComponent(phaseId)}`
-    : "/anmeldung";
-  const inSubdomainMode = loc.hostname.startsWith(`${tenantSlug}.`);
-
-  if (inSubdomainMode) {
-    return `${loc.origin}${path}`;
-  }
-  return `${loc.origin}/${encodeURIComponent(tenantSlug)}${path}`;
-}
-
 export function useEnrollmentPublicUrl({
   tenantSlug,
   phaseId,
@@ -66,8 +33,13 @@ export function useEnrollmentPublicUrl({
     });
   }, []);
 
-  return useMemo(() => {
-    if (!location) return "";
-    return buildEnrollmentPublicUrl({ tenantSlug, phaseId }, location);
-  }, [location, tenantSlug, phaseId]);
+  if (!location || !tenantSlug) return "";
+
+  const path = phaseId
+    ? `/anmeldung/${encodeURIComponent(phaseId)}`
+    : "/anmeldung";
+  if (location.hostname.startsWith(`${tenantSlug}.`)) {
+    return `${location.origin}${path}`;
+  }
+  return `${location.origin}/${encodeURIComponent(tenantSlug)}${path}`;
 }

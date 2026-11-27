@@ -151,7 +151,7 @@ children when that is what the type exists for (`parent_room_changed`,
   a later change of defaults must not overwrite. `notification_type` carries no
   CHECK constraint — an unknown type is inert, nothing reads it.
 - **Service** — `modules/delivery/internal/notifications/preferences.go`. `GetForAccount` /
-  `SetForAccount` for the staff portal; `GetForParent` / `SetForParent` act
+  `SetForPortalAccount` for the staff and school portals; `GetForParent` / `SetForParent` act
   across every active school of a guardian at once (the parents app has no
   tenant context of its own). A type the school currently blocks can still be
   switched on: the gate is applied at delivery time, so an admin toggling the

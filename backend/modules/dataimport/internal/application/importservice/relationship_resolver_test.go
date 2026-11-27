@@ -142,111 +142,6 @@ func TestRelationshipResolver_ResolveGroup_FuzzyMatch(t *testing.T) {
 	}
 }
 
-func TestRelationshipResolver_ResolveRoom_ExactMatch(t *testing.T) {
-	t.Parallel()
-
-	resolver := &RelationshipResolver{
-		roomCache: map[string]Reference{
-			"raum 101": {ID: 1, Name: "Raum 101"},
-			"raum 202": {ID: 2, Name: "Raum 202"},
-		},
-	}
-
-	tests := []struct {
-		name   string
-		input  string
-		wantID *int64
-	}{
-		{
-			name:   "exact match",
-			input:  "Raum 101",
-			wantID: testpkg.Int64Ptr(1),
-		},
-		{
-			name:   "case insensitive",
-			input:  "raum 101",
-			wantID: testpkg.Int64Ptr(1),
-		},
-		{
-			name:   "with spaces",
-			input:  "  Raum 101  ",
-			wantID: testpkg.Int64Ptr(1),
-		},
-		{
-			name:   "empty",
-			input:  "",
-			wantID: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			id, errors := resolver.ResolveRoom(context.Background(), tt.input)
-
-			if tt.wantID != nil {
-				assert.NotNil(t, id)
-				assert.Equal(t, *tt.wantID, *id)
-				assert.Empty(t, errors)
-			} else {
-				assert.Nil(t, id)
-				assert.Empty(t, errors)
-			}
-		})
-	}
-}
-
-func TestRelationshipResolver_ResolveRoom_FuzzyMatch(t *testing.T) {
-	t.Parallel()
-
-	resolver := &RelationshipResolver{
-		roomCache: map[string]Reference{
-			"raum 101": {ID: 1, Name: "Raum 101"},
-			"raum 102": {ID: 2, Name: "Raum 102"},
-			"raum 201": {ID: 3, Name: "Raum 201"},
-		},
-	}
-
-	tests := []struct {
-		name            string
-		input           string
-		wantSuggestions bool
-	}{
-		{
-			name:            "typo - single char difference",
-			input:           "Raum 10",
-			wantSuggestions: true,
-		},
-		{
-			name:            "typo - transposed digit",
-			input:           "Raum 011",
-			wantSuggestions: true,
-		},
-		{
-			name:            "no match",
-			input:           "Zimmer ABC",
-			wantSuggestions: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			id, errors := resolver.ResolveRoom(context.Background(), tt.input)
-
-			assert.Nil(t, id)
-			assert.NotEmpty(t, errors)
-
-			if tt.wantSuggestions {
-				assert.NotEmpty(t, errors[0].Suggestions)
-				assert.Equal(t, "room_not_found_with_suggestions", errors[0].Code)
-				assert.NotNil(t, errors[0].AutoFix)
-			} else {
-				assert.Empty(t, errors[0].Suggestions)
-				assert.Equal(t, "room_not_found", errors[0].Code)
-			}
-		})
-	}
-}
-
 func TestRelationshipResolver_FindSimilarGroups(t *testing.T) {
 	t.Parallel()
 
@@ -316,16 +211,14 @@ func TestRelationshipResolver_FindSimilarGroups(t *testing.T) {
 func TestNewRelationshipResolver(t *testing.T) {
 	t.Parallel()
 
-	t.Run("creates resolver with empty caches", func(t *testing.T) {
+	t.Run("creates resolver with an empty group cache", func(t *testing.T) {
 		// ACT
-		resolver := NewRelationshipResolver(nil, nil)
+		resolver := NewRelationshipResolver(nil)
 
 		// ASSERT
 		assert.NotNil(t, resolver)
 		assert.NotNil(t, resolver.groupCache)
-		assert.NotNil(t, resolver.roomCache)
 		assert.Empty(t, resolver.groupCache)
-		assert.Empty(t, resolver.roomCache)
 	})
 }
 
@@ -351,7 +244,7 @@ func TestRelationshipResolver_PreloadGroups(t *testing.T) {
 				{ID: 2, Name: "Gruppe 2B"},
 			},
 		}
-		resolver := NewRelationshipResolver(mockRepo.lookup, nil)
+		resolver := NewRelationshipResolver(mockRepo.lookup)
 
 		// ACT
 		err := resolver.PreloadReferenceData(ctx)
@@ -368,7 +261,7 @@ func TestRelationshipResolver_PreloadGroups(t *testing.T) {
 		mockRepo := &mockGroupRepo{
 			err: assert.AnError,
 		}
-		resolver := NewRelationshipResolver(mockRepo.lookup, nil)
+		resolver := NewRelationshipResolver(mockRepo.lookup)
 
 		// ACT
 		err := resolver.PreloadReferenceData(ctx)
@@ -379,91 +272,4 @@ func TestRelationshipResolver_PreloadGroups(t *testing.T) {
 	})
 }
 
-// ============================================================================
-// PreloadRooms Tests
-// ============================================================================
-
-type mockRoomRepo struct {
-	rooms []Reference
-	err   error
-}
-
-func TestRelationshipResolver_PreloadRooms(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-
-	t.Run("preloads rooms successfully", func(t *testing.T) {
-		// ARRANGE
-		mockRepo := &mockRoomRepo{
-			rooms: []Reference{
-				{ID: 1, Name: "Raum 101"},
-				{ID: 2, Name: "Raum 202"},
-			},
-		}
-		resolver := NewRelationshipResolver(nil, mockRepo.lookup)
-
-		// ACT
-		err := resolver.PreloadRooms(ctx)
-
-		// ASSERT
-		assert.NoError(t, err)
-		assert.Len(t, resolver.roomCache, 2)
-		assert.Contains(t, resolver.roomCache, "raum 101")
-		assert.Contains(t, resolver.roomCache, "raum 202")
-	})
-
-	t.Run("returns error when repo fails", func(t *testing.T) {
-		// ARRANGE
-		mockRepo := &mockRoomRepo{
-			err: assert.AnError,
-		}
-		resolver := NewRelationshipResolver(nil, mockRepo.lookup)
-
-		// ACT
-		err := resolver.PreloadRooms(ctx)
-
-		// ASSERT
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "preload rooms")
-	})
-}
-
-// ============================================================================
-// findSimilarRooms Tests
-// ============================================================================
-
-func TestRelationshipResolver_FindSimilarRooms(t *testing.T) {
-	t.Parallel()
-
-	resolver := &RelationshipResolver{
-		roomCache: map[string]Reference{
-			"raum 101": {ID: 1, Name: "Raum 101"},
-			"raum 102": {ID: 2, Name: "Raum 102"},
-			"raum 201": {ID: 3, Name: "Raum 201"},
-		},
-	}
-
-	t.Run("finds similar room names", func(t *testing.T) {
-		// ACT
-		suggestions := resolver.findSimilarRooms("Raum 100", 2)
-
-		// ASSERT
-		assert.NotEmpty(t, suggestions)
-		assert.LessOrEqual(t, len(suggestions), 3)
-	})
-
-	t.Run("returns empty for no matches", func(t *testing.T) {
-		// ACT
-		suggestions := resolver.findSimilarRooms("Completely Different", 1)
-
-		// ASSERT
-		assert.Empty(t, suggestions)
-	})
-}
-
-// Stubs for the issue #585 refactor interface additions — unused here.
-
 func (m *mockGroupRepo) lookup(context.Context) ([]Reference, error) { return m.groups, m.err }
-
-func (m *mockRoomRepo) lookup(context.Context) ([]Reference, error) { return m.rooms, m.err }

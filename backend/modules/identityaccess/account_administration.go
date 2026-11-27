@@ -43,7 +43,7 @@ type OwnPasswordChange struct {
 }
 
 // AccountAdministration administers platform accounts (#3332): the read of
-// one manageable account, activation and deactivation, and the credential
+// one manageable account, deactivation, and the credential
 // change an account holder makes for themselves.
 //
 // Accounts are platform-wide rows without a tenant, so ordinary administration
@@ -65,7 +65,6 @@ type AccountAdministration interface {
 	// the caller's transaction, and does not deactivate or unlink the account.
 	AnonymizeAccountForDeletion(ctx context.Context, accountID int64, email string) error
 	FindManageableAccount(ctx context.Context, accountID int64) (ManagedAccount, error)
-	ActivateAccount(ctx context.Context, accountID int64) error
 	DeactivateAccount(ctx context.Context, accountID int64) error
 	ChangeAccountPassword(ctx context.Context, change OwnPasswordChange) error
 }

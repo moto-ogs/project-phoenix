@@ -19,7 +19,7 @@ func TestModuleCreatesPersonsInOneCommand(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	module := buildModule(t, db)
-	batches, ok := module.(peopledirectory.PersonBatches)
+	batches, ok := module.Owner.(peopledirectory.PersonBatches)
 	require.True(t, ok, "the composed owner offers the batch slice")
 	ctx := testpkg.Ctx(t)
 	card := testpkg.CreateTestRFIDCard(t, db, "BATCH")

@@ -481,7 +481,6 @@ export function StudentDokumenteTab({
             setAccidentOpen(false);
             void mutate();
           }}
-          openCreated
         />
       )}
 

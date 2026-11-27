@@ -4776,37 +4776,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (r carePlanRecords) DeleteArrivalExceptionsByStudent(ctx context.Context, studentID int64) error {\n\treturn carePlanScheduleError(r.capability.DeleteArrivalExceptionsByStudent(ctx, studentID))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalExceptionsByStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r carePlanRecords) DeleteArrivalNotesByStudent(ctx context.Context, studentID int64) error {\n\treturn carePlanScheduleError(r.capability.DeleteArrivalNotesByStudent(ctx, studentID))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/carePlanRecords.DeleteArrivalNotesByStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (r carePlanRecords) DeleteArrivalSchedulesByStudent(ctx context.Context, studentID int64) error {\n\treturn carePlanScheduleError(r.capability.DeleteArrivalSchedulesByStudent(ctx, studentID))\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/carePlanRecords.DeleteArrivalSchedulesByStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r carePlanRecords) DeletePickupExceptionsByStudent(ctx context.Context, studentID int64) error {\n\treturn carePlanScheduleError(r.capability.DeletePickupExceptionsByStudent(ctx, studentID))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/carePlanRecords.DeletePickupExceptionsByStudent",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r carePlanRecords) DeletePickupNotesByStudent(ctx context.Context, studentID int64) error {\n\treturn carePlanScheduleError(r.capability.DeletePickupNotesByStudent(ctx, studentID))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/carePlanRecords.DeletePickupNotesByStudent",
       "owner": "roots"
     },
     {

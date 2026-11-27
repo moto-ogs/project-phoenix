@@ -175,21 +175,6 @@ func (p legacyInstancePlans) DeleteActivityInstance(ctx context.Context, id int6
 	return fake.Delete(ctx, id)
 }
 
-func (p legacyInstancePlans) DeletePlannedActivityInstances(ctx context.Context, from string, to *string, groupID *int64, preserveDeviations bool) (int64, error) {
-	fake, ok := p.fake.(interface {
-		DeletePlannedNonSpontaneousInWindow(context.Context, calendar.Date, *calendar.Date, *int64, bool) (int64, error)
-	})
-	if !ok {
-		return 0, fmt.Errorf("fake %T deletes no planned instances", p.fake)
-	}
-	var until *calendar.Date
-	if to != nil {
-		day := calendar.Date(*to)
-		until = &day
-	}
-	return fake.DeletePlannedNonSpontaneousInWindow(ctx, calendar.Date(from), until, groupID, preserveDeviations)
-}
-
 func (p legacyInstancePlans) DeleteRemovedWeekendActivityInstances(ctx context.Context, groupID int64, weekdays []int) (int64, error) {
 	fake, ok := p.fake.(interface {
 		DeletePlannedMaterializedWeekendInstances(context.Context, int64, []int) (int64, error)

@@ -781,7 +781,6 @@ function DienstplanContent() {
 
       {modal && canPlanShifts && (
         <ShiftEditModal
-          isOpen
           mode={modal.mode}
           staffId={modal.staff.id}
           staffName={`${modal.staff.firstName} ${modal.staff.lastName}`}
@@ -815,7 +814,6 @@ function DienstplanContent() {
           dann in jeden Test dieser Seite, wenn ihn niemand öffnet. */}
       {canExportPlan && exportOpen && (
         <PlanExportModal
-          isOpen
           plan="dienstplan"
           weekDay={dayISO}
           isWeekOnScreen={view !== "halbjahr"}

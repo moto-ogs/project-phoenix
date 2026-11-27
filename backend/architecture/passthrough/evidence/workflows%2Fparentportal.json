@@ -604,13 +604,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a guardianPickupExceptions) ApplyGuardianPickupException(ctx context.Context, change care.GuardianPickupChange) error {\n\treturn a.callbacks.ApplyGuardianPickupException(ctx, change)\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "workflows/parentportal/guardianPickupExceptions.ApplyGuardianPickupException",
-      "owner": "workflows/parentportal"
-    },
-    {
-      "build": "production",
       "evidence": "func (a guardianPickupExceptions) WithdrawGuardianPickupException(ctx context.Context, change care.PickupException) error {\n\treturn a.callbacks.WithdrawGuardianPickupException(ctx, change)\n}",
       "form": "unchanged-forward-evidence",
       "id": "workflows/parentportal/guardianPickupExceptions.WithdrawGuardianPickupException",

@@ -1,7 +1,5 @@
 DELETE /api/meal-plan/days/{date}/cancellation -> mittagessen
 DELETE /api/meal-plan/participation/{studentId}/days/{date} -> mittagessen
-DELETE /api/meal-plan/{date} -> mittagessen
-GET /api/meal-plan/ -> mittagessen
 GET /api/meal-plan/cancellations -> mittagessen
 GET /api/meal-plan/days -> mittagessen
 GET /api/meal-plan/orders -> mittagessen
@@ -15,4 +13,3 @@ PUT /api/meal-plan/days/{date} -> mittagessen
 PUT /api/meal-plan/days/{date}/cancellation -> mittagessen
 PUT /api/meal-plan/participation/{studentId}/days/{date} -> mittagessen
 PUT /api/meal-plan/participation/{studentId}/schedule -> mittagessen
-PUT /api/meal-plan/{date} -> mittagessen

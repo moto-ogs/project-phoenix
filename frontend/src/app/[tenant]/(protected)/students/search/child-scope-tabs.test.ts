@@ -6,7 +6,6 @@ import {
   buildChildScopeTabs,
   childScopeAnalyticsValue,
   roomIdFromScope,
-  roomScope,
 } from "./child-scope-tabs";
 
 describe("buildChildScopeTabs (#1321)", () => {
@@ -41,7 +40,7 @@ describe("buildChildScopeTabs (#1321)", () => {
         ownGroupIds: [],
         rooms: [{ id: "42", name: "Werkraum" }],
       })?.map((tab) => tab.value),
-    ).toEqual([ALL_CHILDREN_SCOPE, roomScope("42")]);
+    ).toEqual([ALL_CHILDREN_SCOPE, "room:42"]);
   });
 });
 
@@ -80,7 +79,7 @@ describe("activeChildScope (#1321)", () => {
   it("is the room tab for a room filter alone, none together with groups", () => {
     expect(
       activeChildScope({ selectedGroupIds: [], roomId: "42", ownGroupIds }),
-    ).toBe(roomScope("42"));
+    ).toBe("room:42");
     expect(
       activeChildScope({
         selectedGroupIds: ["5", "6"],
@@ -93,13 +92,13 @@ describe("activeChildScope (#1321)", () => {
   it("names only the kind of tab for the usage analytics (#5046)", () => {
     expect(childScopeAnalyticsValue(ALL_CHILDREN_SCOPE)).toBe("all");
     expect(childScopeAnalyticsValue(MY_GROUPS_SCOPE)).toBe("groups");
-    expect(childScopeAnalyticsValue(roomScope("42"))).toBe("room");
+    expect(childScopeAnalyticsValue("room:42")).toBe("room");
     expect(childScopeAnalyticsValue("")).toBeNull();
     expect(childScopeAnalyticsValue("room:")).toBeNull();
   });
 
   it("reads the room id back from its tab value", () => {
-    expect(roomIdFromScope(roomScope("42"))).toBe("42");
+    expect(roomIdFromScope("room:42")).toBe("42");
     expect(roomIdFromScope(MY_GROUPS_SCOPE)).toBeNull();
   });
 });

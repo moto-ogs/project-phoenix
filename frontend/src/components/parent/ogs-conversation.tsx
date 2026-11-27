@@ -105,14 +105,12 @@ function nudgeUnreadBadge(): void {
 /**
  * The parent <-> OGS chat for one child. The parent is talking to "the OGS
  * [Schulname]" — the child is only context, never the counterpart. Used both
- * inline on the messages landing page (single-child parents go straight here)
- * and on the per-child route (multi-child parents, with a back link + the
- * child shown for disambiguation).
+ * inline on the messages landing page and on the per-child route, which
+ * also has a back link. Both show the child for disambiguation.
  */
 export function OgsConversation({
   studentId,
   showBack = false,
-  showChild = false,
   audience: audienceProp,
   onAudienceChange,
   tourAnchor,
@@ -125,7 +123,6 @@ export function OgsConversation({
    */
   readonly headingLevel?: 1 | 2;
   readonly showBack?: boolean;
-  readonly showChild?: boolean;
   /**
    * `data-parent-tour` value for the conversation head. The page passes its
    * own tour anchor when it hides its intro on a small screen, so the tour
@@ -495,9 +492,7 @@ export function OgsConversation({
               aria-hidden="true"
             >
               <Skeleton className="h-5 w-48 max-w-2/3" />
-              {showChild ? (
-                <Skeleton shape="control" className="h-7 w-28" />
-              ) : null}
+              <Skeleton shape="control" className="h-7 w-28" />
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
@@ -510,7 +505,7 @@ export function OgsConversation({
                     : counterpart}
                 </Heading>
               </div>
-              {showChild && thread?.student_name ? (
+              {thread?.student_name ? (
                 // oxlint-disable-next-line ui-kit/no-hand-rolled-notice -- Namensschild des Kindes im Gesprächskopf, kein Hinweis
                 <div
                   className="bg-moto-green-soft inline-flex w-fit shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-900"

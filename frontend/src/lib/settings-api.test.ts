@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "./api-error";
 import * as sessionCache from "./session-cache";
+import { shellResourceKeys } from "./swr/shell-keys";
 import type { ResolvedSetting, SettingsSchema } from "./settings-api";
 
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
@@ -19,7 +20,6 @@ const {
   revealSettingValue,
   fetchDevicePinSetupReason,
   applyOptimisticSchemaUpdate,
-  SETTINGS_SCHEMA_SWR_KEY,
 } = await import("./settings-api");
 
 type SchemaForTest = Awaited<ReturnType<typeof fetchSettingsSchema>>;
@@ -178,11 +178,11 @@ describe("clearSettingValue", () => {
   });
 });
 
-describe("SETTINGS_SCHEMA_SWR_KEY", () => {
+describe("settings schema cache key", () => {
   it("is the literal string used by every SWR consumer", () => {
     // The shared base key is tenant-prefixed by useSWRAuth/useTenantMutate.
     // Locking the value keeps all readers and invalidation paths in sync.
-    expect(SETTINGS_SCHEMA_SWR_KEY).toBe("settings-schema");
+    expect(shellResourceKeys.settingsSchema()).toBe("settings-schema");
   });
 });
 

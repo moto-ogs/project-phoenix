@@ -6,10 +6,7 @@ import ru from "~/i18n/messages/ru.generated";
 import sq from "~/i18n/messages/sq.generated";
 import tr from "~/i18n/messages/tr.generated";
 import uk from "~/i18n/messages/uk.generated";
-import {
-  CARE_TERM_PLACEHOLDERS,
-  careTermValuesOf,
-} from "~/lib/care-facility-term-value";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 
 // The enrollment flow names the school's care through `{careTerm}` in every
 // language (#6042): no fixed „OGS“ is left, and every language carries the
@@ -23,10 +20,8 @@ const NAMESPACES = [
 
 // German declines the term with its article (#8136): „{careNomCap} prüft“
 // reads „Die GTS prüft“. Every other language keeps the bare `{careTerm}`.
-const CARE_PLACEHOLDER = new RegExp(
-  `\\{(${CARE_TERM_PLACEHOLDERS.join("|")})\\}`,
-);
 const GTS = careTermValuesOf("GTS");
+const CARE_PLACEHOLDER = new RegExp(`\\{(${Object.keys(GTS).join("|")})\\}`);
 
 function leaves(node: unknown, prefix = ""): [string, string][] {
   if (typeof node === "string") return [[prefix, node]];

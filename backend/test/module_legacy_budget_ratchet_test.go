@@ -171,7 +171,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the booking intervals of the utilization (+7).
 	// ADR 0240: +8, the clock fields of its dependencies.
 	// ADR 0289: +13, the seal constructor of the child health document files.
-	"modules/careplan/compose":             1716, // ADR 0220: +13, the pickup change team constructor
+	"modules/careplan/compose":             1715, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,
@@ -191,8 +191,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,
 	// ADR 0124: bind the optional heartbeat to the tenant runtime savepoint (+9).
-	"modules/devicescan/compose":        532,
-	"modules/emergencysnapshot/compose": 13,
+	"modules/devicescan/compose": 532,
 	// Raised by ADR 0105: the holiday period constructor (+13); by ADR 0110:
 	// the public holiday registration constructors (+18); by ADR 0114: the
 	// holiday registration review constructor (+7); by ADR 0116: the
@@ -214,22 +213,21 @@ var moduleComposeBudgets = map[string]int{
 	// less shortened comments and a merged file (-6).
 	// ADR 0231: the registration answers constructor (+5).
 	// ADR 0265: +7, the clock fields of the owner, its phases and deletions.
-	"modules/enrollment/compose": 646,
+	"modules/enrollment/compose": 641,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 180,
 	// ADR 0241: the rooms of the utilization (+13).
-	"modules/facilities/compose":                   195,
-	"modules/facilities/compose/repositoryadapter": 11,
+	"modules/facilities/compose":                   192,
+	"modules/facilities/compose/repositoryadapter": 10,
 	// Raised by ADR 0298: the demo seed's feedback history writer and the
 	// aliases of its input (+15).
 	"modules/feedback/compose":         76,
 	"modules/filestorage/compose":      211,
-	"modules/grouplive/compose":        14,
 	"modules/guardianlinkview/compose": 8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
-	"modules/identityaccess/compose": 1379, // raised by ADR 0077
+	"modules/identityaccess/compose": 1378, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
@@ -342,7 +340,6 @@ var moduleComposeBudgets = map[string]int{
 	// with the visitor read (-1, -5).
 	"modules/studentpresence/compose":                 268,
 	"modules/studentpresence/compose/presenceservice": 105,
-	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
 	// rosters constructor (+5).

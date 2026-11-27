@@ -2,20 +2,18 @@
 
 // Role Entity Configuration
 
-import { defineEntityConfig, type SectionConfig } from "@/lib/database/types";
+import type {
+  EntityConfig,
+  EntityFormConfig,
+  SectionConfig,
+} from "@/lib/database/types";
 import type { Role } from "@/lib/auth-helpers";
 import { bffJson } from "~/lib/bff-fetch";
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
 } from "~/lib/contract/auth-roles.generated";
-import {
-  mapRoleResponse,
-  getRoleDisplayName,
-  getRoleDisplayDescription,
-  getBaseRoleLabel,
-  BASE_ROLE_LABELS,
-} from "@/lib/auth-helpers";
+import { mapRoleResponse, BASE_ROLE_LABELS } from "@/lib/auth-helpers";
 import { ROLE_TEMPLATES, baseRoleOptions } from "@/lib/role-labels";
 import { rolesConcept } from "~/lib/concepts/roles";
 
@@ -92,15 +90,11 @@ export function toUpdateRoleRequest(
   };
 }
 
-export const rolesConfig = defineEntityConfig<Role>({
+export const rolesConfig = {
   name: {
     singular: "Rolle",
     plural: "Rollen",
   },
-
-  concept: rolesConcept,
-
-  backUrl: "/database",
 
   api: {
     list: async () =>
@@ -154,95 +148,7 @@ export const rolesConfig = defineEntityConfig<Role>({
         ],
       },
     ],
-
-    defaultValues: {},
   },
 
-  detail: {
-    header: {
-      title: (role: Role) => getRoleDisplayName(role.name),
-      subtitle: (role: Role) =>
-        getRoleDisplayDescription(role.name, role.description) ||
-        "Keine Beschreibung",
-      avatar: {
-        text: (role: Role) => getRoleDisplayName(role.name)?.[0] ?? "R",
-        size: "lg",
-      },
-    },
-
-    sections: [
-      {
-        title: "Rolleninformationen",
-        items: [
-          {
-            label: "Name",
-            value: (role: Role) => getRoleDisplayName(role.name),
-          },
-          {
-            label: "Beschreibung",
-            value: (role: Role) =>
-              getRoleDisplayDescription(role.name, role.description) ||
-              "Keine Beschreibung",
-          },
-          {
-            label: "Gilt als",
-            value: (role: Role) => getBaseRoleLabel(role.baseRole),
-          },
-          {
-            label: "Berechtigungen",
-            value: (role: Role) =>
-              `${role.permissionNames?.length ?? 0} Berechtigungen zugewiesen`,
-          },
-          {
-            label: "Erstellt am",
-            value: (role: Role) =>
-              new Date(role.createdAt).toLocaleDateString("de-DE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }),
-          },
-          {
-            label: "Aktualisiert am",
-            value: (role: Role) =>
-              new Date(role.updatedAt).toLocaleDateString("de-DE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }),
-          },
-        ],
-      },
-    ],
-  },
-
-  list: {
-    title: "Rollen verwalten",
-    description: "Lege fest, wer in moto was darf.",
-    searchPlaceholder: "Rollen durchsuchen…",
-
-    // Frontend search configuration
-    searchStrategy: "frontend",
-    searchableFields: ["name", "description"],
-    minSearchLength: 0,
-
-    item: {
-      title: (role: Role) => getRoleDisplayName(role.name),
-      subtitle: (role: Role) =>
-        getRoleDisplayDescription(role.name, role.description) ||
-        "Keine Beschreibung",
-      avatar: {
-        text: (role: Role) => getRoleDisplayName(role.name)?.[0] ?? "R",
-      },
-    },
-  },
-
-  labels: {
-    createButton: "Neue Rolle erstellen",
-    createModalTitle: "Neue Rolle",
-    editModalTitle: "Rolle bearbeiten",
-    detailModalTitle: "Rollendetails",
-    deleteConfirmation:
-      "Bist du sicher, dass du diese Rolle löschen möchtest? Alle Benutzer mit dieser Rolle verlieren ihre Berechtigungen.",
-  },
-});
+  createTitle: "Neue Rolle",
+} satisfies EntityConfig<Role> & EntityFormConfig<Role>;

@@ -324,16 +324,13 @@ func TestTransitionLifecycleWritesAreStatusGuarded(t *testing.T) {
 		first := draftWith(t, ctx, module, "2025-2026", account.ID, promoteTo("1a", "2a"))
 		second := draftWith(t, ctx, module, "2026-2027", account.ID, promoteTo("2a", "3a"))
 
-		locked, err := module.LockTransitionForMutation(ctx, first.ID)
-		require.NoError(t, err)
-		assert.Equal(t, first.ID, locked.ID)
-		require.Len(t, locked.Mappings, 1, "the locked row carries its mappings")
-
 		baseline := int64(4242)
 		require.NoError(t, module.MarkTransitionApplied(ctx, first.ID, account.ID, appliedAt, &baseline))
 
 		applied, err := module.FindTransition(ctx, first.ID)
 		require.NoError(t, err)
+		assert.Equal(t, first.ID, applied.ID)
+		require.Len(t, applied.Mappings, 1, "the applied transition carries its mappings")
 		assert.Equal(t, schoolstructure.TransitionStatusApplied, applied.Status)
 		assert.True(t, applied.IsApplied())
 		require.NotNil(t, applied.AppliedBy)

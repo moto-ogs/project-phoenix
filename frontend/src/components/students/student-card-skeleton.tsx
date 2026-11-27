@@ -36,10 +36,10 @@ function StudentCardSkeleton() {
 
 // Same responsive grid classes as the real student-card grids in
 // ogs-groups and students/search.
-function StudentCardGrid({ count }: Readonly<{ count: number }>) {
+function StudentCardGrid() {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
-      {Array.from({ length: count }, (_, i) => (
+      {Array.from({ length: 6 }, (_, i) => (
         <StudentCardSkeleton key={i} />
       ))}
     </div>
@@ -50,18 +50,15 @@ function StudentCardGrid({ count }: Readonly<{ count: number }>) {
  * Standalone grid of StudentCardSkeletons with its own status role, for
  * data-loading branches that replace only the card grid.
  */
-export function StudentCardGridSkeleton({
-  count = 6,
-  label = "Kinder werden geladen",
-}: Readonly<{ count?: number; label?: string }>) {
+export function StudentCardGridSkeleton() {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label={label}
+      aria-label="Kinder werden geladen"
       data-testid="student-card-grid-skeleton"
     >
-      <StudentCardGrid count={count} />
+      <StudentCardGrid />
     </div>
   );
 }
@@ -93,7 +90,7 @@ export function StudentCardPageSkeleton({
       testId={testId}
     >
       <div role="status" aria-busy="true" aria-label={label}>
-        <StudentCardGrid count={6} />
+        <StudentCardGrid />
       </div>
     </TenantPage>
   );

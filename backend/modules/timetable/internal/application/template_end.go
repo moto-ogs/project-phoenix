@@ -104,15 +104,14 @@ func (s *TemplateSplitService) endFromDateInTransaction(
 }
 
 // deleteEndedInstances removes the planned occurrences of the ended segment
-// and of every later segment the cascade ends. preserveDeviations=false:
-// "end this and all following" must actually remove the whole planned series
-// — keeping a deviated row would leave the ended series partly alive (#1840).
+// and of every later segment the cascade ends, including occurrences with
+// deviations. Keeping those rows would leave the ended series partly alive (#1840).
 func (s *TemplateSplitService) deleteEndedInstances(
 	ctx context.Context,
 	templateID int64,
 	effectiveDate, requestedFrom calendar.Date,
 ) (int64, error) {
-	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, calendar.Date(effectiveDate), nil, &templateID, false)
+	deleted, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, effectiveDate, nil, &templateID)
 	if err != nil {
 		return 0, &ports.ScheduleError{Op: "end template: delete planned instances", Err: err}
 	}
@@ -245,7 +244,7 @@ func (s *TemplateSplitService) endCascadedSegment(
 		)
 	}
 	segmentID := seg.Group.ID
-	n, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, calendar.Date(capAt), nil, &segmentID, false)
+	n, err := deletePlannedInstancesInWindow(ctx, s.deps.InstanceRepo.Plans, capAt, nil, &segmentID)
 	if err != nil {
 		return 0, &ports.ScheduleError{Op: "end template: delete cascaded segment planned instances", Err: err}
 	}

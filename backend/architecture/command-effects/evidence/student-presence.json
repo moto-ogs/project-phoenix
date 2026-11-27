@@ -1793,38 +1793,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a110b52e48b9f8bcbb21e1ee970f9a4d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "1a9abae7584b053cad97ef9ee62de07b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "d1b14128e8065eebb3100ac27cbc9abe",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "d1b14128e8065eebb3100ac27cbc9abe",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudents",
       "binding_digest": "6fc4901976fb173a7b35cd116d4c9af7",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudents",
@@ -2846,38 +2814,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "binding_digest": "5f39d08142965093267735b337de7ec5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "10ab605f3313e315e079ab2d4a2cc503",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "44febbbe535306cfde0453b6f81a72b2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "binding_digest": "44febbbe535306cfde0453b6f81a72b2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
       "target_owner": "people-directory"
     },
     {
@@ -12881,14 +12817,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.PrefetchStudentDisplaySettings",
-      "binding_digest": "4911391e2e650dba09c86863a76d0f3b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.DisplaySettings.PrefetchStudentDisplaySettings",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.PrefetchStudentDisplaySettings",
-      "target_owner": "settings-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettings.StudentPhotosEnabled",
       "binding_digest": "d2c25be8624a8a326f3efc6048b813ea",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.DisplaySettings.StudentPhotosEnabled",
@@ -14487,38 +14415,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentProfileCommands.SetStudentLiveStatus",
       "target_owner": "care-plan"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroupAuthorized",

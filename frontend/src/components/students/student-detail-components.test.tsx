@@ -58,8 +58,6 @@ vi.mock("~/lib/student-companion-api", async (importOriginal) => ({
 
 import {
   PersonIcon,
-  ChevronDownIcon,
-  WarningIcon,
   StudentHeaderAvatar,
   StudentHeaderLocation,
   StudentHeaderStats,
@@ -156,36 +154,6 @@ describe("PersonIcon", () => {
     render(<PersonIcon />);
     const svg = document.querySelector("svg");
     expect(svg).toHaveAttribute("data-moto-duotone-tone", "greenVivid");
-  });
-});
-
-describe("ChevronDownIcon", () => {
-  it("renders with default className", () => {
-    render(<ChevronDownIcon />);
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass("h-4", "w-4");
-  });
-
-  it("accepts custom className", () => {
-    render(<ChevronDownIcon className="h-5 w-5 text-gray-400" />);
-    const svg = document.querySelector("svg");
-    expect(svg).toHaveClass("h-5", "w-5", "text-gray-400");
-  });
-});
-
-describe("WarningIcon", () => {
-  it("renders with default className", () => {
-    render(<WarningIcon />);
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass("h-5", "w-5");
-  });
-
-  it("accepts custom className", () => {
-    render(<WarningIcon className="h-8 w-8 text-red-500" />);
-    const svg = document.querySelector("svg");
-    expect(svg).toHaveClass("h-8", "w-8", "text-red-500");
   });
 });
 

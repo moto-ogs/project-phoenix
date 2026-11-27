@@ -72,11 +72,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromActivityInstanceRecords.DeletePlannedNonSpontaneousInWindow",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromActivityInstanceRecords.FindByActiveGroupID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -562,11 +557,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromStudentArrivalExceptionRecords.DeleteByStudentID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromStudentArrivalExceptionRecords.FindByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -598,11 +588,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/fixturetest/fromStudentArrivalNoteRecords.Create",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromStudentArrivalNoteRecords.DeleteByStudentID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -677,11 +662,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromStudentPickupExceptionRecords.DeleteByStudentID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromStudentPickupExceptionRecords.FindByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -713,11 +693,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/fixturetest/fromStudentPickupNoteRecords.Create",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromStudentPickupNoteRecords.DeleteByStudentID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

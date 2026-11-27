@@ -67,12 +67,44 @@ describe("factory keys of the staff, time tracking and plan readers", () => {
         startTime: "08:00",
       }),
     ).toBe("deviation-history-a-3-08:00");
+  });
+
+  it("suppresses active-group roster keys after a not-found roster miss", () => {
+    const missing = new Set(["active-1"]);
+
     expect(
       tenantDailyKeys.activeSupervisionRoster({
         selectedTimetableInstanceId: null,
-        currentRoomId: "6",
-        missingRosterActiveGroupIds: new Set(["6"]),
+        currentRoomId: "active-1",
+        missingRosterActiveGroupIds: missing,
       }),
     ).toBeNull();
+    expect(
+      tenantDailyKeys.activeSupervisionRoster({
+        selectedTimetableInstanceId: null,
+        currentRoomId: "active-2",
+        missingRosterActiveGroupIds: missing,
+      }),
+    ).toBe("timetable-roster-active-group-active-2");
+  });
+
+  it("keeps explicit timetable instance roster keys even when the active group missed", () => {
+    expect(
+      tenantDailyKeys.activeSupervisionRoster({
+        selectedTimetableInstanceId: "instance-1",
+        currentRoomId: "active-1",
+        missingRosterActiveGroupIds: new Set(["active-1"]),
+      }),
+    ).toBe("timetable-roster-instance-1");
+  });
+
+  it("resolves a planned roster by active group after a Schulhof reload", () => {
+    expect(
+      tenantDailyKeys.activeSupervisionRoster({
+        selectedTimetableInstanceId: null,
+        currentRoomId: "schulhof-planned-active-group",
+        missingRosterActiveGroupIds: new Set(),
+      }),
+    ).toBe("timetable-roster-active-group-schulhof-planned-active-group");
   });
 });

@@ -307,14 +307,21 @@ func TestRunStatusFlagClear_PassThatReachesNoSchoolStaysDue(t *testing.T) {
 	now := berlinTime(2026, time.November, 11, 0, 0)
 	archives := &statusFlagArchives{}
 	failing := true
-	s := unitScheduler(&unitSchedulerDependencies{studentStatusDayRepo: archives, settings: endOfDayModes(), now: func() time.Time { return now }, logger: slog.Default()})
-	loader := s.minuteSnapshotLoader
-	s.minuteSnapshotLoader = func(ctx context.Context) (*schedulerMinuteSnapshot, error) {
-		if failing {
-			return nil, errors.New("settings unavailable")
-		}
-		return loader(ctx)
-	}
+	settings := settingsForSchedulerTest(endOfDayModes())
+	s := unitScheduler(&unitSchedulerDependencies{
+		studentStatusDayRepo: archives,
+		settings: scriptedBatchSettings{
+			Settings: settings,
+			resolve: func(ctx context.Context, tenantIDs []int64, keys []string) (map[int64]ports.SettingsSnapshot, error) {
+				if failing {
+					return nil, errors.New("settings unavailable")
+				}
+				return settings.ResolveSettingsSnapshots(ctx, tenantIDs, keys)
+			},
+		},
+		now:    func() time.Time { return now },
+		logger: slog.Default(),
+	})
 	task := &ScheduledTask{Name: "status-flag-clear"}
 
 	s.checkAndRunStatusFlagClear(context.Background(), task)
@@ -322,10 +329,10 @@ func TestRunStatusFlagClear_PassThatReachesNoSchoolStaysDue(t *testing.T) {
 	assert.Zero(t, s.statusFlagPass.Load(), "a pass that reached no school is not done")
 
 	failing = false
-	s.minuteSnapshotLoad = nil
+	now = now.Add(time.Minute)
 	s.checkAndRunStatusFlagClear(context.Background(), task)
 	assert.Len(t, archives.take(), 2, "the next poll runs the boundary")
-	assert.Equal(t, now.Unix(), s.statusFlagPass.Load())
+	assert.Equal(t, statusFlagBoundary(now).Unix(), s.statusFlagPass.Load())
 }
 
 // TestRunStatusFlagClear_MissingArchiveKeepsTheSchoolDue — without the Care
@@ -388,7 +395,7 @@ func TestCheckAndRunStatusFlagClear_EndToEnd_ClearsBothFlags(t *testing.T) {
 	last, ok := s.lastStatusFlagClear.Load(schedulerUnitTenantID)
 	require.True(t, ok)
 	assert.True(t, now.Equal(last.(time.Time)))
-	assert.Equal(t, now.Unix(), s.statusFlagPass.Load())
+	assert.Equal(t, statusFlagBoundary(now).Unix(), s.statusFlagPass.Load())
 }
 
 // TestCheckAndRunStatusFlagClear_EndToEnd_RespectsModeSetting confirms that
@@ -469,14 +476,17 @@ func TestStatusFlagClearRetriesSchoolsThatFailBeforeTheCallback(t *testing.T) {
 			failing := true
 			s := unitScheduler(&unitSchedulerDependencies{
 				studentStatusDayRepo: archives,
-				settings:             &batchSettings{},
+				schoolRepo:           staticTenants(31, 32),
 				now:                  func() time.Time { return now },
-				minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
-					snapshots := map[int64]ports.SettingsSnapshot{31: "snapshot-31", 32: "snapshot-32"}
-					if failing && failure == "settings binding" {
-						snapshots[32] = 32
-					}
-					return &schedulerMinuteSnapshot{tenantIDs: []int64{31, 32}, settings: snapshots}, nil
+				settings: scriptedBatchSettings{
+					Settings: &batchSettings{},
+					resolve: func(context.Context, []int64, []string) (map[int64]ports.SettingsSnapshot, error) {
+						snapshots := map[int64]ports.SettingsSnapshot{31: int64(31), 32: int64(32)}
+						if failing && failure == "settings binding" {
+							snapshots[32] = "invalid snapshot"
+						}
+						return snapshots, nil
+					},
 				},
 				tenantRuntime: scriptedTenantRuntime(func(ctx context.Context, id int64, fn func(context.Context, any) error) error {
 					if failing && failure == "transaction" && id == 32 {
@@ -498,7 +508,7 @@ func TestStatusFlagClearRetriesSchoolsThatFailBeforeTheCallback(t *testing.T) {
 			assert.False(t, marked)
 
 			failing = false
-			s.minuteSnapshotLoad = nil
+			now = now.Add(time.Minute)
 			s.checkAndRunStatusFlagClear(context.Background(), task)
 			calls = archives.take()
 			require.Len(t, calls, 2, "only the failed school is retried")

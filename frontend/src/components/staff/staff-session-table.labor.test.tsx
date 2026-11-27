@@ -87,7 +87,6 @@ function renderTable(props: {
       accountStartDatePending={false}
       accountStartDateError={false}
       today={today}
-      isAdminView
       laborDays={props.laborDays}
       weeklySummaries={props.weeklySummaries}
     />,

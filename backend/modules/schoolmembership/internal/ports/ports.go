@@ -20,7 +20,6 @@ type Store interface {
 	RenewStudentEnrollment(ctx context.Context, input schoolmembership.StudentEnrollment, today string) (int64, domain.OperationStats, error)
 	// LockStudentWindow reads the child's membership under a row lock.
 	LockStudentWindow(ctx context.Context, id int64) (schoolmembership.StudentEnrollment, bool, domain.OperationStats, error)
-	AssignStudentGroup(context.Context, int64, *int64) (bool, domain.OperationStats, error)
 	LockStudentClassWrites(context.Context, bool) (domain.OperationStats, error)
 	EndStudentCare(context.Context, []int64, string) (int64, domain.OperationStats, error)
 	ResumeStudentCare(context.Context, int64, string, string, string) (bool, domain.OperationStats, error)
@@ -72,7 +71,7 @@ type Store interface {
 	UpdateExternalCaregiverRecord(context.Context, int64, schoolmembership.ExternalCaregiverRecordFields) (schoolmembership.ExternalCaregiverRecord, domain.OperationStats, error)
 	DeleteExternalCaregiverRecord(context.Context, int64) (domain.OperationStats, error)
 
-	FindClassListEntry(ctx context.Context, id int64, lock string) (schoolmembership.ClassListEntry, bool, domain.OperationStats, error)
+	FindClassListEntry(ctx context.Context, id int64) (schoolmembership.ClassListEntry, bool, domain.OperationStats, error)
 	ListClassListEntries(context.Context, schoolmembership.ClassListEntryFilter) ([]schoolmembership.ClassListEntry, domain.OperationStats, error)
 	// ListClassListEntriesInDisplayOrder returns the same rows in the
 	// class-then-name order a class list is read in.

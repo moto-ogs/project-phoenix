@@ -270,7 +270,9 @@ describe("ExcusedRequestReviewItem", () => {
       catalogText("students.excused_request_status_conflict", "die Anfrage"),
     );
     expect(onDecided).not.toHaveBeenCalled();
-    expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Lara Beispiel/ }),
+    ).toBeInTheDocument();
   });
 });
 

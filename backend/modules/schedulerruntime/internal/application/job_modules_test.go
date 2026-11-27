@@ -67,7 +67,7 @@ func withWorkerJob(id ports.JobID) context.Context {
 // schoolHolds answers the share-locked read of a school (#7478): the
 // listed schools are retired, a set error fails every read.
 type schoolHolds struct {
-	ports.TenantDirectory
+	unitTenantDirectory
 	retired map[int64]bool
 	err     error
 	held    []int64
@@ -79,22 +79,16 @@ func (h *schoolHolds) HoldLiveSchool(_ context.Context, tenantID int64) (bool, e
 }
 
 func moduleScheduler(settings ports.SettingsResolver, tenantIDs ...int64) *Scheduler {
-	return moduleSchedulerHolding(settings, &schoolHolds{}, tenantIDs...)
+	return moduleSchedulerWithSchools(settings, staticTenants(tenantIDs...))
 }
 
-func moduleSchedulerHolding(settings ports.SettingsResolver, holds *schoolHolds, tenantIDs ...int64) *Scheduler {
+func moduleSchedulerWithSchools(settings ports.SettingsResolver, schools ports.TenantDirectory) *Scheduler {
 	return unitScheduler(&unitSchedulerDependencies{
 		settings:   settings,
-		schoolRepo: holds,
+		schoolRepo: schools,
 		done:       make(chan struct{}),
 		logger:     slog.Default(),
-		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
-			snapshots := make(map[int64]ports.SettingsSnapshot, len(tenantIDs))
-			for _, tenantID := range tenantIDs {
-				snapshots[tenantID] = tenantID
-			}
-			return &schedulerMinuteSnapshot{tenantIDs: tenantIDs, settings: snapshots}, nil
-		}})
+	})
 }
 
 func TestEveryWorkerJobHasAScope(t *testing.T) {
@@ -242,8 +236,8 @@ func TestParentRemindersSkipARetiredSchool(t *testing.T) {
 	t.Parallel()
 
 	for _, job := range []ports.JobID{"announcement-reminders", "appointment-reminders"} {
-		holds := &schoolHolds{retired: map[int64]bool{42: true}}
-		scheduler := moduleSchedulerHolding(bookedModules(), holds, 41, 42)
+		holds := &schoolHolds{unitTenantDirectory: staticTenants(41, 42), retired: map[int64]bool{42: true}}
+		scheduler := moduleSchedulerWithSchools(bookedModules(), holds)
 
 		var ran []int64
 		completed := scheduler.forEachTenantSettings(withWorkerJob(job), string(job), func(_ context.Context, tenantID int64) error {
@@ -262,8 +256,8 @@ func TestParentRemindersSkipARetiredSchool(t *testing.T) {
 func TestOtherJobsDoNotHoldTheSchool(t *testing.T) {
 	t.Parallel()
 
-	holds := &schoolHolds{retired: map[int64]bool{41: true}}
-	scheduler := moduleSchedulerHolding(bookedModules(), holds, 41)
+	holds := &schoolHolds{unitTenantDirectory: staticTenants(41), retired: map[int64]bool{41: true}}
+	scheduler := moduleSchedulerWithSchools(bookedModules(), holds)
 	var ran []int64
 	scheduler.forEachTenantSettings(withWorkerJob("auto-checkout"), "auto-checkout", func(_ context.Context, tenantID int64) error {
 		ran = append(ran, tenantID)
@@ -277,8 +271,8 @@ func TestOtherJobsDoNotHoldTheSchool(t *testing.T) {
 func TestUnreadableSchoolFailsTheReminder(t *testing.T) {
 	t.Parallel()
 
-	holds := &schoolHolds{err: errors.New("school unavailable")}
-	scheduler := moduleSchedulerHolding(bookedModules(), holds, 41)
+	holds := &schoolHolds{unitTenantDirectory: staticTenants(41), err: errors.New("school unavailable")}
+	scheduler := moduleSchedulerWithSchools(bookedModules(), holds)
 	called := false
 	completed := scheduler.forEachTenantSettings(withWorkerJob("announcement-reminders"), "announcement-reminders",
 		func(context.Context, int64) error {

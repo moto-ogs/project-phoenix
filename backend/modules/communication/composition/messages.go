@@ -29,7 +29,7 @@ type ParentMessagingConfig struct {
 	DB               *bun.DB
 	Logger           *slog.Logger
 	Notifier         func(context.Context, communication.NotificationEvent) error
-	Preferences      deliveryPorts.NotificationPreferences
+	Preferences      communication.NotificationPreferences
 	Outbox           deliveryPorts.MailEnqueuer
 	GuardianProfiles parentMessages.GuardianProfileFinder
 	Schools          parentMessages.SchoolFinder

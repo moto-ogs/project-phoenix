@@ -160,7 +160,6 @@ export function OwnPeriod({
             accountStartDatePending={false}
             accountStartDateError={undefined}
             today={parseISODate(today)}
-            isAdminView
             editsUnresolved={error !== undefined}
             onEditDay={(date, row, absenceRow) => {
               const session =

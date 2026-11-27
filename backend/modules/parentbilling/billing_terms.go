@@ -374,8 +374,6 @@ type BillingTerms interface {
 	// read them: terms changed since expectedVersion are refused with
 	// readstate.ErrChanged (ADR 0311).
 	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms, expectedVersion string) ([]ServiceTerms, error)
-	// ListFamilyBilling lists the deviations of the families, by family.
-	ListFamilyBilling(ctx context.Context, reviewer HolidayReviewer) ([]FamilyBilling, error)
 	// FamilyBillingOfContract reads the family of a contract with the
 	// deviation it has (#7770). A contract that is none of the Träger is
 	// ErrFamilyUnknown.

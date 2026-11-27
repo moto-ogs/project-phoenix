@@ -18,7 +18,6 @@ export function useParentNewsUnread(enabled: boolean) {
       enabled,
       fetcher: fetchAnnouncementsUnreadCount,
       eventNames: ["parent-news-unread-refresh"],
-      refetchOnFocus: true,
       eventDebounceMs: 500,
     },
   );

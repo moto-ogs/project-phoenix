@@ -9,18 +9,11 @@ import type {
 import { mapAnnouncement, mapViewDetail } from "./announcements-helpers";
 
 class OperatorAnnouncementsService {
-  async fetchAll(includeInactive = true): Promise<Announcement[]> {
+  async fetchAll(): Promise<Announcement[]> {
     const data = await bffJson("platform", "GET /operator/announcements/", {
-      query: { include_inactive: includeInactive },
+      query: { include_inactive: true },
     });
     return data.map(mapAnnouncement);
-  }
-
-  async fetchById(id: string): Promise<Announcement> {
-    const data = await bffJson("platform", "GET /operator/announcements/{id}", {
-      params: { id },
-    });
-    return mapAnnouncement(data);
   }
 
   async create(data: CreateAnnouncementRequest): Promise<Announcement> {

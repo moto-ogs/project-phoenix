@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 vi.unmock("swr");
 const {
@@ -72,12 +71,10 @@ describe("TraegerAuthGuard", () => {
     });
     // Not the Träger host: paths keep their /traeger prefix.
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.localhost:3000");
-    _resetTraegerHostCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
   });
 
   // The reset link opens without a session (#5149), on the Träger host as

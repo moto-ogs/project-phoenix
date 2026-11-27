@@ -83,7 +83,6 @@
     "loadError": "Nie udało się wczytać zapisanych godzin. Proszę odświeżyć stronę i spróbować ponownie.",
     "errorDisabled": "Zmiana godziny odbioru nie jest włączona w tej {careTerm}.",
     "errorStaffConflict": "Placówka ustaliła już na ten dzień inną godzinę odbioru. Proszę skontaktować się z zespołem.",
-    "errorRaced": "Ten dzień został właśnie zmieniony. Proszę odświeżyć stronę i spróbować ponownie.",
     "errorPastDate": "Nie można zapisać zmiany na dni, które już minęły.",
     "errorTooFar": "Ten dzień jest za daleko w przyszłości. Proszę wybrać dzień w ciągu najbliższych dwóch miesięcy.",
     "staffSet": "Placówka ustaliła już na ten dzień inną godzinę odbioru: {pickup}.",

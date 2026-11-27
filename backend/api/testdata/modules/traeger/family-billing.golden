@@ -1,3 +1,2 @@
-GET /traeger/family-billing/ -> elternbeitraege
 GET /traeger/family-billing/contracts/{id} -> elternbeitraege
 PUT /traeger/family-billing/ -> elternbeitraege

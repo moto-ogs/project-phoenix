@@ -11,19 +11,6 @@
 
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
-// Cache the result for client-only absolute URL helpers.
-let _isParents: boolean | undefined;
-
-function isParentsSubdomain(): boolean {
-  if (typeof window === "undefined") return false;
-  if (_isParents !== undefined) return _isParents;
-
-  const parentsHostname = requiredPortalHostname("parent");
-
-  _isParents = window.location.host === parentsHostname;
-  return _isParents;
-}
-
 /**
  * Returns the public path for navigation inside the parents portal.
  * The result must not depend on `window`, because links render on the server
@@ -36,8 +23,7 @@ export function parentPath(path: string): string {
 /**
  * Absolute URL of the parents-portal login page on its OWN host.
  *
- * Different from parentAbsoluteUrl(), which stays on the current origin.
- * This one crosses hosts: it is used from the tenant (staff) login to send
+ * It is used from the tenant (staff) login to send
  * a guardian-only account to the portal it actually belongs to.
  *
  * NEXT_PUBLIC_PARENTS_HOSTNAME is a host authority and already carries the
@@ -66,23 +52,4 @@ export function parentsPortalUrl(path: string): string {
   const parentsHostname = requiredPortalHostname("parent");
 
   return `${window.location.protocol}//${parentsHostname}${path}`;
-}
-
-/**
- * Returns an absolute URL for parent paths.
- * Use for NextAuth callbackUrl where relative paths resolve against NEXTAUTH_URL.
- * Client-side only — throws on server.
- */
-export function parentAbsoluteUrl(path: string): string {
-  if (typeof window === "undefined") {
-    throw new Error(
-      "parentAbsoluteUrl() is client-only. Use parentPath() on the server.",
-    );
-  }
-  const resolvedPath = isParentsSubdomain()
-    ? parentPath(path)
-    : path.startsWith("/parents")
-      ? path
-      : `/parents${path}`;
-  return `${window.location.origin}${resolvedPath}`;
 }

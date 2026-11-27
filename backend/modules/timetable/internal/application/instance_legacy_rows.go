@@ -215,8 +215,8 @@ func completeSessionInstances(ctx context.Context, sessions ports.InstanceSessio
 
 // deletePlannedInstancesInWindow removes the template-backed occurrences of
 // the window that have not started.
-func deletePlannedInstancesInWindow(ctx context.Context, plans timetable.ActivityInstanceCommand, from calendar.Date, to *calendar.Date, groupID *int64, preserveDeviations bool) (int64, error) {
-	rows, err := plans.DeletePlannedActivityInstances(ctx, from.String(), publicOptionalInstanceDate(to), groupID, preserveDeviations)
+func deletePlannedInstancesInWindow(ctx context.Context, plans timetable.ActivityInstanceCommand, from calendar.Date, to *calendar.Date, groupID *int64) (int64, error) {
+	rows, err := plans.DeletePlannedActivityInstances(ctx, from.String(), publicOptionalInstanceDate(to), groupID)
 	if err != nil {
 		return 0, WrapDatabaseError("delete planned non-spontaneous in window", err)
 	}

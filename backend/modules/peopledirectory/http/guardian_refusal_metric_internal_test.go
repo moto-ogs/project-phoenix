@@ -34,9 +34,6 @@ func TestGuardianReadStateRefusalsCountAsConflicts(t *testing.T) {
 		{"bulk invitation run", readstate.ChangedCode, func(rs *GuardianResource, w http.ResponseWriter, r *http.Request) {
 			rs.fail(w, r, FailureInternal, refused)
 		}},
-		{"deprecated single-field edit", "conflict", func(rs *GuardianResource, w http.ResponseWriter, r *http.Request) {
-			rs.refuseUnversionedEdit(w, r)
-		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

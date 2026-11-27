@@ -236,7 +236,6 @@ export default function AccidentReportPage() {
               setCorrecting(false);
               void mutate();
             }}
-            openCreated
           />
         ) : undefined
       }

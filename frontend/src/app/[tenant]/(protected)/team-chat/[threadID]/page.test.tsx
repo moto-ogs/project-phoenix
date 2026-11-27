@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { TeamChatThreadParts } from "~/components/messaging/team-chat-thread";
+import type { TeamChatThreadParts } from "~/components/messaging/team-chat-frame-parts";
 import { renderThreadFrame } from "~/components/messaging/team-chat-frames";
 
 function parts(
@@ -16,7 +16,6 @@ function parts(
     state: "ready",
     empty: { icon: null, title: "", description: "" },
     error: null,
-    loading: false,
     back: { href: "/team-chat", label: "Zurück zum Team-Chat" },
     containerRef: { current: null },
     body: null,

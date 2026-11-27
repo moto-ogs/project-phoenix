@@ -58,7 +58,7 @@ export const tenantDailyKeys = {
   pastBlocks: () => "timetable-planned-past",
   /**
    * Die Kinderliste eines Blocks; derselbe Schlüssel wie in
-   * `activeSupervisionRosterKey`, den das SSE als „timetable-roster-“ auffrischt.
+   * `activeSupervisionRoster`, den das SSE als „timetable-roster-“ auffrischt.
    */
   timetableRoster: (instanceId: string) =>
     `timetable-roster-${encodeURIComponent(instanceId)}`,

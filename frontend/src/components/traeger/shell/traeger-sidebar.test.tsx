@@ -1,7 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 import {
   expectIdleRenderBudget,
   RENDER_BUDGET_MAX_COMMITS,
@@ -65,12 +64,10 @@ describe("TraegerSidebar", () => {
     localStorage.clear();
     mockPathname.mockReturnValue("/");
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    _resetTraegerHostCache();
     sessionUser.permissions = [];
   });
 

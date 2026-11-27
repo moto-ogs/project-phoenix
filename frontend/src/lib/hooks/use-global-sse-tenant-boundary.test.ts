@@ -8,8 +8,6 @@ const { session, useSSE } = vi.hoisted(() => ({
   useSSE: vi.fn(() => ({
     status: "idle",
     isConnected: false,
-    error: null,
-    reconnectAttempts: 0,
   })),
 }));
 

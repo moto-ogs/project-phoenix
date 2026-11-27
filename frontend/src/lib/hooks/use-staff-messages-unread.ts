@@ -38,10 +38,6 @@ export function useStaffMessagesUnread(): UseUnreadCountResult {
       eventNames: ["team-messages-unread-refresh"],
       // Collapse a burst of messages into one count refetch.
       eventDebounceMs: 500,
-      // SSE stops reconnecting after maxReconnectAttempts and stays "failed"; if
-      // that happens while the tab is backgrounded no refresh event fires and the
-      // badge would stay stale until a full reload. A focus refetch heals it.
-      refetchOnFocus: true,
     },
   );
 }

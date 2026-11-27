@@ -9,7 +9,6 @@ import {
   districtNames,
   formatPercent,
   keyDateInYear,
-  keyDatePresets,
   lateAttendanceStart,
   latestKeyDate,
   reportRows,
@@ -98,14 +97,6 @@ describe("latestKeyDate", () => {
     expect(keyDateInYear(2027, 2, 29)).toBe("2027-02-28");
     expect(keyDateInYear(2028, 2, 29)).toBe("2028-02-29");
     expect(latestKeyDate("2027-03-01", 2, 29)).toBe("2027-02-28");
-  });
-
-  it("offers the last two key dates and today", () => {
-    expect(keyDatePresets("2026-11-15")).toEqual([
-      { label: "Stichtag 15.10.2026", date: "2026-10-15" },
-      { label: "Stichtag 15.10.2025", date: "2025-10-15" },
-      { label: "Heute", date: "2026-11-15" },
-    ]);
   });
 });
 

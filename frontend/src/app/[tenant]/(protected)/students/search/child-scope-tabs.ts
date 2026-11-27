@@ -18,7 +18,7 @@ export interface ScopeRoom {
   readonly name: string;
 }
 
-export function roomScope(roomId: string): string {
+function roomScope(roomId: string): string {
   return `${ROOM_SCOPE_PREFIX}${roomId}`;
 }
 

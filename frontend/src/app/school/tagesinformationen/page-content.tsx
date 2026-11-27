@@ -62,7 +62,6 @@ export default function SchoolNoticesPage() {
           notices={notices}
           onChanged={mutate}
           acknowledge={schoolStaffNoticesApi.acknowledgeStaffNotice}
-          layout="grid"
         />
       </SectionCard>
     </TenantPage>

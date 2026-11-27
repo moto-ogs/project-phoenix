@@ -83,7 +83,6 @@
     "loadError": "Oraret e ruajtura aktuale nuk mund të ngarkoheshin. Ju lutemi ringarkoni faqen dhe provoni përsëri.",
     "errorDisabled": "Ndryshimi i orarit të marrjes nuk është aktivizuar për këtë {careTerm}.",
     "errorStaffConflict": "Institucioni ka caktuar tashmë orare të veçanta për këtë ditë. Ju lutemi kontaktoni ekipin.",
-    "errorRaced": "Kjo ditë sapo u ndryshua. Ju lutemi ringarkoni faqen dhe provoni përsëri.",
     "errorPastDate": "Për ditët e kaluara nuk mund të ruhet asnjë ndryshim.",
     "errorTooFar": "Kjo ditë është shumë larg në të ardhmen. Ju lutemi zgjidhni një ditë brenda dy muajve të ardhshëm.",
     "staffSet": "Institucioni ka caktuar tashmë një orë të veçantë marrjeje për këtë ditë: {pickup}.",

@@ -19,8 +19,6 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 // hook uses useSearchParams().
 export function useOrgSchoolFilter(routePath: string): {
   readonly isAuthenticated: boolean;
-  readonly organizations: Organization[] | undefined;
-  readonly schools: School[] | undefined;
   /** Failed loads of the two filter lists (#2519); render in LoadErrorAlert. */
   readonly organizationsLoadError: FormError | null;
   readonly schoolsLoadError: FormError | null;
@@ -149,8 +147,6 @@ export function useOrgSchoolFilter(routePath: string): {
 
   return {
     isAuthenticated,
-    organizations,
-    schools,
     organizationsLoadError,
     schoolsLoadError,
     activeOrganizations,

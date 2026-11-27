@@ -96,7 +96,6 @@ type Query interface {
 // OrganizationQuery reads organizations and locks them before mutation.
 type OrganizationQuery interface {
 	FindOrganization(context.Context, int64) (Organization, error)
-	FindOrganizationBySlug(context.Context, string) (Organization, error)
 	ListOrganizations(context.Context) ([]Organization, error)
 	ListOrganizationsByID(context.Context, []int64) ([]Organization, error)
 	CountOrganizationsByID(context.Context, []int64) (int, error)

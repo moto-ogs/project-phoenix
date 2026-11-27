@@ -44,18 +44,6 @@ func (f fixedPickupBaseline) Project(
 	}, nil
 }
 
-func (f fixedPickupBaseline) OfferingPickupForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) (*careplan.PickupSchedule, error) {
-	projection, err := f.Project(ctx, []int64{studentID}, date, date)
-	if err != nil {
-		return nil, err
-	}
-	return projection.OfferingForDate(studentID, date), nil
-}
-
 func (f fixedPickupBaseline) HasBookedOfferingPickupForWeekday(_ context.Context, studentID int64, weekday int) (bool, error) {
 	return studentID == f.StudentID && weekday == f.Weekday, nil
 }

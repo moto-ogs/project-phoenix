@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -72,23 +70,6 @@ func cutoffPickupTime() time.Time {
 	return calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 30, 0, 0, time.UTC))
 }
 
-// seedGuardianPickupException stores an already effective guardian pickup
-// exception, the state DELETE .../care-exception removes.
-func seedGuardianPickupException(t *testing.T, d cutoffServiceDeps, chain testpkg.ParentChain, date calendar.Date) {
-	t.Helper()
-	ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
-	guardianID := chain.AccountID
-	exception := &careplan.PickupException{
-		StudentID:         chain.StudentID,
-		ExceptionDate:     careplan.Date(date),
-		PickupTime:        wallClock(14, 30),
-		Source:            careplan.ExceptionSourceGuardian,
-		CreatedByGuardian: &guardianID,
-	}
-	exception.SetTenantID(chain.TenantID)
-	require.NoError(t, api.CreateParentPickupExceptionFixture(ctx, d.repos.CarePlan(), exception))
-}
-
 func guardianPickupExists(t *testing.T, d cutoffServiceDeps, chain testpkg.ParentChain, date calendar.Date) bool {
 	t.Helper()
 	ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
@@ -123,7 +104,9 @@ func TestSubmitPickupChangeRequestHonoursSameDayCutoff(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			chain := testpkg.CreateTestParentGuardianChain(t, d.db)
 			svc := d.service(t, cutoffStub(tc.enabled, tc.clock), tc.now)
-			_, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, tc.date, cutoffPickupTime(), "", "Arzttermin", nil)
+			_, err := svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+				Date: tc.date, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+			})
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
 				return
@@ -151,15 +134,9 @@ func TestSubmitPickupChangeRequestRechecksCutoffAtWriteBoundary(t *testing.T) {
 		return settings.stringValues[key], nil
 	}
 
-	_, err := d.service(t, settings, func() time.Time { return now() }).SubmitPickupChangeRequest(
-		testpkg.WithPackageTenantRuntime(context.Background()),
-		chain.AccountID,
-		chain.StudentID,
-		cutoffToday,
-		cutoffPickupTime(), "",
-		"Arzttermin",
-		nil,
-	)
+	_, err := d.service(t, settings, func() time.Time { return now() }).SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCutoffPassed)
 }
 
@@ -186,44 +163,11 @@ func TestSubmitPickupChangeRequestRechecksEnablementAtWriteBoundary(t *testing.T
 		return nil
 	}
 
-	_, err := d.service(t, settings, berlinClock(10, 59)).SubmitPickupChangeRequest(
-		testpkg.WithPackageTenantRuntime(context.Background()),
-		chain.AccountID,
-		chain.StudentID,
-		cutoffToday,
-		cutoffPickupTime(), "",
-		"Arzttermin",
-		nil,
-	)
+	_, err := d.service(t, settings, berlinClock(10, 59)).SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeDisabled)
 	assert.True(t, lockTaken)
-}
-
-// The unrouted direct exception path is a guardian write too, so it must not
-// commit after the feature switch changed between its first check and write.
-func TestSubmitCareExceptionRechecksEnablementAtWriteBoundary(t *testing.T) {
-	t.Parallel()
-
-	d := newCutoffServiceDeps(t)
-	chain := testpkg.CreateTestParentGuardianChain(t, d.db)
-	settings := cutoffStub(true, "11:00")
-	settings.stringInTxFn = func(key string) (string, error) {
-		if key == parentService.KeyParentPickupChangeEnabled {
-			return "false", nil
-		}
-		return settings.stringValues[key], nil
-	}
-	pickupTime := cutoffPickupTime()
-
-	_, err := d.service(t, settings, berlinClock(10, 59)).SubmitCareExceptionWithReason(
-		testpkg.WithPackageTenantRuntime(context.Background()),
-		chain.AccountID,
-		chain.StudentID,
-		cutoffToday,
-		&pickupTime,
-		"Arzttermin",
-	)
-	require.ErrorIs(t, err, parentService.ErrPickupChangeDisabled)
 }
 
 // A request that came in before the cutoff cannot be edited afterwards; the
@@ -237,16 +181,24 @@ func TestEditPickupChangeRequestHonoursSameDayCutoff(t *testing.T) {
 	settings := cutoffStub(true, "11:00")
 
 	created, err := d.service(t, settings, berlinClock(9, 30)).
-		SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+		SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+			Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+		})
 	require.NoError(t, err)
 
 	later := d.service(t, settings, berlinClock(11, 1))
-	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
+	_, err = later.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
+		Date: cutoffToday, PickupTime: cutoffPickupTime().Add(time.Hour), Reason: "Termin verschoben",
+		ExpectedVersion:           testpkg.CareRequestVersion(t, created.ID),
+		PreservePickupDeclaration: true,
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCutoffPassed)
 
-	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
+	_, err = later.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
+		Date: cutoffToday.AddDays(1), PickupTime: cutoffPickupTime(), Reason: "Termin verschoben",
+		ExpectedVersion:           testpkg.CareRequestVersion(t, created.ID),
+		PreservePickupDeclaration: true,
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCutoffPassed, "moving today's request away is closed too")
 }
 
@@ -263,22 +215,34 @@ func TestPickupChangeRequestClosesTodayAtCareDayEnd(t *testing.T) {
 	settings.stringValues[parentService.KeySessionEndTime] = "16:00"
 
 	created, err := d.service(t, settings, berlinClock(15, 59)).
-		SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+		SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+			Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+		})
 	require.NoError(t, err, "before the care day end today stays open")
 
 	later := d.service(t, settings, berlinClock(16, 0))
-	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
+	_, err = later.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
+		Date: cutoffToday, PickupTime: cutoffPickupTime().Add(time.Hour), Reason: "Termin verschoben",
+		ExpectedVersion:           testpkg.CareRequestVersion(t, created.ID),
+		PreservePickupDeclaration: true,
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded)
 
-	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
+	_, err = later.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
+		Date: cutoffToday.AddDays(1), PickupTime: cutoffPickupTime(), Reason: "Termin verschoben",
+		ExpectedVersion:           testpkg.CareRequestVersion(t, created.ID),
+		PreservePickupDeclaration: true,
+	})
 	require.NoError(t, err, "moving a pending request to a later day stays open without a cutoff")
 
 	other := testpkg.CreateTestParentGuardianChain(t, d.db)
-	_, err = later.SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+	_, err = later.SubmitPickupChange(ctx, other.AccountID, other.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded)
-	_, err = later.SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday.AddDays(1), cutoffPickupTime(), "", "Arzttermin", nil)
+	_, err = later.SubmitPickupChange(ctx, other.AccountID, other.StudentID, parentService.PickupChangeSubmission{
+		Date: cutoffToday.AddDays(1), PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+	})
 	require.NoError(t, err, "a later day stays open")
 }
 
@@ -290,7 +254,7 @@ func TestPickupWritesRecheckCareDayEndAfterPolicyLock(t *testing.T) {
 
 	d := newCutoffServiceDeps(t)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	for _, operation := range []string{"submit exception", "delete exception", "submit request", "edit request"} {
+	for _, operation := range []string{"delete exception", "submit request", "edit request"} {
 		t.Run(operation, func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			chain := testpkg.CreateTestParentGuardianChain(t, d.db)
@@ -300,11 +264,12 @@ func TestPickupWritesRecheckCareDayEndAfterPolicyLock(t *testing.T) {
 			var requestID int64
 			var originalPayload []byte
 			if operation == "delete exception" {
-				seedGuardianPickupException(t, d, chain, cutoffToday)
+				seedGuardianPickupException(t, d.db, chain, cutoffToday, wallClock(14, 30))
 			}
 			if operation == "edit request" {
-				created, err := d.service(t, settings, now).SubmitPickupChangeRequest(
-					ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+				created, err := d.service(t, settings, now).SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+					Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+				})
 				require.NoError(t, err)
 				requestID = created.ID
 				originalPayload = created.Payload
@@ -322,16 +287,18 @@ func TestPickupWritesRecheckCareDayEndAfterPolicyLock(t *testing.T) {
 			svc := d.service(t, settings, func() time.Time { return now() })
 			var err error
 			switch operation {
-			case "submit exception":
-				pickup := cutoffPickupTime()
-				_, err = svc.SubmitCareExceptionWithReason(ctx, chain.AccountID, chain.StudentID, cutoffToday, &pickup, "Arzttermin")
 			case "delete exception":
 				err = svc.DeleteCareException(ctx, chain.AccountID, chain.StudentID, cutoffToday)
 			case "submit request":
-				_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+				_, err = svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+					Date: cutoffToday, PickupTime: cutoffPickupTime(), Reason: "Arzttermin",
+				})
 			case "edit request":
-				_, err = svc.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, requestID,
-					cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, requestID))
+				_, err = svc.EditPickupChange(ctx, chain.AccountID, chain.StudentID, requestID, parentService.PickupChangeEdit{
+					Date: cutoffToday, PickupTime: cutoffPickupTime().Add(time.Hour), Reason: "Termin verschoben",
+					ExpectedVersion:           testpkg.CareRequestVersion(t, requestID),
+					PreservePickupDeclaration: true,
+				})
 			}
 			require.True(t, lockTaken)
 			require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded)
@@ -374,7 +341,7 @@ func TestDeleteCareExceptionHonoursSameDayCutoff(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			chain := testpkg.CreateTestParentGuardianChain(t, d.db)
-			seedGuardianPickupException(t, d, chain, tc.date)
+			seedGuardianPickupException(t, d.db, chain, tc.date, wallClock(14, 30))
 			svc := d.service(t, tc.settings, tc.now)
 
 			err := svc.DeleteCareException(ctx, chain.AccountID, chain.StudentID, tc.date)
@@ -451,7 +418,7 @@ func TestPickupChangeCutoffIsTenantScoped(t *testing.T) {
 
 	chainA := testpkg.CreateTestParentGuardianChain(t, d.db)
 	require.NoError(t, settings.SetValue(testpkg.Ctx(t), parentService.KeyParentPickupChangeCutoffTime, "11:00", nil, nil))
-	seedGuardianPickupException(t, d, chainA, cutoffToday)
+	seedGuardianPickupException(t, d.db, chainA, cutoffToday, wallClock(14, 30))
 	svc := d.service(t, settings, berlinClock(11, 1))
 
 	flagsA, err := svc.ChildFeatures(runtimeCtx, chainA.AccountID, chainA.StudentID)
@@ -465,7 +432,7 @@ func TestPickupChangeCutoffIsTenantScoped(t *testing.T) {
 		testpkg.OwnTenant(t)
 		chainB := testpkg.CreateTestParentGuardianChain(t, d.db)
 		require.NotEqual(t, chainA.TenantID, chainB.TenantID)
-		seedGuardianPickupException(t, d, chainB, cutoffToday)
+		seedGuardianPickupException(t, d.db, chainB, cutoffToday, wallClock(14, 30))
 
 		flagsB, err := svc.ChildFeatures(runtimeCtx, chainB.AccountID, chainB.StudentID)
 		require.NoError(t, err)

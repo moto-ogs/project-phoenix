@@ -80,7 +80,7 @@ type PreferenceState struct {
 	Group       string `json:"group"`
 	Enabled     bool   `json:"enabled"`
 	// Available reports whether the school allows this type right now. A type
-	// can be switched on personally while unavailable — see SetForAccount.
+	// can be switched on personally while unavailable.
 	Available bool `json:"available"`
 }
 

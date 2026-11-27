@@ -46,7 +46,6 @@ export interface TeamChatThreadBack {
 /** Was das Seitengerüst vom Chat-Fenster bekommt. */
 export interface TeamChatThreadParts {
   readonly title: string;
-  readonly previewTitle?: string;
   readonly roleLabel: string | null;
   readonly stats: ReactNode;
   readonly audience: string;
@@ -59,7 +58,6 @@ export interface TeamChatThreadParts {
     readonly description: string;
   };
   readonly error: FormError | string | null;
-  readonly loading: boolean;
   readonly back: TeamChatThreadBack;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly body: ReactNode;

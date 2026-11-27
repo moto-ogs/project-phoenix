@@ -24,13 +24,19 @@ function row(
 describe("OpenWithdrawalCard", () => {
   it("names the last care day while the withdrawal is still planned", () => {
     render(
-      <OpenWithdrawalCard row={row({})} finish={vi.fn()} remove={vi.fn()} />,
+      <OpenWithdrawalCard
+        row={row({})}
+        position={1}
+        total={1}
+        finish={vi.fn()}
+        remove={vi.fn()}
+      />,
     );
 
     // The row is named by its cells; open or closed is aria-expanded (#7112).
     fireEvent.click(
       screen.getByRole("button", {
-        name: /^Emelie Beispiel Abmeldung/,
+        name: /^Abmeldung.*Emelie Beispiel$/,
         expanded: false,
       }),
     );
@@ -46,6 +52,8 @@ describe("OpenWithdrawalCard", () => {
     render(
       <OpenWithdrawalCard
         row={row({ firstBookinglessDay: "2026-09-01", urgency: "overdue" })}
+        position={1}
+        total={1}
         finish={vi.fn()}
         remove={vi.fn()}
       />,
@@ -54,7 +62,7 @@ describe("OpenWithdrawalCard", () => {
     // The row is named by its cells; open or closed is aria-expanded (#7112).
     fireEvent.click(
       screen.getByRole("button", {
-        name: /^Emelie Beispiel Abmeldung/,
+        name: /^Abmeldung.*Emelie Beispiel$/,
         expanded: false,
       }),
     );

@@ -202,7 +202,7 @@ func TestCheckAndRunTimetableCleanup_WrongTime(t *testing.T) {
 	s := unitScheduler(&unitSchedulerDependencies{
 		logger:           slog.Default(),
 		timetableCleanup: svc,
-		cleanupClock:     func() time.Time { return scheduleNow },
+		now:              func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			intValues: map[string]int{settingDataCleanupTimeoutMinutes: 30},
 			boolValues: map[string]bool{
@@ -230,7 +230,7 @@ func TestCheckAndRunTimetableCleanup_WasRunToday(t *testing.T) {
 	s := unitScheduler(&unitSchedulerDependencies{
 		logger:           slog.Default(),
 		timetableCleanup: svc,
-		cleanupClock:     func() time.Time { return scheduleNow },
+		now:              func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			intValues: map[string]int{settingDataCleanupTimeoutMinutes: 30},
 			boolValues: map[string]bool{
@@ -266,7 +266,7 @@ func TestCheckAndRunTimetableCleanup_HappyPath(t *testing.T) {
 	s := unitScheduler(&unitSchedulerDependencies{
 		logger:           slog.Default(),
 		timetableCleanup: svc,
-		cleanupClock:     func() time.Time { return scheduleNow },
+		now:              func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			boolValues: map[string]bool{
 				settingDataCleanupEnabled: true,
@@ -299,7 +299,7 @@ func TestCheckAndRunTimetableCleanup_ServiceError_ClearsTodayStamp(t *testing.T)
 	s := unitScheduler(&unitSchedulerDependencies{
 		logger:           slog.Default(),
 		timetableCleanup: svc,
-		cleanupClock:     func() time.Time { return scheduleNow },
+		now:              func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			intValues: map[string]int{settingDataCleanupTimeoutMinutes: 30},
 			boolValues: map[string]bool{
@@ -339,7 +339,7 @@ func TestCheckAndRunTimetableCleanup_ZeroCounters_SuppressesInfoLog(t *testing.T
 	s := unitScheduler(&unitSchedulerDependencies{
 		logger:           slog.Default(),
 		timetableCleanup: svc,
-		cleanupClock:     func() time.Time { return scheduleNow },
+		now:              func() time.Time { return scheduleNow },
 		settings: &fakeSettingsResolver{
 			intValues: map[string]int{settingDataCleanupTimeoutMinutes: 30},
 			boolValues: map[string]bool{

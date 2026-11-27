@@ -1,26 +1,12 @@
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { Publisher } from "./publish";
 import { drivePublisher } from "./publish-drive";
-import { filesystemPublisher } from "./publish-filesystem";
 
-// Seam 2 der Produkt-Screenshots (#3759): der Upload-Adapter "veröffentliche
-// das Ausgabeverzeichnis als Version X". Derselbe Vertrag läuft gegen den
-// Dateisystem-Adapter und gegen den Drive-Adapter mit einer nachgebildeten
-// Drive-REST-API. Geprüft wird nur der sichtbare Zustand im Ziel: welche
-// Ordner und Dateien es gibt, was darin steht und ob eine Datei in "Aktuell"
-// dieselbe bleibt (Inode bzw. Drive-Datei-ID).
+// Die nachgebildete Drive-REST-API hält den sichtbaren Zustand im Ziel fest:
+// Ordner, Dateiinhalte und die stabilen Datei-IDs in "Aktuell".
 
 const directories: string[] = [];
 
@@ -70,36 +56,6 @@ interface Snapshot {
   [path: string]: { readonly identity: string; readonly content: string };
 }
 
-interface Target {
-  readonly publisher: Publisher;
-  /** Alle Dateien im Ziel, mit Inhalt und Identität. */
-  snapshot(): Promise<Snapshot>;
-}
-
-async function filesystemTarget(): Promise<Target> {
-  const root = await tempDir();
-  async function walk(dir: string, prefix: string): Promise<Snapshot> {
-    const result: Snapshot = {};
-    for (const entry of await readdir(dir, { withFileTypes: true })) {
-      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        Object.assign(result, await walk(full, path));
-      } else {
-        result[path] = {
-          identity: String((await stat(full)).ino),
-          content: await readFile(full, "utf8"),
-        };
-      }
-    }
-    return result;
-  }
-  return {
-    publisher: filesystemPublisher(root),
-    snapshot: () => walk(root, ""),
-  };
-}
-
 interface FakeDriveFile {
   name: string;
   mimeType: string;
@@ -121,7 +77,7 @@ function driveTarget({
 }: {
   createdButFailed?: number;
   rejectedRequest?: { method: string; status: number; reason: string };
-} = {}): Target {
+} = {}) {
   const files = new Map<string, FakeDriveFile>();
   let nextId = 0;
   const root = "zielordner";
@@ -252,7 +208,11 @@ function driveTarget({
       folderId: root,
       fetch: fakeFetch as typeof fetch,
     }),
-    snapshot: async () => walk(root, ""),
+    snapshot: () => walk(root, ""),
+    replaceCurrentManifest(manifest: string) {
+      const { identity } = walk(root, "")["Aktuell/manifest.json"]!;
+      files.get(identity)!.data = manifest;
+    },
   };
 }
 
@@ -276,12 +236,9 @@ function topFolders(snap: Snapshot): string[] {
   ].sort();
 }
 
-describe.each([
-  ["Dateisystem", filesystemTarget],
-  ["Google Drive", async () => driveTarget()],
-] as const)("Upload-Adapter %s", (_name, createTarget) => {
+describe("Google Drive Upload", () => {
   test("legt den Versionsordner und Aktuell mit der Ausgabe an", async () => {
-    const target = await createTarget();
+    const target = driveTarget();
     const outDir = await writeOutput("1.0.0", {
       anwesenheit: { "macbook.png": "anwesenheit 1" },
       "eltern-kinder": { "iphone.png": "eltern 1" },
@@ -292,7 +249,7 @@ describe.each([
       date: "2026-10-01",
     });
 
-    const snap = await target.snapshot();
+    const snap = target.snapshot();
     const expected = {
       "anwesenheit/macbook.png": "anwesenheit 1",
       "eltern-kinder/iphone.png": "eltern 1",
@@ -304,19 +261,19 @@ describe.each([
   });
 
   test("überschreibt Aktuell mit derselben Datei-Identität", async () => {
-    const target = await createTarget();
+    const target = driveTarget();
     await target.publisher.publish(
       await writeOutput("1.0.0", { anwesenheit: { "macbook.png": "alt" } }),
       { version: "1.0.0", date: "2026-10-01" },
     );
-    const before = under(await target.snapshot(), "Aktuell");
+    const before = under(target.snapshot(), "Aktuell");
 
     await target.publisher.publish(
       await writeOutput("1.1.0", { anwesenheit: { "macbook.png": "neu" } }),
       { version: "1.1.0", date: "2026-10-08" },
     );
 
-    const after = under(await target.snapshot(), "Aktuell");
+    const after = under(target.snapshot(), "Aktuell");
     expect(after["anwesenheit/macbook.png"]).toEqual({
       identity: before["anwesenheit/macbook.png"]!.identity,
       content: "neu",
@@ -327,7 +284,7 @@ describe.each([
   });
 
   test("ein entfernter Shot fehlt in Aktuell, alte Versionsordner bleiben unverändert", async () => {
-    const target = await createTarget();
+    const target = driveTarget();
     await target.publisher.publish(
       await writeOutput("1.0.0", {
         anwesenheit: { "macbook.png": "anwesenheit 1" },
@@ -335,7 +292,7 @@ describe.each([
       }),
       { version: "1.0.0", date: "2026-10-01" },
     );
-    const oldVersion = under(await target.snapshot(), "v1.0.0 (2026-10-01)");
+    const oldVersion = under(target.snapshot(), "v1.0.0 (2026-10-01)");
 
     const outDir = await writeOutput("1.1.0", {
       anwesenheit: { "macbook.png": "anwesenheit 2" },
@@ -346,7 +303,7 @@ describe.each([
       date: "2026-10-08",
     });
 
-    const snap = await target.snapshot();
+    const snap = target.snapshot();
     const expected = {
       "anwesenheit/macbook.png": "anwesenheit 2",
       "eltern-kinder/iphone.png": "eltern 2",
@@ -358,7 +315,7 @@ describe.each([
   });
 
   test("ein erneuter Lauf derselben Version gleicht ihren Ordner an", async () => {
-    const target = await createTarget();
+    const target = driveTarget();
     await target.publisher.publish(
       await writeOutput("1.0.0", { anwesenheit: { "macbook.png": "erster" } }),
       { version: "1.0.0", date: "2026-10-01" },
@@ -371,7 +328,7 @@ describe.each([
       { version: "1.0.0", date: "2026-10-02" },
     );
 
-    const snap = await target.snapshot();
+    const snap = target.snapshot();
     expect(topFolders(snap)).toEqual(["Aktuell", "v1.0.0 (2026-10-01)"]);
     expect(contents(snap)["v1.0.0 (2026-10-01)/anwesenheit/macbook.png"]).toBe(
       "zweiter",
@@ -391,7 +348,7 @@ describe.each([
   ])(
     "Version %s bleibt aktuell beim Nachholen von %s",
     async (newer, older) => {
-      const target = await createTarget();
+      const target = driveTarget();
       await target.publisher.publish(
         await writeOutput(newer, {
           anwesenheit: { "macbook.png": "neu" },
@@ -399,7 +356,7 @@ describe.each([
         }),
         { version: newer, date: "2026-10-01" },
       );
-      const before = await target.snapshot();
+      const before = target.snapshot();
       const oldOutput = await writeOutput(older, {
         anwesenheit: { "macbook.png": "alt" },
       });
@@ -407,7 +364,7 @@ describe.each([
         version: older,
         date: "2026-10-02",
       });
-      const after = await target.snapshot();
+      const after = target.snapshot();
       expect(under(after, "Aktuell")).toEqual(under(before, "Aktuell"));
       expect(under(after, `v${newer} (2026-10-01)`)).toEqual(
         under(before, `v${newer} (2026-10-01)`),
@@ -423,12 +380,12 @@ describe.each([
   );
 
   test("eine unvollständige oder fremde Ausgabe lässt das Ziel unverändert", async () => {
-    const target = await createTarget();
+    const target = driveTarget();
     await target.publisher.publish(
       await writeOutput("1.0.0", { anwesenheit: { "macbook.png": "gut" } }),
       { version: "1.0.0", date: "2026-10-01" },
     );
-    const before = await target.snapshot();
+    const before = target.snapshot();
 
     const missingFile = await writeOutput("1.1.0", {
       anwesenheit: { "macbook.png": "neu" },
@@ -455,7 +412,7 @@ describe.each([
     await expect(
       target.publisher.publish(join(missingFile, "fehlt"), release),
     ).rejects.toThrow();
-    expect(await target.snapshot()).toEqual(before);
+    expect(target.snapshot()).toEqual(before);
   });
 });
 
@@ -493,7 +450,7 @@ test("Drive: ein Serverfehler nach dem Anlegen erzeugt beim erneuten Lauf kein D
   );
   await target.publisher.publish(outDir, release);
 
-  const snap = await target.snapshot();
+  const snap = target.snapshot();
   expect(contents(under(snap, "Aktuell"))["anwesenheit/macbook.png"]).toBe(
     "bild",
   );
@@ -527,7 +484,7 @@ test.each(["rateLimitExceeded", "userRateLimitExceeded"])(
         }),
         release,
       );
-      const snap = await target.snapshot();
+      const snap = target.snapshot();
       for (const folder of ["Aktuell", "v1.0.0 (2026-10-01)"]) {
         expect(contents(under(snap, folder))["anwesenheit/macbook.png"]).toBe(
           "zweiter",
@@ -551,33 +508,27 @@ test("Drive: andere 403-Fehler werden nicht wiederholt", async () => {
       { version: "1.0.0", date: "2026-10-01" },
     ),
   ).rejects.toThrow(/403.*insufficientFilePermissions/);
-  expect(await target.snapshot()).toEqual({});
+  expect(target.snapshot()).toEqual({});
 });
 
 test.each(["kein JSON", "null", '{"version":"fremd"}'])(
   "ein ungültiges aktuelles Manifest schützt Aktuell vor Änderungen: %s",
   async (manifest) => {
-    const root = await tempDir();
-    const publisher = filesystemPublisher(root);
-    await publisher.publish(
+    const target = driveTarget();
+    await target.publisher.publish(
       await writeOutput("1.0.0", { anwesenheit: { "macbook.png": "alt" } }),
       { version: "1.0.0", date: "2026-10-01" },
     );
-    await writeFile(join(root, "Aktuell", "manifest.json"), manifest);
+    target.replaceCurrentManifest(manifest);
     await expect(
-      publisher.publish(
+      target.publisher.publish(
         await writeOutput("1.1.0", { anwesenheit: { "macbook.png": "neu" } }),
         { version: "1.1.0", date: "2026-10-02" },
       ),
     ).rejects.toThrow();
-    expect(await readFile(join(root, "Aktuell", "manifest.json"), "utf8")).toBe(
-      manifest,
-    );
-    expect(
-      await readFile(
-        join(root, "Aktuell", "anwesenheit", "macbook.png"),
-        "utf8",
-      ),
-    ).toBe("alt");
+    expect(contents(under(target.snapshot(), "Aktuell"))).toEqual({
+      "manifest.json": manifest,
+      "anwesenheit/macbook.png": "alt",
+    });
   },
 );

@@ -362,7 +362,7 @@ Projektion nutzt „change“.
 - Rechte-Regel: Jedes Konto des Staff-Portals sieht die Kurzinfo, auch ohne
   `meals:read`. Sie nennt kein Gericht. Den Link auf die Seite Speiseplan
   bekommt nur ein Konto, das den Speiseplan lesen darf (Regel von
-  `GET /api/meal-plan/`), damit niemand auf einer leeren Seite landet.
+  `GET /api/meal-plan/days`), damit niemand auf einer leeren Seite landet.
 - Live: Meal Plan meldet ein gespeichertes oder gelöschtes Menü mit dem Event
   `meal_plan_changed` ohne Inhalt an die Schule. Die Wurzel bindet es als
   Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie

@@ -46,11 +46,11 @@ export function inventory(report, frontend) {
 // logger, a subprocess) can split a framing line; test2json then drops its
 // event (#6488). "^V--- PASS: <name> (1.23s)" is a test's longest framing line.
 // Reject such names on every run instead of only on an unlucky one.
-export const goFramingLineLimit = 512;
+const goFramingLineLimit = 512;
 const goFramingLineBytes = event =>
   Buffer.byteLength(`\x16--- ${event.Action.toUpperCase()}: ${event.Test} (${(event.Elapsed ?? 0).toFixed(2)}s)\n`);
 
-// Both adapters share validation and retain duplicate internal/external names.
+// Retain duplicate internal/external test names and validate each occurrence.
 function goInventoryCollector() {
   const packages = new Map();
   const tests = [];
@@ -98,22 +98,11 @@ function goInventoryCollector() {
   return { collect, finish };
 }
 
-export function goInventory(text) {
-  const collector = goInventoryCollector();
-  let start = 0, end;
-  while ((end = text.indexOf('\n', start)) !== -1) {
-    collector.collect(text.slice(start, end));
-    start = end + 1;
-  }
-  collector.collect(text.slice(start));
-  return collector.finish();
-}
-
-export async function goInventoryFile(file, { highWaterMark = 64 * 1024 } = {}) {
+export async function goInventoryFile(file) {
   const collector = goInventoryCollector();
   // The stream decoder preserves UTF-8 characters across byte chunks. Retain
   // only an unfinished event, never the full report or its output events.
-  const input = createReadStream(file, { encoding: 'utf8', highWaterMark });
+  const input = createReadStream(file, { encoding: 'utf8' });
   let pending = '';
   try {
     for await (const chunk of input) {

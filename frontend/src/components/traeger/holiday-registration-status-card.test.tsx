@@ -11,7 +11,6 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
-import { _resetTraegerHostCache } from "~/lib/traeger-url";
 import type { HolidayRegistrationDetail } from "~/lib/traeger-holiday-registrations-api";
 import type { HolidayContribution } from "~/lib/traeger-contributions-api";
 import {
@@ -187,10 +186,8 @@ describe("HolidayRegistrationStatusCard", () => {
   beforeEach(() => {
     // The hint at Bestätigen links to the period (#6672).
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
     onTestFinished(() => {
       vi.unstubAllEnvs();
-      _resetTraegerHostCache();
     });
     mockChange.mockReset();
     mockCancel.mockReset();
@@ -532,10 +529,8 @@ describe("HolidayRegistrationStatusCard", () => {
 
   it("names the missing rule when the parents state benefits", () => {
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
-    _resetTraegerHostCache();
     onTestFinished(() => {
       vi.unstubAllEnvs();
-      _resetTraegerHostCache();
     });
     renderCard(
       { ...HOLIDAY_REGISTRATION, benefitsDeclared: true },

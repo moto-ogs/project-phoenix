@@ -304,13 +304,13 @@ func (s *Service) DeleteActivityInstancesBefore(ctx context.Context, before stri
 // DeletePlannedActivityInstances removes the template-backed occurrences of
 // the window a replan may replace. A block that started or ended keeps its
 // row: Student Presence records the execution, so the planner asks it first.
-func (s *Service) DeletePlannedActivityInstances(ctx context.Context, from string, to *string, groupID *int64, preserveDeviations bool) (result int64, err error) {
+func (s *Service) DeletePlannedActivityInstances(ctx context.Context, from string, to *string, groupID *int64) (result int64, err error) {
 	if !timetable.ValidDate(from) || !validOptionalDate(to) || (groupID != nil && *groupID <= 0) {
 		return 0, s.reject("delete_planned_activity_instances", timetable.ErrInvalidActivityInstance)
 	}
 
 	err = s.runWrite(ctx, "delete_planned_activity_instances", true, func(txCtx context.Context, stats *domain.OperationStats) error {
-		ids, queryStats, listErr := s.store.ListReplannableActivityInstanceIDs(txCtx, from, to, groupID, preserveDeviations)
+		ids, queryStats, listErr := s.store.ListReplannableActivityInstanceIDs(txCtx, from, to, groupID, false)
 		stats.Add(queryStats)
 		if listErr != nil {
 			return listErr

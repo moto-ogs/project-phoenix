@@ -83,7 +83,6 @@
     "loadError": "Die aktuell hinterlegten Zeiten konnten nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
     "errorDisabled": "Das Ändern der Abholzeit ist für {careThisAcc} nicht aktiviert.",
     "errorStaffConflict": "Für diesen Tag hat die Einrichtung bereits eine abweichende Abholzeit festgelegt. Bitte wende dich an das Team.",
-    "errorRaced": "Dieser Tag wurde gerade geändert. Bitte lade die Seite neu und versuche es erneut.",
     "errorPastDate": "Für vergangene Tage kann keine Änderung gespeichert werden.",
     "errorTooFar": "Der Tag liegt zu weit in der Zukunft. Bitte wähle einen Tag innerhalb der nächsten zwei Monate.",
     "staffSet": "Für diesen Tag hat die Einrichtung bereits eine abweichende Abholzeit festgelegt: {pickup} Uhr.",

@@ -169,13 +169,6 @@ func manualPickupRows(rows []*careplan.PickupSchedule) map[int64]map[int]*carepl
 	}
 	return out
 }
-func (q *PickupBaselineQueries) OfferingPickupForDate(ctx context.Context, id int64, date calendar.Date) (*careplan.PickupSchedule, error) {
-	projection, err := q.Project(ctx, []int64{id}, date, date)
-	if err != nil {
-		return nil, err
-	}
-	return projection.OfferingForDate(id, date), nil
-}
 func (q *PickupBaselineQueries) HasBookedOfferingPickupForWeekday(ctx context.Context, id int64, weekday int) (bool, error) {
 	if weekday < 1 || weekday > 5 {
 		return false, nil

@@ -7,12 +7,8 @@ import type {
 } from "./contract/settings.generated";
 import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
-import { shellResourceKeys } from "./swr/shell-keys";
 
 const logger = createLogger({ component: "SettingsApi" });
-
-/** The schema's SWR key; readers use `shellResourceKeys.settingsSchema()`. */
-export const SETTINGS_SCHEMA_SWR_KEY = shellResourceKeys.settingsSchema();
 
 // --- Types ---
 

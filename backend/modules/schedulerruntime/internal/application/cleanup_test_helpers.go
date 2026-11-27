@@ -19,7 +19,7 @@ func NewCleanupTestRunner(deps ports.WorkerDependencies) func() {
 		retentionCleanupJobs: newRetentionCleanupJobs(deps),
 		logger:               deps.Logger, schoolRepo: deps.SchoolRepo, tenantRuntime: deps.TenantRuntime,
 		retention: retention,
-		settings:  deps.Settings, cleanupRuns: deps.CleanupRuns, cleanupClock: deps.Now,
+		settings:  deps.Settings, cleanupRuns: deps.CleanupRuns,
 		cleanupService: deps.ActiveCleanup, workerTracer: deps.Tracer,
 		workSessionCleanup:        deps.WorkSessionCleanup,
 		enrollmentRejectedCleanup: deps.EnrollmentRejectedCleanup,

@@ -2,10 +2,7 @@ import { purgeTenantSettingsCache } from "~/lib/tenant-settings-cache.server";
 import { requireStringParam } from "~/lib/route-wrapper-utils.server";
 import type { NextRequest } from "next/server";
 import { createLogger } from "~/lib/logger";
-import {
-  createOperatorPutHandler,
-  createOperatorDeleteHandler,
-} from "~/lib/operator/route-wrapper.server";
+import { operator } from "~/lib/operator/route-wrapper.server";
 import {
   SETTINGS_KEY_SEGMENT,
   TENANT_RESOLVE_AFFECTING_KEYS,
@@ -38,7 +35,7 @@ function revalidateTenantIfNeeded(
   logger.info("tenant_cache_revalidated", { subdomain, key });
 }
 
-export const PUT = createOperatorPutHandler(
+export const PUT = operator.put(
   async (
     request: NextRequest,
     body: sharedContract.setSchoolSettingRequest,
@@ -72,7 +69,7 @@ export const PUT = createOperatorPutHandler(
   },
 );
 
-export const DELETE = createOperatorDeleteHandler(
+export const DELETE = operator.del(
   async (
     request: NextRequest,
     token: string,

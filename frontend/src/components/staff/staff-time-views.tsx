@@ -36,16 +36,12 @@ export function KpiCard({
   secondary,
   progressPct,
   color,
-  compactPrimary,
 }: {
   readonly label: string;
   readonly primary: string;
   readonly secondary?: string;
   readonly progressPct?: number;
   readonly color?: "green" | "amber" | "gray" | "red";
-  /** Schulweite Summen sind vierstellig ("1521h 11min") und brechen sonst
-   *  mitten im Wert um. Eine Stufe kleiner und ohne Umbruch. */
-  readonly compactPrimary?: boolean;
 }) {
   return (
     <StatCard
@@ -54,7 +50,6 @@ export function KpiCard({
       hint={secondary}
       progressPct={progressPct}
       tone={color === "amber" ? "orange" : (color ?? "gray")}
-      compactValue={compactPrimary}
     />
   );
 }

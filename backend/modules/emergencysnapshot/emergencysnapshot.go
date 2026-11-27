@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 )
 
 // ErrIncompleteDependencies reports a missing port. Missing wiring is a
@@ -121,8 +123,6 @@ type Dependencies struct {
 	Renderer Renderer
 	// AccessLog records an export that prints health information (#5472).
 	AccessLog AccessLog
-	// Collate orders two names in German dictionary order (DIN 5007-1).
-	Collate func(a, b string) int
 	// Now supplies the export instant: the root's clock. Required.
 	Now func() time.Time
 	// Logger is optional; a nil logger falls back to slog.Default.
@@ -139,7 +139,7 @@ type Projection struct {
 func New(deps Dependencies) (*Projection, error) {
 	if deps.Presence == nil || deps.Rooms == nil || deps.Students == nil || deps.Persons == nil ||
 		deps.Contacts == nil || deps.Calendar == nil || deps.Renderer == nil ||
-		deps.AccessLog == nil || deps.Collate == nil || deps.Now == nil {
+		deps.AccessLog == nil || deps.Now == nil {
 		return nil, ErrIncompleteDependencies
 	}
 	if deps.Logger == nil {
@@ -229,7 +229,7 @@ func (p *Projection) loadRows(ctx context.Context, date Date, studentIDs []int64
 	}
 
 	rows := buildRows(studentIDs, students, persons, locations, contacts)
-	p.sortRows(rows)
+	sortRows(rows)
 	return rows, nil
 }
 
@@ -270,12 +270,12 @@ func buildRows(
 
 // sortRows orders by location (plain byte order, so the room blocks stay
 // stable) and then by name in German dictionary order.
-func (p *Projection) sortRows(rows []Row) {
+func sortRows(rows []Row) {
 	sort.SliceStable(rows, func(i, j int) bool {
 		if rows[i].Location != rows[j].Location {
 			return rows[i].Location < rows[j].Location
 		}
-		return p.deps.Collate(rows[i].Name, rows[j].Name) < 0
+		return collation.CompareGerman(rows[i].Name, rows[j].Name) < 0
 	})
 }
 

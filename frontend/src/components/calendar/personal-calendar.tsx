@@ -4,7 +4,7 @@ import { FramedList } from "~/components/ui/framed-list";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 import { StatCard } from "~/components/ui/stat-card";
 import { ActionHint } from "~/components/ui/action-hint";
 import { Button, buttonClassName } from "~/components/ui/button";
@@ -30,7 +30,7 @@ import {
   type CalendarResponseStatus,
   knownResponseStatus,
 } from "~/lib/personal-calendar-api";
-import { parseISODate, toISODate, berlinTodayISO } from "~/lib/date-helpers";
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import {
   formatDayHeader,
   formatWeekLabel,
@@ -73,8 +73,7 @@ interface PersonalCalendarProps {
    */
   readonly showWeekend?: boolean;
   readonly events: readonly CalendarEvent[];
-  readonly referenceDate?: Date;
-  readonly weekStart?: Date;
+  readonly referenceDate: Date;
   readonly viewMode?: CalendarViewMode;
   readonly loading?: boolean;
   /** Mit `occurrenceDate` zählt die Übersicht einen Termin einer Reihe. */
@@ -610,8 +609,7 @@ function nextLabel(viewMode: CalendarViewMode): string {
 export function PersonalCalendar({
   showWeekend = false,
   events,
-  referenceDate: rawReferenceDate,
-  weekStart,
+  referenceDate,
   viewMode = "week",
   loading,
   onShowOverview,
@@ -639,8 +637,6 @@ export function PersonalCalendar({
     icsHref,
     showGuardianMails,
   };
-  const referenceDate =
-    rawReferenceDate ?? weekStart ?? parseISODate(berlinTodayISO());
   const { from } = getWeekRange(referenceDate);
   const days = getWeekdays(from);
   const monthDays = monthGridDays(referenceDate);
@@ -1677,40 +1673,29 @@ function EmptyCalendarState({
 
 /**
  * Das Bedienband des Kalenders: Zeitnavigation, Ansichtsumschalter,
- * Wochenend-Schalter und die Primäraktion. Es sitzt in der Kopfkarte der
+ * Wochenend-Schalter. Es sitzt in der Kopfkarte der
  * Seite (`TenantPage` Slot `searchSlot`) und NICHT über dem Raster — sonst
  * hätte die Seite zwei Köpfe. Deshalb ist es eine eigene Komponente und kein
  * Teil von `PersonalCalendar`.
  */
 export function PersonalCalendarChrome({
   events,
-  referenceDate: rawReferenceDate,
-  weekStart,
+  referenceDate,
   viewMode = "week",
   showWeekend,
   onShowWeekendChange,
   onDateChange,
-  onWeekChange,
   onViewModeChange,
-  onCreate,
-  subtitle,
 }: Readonly<{
   events: readonly CalendarEvent[];
-  referenceDate?: Date;
-  weekStart?: Date;
+  referenceDate: Date;
   viewMode?: CalendarViewMode;
   showWeekend: boolean;
   onShowWeekendChange: (next: boolean) => void;
-  onDateChange?: (date: Date) => void;
-  onWeekChange?: (date: Date) => void;
-  onViewModeChange?: (mode: CalendarViewMode) => void;
-  onCreate?: () => void;
-  subtitle?: string;
+  onDateChange: (date: Date) => void;
+  onViewModeChange: (mode: CalendarViewMode) => void;
 }>) {
   const today = useBerlinToday();
-  const referenceDate = rawReferenceDate ?? weekStart ?? parseISODate(today);
-  const handleDateChange = onDateChange ?? onWeekChange ?? (() => undefined);
-  const handleViewModeChange = onViewModeChange ?? (() => undefined);
   const { from, to } = getWeekRange(referenceDate);
   const days = getWeekdays(from);
   const monthDays = monthGridDays(referenceDate);
@@ -1725,17 +1710,15 @@ export function PersonalCalendarChrome({
 
   return (
     <PlanningContextBar
-      onPrevious={() =>
-        handleDateChange(shiftDate(referenceDate, viewMode, -1))
-      }
-      onNext={() => handleDateChange(shiftDate(referenceDate, viewMode, 1))}
+      onPrevious={() => onDateChange(shiftDate(referenceDate, viewMode, -1))}
+      onNext={() => onDateChange(shiftDate(referenceDate, viewMode, 1))}
       previousLabel={previousLabel(viewMode)}
       nextLabel={nextLabel(viewMode)}
       dateLabel={label}
       onToday={
         showsToday(referenceDate, viewMode, today)
           ? undefined
-          : () => handleDateChange(parseISODate(today))
+          : () => onDateChange(parseISODate(today))
       }
       viewSwitcher={
         <SegmentedControl
@@ -1744,24 +1727,9 @@ export function PersonalCalendarChrome({
             label: option.label,
           }))}
           value={viewMode}
-          onChange={handleViewModeChange}
+          onChange={onViewModeChange}
           ariaLabel="Ansicht wählen"
         />
-      }
-      actions={
-        onCreate ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            className="gap-1.5"
-            onClick={onCreate}
-            tooltip={NEW_APPOINTMENT_HINT}
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            Neuer Termin
-          </Button>
-        ) : undefined
       }
     >
       {viewMode !== "day" ? (
@@ -1780,13 +1748,10 @@ export function PersonalCalendarChrome({
           {hiddenWeekendCount > 0 ? `Sa/So (${hiddenWeekendCount})` : "Sa/So"}
         </Button>
       ) : null}
-      {subtitle ? (
-        <p className="truncate text-xs text-gray-500">{subtitle}</p>
-      ) : null}
     </PlanningContextBar>
   );
 }
 
-/** Erklärung von „Neuer Termin“, gleich im Kopf der Seite und in der Leiste. */
+/** Erklärung von „Neuer Termin“ im Kopf der Seite. */
 export const NEW_APPOINTMENT_HINT =
   "Öffnet ein leeres Formular für einen neuen Termin.";

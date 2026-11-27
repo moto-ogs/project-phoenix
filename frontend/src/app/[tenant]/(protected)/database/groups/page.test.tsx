@@ -699,7 +699,7 @@ describe("GroupsPage", () => {
 
   it("calls delete service after confirming deletion from the detail panel", async () => {
     setSelectedGroup("1");
-    mockRemove.mockResolvedValueOnce(true);
+    mockRemove.mockResolvedValueOnce(undefined);
 
     render(<GroupsPage />);
 

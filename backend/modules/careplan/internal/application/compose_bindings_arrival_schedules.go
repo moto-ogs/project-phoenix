@@ -12,10 +12,10 @@ func ArrivalScheduleRecords(r carePlanBindingPorts.ArrivalScheduleRecords) Effec
 
 func ArrivalExceptionRecords(r carePlanBindingPorts.ArrivalScheduleRecords) ExceptionRecords[careplan.ArrivalException, *careplan.ArrivalException] {
 	return NewExceptionRecords[careplan.ArrivalException, *careplan.ArrivalException](RecordFuncs[careplan.ArrivalException]{Find: r.FindArrivalException, List: r.ListArrivalExceptions,
-		Create: r.CreateArrivalException, Update: r.UpdateArrivalException, Remove: r.DeleteArrivalException, RemoveByStudent: r.DeleteArrivalExceptionsByStudent})
+		Create: r.CreateArrivalException, Update: r.UpdateArrivalException, Remove: r.DeleteArrivalException})
 }
 
-func ArrivalNoteRecords(r carePlanBindingPorts.ArrivalScheduleRecords) NoteRecords[careplan.ArrivalNote, *careplan.ArrivalNote] {
-	return NewNoteRecords[careplan.ArrivalNote, *careplan.ArrivalNote](RecordFuncs[careplan.ArrivalNote]{Find: Unlocked(r.FindArrivalNote), List: r.ListArrivalNotes,
-		Create: r.CreateArrivalNote, Update: r.UpdateArrivalNote, Remove: r.DeleteArrivalNote, RemoveByStudent: r.DeleteArrivalNotesByStudent})
+func ArrivalNoteRecords(r carePlanBindingPorts.ArrivalScheduleRecords) EffectiveRecords[careplan.ArrivalNote, *careplan.ArrivalNote] {
+	return NewEffectiveRecords[careplan.ArrivalNote, *careplan.ArrivalNote](RecordFuncs[careplan.ArrivalNote]{Find: Unlocked(r.FindArrivalNote), List: r.ListArrivalNotes,
+		Create: r.CreateArrivalNote, Update: r.UpdateArrivalNote, Remove: r.DeleteArrivalNote})
 }

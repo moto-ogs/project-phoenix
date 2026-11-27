@@ -2293,7 +2293,6 @@ function TimetablesContent() {
           onAttendancePatch={
             canManageSchedules ? handleAttendancePatch : undefined
           }
-          editDeferred={false}
           suspended={
             eventModalOpen ||
             poolInstance !== null ||
@@ -2415,7 +2414,6 @@ function TimetablesContent() {
 
       {canExportBetreuungsplan && exportOpen && (
         <PlanExportModal
-          isOpen
           plan="betreuungsplan"
           weekDay={dayISO}
           isWeekOnScreen={view === "week"}

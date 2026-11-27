@@ -87,7 +87,6 @@ type fakeParentService struct {
 	listRows         []*parentService.StudentDataChangeRequest
 	listErr          error
 	submitStatus     *parentService.GuardianSubmitStatus
-	careException    *parentService.CareException
 	careExceptionErr error
 	gotCareAccount   int64
 	gotCareStudent   int64
@@ -268,12 +267,6 @@ func (f *fakeParentService) ListExcusedRequests(context.Context, int64, int64) (
 func (f *fakeParentService) EditExcusedRequest(context.Context, int64, int64, int64, []timezone.Date, string, string) (*parentService.ExcusedAbsenceRequestSnapshot, error) {
 	return nil, nil
 }
-func (f *fakeParentService) EditPickupChangeRequest(context.Context, int64, int64, int64, timezone.Date, time.Time, string, string, string) (*careplan.CareScheduleChangeRequest, error) {
-	return nil, nil
-}
-func (f *fakeParentService) EditCareScheduleRequest(context.Context, int64, int64, int64, map[string]any, string) (*parentService.ChildCareSchedule, error) {
-	return nil, nil
-}
 func (f *fakeParentService) EditMasterDataRequest(context.Context, int64, int64, int64, json.RawMessage, string) (*parentService.StudentDataChangeRequest, error) {
 	return nil, nil
 }
@@ -346,10 +339,6 @@ func (f *fakeParentService) GetChildCareSchedule(context.Context, int64, int64) 
 	return nil, nil
 }
 
-func (f *fakeParentService) CreateCareScheduleRequest(context.Context, int64, int64, map[string]any) (*parentService.ChildCareSchedule, error) {
-	return nil, nil
-}
-
 // Offering change requests (#1665). Zero-value stubs: these handlers have their
 // own tests; the fake only has to satisfy the interface.
 func (f *fakeParentService) GetChildCareOfferings(context.Context, int64, int64) (*parentService.ChildCareOfferings, error) {
@@ -384,20 +373,6 @@ func (f *fakeParentService) CreateOfferingChangeRequest(
 	return nil, nil
 }
 
-func (f *fakeParentService) SubmitCareExceptionWithReason(_ context.Context, accountID, studentID int64, date timezone.Date, pickup *time.Time, reason string) (*parentService.CareException, error) {
-	f.gotCareAccount = accountID
-	f.gotCareStudent = studentID
-	f.gotCareDate = date
-	f.gotCarePickup = pickup
-	f.gotCareReason = reason
-	return f.careException, f.careExceptionErr
-}
-
-func (f *fakeParentService) SubmitPickupChange(ctx context.Context, accountID, studentID int64, submission parentService.PickupChangeSubmission) (*careplan.CareScheduleChangeRequest, error) {
-	f.gotPickupSubmission = &submission
-	return f.SubmitPickupChangeRequest(ctx, accountID, studentID, submission.Date, submission.PickupTime, submission.DepartureMode, submission.Reason, submission.RecipientGuardianProfileIDs)
-}
-
 func (f *fakeParentService) EditPickupChange(_ context.Context, accountID, _ int64, _ int64, edit parentService.PickupChangeEdit) (*careplan.CareScheduleChangeRequest, error) {
 	f.gotPickupEdit = &edit
 	return &careplan.CareScheduleChangeRequest{
@@ -406,12 +381,12 @@ func (f *fakeParentService) EditPickupChange(_ context.Context, accountID, _ int
 	}, nil
 }
 
-func (f *fakeParentService) CreateSignedCareScheduleRequest(ctx context.Context, accountID, studentID int64, payload map[string]any, _ *parentService.PickupSignatureInput) (*parentService.ChildCareSchedule, error) {
-	return f.CreateCareScheduleRequest(ctx, accountID, studentID, payload)
+func (f *fakeParentService) CreateSignedCareScheduleRequest(context.Context, int64, int64, map[string]any, *parentService.PickupSignatureInput) (*parentService.ChildCareSchedule, error) {
+	return nil, nil
 }
 
-func (f *fakeParentService) EditSignedCareScheduleRequest(ctx context.Context, accountID, studentID, requestID int64, payload map[string]any, expectedVersion string, _ *parentService.PickupSignatureInput) (*parentService.ChildCareSchedule, error) {
-	return f.EditCareScheduleRequest(ctx, accountID, studentID, requestID, payload, expectedVersion)
+func (f *fakeParentService) EditSignedCareScheduleRequest(context.Context, int64, int64, int64, map[string]any, string, *parentService.PickupSignatureInput) (*parentService.ChildCareSchedule, error) {
+	return nil, nil
 }
 
 func (f *fakeParentService) SubmitPickupPermissionRequest(context.Context, int64, int64, int64, parentService.PickupPermissionInput) (*careplan.CareScheduleChangeRequest, error) {
@@ -437,7 +412,9 @@ func (f *fakeParentService) PickupRequestProof(context.Context, int64, int64, in
 	return nil, parentService.ErrPickupProofNotFound
 }
 
-func (f *fakeParentService) SubmitPickupChangeRequest(_ context.Context, accountID, studentID int64, date timezone.Date, pickup time.Time, departureMode, reason string, _ []int64) (*careplan.CareScheduleChangeRequest, error) {
+func (f *fakeParentService) SubmitPickupChange(_ context.Context, accountID, studentID int64, submission parentService.PickupChangeSubmission) (*careplan.CareScheduleChangeRequest, error) {
+	f.gotPickupSubmission = &submission
+	date, pickup, departureMode, reason := submission.Date, submission.PickupTime, submission.DepartureMode, submission.Reason
 	f.gotCareAccount = accountID
 	f.gotCareStudent = studentID
 	f.gotCareDate = date
@@ -813,16 +790,7 @@ func TestSubmitCareException_PassesRequiredReasonAndReturnsIt(t *testing.T) {
 	t.Parallel()
 
 	reason := "Abholung durch die Großeltern"
-	pickup := time.Date(2000, time.January, 1, 14, 30, 0, 0, time.UTC)
-	date, err := timezone.ParseDate("2026-08-18")
-	require.NoError(t, err)
-	service := &fakeParentService{careException: &parentService.CareException{
-		Date:       date,
-		PickupTime: &pickup,
-		Reason:     &reason,
-		Source:     "guardian",
-		UpdatedAt:  time.Date(2026, time.August, 14, 10, 0, 0, 0, time.UTC),
-	}}
+	service := &fakeParentService{}
 	rs := &Resource{ParentService: service}
 	w := httptest.NewRecorder()
 

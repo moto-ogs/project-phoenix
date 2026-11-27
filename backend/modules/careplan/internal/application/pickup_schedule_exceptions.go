@@ -16,42 +16,6 @@ func (s *pickupScheduleService) GetStudentPickupExceptionByID(
 	return s.exceptionByID(ctx, exceptionID)
 }
 
-func (s *pickupScheduleService) GetStudentPickupExceptionForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) (*careplan.PickupException, error) {
-	return s.exceptionForDate(ctx, studentID, date)
-}
-
-func (s *pickupScheduleService) GetStudentPickupExceptions(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.PickupException, error) {
-	return s.loadExceptions(ctx, studentID)
-}
-
-func (s *pickupScheduleService) GetUpcomingStudentPickupExceptions(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.PickupException, error) {
-	return s.upcomingExceptions(ctx, studentID, s.today())
-}
-
-func (s *pickupScheduleService) CreateStudentPickupException(
-	ctx context.Context,
-	row *careplan.PickupException,
-) error {
-	return s.createException(ctx, row)
-}
-
-func (s *pickupScheduleService) UpdateStudentPickupException(
-	ctx context.Context,
-	row *careplan.PickupException,
-) error {
-	return s.updateExceptionRow(ctx, row)
-}
-
 func (s *pickupScheduleService) CreateOrReclaimException(
 	ctx context.Context,
 	studentID int64,

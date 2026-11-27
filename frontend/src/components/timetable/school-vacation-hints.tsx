@@ -15,8 +15,6 @@ import {
 } from "~/components/timetable/school-vacation-hints-core";
 import type { SchoolVacationHint } from "~/lib/school-vacations-api";
 
-export { vacationHintMessage } from "~/components/timetable/school-vacation-hints-core";
-
 interface SchoolVacationHintsProps extends Omit<
   SchoolVacationHintsCoreProps,
   "onCancel"

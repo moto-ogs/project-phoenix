@@ -129,12 +129,6 @@ type staffShiftService struct {
 	lockStaffShifts func(ctx context.Context, staffID int64) error
 	broadcaster     realtime.Broadcaster
 	logger          *slog.Logger
-	// lockObserver, when set, is invoked with the sorted, de-duplicated staff-id
-	// set of every lockStaffWritesOrdered acquisition. It is a test-only seam: the
-	// lock is a no-op without one bound, so a unit test cannot otherwise assert
-	// which staff members an operation serializes on (e.g. that a dropped cover's
-	// staff is folded into the cancellation lock set, #1841). Nil in production.
-	lockObserver func(staffIDs []int64)
 	// sickReports and today give a created or moved shift the sick state of
 	// its day (#6302). A nil reader plans everybody healthy.
 	sickReports SickReportReader
@@ -389,9 +383,6 @@ func (s *staffShiftService) lockStaffWritesOrdered(ctx context.Context, staffIDs
 		unique = append(unique, id)
 	}
 	slices.Sort(unique)
-	if s.lockObserver != nil {
-		s.lockObserver(unique)
-	}
 	for _, id := range unique {
 		if err := s.lockShiftWrites(ctx, id); err != nil {
 			return err

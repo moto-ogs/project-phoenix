@@ -464,7 +464,6 @@ function RoleMasterDataForm({
       onSubmit={handleSave}
       onCancel={onCancel}
       submitLabel="Speichern"
-      stickyActions
       errorPath={errorPath}
       errorObject="die Rolle"
     />

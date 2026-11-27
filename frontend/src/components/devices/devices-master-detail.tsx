@@ -331,7 +331,6 @@ function DeviceEditForm({
       onSubmit={handleSave}
       onCancel={onCancelEdit}
       submitLabel="Speichern"
-      stickyActions
       errorPath={saveErrors}
       errorObject="das Gerät"
     />

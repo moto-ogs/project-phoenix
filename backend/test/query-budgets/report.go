@@ -28,14 +28,15 @@ type feedbackTB interface {
 	Errorf(string, ...any)
 }
 
-func emitQueryFeedback(tb feedbackTB, scenario string, queries []string, budget queryBudget, getenv func(string) string) {
+func emitQueryFeedback(tb feedbackTB, scenario string, observed Measurement, budget queryBudget, getenv func(string) string) {
+	queries := observed.Statements
 	dump := getenv("PHX_QUERY_DUMP") == "1"
 	if dump {
 		tb.Logf("query budget %q: %d statements\n%s", scenario, len(queries), indentQueries(queries, 0))
 	}
 	if path := getenv("PHX_QUERY_BUDGET_REPORT"); path != "" {
 		report := budgetReport{
-			Scenario: scenario, Test: tb.Name(), Actual: len(queries),
+			Route: observed.Route, Scenario: scenario, Test: tb.Name(), Actual: len(queries),
 			Max: budget.max, Exact: budget.exact, DuplicateStatements: duplicateStatements(queries),
 		}
 		if dump {

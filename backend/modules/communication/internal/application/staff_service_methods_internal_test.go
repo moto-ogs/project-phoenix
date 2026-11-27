@@ -629,11 +629,12 @@ func TestService_Publish_WithEmail(t *testing.T) {
 		}
 		return &communication.MailEnqueued{}, nil
 	}}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
-		Now:        staffTestClock,
-		Repo:       repo,
-		Settings:   stubSettings{newsEnabled: true, loginImageURL: "logo.png"},
-		Notifier:   &fakeNotifier{},
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: stubSettings{newsEnabled: true, loginImageURL: "logo.png"},
+		Notifier: notifier, Series: notifier.series(),
 		Outbox:     outbox,
 		ParentsURL: "https://parents.example",
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
@@ -832,11 +833,12 @@ func TestService_Publish_EmailNoOutbox(t *testing.T) {
 			return []*StaffAnnouncementRecipientStatus{{AccountID: 101}}, nil
 		},
 	}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:      staffTestClock,
 		Repo:     repo,
 		Settings: stubSettings{newsEnabled: true},
-		Notifier: &fakeNotifier{},
+		Notifier: notifier, Series: notifier.series(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish without outbox: %v", err)
@@ -940,12 +942,13 @@ func TestService_Publish_LogoLookupError_StillEnqueues(t *testing.T) {
 		}
 		return &communication.MailEnqueued{}, nil
 	}}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:      staffTestClock,
 		Repo:     repo,
 		Settings: stubSettings{newsEnabled: true, loginImageErr: errors.New("no logo")},
-		Notifier: &fakeNotifier{},
-		Outbox:   outbox,
+		Notifier: notifier, Series: notifier.series(),
+		Outbox: outbox,
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish with logo error: %v", err)
@@ -975,12 +978,13 @@ func TestService_Publish_EmptyAudience(t *testing.T) {
 		t.Fatal("must not enqueue for empty audience")
 		return nil, nil
 	}}
+	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
 		Now:      staffTestClock,
 		Repo:     repo,
 		Settings: stubSettings{newsEnabled: true},
-		Notifier: &fakeNotifier{},
-		Outbox:   outbox,
+		Notifier: notifier, Series: notifier.series(),
+		Outbox: outbox,
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish empty audience: %v", err)

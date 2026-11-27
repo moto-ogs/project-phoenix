@@ -185,28 +185,6 @@ describe("substitutionService", () => {
     },
   );
 
-  it("maps the proxy-wrapped overview response", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        data: { group_handovers: [handover], targets: [] },
-      }),
-    });
-
-    const result = await substitutionService.fetchSubstitutions();
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      id: "5",
-      type: "group_handover",
-      groupId: "12",
-      groupName: "Robins Gruppe",
-      substituteStaffId: "34",
-      substituteStaffName: "Toni Test",
-      canEnd: true,
-    });
-  });
-
   it("loads the central overview through one module request", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
@@ -237,7 +215,17 @@ describe("substitutionService", () => {
       method: "GET",
     });
     expect(result.groups).toEqual([{ id: "12", name: "Robins Gruppe" }]);
-    expect(result.groupHandovers[0]?.id).toBe("5");
+    expect(result.groupHandovers).toMatchObject([
+      {
+        id: "5",
+        type: "group_handover",
+        groupId: "12",
+        groupName: "Robins Gruppe",
+        substituteStaffId: "34",
+        substituteStaffName: "Toni Test",
+        canEnd: true,
+      },
+    ]);
     expect(result.targets).toEqual([{ id: "34", fullName: "Toni Test" }]);
     expect(result.runningSupervisions[0]).toMatchObject({
       id: "41",
@@ -612,9 +600,9 @@ describe("substitutionService", () => {
   it("rejects a missing proxy envelope", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
 
-    await expect(
-      substitutionService.fetchSubstitutions(),
-    ).rejects.toMatchObject({ status: 502 });
+    await expect(substitutionService.fetchOverview()).rejects.toMatchObject({
+      status: 502,
+    });
   });
 
   it("ends a typed group handover", async () => {

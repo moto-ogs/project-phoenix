@@ -52,10 +52,6 @@ type RoleStore interface {
 
 	// LockAccount locks the account row for the caller's transaction.
 	LockAccount(ctx context.Context, accountID int64) (bool, error)
-	// HasTenantMembership reports whether the account is mapped to the
-	// tenant. With share it only counts an active mapping and locks it FOR
-	// SHARE, so a concurrent revocation waits for the caller.
-	HasTenantMembership(ctx context.Context, accountID, tenantID int64, share bool) (bool, error)
 	ListAccountEmails(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 	ListAccountAvatars(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 }

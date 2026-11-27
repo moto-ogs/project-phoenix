@@ -113,30 +113,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
       "binding_digest": "898708533b442531816204abf4738cdf",
       "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
@@ -2513,38 +2489,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudents",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudents",
@@ -3468,38 +3412,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""
@@ -6465,22 +6377,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListEnrolledStudents",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListEnrolledStudents",
@@ -6940,22 +6836,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentRoster",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterByGroup",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""
@@ -8297,38 +8177,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListEnrolledStudents",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListEnrolledStudents",
@@ -9225,38 +9073,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentRosterOverlapping",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterOverlapping",
@@ -10105,22 +9921,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListEnrolledStudentIDsByNameAndBirthday",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListEnrolledStudentIDsByNameAndBirthday",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRoster",
@@ -10132,22 +9932,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRoster",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRosterByGroup",
-      "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterByGroup",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRosterByGroup",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""

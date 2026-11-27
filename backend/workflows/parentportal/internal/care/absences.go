@@ -305,7 +305,7 @@ func (s *Service) afterAbsenceCommit(ctx context.Context, tenantID int64, report
 	}
 	s.Runtime.RegisterAfterCommit(ctx, func() {
 		s.broadcastStudentUpdated(tenantID, report.studentID)
-		// broadcastStudentUpdated is staff-only and emitSelfServicePill wakes
+		// broadcastStudentUpdated is staff-only and EmitSelfServicePill wakes
 		// just the acting guardian's thread; fan out to EVERY guardian so a
 		// co-guardian's open tab drops the stale presence too (#1725 review).
 		s.SelfService.WakeChildGuardians(tenantID, report.studentID)

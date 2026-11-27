@@ -322,7 +322,6 @@ export function RoomCheckinDialog({
                         schoolClass={candidate.student.school_class}
                         groupName={candidate.student.group_name ?? undefined}
                         photoUrl={candidate.student.photo_url ?? null}
-                        chrome="plain"
                       />
                     </span>
                     <span className="shrink-0 text-xs text-gray-600">

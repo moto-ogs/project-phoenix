@@ -10,7 +10,6 @@ const logger = createLogger({ component: "SSEErrorBoundary" });
 
 interface SSEErrorBoundaryProps {
   readonly children: React.ReactNode;
-  readonly fallback?: React.ReactNode;
 }
 
 interface SSEErrorBoundaryState {
@@ -43,9 +42,7 @@ export class SSEErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        this.props.fallback ?? (
-          <LoadErrorAlert error="Live-Updates sind derzeit nicht verfügbar." />
-        )
+        <LoadErrorAlert error="Live-Updates sind derzeit nicht verfügbar." />
       );
     }
     return this.props.children;

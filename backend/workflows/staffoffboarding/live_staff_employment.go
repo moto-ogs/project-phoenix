@@ -3,8 +3,6 @@ package staffoffboarding
 import (
 	"context"
 	"errors"
-
-	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
 // LiveStaffMembership locks a staff member's membership row while the member
@@ -16,7 +14,6 @@ type LiveStaffMembership interface {
 
 // StaffEmploymentWrites are Workforce's employment-only staff writes.
 type StaffEmploymentWrites interface {
-	AppendStaffNotes(ctx context.Context, membershipID int64, notes string) (workforce.StaffEmployment, error)
 	SetStaffBirthdayDisplayOptOut(ctx context.Context, membershipID int64, optOut bool) error
 }
 
@@ -44,13 +41,4 @@ func (w *LiveStaffEmployment) SetBirthdayDisplayOptOut(ctx context.Context, staf
 		return err
 	}
 	return w.employment.SetStaffBirthdayDisplayOptOut(ctx, staffID, optOut)
-}
-
-// AppendNotes adds a paragraph to a live staff member's private notes.
-func (w *LiveStaffEmployment) AppendNotes(ctx context.Context, staffID int64, notes string) error {
-	if err := w.membership.LockLiveStaff(ctx, staffID); err != nil {
-		return err
-	}
-	_, err := w.employment.AppendStaffNotes(ctx, staffID, notes)
-	return err
 }

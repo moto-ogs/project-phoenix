@@ -25,11 +25,3 @@ func (s *Service) pickupExceptionForDate(ctx context.Context, id int64, date cal
 	}
 	return &rows[0], nil
 }
-
-func (s *Service) arrivalExceptionForDate(ctx context.Context, id int64, date calendar.Date) (*ArrivalException, error) {
-	rows, err := s.CareExceptions.ListArrivalExceptions(ctx, StudentScheduleFilter{StudentIDs: []int64{id}, Date: date})
-	if err != nil || len(rows) == 0 {
-		return nil, err
-	}
-	return &rows[0], nil
-}

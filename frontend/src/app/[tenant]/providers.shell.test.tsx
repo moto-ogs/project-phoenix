@@ -113,12 +113,9 @@ const shell: ShellBootstrap = {
     },
   },
   profile: {
-    id: "1",
     firstName: "Ada",
     lastName: "L",
     email: "a@b",
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
     version: "v1",
   },
   reminders: { enabled: true, reminders: [], count: 0 },

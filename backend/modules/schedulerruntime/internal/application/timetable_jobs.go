@@ -49,7 +49,7 @@ func (s *Scheduler) checkAndRunMaterializationWithContext(ctx context.Context, t
 	ctx, cancel := s.taskContext(ctx, 30*time.Minute)
 	defer cancel()
 
-	now := s.materializationTime()
+	now := s.clock()
 	s.forEachTenantSettings(ctx, "materialization-check", func(tenantCtx context.Context, tenantID int64) error {
 		return s.runMaterializationForTenant(tenantCtx, tenantID, now)
 	})
@@ -61,13 +61,6 @@ func isoWeekdayMatches(wd int, now time.Time) bool {
 		return wd == 7
 	}
 	return wd == int(today)
-}
-
-func (s *Scheduler) materializationTime() time.Time {
-	if s.materializationNow != nil {
-		return s.materializationNow()
-	}
-	return s.clock()
 }
 
 func (s *Scheduler) scheduleAutoStartTask() {

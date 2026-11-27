@@ -56,7 +56,6 @@ func (rs *BillingTermsResource) FamilyRouter(protectedTraegerRoutes func(chi.Rou
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
-		billing.Get("/", rs.listFamilies)
 		billing.Get("/contracts/{id}", rs.familyOfContract)
 		billing.Put("/", rs.saveFamily)
 	})
@@ -197,20 +196,6 @@ func (rs *BillingTermsResource) saveServiceTerms(w http.ResponseWriter, r *http.
 	}
 	common.Respond(w, r, http.StatusOK, BillingTermsResponse{Services: capability.BillingServices, Terms: terms},
 		"Billing terms saved successfully")
-}
-
-func (rs *BillingTermsResource) listFamilies(w http.ResponseWriter, r *http.Request) {
-	reviewer, ok := reviewerOf(w, r)
-	if !ok {
-		return
-	}
-	families, err := rs.terms.ListFamilyBilling(r.Context(), reviewer)
-	if err != nil {
-		tenant.MarkRollback(r.Context())
-		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, families, "Family billing retrieved successfully")
 }
 
 // familyOfContract answers the family of a contract with its deviation, so

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const BOTTOM_OFFSET_PX = 32;
+
 /**
  * Misst, wie viel Höhe unter dem Element bis zur Unterkante des Bildschirms
  * bleibt, und liefert sie als CSS-Wert. Damit füllt eine Liste den Rest der
@@ -11,7 +13,7 @@ import { useEffect, useState } from "react";
  * Sammlung (`DatabaseListLayout`): beide sollen gleich hoch werden, sonst
  * springt die Fläche, wenn ein Register zwischen den Bauarten wechselt.
  */
-export function useFillHeight<T extends HTMLElement>(bottomOffset = 32) {
+export function useFillHeight<T extends HTMLElement>() {
   const [node, setNode] = useState<T | null>(null);
   const [height, setHeight] = useState<string>("100dvh");
 
@@ -20,7 +22,7 @@ export function useFillHeight<T extends HTMLElement>(bottomOffset = 32) {
 
     const measure = () => {
       const top = Math.max(0, Math.round(node.getBoundingClientRect().top));
-      const next = `calc(100dvh - ${top + bottomOffset}px)`;
+      const next = `calc(100dvh - ${top + BOTTOM_OFFSET_PX}px)`;
       setHeight((prev) => (prev === next ? prev : next));
     };
 
@@ -32,7 +34,7 @@ export function useFillHeight<T extends HTMLElement>(bottomOffset = 32) {
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [bottomOffset, node]);
+  }, [node]);
 
   return { ref: setNode, height };
 }

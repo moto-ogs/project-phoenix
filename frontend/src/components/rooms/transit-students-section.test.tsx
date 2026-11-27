@@ -538,22 +538,6 @@ describe("TransitStudentsSection", () => {
     );
   });
 
-  it("reports active selection state to the drawer wrapper", async () => {
-    const onSelectionActiveChange = vi.fn();
-
-    render(
-      <TransitStudentsSection
-        onSelectionActiveChange={onSelectionActiveChange}
-      />,
-    );
-
-    fireEvent.click(screen.getByLabelText("Mila Sommer auswählen"));
-
-    await waitFor(() => {
-      expect(onSelectionActiveChange).toHaveBeenLastCalledWith(true);
-    });
-  });
-
   it("shows the load error instead of an empty state", async () => {
     mockTransitData({
       students: [],

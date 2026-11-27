@@ -3,10 +3,7 @@ import type { NextRequest } from "next/server";
 import { contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/settings.generated";
 import type { setValueRequest } from "~/lib/contract/shared.generated";
-import {
-  createPutHandler,
-  createDeleteHandler,
-} from "~/lib/route-wrapper.server";
+import { tenant } from "~/lib/route-wrapper.server";
 import {
   SETTINGS_KEY_SEGMENT,
   TENANT_RESOLVE_AFFECTING_KEYS,
@@ -18,7 +15,7 @@ function revalidateTenantIfNeeded(request: NextRequest, key: string): void {
     purgeRequestTenantSettingsCache(request);
 }
 
-export const PUT = createPutHandler(
+export const PUT = tenant.put(
   async (
     request: NextRequest,
     body: setValueRequest,
@@ -45,7 +42,7 @@ export const PUT = createPutHandler(
   },
 );
 
-export const DELETE = createDeleteHandler(
+export const DELETE = tenant.del(
   async (
     request: NextRequest,
     token: string,

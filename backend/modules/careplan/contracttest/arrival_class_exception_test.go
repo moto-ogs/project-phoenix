@@ -150,8 +150,10 @@ func TestClassArrivalExceptionStaysOutOfWeeklySchedules(t *testing.T) {
 	assert.Equal(t, "13:30", data.Schedules[0].ExpectedArrival.Format("15:04"))
 	assert.Equal(t, careplan.ScheduleSourceClassSchedule, data.Schedules[0].Source)
 
-	effective, err := svc.GetEffectiveArrivalTimeForDate(ctx, student.ID, monday)
+	times, err := svc.GetBulkEffectiveArrivalTimesForDate(ctx, []int64{student.ID}, monday)
 	require.NoError(t, err)
+	effective := times[student.ID]
+	require.NotNil(t, effective)
 	require.NotNil(t, effective.ArrivalTime)
 	assert.Equal(t, "11:45", effective.ArrivalTime.Format("15:04"))
 	require.NotNil(t, effective.ClassException)
@@ -219,10 +221,6 @@ func TestPerChildDayExceptionWinsOverTheClassException(t *testing.T) {
 	assert.Equal(t, "Klasse 3a: Unterricht fällt aus", withClass.ClassException.Label)
 	assert.Equal(t, "Klasse 3a: Unterricht fällt aus", withClass.Notes)
 
-	single, err := svc.GetEffectiveArrivalTimeForDate(ctx, second.ID, monday)
-	require.NoError(t, err)
-	require.NotNil(t, single.ClassException)
-	assert.Equal(t, "Klasse 3a: Unterricht fällt aus", single.ClassException.Label)
 }
 
 func TestUpsertClassArrivalExceptionWritesAndListsOneRowPerDate(t *testing.T) {

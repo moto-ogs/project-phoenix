@@ -107,7 +107,7 @@ const SENTENCE_START = [
 
 type SentenceStartPlaceholder = `${(typeof SENTENCE_START)[number]}Cap`;
 
-export type CareTermPlaceholder =
+type CareTermPlaceholder =
   | "careTerm"
   | "careAccShort"
   | DeclinedPlaceholder
@@ -120,15 +120,6 @@ export type CareTermValues = Readonly<Record<CareTermPlaceholder, string>>;
 function capitalize(text: string): string {
   return text.charAt(0).toLocaleUpperCase("de") + text.slice(1);
 }
-
-/** Every placeholder a message may use for the school's care. */
-export const CARE_TERM_PLACEHOLDERS: readonly CareTermPlaceholder[] = [
-  "careTerm",
-  "careAccShort",
-  ...(Object.keys(DECLENSION) as DeclinedPlaceholder[]),
-  ...(Object.keys(PRONOUNS) as PronounPlaceholder[]),
-  ...SENTENCE_START.map((key): SentenceStartPlaceholder => `${key}Cap`),
-];
 
 /**
  * The values for one school's name. An account with children at schools of

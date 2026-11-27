@@ -65,7 +65,7 @@ describe("shared resource factories", () => {
     expect(roomKeys.key({ page: 1, pageSize: 500 })).toBe(
       roomKeys.key({ pageSize: 500, page: 1 }),
     );
-    expect(roomKeys.key({ building: undefined })).toBe(roomKeys.key());
+    expect(roomKeys.key({ openOn: undefined })).toBe(roomKeys.key());
     expect(groupKeys.key({ pageSize: 500, page: 1 })).toBe(
       groupKeys.key({ page: 1, pageSize: 500 }),
     );

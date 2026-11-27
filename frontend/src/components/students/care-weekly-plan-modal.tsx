@@ -164,7 +164,6 @@ function CareWeeklyPlanModalForm({
           careDaysSource={careDaysSource}
           removals={[]}
           disabled={isSubmitting}
-          pickupNeedsCareDay
           schoolPeriods={schoolPeriods}
           timePresets={timePresets}
         />

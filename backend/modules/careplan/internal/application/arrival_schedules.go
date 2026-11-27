@@ -181,28 +181,6 @@ func (s *arrivalScheduleService) GetWeeklySchedulesByStudentIDsForDate(
 	return s.projectedWeeklySchedules(ctx, studentIDs, date)
 }
 
-func (s *arrivalScheduleService) GetStudentArrivalScheduleForWeekday(
-	ctx context.Context,
-	studentID int64,
-	weekday int,
-) (*careplan.ArrivalSchedule, error) {
-	// The weekday validation stays with the core so an invalid weekday keeps
-	// erroring rather than reading as "no care that day".
-	stored, err := s.scheduleForWeekday(ctx, studentID, weekday)
-	if err != nil && !s.tx.IsNotFound(err) {
-		return stored, err
-	}
-	if s.baselines == nil {
-		return stored, err
-	}
-	date := weekStart(s.today()).AddDays(weekday - 1)
-	week, err := s.projectedWeek(ctx, []int64{studentID}, date)
-	if err != nil {
-		return nil, err
-	}
-	return week[studentID][weekday], nil
-}
-
 func (s *arrivalScheduleService) UpsertStudentArrivalSchedule(
 	ctx context.Context,
 	row *careplan.ArrivalSchedule,
@@ -333,18 +311,6 @@ func (s *arrivalScheduleService) DeleteStudentArrivalSchedule(
 	})
 }
 
-func (s *arrivalScheduleService) DeleteAllStudentArrivalSchedules(
-	ctx context.Context,
-	studentID int64,
-) error {
-	return s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
-		if err := s.lockArrivalStudent(txCtx, studentID); err != nil {
-			return err
-		}
-		return s.deleteAllSchedules(txCtx, studentID)
-	})
-}
-
 func (s *arrivalScheduleService) GetStudentArrivalExceptionByID(
 	ctx context.Context,
 	exceptionID int64,
@@ -358,34 +324,6 @@ func (s *arrivalScheduleService) GetStudentArrivalExceptionsForDate(
 	date calendar.Date,
 ) (map[int64]*careplan.ArrivalException, error) {
 	return s.exceptionsForDate(ctx, studentIDs, date)
-}
-
-func (s *arrivalScheduleService) GetStudentArrivalExceptions(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.ArrivalException, error) {
-	return s.loadExceptions(ctx, studentID)
-}
-
-func (s *arrivalScheduleService) GetUpcomingStudentArrivalExceptions(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.ArrivalException, error) {
-	return s.upcomingExceptions(ctx, studentID, s.today())
-}
-
-func (s *arrivalScheduleService) CreateStudentArrivalException(
-	ctx context.Context,
-	row *careplan.ArrivalException,
-) error {
-	return s.createException(ctx, row)
-}
-
-func (s *arrivalScheduleService) UpdateStudentArrivalException(
-	ctx context.Context,
-	row *careplan.ArrivalException,
-) error {
-	return s.updateExceptionRow(ctx, row)
 }
 
 func (s *arrivalScheduleService) CreateOrReclaimException(
@@ -498,21 +436,6 @@ func (s *arrivalScheduleService) GetStudentArrivalNoteByID(
 	return s.noteByID(ctx, noteID)
 }
 
-func (s *arrivalScheduleService) GetStudentArrivalNotes(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.ArrivalNote, error) {
-	return s.loadNotes(ctx, studentID)
-}
-
-func (s *arrivalScheduleService) GetStudentArrivalNotesForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) ([]*careplan.ArrivalNote, error) {
-	return s.notesForDate(ctx, studentID, date)
-}
-
 func (s *arrivalScheduleService) CreateStudentArrivalNote(
 	ctx context.Context,
 	row *careplan.ArrivalNote,
@@ -545,13 +468,6 @@ func (s *arrivalScheduleService) DeleteStudentArrivalNote(
 	noteID int64,
 ) error {
 	return s.deleteNote(ctx, noteID)
-}
-
-func (s *arrivalScheduleService) DeleteAllStudentArrivalNotes(
-	ctx context.Context,
-	studentID int64,
-) error {
-	return s.deleteAllNotes(ctx, studentID)
 }
 
 func (s *arrivalScheduleService) GetStudentArrivalData(
@@ -653,38 +569,6 @@ func (s *arrivalScheduleService) GetStudentsWithStoredArrivalSchedules(
 		}
 	}
 	return hasSchedules, nil
-}
-
-func (s *arrivalScheduleService) GetEffectiveArrivalTimeForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) (*careplan.EffectiveArrivalTime, error) {
-	if s.baselines == nil {
-		result, err := s.effectiveTimeForDate(ctx, studentID, date)
-		if err != nil {
-			return nil, err
-		}
-		return arrivalEffectiveTime(result), nil
-	}
-	projection, err := s.baselines.Project(ctx, []int64{studentID}, date, date)
-	if err != nil {
-		return nil, &careplan.ScheduleError{Op: "get effective arrival time", Err: err}
-	}
-	scheduleRow := projection.ForDate(studentID, date)
-	if projection.BookingsAuthoritative && scheduleRow == nil {
-		return &careplan.EffectiveArrivalTime{
-			Date:        date,
-			WeekdayName: domain.WeekdayName(domain.ISOWeekday(date)),
-		}, nil
-	}
-	result, err := s.effectiveTimeForDateWithSchedule(ctx, studentID, date, scheduleRow)
-	if err != nil {
-		return nil, err
-	}
-	mapped := arrivalEffectiveTime(result)
-	attachClassException(mapped, scheduleRow)
-	return mapped, nil
 }
 
 // bulkEffectiveResults resolves the recurring rows through the projection

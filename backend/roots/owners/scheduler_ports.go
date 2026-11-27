@@ -7,7 +7,6 @@ import (
 
 	snapshotRecords "github.com/moto-ogs/project-phoenix/modules/settings/records"
 
-	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -38,7 +37,7 @@ func verifyPreloadSettingKeys(keys []string) error {
 // schedulerSettings binds the Settings Platform service and its cross-tenant
 // batch read, so one query per minute preloads the polling settings of every
 // school.
-func schedulerSettings(settings settingsCompose.BatchSettingsService) (schedulerPorts.SettingsResolver, error) {
+func schedulerSettings(settings settingsCompose.BatchSettingsService) (schedulerPorts.Settings, error) {
 	if err := verifySchedulerSettingKeys(); err != nil {
 		return nil, err
 	}
@@ -128,18 +127,15 @@ func schedulerDayInstances(timetableRepositories timetableCompose.Repositories) 
 }
 
 // schedulerExistingRooms binds the overdue tick's room check.
-func schedulerExistingRooms(capability facilitiesModule.Capability) schedulerPorts.ExistingRoomReader {
-	rooms := facilitiesCompose.NewRoomRepository(capability)
+func schedulerExistingRooms(rooms facilitiesModule.Query) schedulerPorts.ExistingRoomReader {
 	return func(ctx context.Context, roomIDs []int64) ([]int64, error) {
-		found, err := rooms.FindByIDs(ctx, roomIDs)
+		found, err := rooms.ListRoomsByID(ctx, roomIDs)
 		if err != nil {
 			return nil, err
 		}
 		existing := make([]int64, 0, len(found))
 		for _, room := range found {
-			if room != nil {
-				existing = append(existing, room.ID)
-			}
+			existing = append(existing, room.ID)
 		}
 		return existing, nil
 	}

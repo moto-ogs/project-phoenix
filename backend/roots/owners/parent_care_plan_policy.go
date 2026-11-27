@@ -18,10 +18,6 @@ func NewParentCarePlanPolicy() parentportal.CarePlanPolicy {
 				return careplan.ErrManualPartialAbsenceConflict
 			case parentportal.CarePlanSchoolStatusDayConflict:
 				return careplan.ErrSchoolStatusDayConflict
-			case parentportal.CarePlanGuardianPickupExceptionRaced:
-				return careplan.ErrGuardianPickupExceptionRaced
-			case parentportal.CarePlanPickupExceptionStaffOwned:
-				return careplan.ErrPickupExceptionStaffOwned
 			case parentportal.CarePlanStudentDataRequestFieldPending:
 				return careplan.ErrStudentDataRequestFieldPending
 			default:

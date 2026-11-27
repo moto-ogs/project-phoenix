@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createGetHandler,
-  tenant,
-  createPutHandler,
-  createDeleteHandler,
-} from "./route-wrapper.server";
+import { tenant } from "./route-wrapper.server";
 import { mockServerSessionData } from "~/test/mocks/next-auth";
 import { ApiResponseError } from "./api-response-error.server";
 import {
@@ -93,10 +88,10 @@ interface ApiErrorResponse {
 const defaultSession = mockServerSessionData() as ExtendedSession;
 
 // ============================================================================
-// Tests: createGetHandler
+// Tests: tenant.get
 // ============================================================================
 
-describe("createGetHandler", () => {
+describe("tenant.get", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
@@ -109,7 +104,7 @@ describe("createGetHandler", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
 
-    const handler = createGetHandler(async () => ({ data: "test" }));
+    const handler = tenant.get(async () => ({ data: "test" }));
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -128,7 +123,7 @@ describe("createGetHandler", () => {
       expires: "2099-01-01",
     } as never);
 
-    const handler = createGetHandler(async () => ({ data: "test" }));
+    const handler = tenant.get(async () => ({ data: "test" }));
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -138,7 +133,7 @@ describe("createGetHandler", () => {
   it("calls handler with request, token, and params", async () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1, name: "Test" });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/test/123");
     await handler(request, createMockContext({ id: "123" }));
 
@@ -150,7 +145,7 @@ describe("createGetHandler", () => {
   });
 
   it("wraps response in ApiResponse format", async () => {
-    const handler = createGetHandler(async () => ({ id: 1, name: "Test" }));
+    const handler = tenant.get(async () => ({ id: 1, name: "Test" }));
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -167,7 +162,7 @@ describe("createGetHandler", () => {
       { id: 1, name: "Room 1" },
       { id: 2, name: "Room 2" },
     ];
-    const handler = createGetHandler(async () => NextResponse.json(roomsData));
+    const handler = tenant.get(async () => NextResponse.json(roomsData));
     const request = createMockRequest("/api/rooms");
     const response = await handler(request, createMockContext());
 
@@ -178,7 +173,7 @@ describe("createGetHandler", () => {
   it("wraps data that carries a success field of its own", async () => {
     // The removed wrapper passed such data on unwrapped (#2353).
     const payload = { success: true, data: { id: 1 } };
-    const handler = createGetHandler(async () => payload);
+    const handler = tenant.get(async () => payload);
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -189,7 +184,7 @@ describe("createGetHandler", () => {
   it("extracts ID from URL path when not in context params", async () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1 });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/students/456");
     await handler(request, createMockContext({}));
 
@@ -203,7 +198,7 @@ describe("createGetHandler", () => {
   it("includes search params in extracted params", async () => {
     const mockHandler = vi.fn().mockResolvedValue({ data: [] });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/students", {
       searchParams: { search: "Max", page: "2" },
     });
@@ -217,7 +212,7 @@ describe("createGetHandler", () => {
   });
 
   it("handles errors by calling handleApiError", async () => {
-    const handler = createGetHandler(async () => {
+    const handler = tenant.get(async () => {
       throw new Error("Database connection failed");
     });
     const request = createMockRequest("/api/test");
@@ -322,10 +317,10 @@ describe("tenant.post", () => {
 });
 
 // ============================================================================
-// Tests: createPutHandler
+// Tests: tenant.put
 // ============================================================================
 
-describe("createPutHandler", () => {
+describe("tenant.put", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
@@ -334,7 +329,7 @@ describe("createPutHandler", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
 
-    const handler = createPutHandler(async () => ({ id: 1 }));
+    const handler = tenant.put(async () => ({ id: 1 }));
     const request = createMockRequest("/api/test/1", {
       method: "PUT",
       body: { name: "Updated" },
@@ -348,7 +343,7 @@ describe("createPutHandler", () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1, name: "Updated" });
     const body = { name: "Updated Name" };
 
-    const handler = createPutHandler(mockHandler);
+    const handler = tenant.put(mockHandler);
     const request = createMockRequest("/api/test/123", { method: "PUT", body });
     await handler(request, createMockContext({ id: "123" }));
 
@@ -361,7 +356,7 @@ describe("createPutHandler", () => {
   });
 
   it("wraps response in ApiResponse format", async () => {
-    const handler = createPutHandler(async () => ({ id: 1, name: "Updated" }));
+    const handler = tenant.put(async () => ({ id: 1, name: "Updated" }));
     const request = createMockRequest("/api/test/1", {
       method: "PUT",
       body: { name: "Updated" },
@@ -378,10 +373,10 @@ describe("createPutHandler", () => {
 });
 
 // ============================================================================
-// Tests: createDeleteHandler
+// Tests: tenant.del
 // ============================================================================
 
-describe("createDeleteHandler", () => {
+describe("tenant.del", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
@@ -390,7 +385,7 @@ describe("createDeleteHandler", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
 
-    const handler = createDeleteHandler(async () => null);
+    const handler = tenant.del(async () => null);
     const request = createMockRequest("/api/test/1", { method: "DELETE" });
     const response = await handler(request, createMockContext({ id: "1" }));
 
@@ -398,7 +393,7 @@ describe("createDeleteHandler", () => {
   });
 
   it("returns 204 No Content for successful deletion with null response", async () => {
-    const handler = createDeleteHandler(async () => null);
+    const handler = tenant.del(async () => null);
     const request = createMockRequest("/api/test/1", { method: "DELETE" });
     const response = await handler(request, createMockContext({ id: "1" }));
 
@@ -406,7 +401,7 @@ describe("createDeleteHandler", () => {
   });
 
   it("returns 204 No Content for successful deletion with undefined response", async () => {
-    const handler = createDeleteHandler(async () => undefined);
+    const handler = tenant.del(async () => undefined);
     const request = createMockRequest("/api/test/1", { method: "DELETE" });
     const response = await handler(request, createMockContext({ id: "1" }));
 
@@ -414,7 +409,7 @@ describe("createDeleteHandler", () => {
   });
 
   it("returns wrapped response if handler returns data", async () => {
-    const handler = createDeleteHandler(async () => ({
+    const handler = tenant.del(async () => ({
       message: "Deleted successfully",
     }));
     const request = createMockRequest("/api/test/1", { method: "DELETE" });
@@ -464,7 +459,7 @@ describe("Token Refresh and Retry Logic", () => {
       expires: "2099-01-01",
     });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -486,7 +481,7 @@ describe("Token Refresh and Retry Logic", () => {
       .mockRejectedValueOnce(new ApiResponseError(401, "Unauthorized"))
       .mockResolvedValueOnce(null);
 
-    const handler = createDeleteHandler(mockHandler);
+    const handler = tenant.del(mockHandler);
     const response = await handler(
       createMockRequest("/api/test/1", { method: "DELETE" }),
       createMockContext({ id: "1" }),
@@ -505,7 +500,7 @@ describe("Token Refresh and Retry Logic", () => {
       .mockRejectedValue(new ApiResponseError(401, "Unauthorized"));
     mockAuth.mockResolvedValueOnce(defaultSession);
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const response = await handler(
       createMockRequest("/api/test"),
       createMockContext(),
@@ -531,7 +526,7 @@ describe("Token Refresh and Retry Logic", () => {
       expires: "2099-01-01",
     });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const response = await handler(
       createMockRequest("/api/test"),
       createMockContext(),
@@ -571,7 +566,7 @@ describe("Token Refresh and Retry Logic", () => {
       expires: "2099-01-01",
     });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const response = await handler(
       createMockRequest("/api/test"),
       createMockContext(),
@@ -613,7 +608,7 @@ describe("Token Refresh and Retry Logic", () => {
       expires: "2099-01-01",
     });
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
@@ -637,7 +632,7 @@ describe("Token Refresh and Retry Logic", () => {
       .mockRejectedValueOnce(new ApiResponseError(401, "Unauthorized"))
       .mockResolvedValueOnce({ id: 7, active: true });
 
-    const handler = createPutHandler(mockHandler);
+    const handler = tenant.put(mockHandler);
     const request = createMockRequest("/api/test/7", {
       method: "PUT",
       body: { active: true },
@@ -666,7 +661,7 @@ describe("Token Refresh and Retry Logic", () => {
       .fn()
       .mockRejectedValue(new ApiResponseError(401, "Unauthorized"));
 
-    const handler = createPutHandler(mockHandler);
+    const handler = tenant.put(mockHandler);
     const request = createMockRequest("/api/test/7", {
       method: "PUT",
       body: { active: true },
@@ -687,7 +682,7 @@ describe("Token Refresh and Retry Logic", () => {
       .fn()
       .mockRejectedValue(new ApiResponseError(500, "Internal Server Error"));
 
-    const handler = createGetHandler(mockHandler);
+    const handler = tenant.get(mockHandler);
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 

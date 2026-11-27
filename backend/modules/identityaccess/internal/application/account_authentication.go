@@ -290,24 +290,6 @@ func (s *AccountAuthentication) LoginSchoolAtTenantWithMFAGate(ctx context.Conte
 	})
 }
 
-func (s *AccountAuthentication) LoadAccountClaims(ctx context.Context, accountID, tenantID int64) (identityaccess.AccountClaims, error) {
-	return runFlow(ctx, s.flow(), func(ctx context.Context) (identityaccess.AccountClaims, error) {
-		payload, err := s.loadAccountClaims(ctx, accountID, tenantID)
-		if err != nil {
-			return identityaccess.AccountClaims{}, err
-		}
-		roles := make([]identityaccess.AccountRole, 0, len(payload.Roles))
-		for _, role := range payload.Roles {
-			roles = append(roles, identityaccess.AccountRole{ID: role.RoleID, Name: role.Name, IsSystem: role.IsSystem, TenantID: role.TenantID, SchoolPortal: role.SchoolPortal})
-		}
-		return identityaccess.AccountClaims{
-			RoleNames: payload.RoleNames, Roles: roles, Permissions: payload.Permissions, Username: payload.Username,
-			FirstName: payload.FirstName, LastName: payload.LastName, IsAdmin: payload.IsAdmin,
-			TenantID: payload.TenantID, OrgID: payload.OrgID, Scope: payload.Scope,
-		}, nil
-	})
-}
-
 func (s *AccountAuthentication) FindGuardianTenant(ctx context.Context, accountID int64) (bool, int64, error) {
 	return runFlow2(ctx, s.flow(), func(ctx context.Context) (bool, int64, error) {
 		return s.findGuardianTenant(ctx, accountID)

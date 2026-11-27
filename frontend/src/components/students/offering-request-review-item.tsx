@@ -117,7 +117,6 @@ export interface HeldOfferingDecision {
 export function OfferingRequestReviewItem({
   row,
   onDecided,
-  grouped = false,
   expectedVersion,
   onStale,
   decisionDisabledReason,
@@ -134,7 +133,6 @@ export function OfferingRequestReviewItem({
   onHold?: (decision: HeldOfferingDecision) => void;
   /** Schon gehaltene Freigabe: die Karte zeigt sofort ihre Auswirkung. */
   held?: HeldOfferingDecision;
-  grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
@@ -466,7 +464,6 @@ export function OfferingRequestReviewItem({
     <RequestReviewCard
       type="offering"
       childName={row.student_name}
-      grouped={grouped}
       defaultOpen={openedFromWaitlist}
       summary={`ab ${formatDate(effectiveFrom)}`}
       badge={
@@ -480,7 +477,6 @@ export function OfferingRequestReviewItem({
         setReason(value);
         setReasonError(false);
       }}
-      reasonPlaceholder="Begründung (Pflicht bei Ablehnung)"
       reasonError={
         reasonError
           ? "Für eine Ablehnung ist eine Begründung erforderlich."

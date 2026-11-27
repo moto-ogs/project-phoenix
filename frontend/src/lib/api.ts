@@ -58,8 +58,6 @@ export const roomService = {
   // Get all rooms. A refused read is an error, not a school without rooms
   // (#2353).
   getRooms: async (filters?: {
-    building?: string;
-    category?: string;
     includeSystem?: boolean;
     /** Calendar day for which rooms closed by a temporary closure are omitted. */
     openOn?: string;
@@ -69,8 +67,6 @@ export const roomService = {
     try {
       const { data } = await bffJson("tenant", "GET /api/rooms/", {
         query: {
-          building: filters?.building || undefined,
-          category: filters?.category || undefined,
           include_system: filters?.includeSystem,
           open_on: filters?.openOn,
           page: filters?.page,

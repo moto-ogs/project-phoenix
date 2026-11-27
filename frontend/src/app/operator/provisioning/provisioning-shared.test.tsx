@@ -6,7 +6,6 @@ import {
   DeliveryStatusBadge,
   ProvisioningEmptyState,
   SimpleEmptyState,
-  SelectWithChevron,
   PlusIcon,
 } from "./provisioning-shared";
 
@@ -280,102 +279,6 @@ describe("SimpleEmptyState", () => {
     // Anker: der leere Zustand ist mit Titel gerendert.
     expect(screen.getByText("No data")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-});
-
-describe("SelectWithChevron", () => {
-  it("should render a select-like control exposing the given options", () => {
-    render(
-      <SelectWithChevron aria-label="Test" value="">
-        <option value="a">Option A</option>
-        <option value="b">Option B</option>
-      </SelectWithChevron>,
-    );
-
-    const select = screen.getByRole("combobox", { name: "Test" });
-    fireEvent.click(select);
-    expect(
-      screen.getByRole("option", { name: "Option A" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "Option B" }),
-    ).toBeInTheDocument();
-  });
-
-  it("should render a chevron SVG icon", () => {
-    const { container } = render(
-      <SelectWithChevron>
-        <option>Test</option>
-      </SelectWithChevron>,
-    );
-
-    const svg = container.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("should pass through value and disabled and emit selection changes", () => {
-    const onChange = vi.fn();
-
-    const { rerender } = render(
-      <SelectWithChevron
-        aria-label="Test"
-        value="b"
-        onChange={onChange}
-        disabled
-      >
-        <option value="a">Option A</option>
-        <option value="b">Option B</option>
-      </SelectWithChevron>,
-    );
-
-    const disabledSelect = screen.getByRole("combobox", { name: "Test" });
-    expect(disabledSelect).toHaveTextContent("Option B");
-    expect(disabledSelect).toBeDisabled();
-
-    rerender(
-      <SelectWithChevron aria-label="Test" value="b" onChange={onChange}>
-        <option value="a">Option A</option>
-        <option value="b">Option B</option>
-      </SelectWithChevron>,
-    );
-
-    fireEvent.click(screen.getByRole("combobox", { name: "Test" }));
-    fireEvent.click(screen.getByRole("option", { name: "Option A" }));
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0]![0].target.value).toBe("a");
-  });
-
-  it("should render option elements as children", () => {
-    render(
-      <SelectWithChevron aria-label="Test" value="">
-        <option value="1">First</option>
-        <option value="2">Second</option>
-        <option value="3">Third</option>
-      </SelectWithChevron>,
-    );
-
-    fireEvent.click(screen.getByRole("combobox", { name: "Test" }));
-    expect(screen.getAllByRole("option")).toHaveLength(3);
-  });
-
-  it("names both the trigger and popup listbox from the FormField label when no aria-label is given", () => {
-    render(
-      <FormField label="System-Rolle" htmlFor="role-field">
-        <SelectWithChevron id="role-field" value="">
-          <option value="a">Option A</option>
-          <option value="b">Option B</option>
-        </SelectWithChevron>
-      </FormField>,
-    );
-
-    expect(
-      screen.getByRole("combobox", { name: "System-Rolle" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("combobox", { name: "System-Rolle" }));
-    expect(
-      screen.getByRole("listbox", { name: "System-Rolle" }),
-    ).toBeInTheDocument();
   });
 });
 

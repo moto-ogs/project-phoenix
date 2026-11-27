@@ -2,169 +2,20 @@ package care
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
-	"time"
-	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// SubmitCareException sets the guardian-authored pickup and/or arrival override
-// for a single day. The two times are the COMPLETE desired override for the
-// day, mirroring the parents-portal modal (which always prefills both fields
-// from the current state): a non-nil time sets that leg, a nil time clears the
-// guardian row for that leg. So emptying the pickup field and saving removes the
-// pickup override while keeping the arrival one, instead of silently retaining
-func (s *Service) SubmitCareExceptionWithReason(ctx context.Context, accountID, studentID int64, date calendar.Date, pickupTime *time.Time, reason string) (*CareException, error) {
-	trimmedReason := strings.TrimSpace(reason)
-	if pickupTime == nil {
-		return nil, ErrNoCareException
-	}
-	if utf8.RuneCountInString(trimmedReason) > 255 {
-		return nil, ErrCareExceptionReasonTooLong
-	}
-	if trimmedReason == "" {
-		// Same one-day Abholzeit change as the request path, so it follows the
-		// same per-school reason policy — which needs the child's tenant first
-		// (#2267, story 28).
-		child, err := s.ResolvePermittedChild(ctx, accountID, studentID, GuardianPermissionPickupManage)
-		if err != nil {
-			return nil, err
-		}
-		if s.guardianReasonRequired(ctx, child.TenantID) {
-			return nil, ErrCareExceptionReasonRequired
-		}
-	}
-	return s.submitCareException(ctx, accountID, studentID, date, pickupTime, &trimmedReason)
-}
-
-func (s *Service) submitCareException(ctx context.Context, accountID, studentID int64, date calendar.Date, pickupTime *time.Time, reason *string) (*CareException, error) {
-	if pickupTime == nil {
-		return nil, ErrNoCareException
-	}
-
-	child, err := s.ResolvePermittedChild(ctx, accountID, studentID, GuardianPermissionPickupManage)
-	if err != nil {
-		return nil, err
-	}
-	// A child whose care at this school has ended keeps read access to
-	// what happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireOGSCareRunning(); err != nil {
-		return nil, err
-	}
-
-	enabled, err := s.Settings.ResolveBoolForTenant(ctx, child.TenantID, KeyParentPickupChangeEnabled)
-	if err != nil {
-		return nil, fmt.Errorf("parent: resolve pickup-change setting: %w", err)
-	}
-	if !enabled {
-		return nil, ErrPickupChangeDisabled
-	}
-
-	today := s.todayDate()
-	if err := checkCareExceptionDate(date, today); err != nil {
-		return nil, err
-	}
-	change := careExceptionChange{accountID: accountID, studentID: studentID, date: date, today: today, pickupTime: pickupTime, reason: reason}
-	var result *CareException
-	txErr := s.WithChildWrite(ctx, accountID, studentID, child, childWriteNeeds(GuardianPermissionPickupManage), func(txCtx context.Context) error {
-		merged, err := s.writeCareException(txCtx, child.TenantID, change)
-		result = merged
-		return err
-	})
-	if txErr != nil {
-		// Two submits for the same child+date can race between the find and the
-		// insert (e.g. a double-click or two guardians at once); the unique
-		// (student_id, exception_date) index makes the loser fail, and Care Plan
-		// reports it as a race. Classify it as its own conflict (409) instead of
-		// leaking a 500 — and distinct from the staff-override conflict, since the
-		// fix differs (reload and retry vs. nothing the parent can do).
-		if errors.Is(txErr, s.CarePlanPolicy.Error(CarePlanGuardianPickupExceptionRaced)) {
-			return nil, ErrCareExceptionRaced
-		}
-		return nil, fmt.Errorf("parent: submit care exception: %w", txErr)
-	}
-
-	s.Logger.Info("parent submitted care exception",
-		slog.Int64("account_id", accountID),
-		slog.Int64("student_id", studentID),
-		slog.Int64("tenant_id", child.TenantID),
-		slog.Bool("has_pickup", pickupTime != nil),
-		slog.Bool("has_arrival", false),
-	)
-	return result, nil
-}
-
-// checkCareExceptionDate refuses a past day and one beyond two calendar
-// months, mirroring the parent-portal list window (parseSickDayRange) so a
-// created entry can never fall outside the range the UI shows.
-func checkCareExceptionDate(date, today calendar.Date) error {
-	if date.Before(today) {
-		return ErrPastCareDate
-	}
-	maxDate := calendar.NewDate(today.Year(), today.Month()+2, today.Day())
-	if date.After(maxDate) {
-		return ErrCareDateTooFar
-	}
-	return nil
-}
-
 // careExceptionChange is one guardian pickup change for a day.
 type careExceptionChange struct {
-	accountID  int64
-	studentID  int64
-	date       calendar.Date
-	today      calendar.Date
-	pickupTime *time.Time
-	reason     *string
-}
-
-// writeCareException applies the change inside the child's tenant unit of
-// work: the student row and the care day are locked before any check, Care
-// Plan writes the guardian leg and keeps the derived excusal in step, and the
-// merged day is read back for the response.
-func (s *Service) writeCareException(ctx context.Context, tenantID int64, change careExceptionChange) (*CareException, error) {
-	if err := s.lockCareDay(ctx, change.studentID, change.date); err != nil {
-		return nil, err
-	}
-	if err := s.guardCareExceptionDay(ctx, tenantID, change); err != nil {
-		return nil, err
-	}
-	// Parent-set day pickup times couple with the per-block excusal the same
-	// way staff-set ones do (#2360): a pull-forward against the weekly
-	// baseline excuses the blocks after the new time; moving it back releases
-	// them again. Care Plan does both in the same unit of work.
-	err := s.GuardianPickups.ApplyGuardianPickupException(ctx, GuardianPickupChange{
-		TenantID: tenantID, StudentID: change.studentID, GuardianAccountID: change.accountID,
-		Date: calendar.Date(change.date), PickupTime: change.pickupTime, Reason: change.reason,
-	})
-	if errors.Is(err, s.CarePlanPolicy.Error(CarePlanPickupExceptionStaffOwned)) {
-		return nil, ErrCareExceptionConflict
-	}
-	if err != nil {
-		return nil, err
-	}
-	merged, err := s.loadCareException(ctx, change.studentID, change.date)
-	if err != nil {
-		return nil, err
-	}
-	pillBody := CareExceptionEventBody(change.date, change.pickupTime, nil)
-	pillRefTable, pillRefID := s.careExceptionRef(ctx, change.studentID, change.date)
-	if err := s.SelfService.EmitSelfServicePill(ctx, tenantID, change.studentID, change.accountID, "care_exception", pillBody, pillRefTable, pillRefID); err != nil {
-		return nil, err
-	}
-	s.Runtime.RegisterAfterCommit(ctx, func() {
-		s.broadcastStudentUpdated(tenantID, change.studentID)
-		// Fan out to EVERY guardian so a co-guardian's open tab reflects the
-		// new override on the "Heute" tile live (#1725 review).
-		s.SelfService.WakeChildGuardians(tenantID, change.studentID)
-	})
-	return merged, nil
+	accountID int64
+	studentID int64
+	date      calendar.Date
+	today     calendar.Date
 }
 
 // lockCareDay locks the child's row, re-checks the care interval under that
@@ -178,37 +29,6 @@ func (s *Service) lockCareDay(ctx context.Context, studentID int64, date calenda
 		return ErrChildCareEnded
 	}
 	return s.CareExceptions.LockStudentAndExceptionDay(ctx, studentID, date.String())
-}
-
-// guardCareExceptionDay refuses a day the child has already left or whose
-// care day has ended, a day the school owns, and a change the school's pickup
-// policy closes.
-func (s *Service) guardCareExceptionDay(ctx context.Context, tenantID int64, change careExceptionChange) error {
-	if err := s.guardTodayPickupOpen(ctx, tenantID, change.studentID, change.date, change.today); err != nil {
-		return err
-	}
-	staffOwned, err := s.pickupHasStaffException(ctx, change.studentID, change.date)
-	if err != nil {
-		return err
-	}
-	if staffOwned {
-		return ErrCareExceptionConflict
-	}
-	policy, err := s.pickupChangePolicyInTx(ctx, tenantID)
-	if err != nil {
-		return err
-	}
-	// Waiting on a settings writer can cross the care-day boundary.
-	if err := s.guardTodayPickupOpen(ctx, tenantID, change.studentID, change.date, change.today); err != nil {
-		return err
-	}
-	if !policy.enabled {
-		return ErrPickupChangeDisabled
-	}
-	if policy.cutoff.Closed(change.date) {
-		return ErrPickupChangeCutoffPassed
-	}
-	return nil
 }
 
 // guardTodayPickupOpen refuses a guardian change to today's pickup once the
@@ -273,7 +93,7 @@ func (s *Service) childAlreadyLeftToday(ctx context.Context, studentID int64, da
 // Only the PICKUP leg of the day can block a parent: since arrival times became
 // OGS-only, a staff-set Bringzeit says nothing about who owns the Abholzeit, and
 // treating it as a conflict would let one OGS entry silently forbid every parent
-// pickup change for that day (TestSubmitCareExceptionWithReasonPreservesExistingArrival).
+// pickup change for that day.
 // An AUTO-derived partial absence is the school's own bookkeeping, not a
 // decision, so only a manual one counts (#2360).
 func (s *Service) pickupHasStaffException(ctx context.Context, studentID int64, date calendar.Date) (bool, error) {
@@ -377,21 +197,4 @@ func (s *Service) broadcastStudentUpdated(tenantID, studentID int64) {
 			slog.String("error", err.Error()),
 		)
 	}
-}
-
-// careExceptionRef resolves the pill's backreference to the exception row the
-// submission wrote (pickup preferred, else arrival). Best-effort: a lookup
-// failure just leaves the pill without a ref.
-func (s *Service) careExceptionRef(ctx context.Context, studentID int64, date calendar.Date) (string, *int64) {
-	pickup, err := s.pickupExceptionForDate(ctx, studentID, calendar.Date(date))
-	if err == nil && pickup != nil {
-		id := pickup.ID
-		return "schedule.student_pickup_exceptions", &id
-	}
-	arrival, err := s.arrivalExceptionForDate(ctx, studentID, calendar.Date(date))
-	if err == nil && arrival != nil {
-		id := arrival.ID
-		return "schedule.student_arrival_exceptions", &id
-	}
-	return "", nil
 }

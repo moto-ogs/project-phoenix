@@ -81,11 +81,11 @@ vi.mock("~/components/timetable/bulk-cancel-appointments-modal", () => ({
   },
 }));
 
+import { SchoolVacationHints } from "./school-vacation-hints";
 import {
-  SchoolVacationHints,
+  SchoolVacationHintsCore,
   vacationHintMessage,
-} from "./school-vacation-hints";
-import { SchoolVacationHintsCore } from "./school-vacation-hints-core";
+} from "./school-vacation-hints-core";
 
 const christmas: SchoolVacationHint = {
   name: "Weihnachtsferien",

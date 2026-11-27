@@ -107,26 +107,6 @@ func (s *pickupScheduleService) GetWeeklySchedulesByStudentIDsForDate(
 	return s.projectedWeeklySchedules(ctx, studentIDs, date)
 }
 
-func (s *pickupScheduleService) GetStudentPickupScheduleForWeekday(
-	ctx context.Context,
-	studentID int64,
-	weekday int,
-) (*careplan.PickupSchedule, error) {
-	if weekday < 1 || weekday > 5 {
-		return nil, &careplan.ScheduleError{Op: "get student pickup schedule for weekday", Err: errors.New("invalid weekday")}
-	}
-	rows, err := s.projectedWeeklySchedules(ctx, []int64{studentID}, s.today())
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		if row.Weekday == weekday {
-			return row, nil
-		}
-	}
-	return nil, nil
-}
-
 func (s *pickupScheduleService) projectedWeeklySchedules(
 	ctx context.Context,
 	studentIDs []int64,
@@ -395,38 +375,11 @@ func (s *pickupScheduleService) DeleteStudentPickupSchedule(
 	})
 }
 
-func (s *pickupScheduleService) DeleteAllStudentPickupSchedules(
-	ctx context.Context,
-	studentID int64,
-) error {
-	if s.autoExcusal == nil {
-		return s.deleteAllSchedules(ctx, studentID)
-	}
-	return s.withWeeklyResync(ctx, studentID, func(txCtx context.Context) error {
-		return s.deleteAllSchedules(txCtx, studentID)
-	})
-}
-
 func (s *pickupScheduleService) GetStudentPickupNoteByID(
 	ctx context.Context,
 	noteID int64,
 ) (*careplan.PickupNote, error) {
 	return s.noteByID(ctx, noteID)
-}
-
-func (s *pickupScheduleService) GetStudentPickupNotes(
-	ctx context.Context,
-	studentID int64,
-) ([]*careplan.PickupNote, error) {
-	return s.loadNotes(ctx, studentID)
-}
-
-func (s *pickupScheduleService) GetStudentPickupNotesForDate(
-	ctx context.Context,
-	studentID int64,
-	date calendar.Date,
-) ([]*careplan.PickupNote, error) {
-	return s.notesForDate(ctx, studentID, date)
 }
 
 // CreateStudentPickupNote writes under the student lock every weekly plan
@@ -483,13 +436,6 @@ func (s *pickupScheduleService) DeleteStudentPickupNote(
 // unit; the weekly plan save checks its token under the same lock.
 func (s *pickupScheduleService) lockNoteStudent(ctx context.Context, studentID int64) error {
 	return s.tx.LockStudent(ctx, studentID)
-}
-
-func (s *pickupScheduleService) DeleteAllStudentPickupNotes(
-	ctx context.Context,
-	studentID int64,
-) error {
-	return s.deleteAllNotes(ctx, studentID)
 }
 
 func (s *pickupScheduleService) GetStudentPickupData(

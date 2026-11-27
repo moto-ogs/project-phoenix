@@ -28,7 +28,6 @@ const PLAN_EXPORT_FORMATS: readonly PlanExportFormat[] = ["pdf", "xlsx"];
 const MAX_WEEKS = 8;
 
 interface PlanExportModalProps {
-  readonly isOpen: boolean;
   readonly plan: PlanExportPlan;
   /** Any day of the exported week ("YYYY-MM-DD"). */
   readonly weekDay: string;
@@ -62,7 +61,6 @@ type RangeMode = "week" | "range";
  * list, so neither page carries its own copy of this form.
  */
 export function PlanExportModal({
-  isOpen,
   plan,
   weekDay,
   isWeekOnScreen,
@@ -85,13 +83,12 @@ export function PlanExportModal({
   // Reopening the dialog on a different week must not export the week the
   // user looked at last time.
   useEffect(() => {
-    if (!isOpen) return;
     setTemplate(defaultTemplate);
     setVariant("aushang");
     setRangeMode("week");
     setFrom(weekDay);
     setTo(weekDay);
-  }, [isOpen, defaultTemplate, weekDay]);
+  }, [defaultTemplate, weekDay]);
 
   const range = useMemo(
     () =>
@@ -122,7 +119,7 @@ export function PlanExportModal({
   });
 
   const run = useExportRun({
-    isOpen,
+    isOpen: true,
     onDownload: (format: PlanExportFormat) =>
       exportPlan(plan, request(), format, "download", null),
     onPrint: (target) => exportPlan(plan, request(), "pdf", "print", target),
@@ -136,7 +133,7 @@ export function PlanExportModal({
 
   return (
     <ExportDialog
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={
         plan === "dienstplan"

@@ -184,13 +184,13 @@ func (s *surveyService) notifyStaff(ctx context.Context, survey *communication.S
 		title = "Erinnerung an eine Umfrage"
 		body = fmt.Sprintf("Die Umfrage „%s“ läuft noch bis zum %s.", survey.Title, survey.ClosesAt.In(calendar.Berlin).Format("02.01.2006"))
 	}
-	err = n.Notify(ctx, NotificationEvent{
+	err = n.Notify(ctx, communication.NotificationEvent{
 		Type: TypeStaffSurvey, IdempotencyKey: fmt.Sprintf(keyFormat, survey.ID),
 		RelatedType: "staff_survey", RelatedID: survey.ID,
 		Title: title, Body: body, DeepLink: staffSurveyDeepLink, Priority: PriorityNormal,
-		Audience: NotificationAudience{TenantID: survey.TenantID, Scope: ScopeStaff, StaffAccountIDs: accountIDs},
+		Audience: communication.NotificationAudience{TenantID: survey.TenantID, Scope: ScopeStaff, StaffAccountIDs: accountIDs},
 		Feed:     &communication.NotificationFeed{PushAccountIDs: push},
-	}.Public())
+	})
 	if s.announcements.deliveryPolicy.IsNotificationsDisabled(err) || s.announcements.deliveryPolicy.IsOutsideActiveWindow(err) {
 		return 0, nil
 	}

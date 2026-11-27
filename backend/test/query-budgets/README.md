@@ -41,25 +41,16 @@ golden file, `-update-goldens` deletes that file; add a record naming the file
 and all its base routes to `architecture/route-golden-retirements.json` as well
 (ADR 0160, addendum of 2026-11-20).
 
-## Explicit initial route capture
+## Verifying a route binding
 
-1. Run the existing budget-bearing tests with
-   `PHX_QUERY_BUDGET_CAPTURE_ROUTES=/absolute/path/routes.jsonl` through the
-   pinned Go toolchain. Start with an empty report; each observation contains
-   the resolved route, never an inference from its description. Shared helpers
-   must snapshot `counter.Measurement(...)` after routing, including zero-SQL
-   requests. Use the production mount in route-sized test routers.
-2. Review every routeless API observation against its test. Only a direct
-   non-HTTP use-case call gets a scenario-specific reason in the exception
-   register. Reports must cover every API budget, including these exceptions.
-3. Run `node scripts/capture-query-budget-routes.mjs /absolute/path/routes.jsonl`
-   to validate the complete backfill, then repeat with `--write`. The script
-   adds only route fields, rejects conflicting observations and refuses to
-   overwrite a different existing route. It changes no scenario, `max` or
-   `exact` field. Existing bindings are checked even during capture.
-4. Run the same targeted tests without the capture variable, plus the
-   architecture comparison against the immutable merge base. Normal runs
-   never write routes or budget files.
+Use the production mount in route-sized test routers. Snapshot
+`counter.Measurement(...)` after routing, including for zero-SQL requests.
+Run the targeted test through the pinned Go toolchain. A mismatch prints both
+the stored and measured routes; `PHX_QUERY_BUDGET_REPORT=/absolute/path/report.jsonl`
+also records the measured route in each HTTP observation. Check it against the
+router golden before authoring or correcting `route`, then rerun the test and
+the architecture comparison. Reports never exempt a mismatch or edit the
+register.
 
 `PHX_QUERY_DUMP=1` prints complete statements in execution order. When
 `PHX_QUERY_BUDGET_REPORT` is also set, each JSONL observation includes the same

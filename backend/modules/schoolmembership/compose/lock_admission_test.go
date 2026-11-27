@@ -38,7 +38,8 @@ func TestMembershipLocksAreAdmittedBeforeTheyWait(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	quotas := newChildQuotas()
 	dependencies := Dependencies{DB: db, Observe: func(Observation) {}, Employment: testEmployment, ChildQuota: quotas,
-		Today: func() calendar.Date { return "2099-12-07" }}
+		Today:             func() calendar.Date { return "2099-12-07" },
+		ClassListStudents: &recordingStudents{}, ClassListTrail: &recordingTrail{}}
 	module, err := New(dependencies)
 	require.NoError(t, err)
 	windows, err := NewPendingWindows(dependencies)
@@ -119,7 +120,10 @@ func TestMembershipLocksAreAdmittedBeforeTheyWait(t *testing.T) {
 			name: "class list entry", class: tenant.LockLeaf, key: "users.class_list_entries",
 			hold: rowLock(`SELECT id FROM users.class_list_entries WHERE id = ? FOR UPDATE`, entry.ID),
 			path: func(ctx context.Context) error {
-				_, err := module.UpdateClassListEntry(ctx, schoolmembership.UpdateClassListEntry{ID: entry.ID, ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Lea", LastName: "Lock", SchoolClass: "3b"}})
+				_, err := module.ReviseClassListEntry(ctx, schoolmembership.ReviseClassListEntry{
+					ID: entry.ID, ExpectedVersion: schoolmembership.ClassListEntryVersion(entry),
+					ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Lea", LastName: "Lock", SchoolClass: "3b"},
+				})
 				return err
 			},
 		},

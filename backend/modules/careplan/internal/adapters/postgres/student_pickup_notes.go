@@ -215,14 +215,6 @@ func (s *Store) DeletePickupNote(ctx context.Context, id int64) (domain.Operatio
 	}
 	return execAny(ctx, db.NewDelete().TableExpr(`schedule.student_pickup_notes AS "student_pickup_note"`).Where(`"student_pickup_note".id = ?`, id).Where(`"student_pickup_note".tenant_id = ?`, tid), "delete pickup note")
 }
-func (s *Store) DeletePickupNotesByStudent(ctx context.Context, id int64) (domain.OperationStats, error) {
-	db, tid, err := s.databaseForWrite(ctx, "delete pickup notes by student")
-	if err != nil {
-		return domain.OperationStats{}, err
-	}
-	return execAny(ctx, db.NewDelete().TableExpr(`schedule.student_pickup_notes AS "student_pickup_note"`).Where(`"student_pickup_note".tenant_id = ?`, tid).Where(`"student_pickup_note".student_id = ?`, id), "delete pickup notes by student")
-}
-
 func pickupNoteFromPublic(v careplan.PickupNote) pickupNoteRow {
 	row := pickupNoteRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Content: v.Content, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 	if v.Weekday != 0 {

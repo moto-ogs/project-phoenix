@@ -19,26 +19,20 @@ import { timetableService } from "~/lib/timetable-api";
  * gelesen werden, fehlt nur dieser Hinweis; der Betreuungsplan zeigt ihn
  * weiter.
  */
-export function BookingLeftoverTodos({
-  enabled,
-}: Readonly<{
-  /** Recht am Betreuungsplan und Betreuungsplan eingeschaltet. */
-  enabled: boolean;
-}>) {
+export function BookingLeftoverTodos() {
   const tenantPath = useTenantAwarePath();
-  const { data: periods } = useSWRAuth(
-    enabled ? databaseKeys.calendarPeriods() : null,
-    () => calendarPeriodService.list(),
+  const { data: periods } = useSWRAuth(databaseKeys.calendarPeriods(), () =>
+    calendarPeriodService.list(),
   );
   const period = periods ? findPeriodForDate(periods, berlinTodayISO()) : null;
   const { data: count = 0 } = useSWRAuth(
-    enabled && period ? timetableKeys.bookingLeftoverCount(period.id) : null,
+    period ? timetableKeys.bookingLeftoverCount(period.id) : null,
     async () =>
       countOpenBookingChildren(
         await timetableService.getBookingLeftovers(period?.id ?? ""),
       ),
   );
-  if (!enabled || count === 0) return null;
+  if (count === 0) return null;
   return (
     <Alert
       type="warning"

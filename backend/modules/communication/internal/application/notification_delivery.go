@@ -7,46 +7,17 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
 
-// NotificationAudience retains every authorization and portal selector.
-type NotificationAudience struct {
-	TenantID           int64
-	Scope              string
-	GuardianAccountID  int64
-	GuardianAccountIDs []int64
-	ActiveGroupID      string
-	StaffAccountIDs    []int64
-	StudentIDs         []int64
-}
+// Messaging adapters share the producer contract without a second wire shape.
+type (
+	NotificationEvent       = communication.NotificationEvent
+	NotificationAudience    = communication.NotificationAudience
+	NotificationSender      = communication.NotificationSender
+	NotificationPreferences = communication.NotificationPreferences
+)
 
-// NotificationEvent is the complete producer input to the existing router.
-type NotificationEvent struct {
-	Type           string
-	IdempotencyKey string
-	RelatedType    string
-	RelatedID      int64
-	Audience       NotificationAudience
-	Priority       string
-	Title          string
-	Body           string
-	DeepLink       string
-	SchoolDeepLink string
-	Data           map[string]string
-	Portal         string
-	Feed           *communication.NotificationFeed
-}
-
-// NotificationSender is the producer's port.
-type NotificationSender interface {
-	communication.NotificationSender
-}
-
-// NotificationPreferences only narrows the producer's candidate recipients.
+// NotificationOptIns only narrows the producer's candidate recipients.
 type NotificationOptIns interface {
 	FilterOptedIn(context.Context, string, []int64) ([]int64, error)
-}
-
-type NotificationPreferences interface {
-	communication.NotificationPreferences
 }
 
 // ParentDeliveryPolicy is the exact stateless policy used by parent producers.
@@ -74,38 +45,11 @@ func (send notificationSender) Notify(ctx context.Context, event communication.N
 }
 
 // NewNotificationSender binds a public callback while preserving absent delivery.
-func NewNotificationSender(send func(context.Context, communication.NotificationEvent) error) NotificationSender {
+func NewNotificationSender(send func(context.Context, communication.NotificationEvent) error) communication.NotificationSender {
 	if send == nil {
 		return nil
 	}
 	return notificationSender(send)
-}
-
-// Public preserves every selector when crossing the application boundary.
-func (event NotificationEvent) Public() communication.NotificationEvent {
-	return communication.NotificationEvent{
-		Type:           event.Type,
-		IdempotencyKey: event.IdempotencyKey,
-		RelatedType:    event.RelatedType,
-		RelatedID:      event.RelatedID,
-		Audience: communication.NotificationAudience{
-			TenantID:           event.Audience.TenantID,
-			Scope:              event.Audience.Scope,
-			GuardianAccountID:  event.Audience.GuardianAccountID,
-			GuardianAccountIDs: event.Audience.GuardianAccountIDs,
-			ActiveGroupID:      event.Audience.ActiveGroupID,
-			StaffAccountIDs:    event.Audience.StaffAccountIDs,
-			StudentIDs:         event.Audience.StudentIDs,
-		},
-		Priority:       event.Priority,
-		Title:          event.Title,
-		Body:           event.Body,
-		DeepLink:       event.DeepLink,
-		SchoolDeepLink: event.SchoolDeepLink,
-		Data:           event.Data,
-		Portal:         event.Portal,
-		Feed:           event.Feed,
-	}
 }
 
 // Stored notification protocol values, independent of routing and copy policy.
@@ -130,20 +74,6 @@ const (
 type LocaleNormalizer interface{ NormalizeLocale(string) string }
 
 const TypeParentRequestDecided = communication.TypeParentRequestDecided
-
-// notifyEach sends the events in order as consecutive Notify calls and
-// reports how many the router accepted before the first error.
-func (s *service) notifyEach(ctx context.Context, events []communication.NotificationEvent) (int, error) {
-	if s.series.Notify != nil {
-		return s.series.Notify(ctx, events)
-	}
-	for i, event := range events {
-		if err := s.notifier.Notify(ctx, event); err != nil {
-			return i, err
-		}
-	}
-	return len(events), nil
-}
 
 // notifyEachDurably sends the events in order as consecutive NotifyDurably
 // calls and sums the receipts of those accepted before the first error.

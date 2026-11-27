@@ -19,19 +19,17 @@ type Service struct {
 	store          ports.Store
 	observe        ports.Observer
 	administration Administration
-	// CalendarAlgorithms promotes ValidHolidayRegion unchanged.
-	CalendarAlgorithms
 }
 
 // New composes the service. The administrative write path needs a
 // transaction runner and a clock; the gate, guard and federal-state ports
 // are optional collaborators of the composition.
-func New(store ports.Store, observe ports.Observer, administration Administration, algorithms CalendarAlgorithms) *Service {
-	if algorithms == nil || store == nil || observe == nil || administration.Transaction == nil || administration.Today == nil {
+func New(store ports.Store, observe ports.Observer, administration Administration) *Service {
+	if store == nil || observe == nil || administration.Transaction == nil || administration.Today == nil {
 		panic("school calendar application: all dependencies are required")
 	}
 	administration.Observe = observe
-	return &Service{store: store, observe: observe, administration: administration, CalendarAlgorithms: algorithms}
+	return &Service{store: store, observe: observe, administration: administration}
 }
 
 // --- calendar periods ---
@@ -76,7 +74,7 @@ func WithAdministration(records schoolcalendar.Days, administration Administrati
 	}
 	administration.FederalState = original.administration.FederalState
 	administration.Observe = observe
-	return &Service{store: original.store, observe: original.observe, administration: administration, CalendarAlgorithms: original.CalendarAlgorithms}, nil
+	return &Service{store: original.store, observe: original.observe, administration: administration}, nil
 }
 
 // BerlinDay names the Berlin calendar day of the clock now in YYYY-MM-DD,

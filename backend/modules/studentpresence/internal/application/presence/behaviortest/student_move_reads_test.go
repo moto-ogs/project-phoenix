@@ -89,7 +89,7 @@ func TestBulkMoveReadsGuardsOnce(t *testing.T) {
 						assert.Equal(t, source.ID, result.PreviousActiveGroupIDs[id])
 					}
 				} else {
-					result, err := svc.AssignTransitStudentsToActiveGroup(ctx, cohort.request, target.ID)
+					result, err := svc.AssignTransitStudentsToActiveGroupAuthorized(ctx, cohort.request, target.ID, activeSvcBypassAuth)
 					counter.Stop()
 					require.NoError(t, err)
 					assert.Equal(t, ident.IDs(cohort.transit), result.Assigned)

@@ -4,12 +4,16 @@ import { describe, expect, it } from "vitest";
 import { DatabaseDetailHeader } from "./database-detail-header";
 
 describe("DatabaseDetailHeader", () => {
-  it("renders avatar, title, and subtitle", () => {
+  it("renders the icon, title, and subtitle", () => {
     render(
-      <DatabaseDetailHeader avatar="MA" title="Mathe AG" subtitle="Sport" />,
+      <DatabaseDetailHeader
+        icon={<span data-testid="detail-icon" />}
+        title="Mathe AG"
+        subtitle="Sport"
+      />,
     );
 
-    expect(screen.getByText("MA")).toBeInTheDocument();
+    expect(screen.getByTestId("detail-icon")).toBeInTheDocument();
     expect(screen.getByText("Mathe AG")).toBeInTheDocument();
     expect(screen.getByText("Sport")).toBeInTheDocument();
   });
@@ -17,7 +21,7 @@ describe("DatabaseDetailHeader", () => {
   it("renders provided actions in the trailing slot", () => {
     render(
       <DatabaseDetailHeader
-        avatar="R"
+        icon={<span />}
         title="Raum 101"
         subtitle="Hauptgebäude"
         actions={<button type="button">Löschen</button>}

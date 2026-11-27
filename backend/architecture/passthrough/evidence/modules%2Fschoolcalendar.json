@@ -44,34 +44,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) HolidayDates(ctx context.Context, region, from, to string) (result map[string]bool, err error) {\n\tif err := validateHolidayWindow(from, to); err != nil {\n\t\treturn nil, err\n\t}\n\terr = s.observeOperation(\"holiday_dates\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tresult, err = s.CalendarAlgorithms.HolidayDates(ctx, region, from, to)\n\t\tstats.Rows = int64(len(result))\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolcalendar/internal/application/Service.HolidayDates",
-      "owner": "modules/schoolcalendar"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) ListHolidays(ctx context.Context, region, from, to string) (result []schoolcalendar.Holiday, err error) {\n\tif err := validateHolidayWindow(from, to); err != nil {\n\t\treturn nil, err\n\t}\n\terr = s.observeOperation(\"list_holidays\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tresult, err = s.CalendarAlgorithms.ListHolidays(ctx, region, from, to)\n\t\tstats.Rows = int64(len(result))\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolcalendar/internal/application/Service.ListHolidays",
-      "owner": "modules/schoolcalendar"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) RenderCalendar(ctx context.Context, name string, events []schoolcalendar.CalendarEvent) (result string, err error) {\n\tfor _, event := range events {\n\t\tif err := validateCalendarEvent(event); err != nil {\n\t\t\treturn \"\", err\n\t\t}\n\t}\n\terr = s.observeOperation(\"render_calendar\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tresult, err = s.CalendarAlgorithms.RenderCalendar(ctx, name, events)\n\t\tstats.Rows = int64(len(events))\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolcalendar/internal/application/Service.RenderCalendar",
-      "owner": "modules/schoolcalendar"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) RenderCalendarObject(ctx context.Context, event schoolcalendar.CalendarEvent) (result string, err error) {\n\tif err := validateCalendarEvent(event); err != nil {\n\t\treturn \"\", err\n\t}\n\terr = s.observeOperation(\"render_calendar_object\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tresult, err = s.CalendarAlgorithms.RenderCalendarObject(ctx, event)\n\t\tstats.Rows = 1\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolcalendar/internal/application/Service.RenderCalendarObject",
-      "owner": "modules/schoolcalendar"
-    },
-    {
-      "build": "production",
       "evidence": "func (h TenantHolidays) HolidayDates(ctx context.Context, from, to calendar.Date) (map[calendar.Date]bool, error) {\n\treturn calendarDateSet(h.Calendar.TenantHolidayDates(ctx, from.String(), to.String()))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolcalendar/internal/application/TenantHolidays.HolidayDates",

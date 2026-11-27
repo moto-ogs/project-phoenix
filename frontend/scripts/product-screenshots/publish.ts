@@ -4,9 +4,8 @@ import { join } from "node:path";
 import { MANIFEST_FILE, readOutput } from "./pipeline";
 
 // Der Upload-Adapter der Produkt-Screenshots (#3759): "veröffentliche das
-// Ausgabeverzeichnis als Version X". Jedes Ziel (Dateisystem, Google Drive)
-// beschreibt nur, wie es Ordner und Dateien anlegt, überschreibt und entfernt;
-// was im Ziel entsteht, legt storePublisher für alle gleich fest:
+// Ausgabeverzeichnis als Version X". Der Drive-Adapter legt Ordner und Dateien
+// an, überschreibt und entfernt sie. Was im Ziel entsteht:
 //
 //   v<version> (<datum>)/   die Ausgabe dieser Version
 //   Aktuell/                die höchste veröffentlichte Version; Dateien werden

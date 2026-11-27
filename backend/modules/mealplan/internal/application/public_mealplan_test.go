@@ -186,8 +186,7 @@ func TestModuleRejectsUnknownAllergensBeforeWriting(t *testing.T) {
 
 // A save locks the day, reads it and checks the version its saver read
 // before it writes: an outdated or missing version is refused without a
-// write. The deprecated route's day as read stands for its version, in
-// stored form.
+// write.
 func TestModuleChecksTheReadVersionBeforeTheWrite(t *testing.T) {
 	t.Parallel()
 
@@ -197,31 +196,25 @@ func TestModuleChecksTheReadVersionBeforeTheWrite(t *testing.T) {
 	}
 	note := "mit Brot"
 	stored := []domain.Entry{{Date: domain.Date(date), Dish: "Suppe", Note: &note, Allergens: []string{"gluten", "milk"}}}
-	spaced := " mit Brot "
-	asRead := []mealplan.Dish{{Dish: " Suppe ", Note: &spaced, Allergens: []mealplan.Allergen{"milk", "gluten"}}, {Dish: " "}}
-	empty := []mealplan.Dish{}
 	current := dayVersion(storedDishes(stored))
 	written := []string{"lock 2026-09-07", "read 2026-09-07", "write 2026-09-07"}
 	refused := []string{"lock 2026-09-07", "read 2026-09-07"}
 	tests := []struct {
 		name      string
 		version   string
-		asRead    *[]mealplan.Dish
 		wantErr   error
 		wantCalls []string
 	}{
-		{"current version", current, nil, nil, written},
-		{"outdated version", dayVersion(nil), nil, readstate.ErrChanged, refused},
-		{"no version", "", nil, readstate.ErrChanged, refused},
-		{"deprecated day as read", "", &asRead, nil, written},
-		{"deprecated day changed since read", "", &empty, readstate.ErrChanged, refused},
+		{"current version", current, nil, written},
+		{"outdated version", dayVersion(nil), readstate.ErrChanged, refused},
+		{"no version", "", readstate.ErrChanged, refused},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			engine := &recordingEngine{available: true, stored: stored}
 			day, err := newTestModule(engine).ReplaceDay(context.Background(), mealplan.ReplaceDay{
-				Date: date, Dishes: []mealplan.Dish{{Dish: " Nudeln "}}, ExpectedVersion: tc.version, ExpectedDishes: tc.asRead,
+				Date: date, Dishes: []mealplan.Dish{{Dish: " Nudeln "}}, ExpectedVersion: tc.version,
 			})
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("ReplaceDay() error = %v, want %v", err, tc.wantErr)
