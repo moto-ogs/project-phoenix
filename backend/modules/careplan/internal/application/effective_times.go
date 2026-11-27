@@ -292,8 +292,8 @@ func (c *effectiveTimeCore[S, E, N, D]) bulkEffectiveTimesForDate(
 	return c.bulkEffectiveTimesForDateWithSchedules(ctx, studentIDs, date, scheduleMap)
 }
 
-// BulkEffectiveTimesForDateWithSchedules is the batched counterpart of
-// EffectiveTimeForDateWithSchedule.
+// bulkEffectiveTimesForDateWithSchedules resolves the effective time of each
+// student for date from the weekly schedules already loaded.
 func (c *effectiveTimeCore[S, E, N, D]) bulkEffectiveTimesForDateWithSchedules(
 	ctx context.Context,
 	studentIDs []int64,

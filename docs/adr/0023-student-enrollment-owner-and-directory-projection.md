@@ -75,7 +75,7 @@ statement that serves it.
 ## The enrollment capability
 
 School Membership grows `Enroll`, `ChangeClass`, `Graduate`, `Reactivate`,
-`EndCare`, `ResumeCare` and `AssignGroup`, and takes over the tenant-wide
+`EndCare` and `ResumeCare`, and takes over the tenant-wide
 class-writes gate that People Directory holds today. Commands, not row writes:
 the current guards have already drifted apart under a row-shaped interface, as
 `Promote` refuses an alumnus (`student_store.go:192`), `RevertClass` does not

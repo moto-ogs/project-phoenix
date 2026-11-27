@@ -97,10 +97,10 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/peopledirectory/guardian.go:GuardianCommand":                                             14,
 	"modules/peopledirectory/guardian.go:GuardianProvider":                                            26,
 	"modules/peopledirectory/guardian.go:GuardianQuery":                                               17,
-	"modules/peopledirectory/peopledirectory.go:Capability":                                           134, // Removed test-only directory reads.
+	"modules/peopledirectory/peopledirectory.go:Capability":                                           134, // Lowered by #7808: the test-only cross-tenant visitor reads left.
 	"modules/peopledirectory/peopledirectory.go:Command":                                              76,
-	"modules/peopledirectory/peopledirectory.go:Owner":                                                137, // Removed test-only directory reads.
-	"modules/peopledirectory/peopledirectory.go:Query":                                                57,  // Removed test-only directory reads.
+	"modules/peopledirectory/peopledirectory.go:Owner":                                                137, // Lowered by #7808: the test-only cross-tenant visitor reads left.
+	"modules/peopledirectory/peopledirectory.go:Query":                                                57,  // Lowered by #7808: the test-only cross-tenant person read left.
 	"modules/peopledirectory/student_directory.go:StudentDirectoryQuery":                              13,
 	"modules/schoolcalendar/period_administration.go:Calendar":                                        31,
 	"modules/schoolcalendar/portal/contract.go:FullService":                                           40,

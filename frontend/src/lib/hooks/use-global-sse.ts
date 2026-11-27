@@ -199,14 +199,12 @@ const ARRIVAL_TIME_CACHE_KEY_PARTS = [
 ] as const;
 
 // What a student_updated write can invalidate. It covers both time families on
-// purpose: a parent care-exception (submit AND delete) rewrites that day's
-// pickup and arrival override but announces ONLY student_updated — no
-// pickup_schedule_changed, no arrival_schedule_changed
-// (workflows/parentportal/legacy/parent_write_service.go SubmitCareException). An approved
-// care request is the mirror gap: it emits arrival_schedule_changed but also
-// rewrites the weekly PICKUP plan. Every one of these caches disables focus
-// revalidation, so without this list an open page keeps showing the superseded
-// time until a manual reload.
+// purpose: a parent withdrawing a one-day pickup change rewrites that day's
+// pickup override but announces ONLY student_updated — no
+// pickup_schedule_changed. An approved care request is the mirror gap: it
+// emits arrival_schedule_changed but also rewrites the weekly PICKUP plan.
+// Every one of these caches disables focus revalidation, so without this list
+// an open page keeps showing the superseded time until a manual reload.
 const STUDENT_UPDATE_CACHE_KEY_PARTS = [
   STUDENT_KEY_FAMILIES.detail,
   STUDENT_KEY_FAMILIES.statusDays,

@@ -1245,7 +1245,7 @@ export function PickupTimeModal({
         ?.date ?? today
     );
   }, [careExceptions, pickupChangeEnabled, pickupChangeRequests, today]);
-  // Two calendar months ahead — mirrors the backend cap in SubmitCareException
+  // Two calendar months ahead — mirrors the backend cap (ErrCareDateTooFar)
   // and the parent-portal list window, so the picker can't offer a date the
   // server would reject.
   const maxSelectable = (() => {

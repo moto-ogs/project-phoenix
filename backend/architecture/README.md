@@ -460,8 +460,7 @@ payment and profile-loader services keep their API; what the compose package
 may not name became consumer-owned ports: `GuardianFinancialAudit` and
 `GuardianDataAccessLog` (bound in `services` to the guardian change trail and
 the data-access log, same field names and resource types) and
-`GuardianRolePresets` (bound to the Security Runtime's role presets, which
-store the same role and permissions as `authorize.ApplyStudentGuardianRole`).
+`GuardianRolePresets` (bound to the Security Runtime's role presets).
 The unused mail dependencies of the guardian service are dropped. The
 authorize wrappers the root used (`GrantedGuardianPermissions`, the role
 classes, the legal-guardian promotion) moved into `services` over
@@ -4004,8 +4003,8 @@ refresh rotation's recovery-proof binding is handed in. Epoch 67 adds
 from 7,356 to 4,075 LOC.
 
 Care Plan follows with its record adapters: the generic effective-time record
-adapters (`application.EffectiveRecords`, `ExceptionRecords`, `NoteRecords`
-over `RecordFuncs`), the companion edges (`application.CompanionEdges`) and the
+adapters (`application.EffectiveRecords` and `ExceptionRecords` over
+`RecordFuncs`), the companion edges (`application.CompanionEdges`) and the
 student profile commands (`application.NewStudentProfiles` over
 `ports.StudentProfileStore`) move from `modules/careplan/compose` into
 `internal/application`; the composition binds the store and the record
@@ -4202,9 +4201,8 @@ and `sse_presence.go` had already left with #4008 and #4006. Each part went
 where ADR 0053 point 8 puts it:
 
 - **Owner compositions** hold what binds one owner: Facilities builds the
-  retained room repository and the yard colour read (`NewRoomRepository`,
-  `YardRoomColor`) and names `OpenGroupCatalog`; Settings answers the named
-  presence questions (`PresenceSettings`); Student Presence logs its
+  yard colour read (`YardRoomColor`) and names `OpenGroupCatalog`; Settings
+  answers the named presence questions (`PresenceSettings`); Student Presence logs its
   operations (`FailureLogger`, `DebugLogger`); Delivery queues the
   instance-started and arrival-schedule events (`QueueInstanceStarted`,
   `QueueArrivalScheduleChanged`), because the root may not import its
@@ -4446,13 +4444,10 @@ classified packages below `services/` stay with their owners. The root
 - **Imports through compositions.** The root may not import Delivery's
   application role, the projections' adapters, Observability's store or
   Workforce's adapter. Delivery's composition names the notification, outbox
-  and PWA usage services; `modules/grouplive/compose` and
-  `modules/supervisiondashboard/compose` name the callers and the open room
-  sessions; the new `modules/emergencysnapshot/compose` and
-  `observability/compose` build the Notfallliste and the PWA usage store;
-  `modules/workforce/compose` names the group substitution row. The two new
-  packages are created packages of their owners, so PR mode accepts their
-  classification.
+  and PWA usage services; `observability/compose` builds the PWA usage store;
+  `modules/workforce/compose` names the group substitution row. The root
+  builds Group Live, the supervision dashboard and the Notfallliste from the
+  owners' public constructors.
 - **Rule 1 and the complexity limit hold under `api/`** without an allowlist
   entry. Source fields name the narrow ports the root's adapters already
   declare. The Timetable composition takes consumer-owned ports for the

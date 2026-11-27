@@ -272,7 +272,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    11,
-	"modules/peopledirectory":  190, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3); test-only directory read wrappers removed (-2)
+	"modules/peopledirectory":  190, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 94, // Removed unused per-student visit and count façades.
+	"modules/studentpresence": 94, // #7808: dead cross-tenant list removed (-1)
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	// Lowered by #2353: the single-schedule read left with its route (-1).

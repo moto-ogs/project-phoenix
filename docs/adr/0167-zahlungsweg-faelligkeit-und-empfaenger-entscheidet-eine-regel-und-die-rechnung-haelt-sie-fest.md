@@ -82,9 +82,9 @@ Vertragspartei.
   Entscheidung 0167).
 - Compose-LOC `modules/parentbilling/compose` 62 → 67, Summe 13088 → 13093:
   der Konstruktor `NewBillingTerms`.
-- Query-Budgets `api.traeger.billing_terms` und `api.traeger.family_billing`
-  (je 2, exakt). Der Lauf liest Bedingungen, Abweichungen und Fälligkeiten in
-  einer Abfrage (`InvoicePaymentTerms`).
+- Query-Budget `api.traeger.billing_terms` (2, exakt). Der Lauf liest
+  Bedingungen, Abweichungen und Fälligkeiten in einer Abfrage
+  (`InvoicePaymentTerms`).
 
 ## Verworfene Optionen
 
