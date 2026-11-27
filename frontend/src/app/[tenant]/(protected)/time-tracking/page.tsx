@@ -1700,7 +1700,10 @@ function OwnZeiterfassungSection({
   setTargetHref,
   app = false,
   rangeBar,
+  dienstplanHref,
 }: {
+  /** App: „Mein Dienstplan“ als letzte Zeile der Tagesliste. */
+  readonly dienstplanHref?: string;
   /**
    * App (#8070): die Wochen- bzw. Monatswahl als Kopf der Tagesliste, in
    * derselben Karte statt als eigene Karte darüber.
@@ -2068,6 +2071,7 @@ function OwnZeiterfassungSection({
         ) : (
           <AppDayList
             header={rangeBar}
+            dienstplanHref={dienstplanHref}
             from={visibleFrom}
             to={visibleTo}
             today={today}
@@ -4737,6 +4741,9 @@ function TimeTrackingContent() {
           days={
             <OwnZeiterfassungSection
               app
+              dienstplanHref={
+                dienstplanBooked ? tenantPath("/mein-dienstplan") : undefined
+              }
               ownStaffId={ownStaffId}
               schedule={ownSchedule ?? null}
               isSessionOpen={currentSession?.checkOutTime === null}
