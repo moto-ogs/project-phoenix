@@ -9,6 +9,10 @@
 import { bffFile, bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import {
+  INVOICE_STATUS_VALUES,
+  type BillingInvoiceStatus,
+} from "./traeger-billing-families-api";
+import {
   JOURNAL_DOCUMENT_TYPE_VALUES,
   JOURNAL_REFERENCE_KIND_VALUES,
   JOURNAL_RUN_KIND_VALUES,
@@ -24,6 +28,9 @@ import {
 } from "./traeger-list-export";
 
 export type { JournalDocumentType };
+
+/** The columns a page of the journal is ordered by (#8138). */
+export type JournalSort = "number" | "issued" | "recipient" | "gross" | "open";
 
 /** The services whose counters number documents. */
 const JOURNAL_SERVICE_VALUES = ["holiday", "care"] as const;
@@ -80,12 +87,26 @@ export interface JournalDocument {
   readonly taxCents: number;
   readonly netCents: number;
   readonly reference: JournalReference | null;
+  /**
+   * The state of an invoice (#8138); null on a document without one: a
+   * Storno, a Gutschrift, a Jahresbescheid.
+   */
+  readonly status: BillingInvoiceStatus | null;
+  /** What an invoice still asks for; 0 without a state. */
+  readonly openCents: number;
+  /** First names of the children the document bills. */
+  readonly childNames: readonly string[];
+  readonly debtorNumber: string;
+  /** Opens the family of the document; null on a Jahresbescheid. */
+  readonly familyId: string | null;
 }
 
 interface JournalTotals {
   readonly grossCents: number;
   readonly taxCents: number;
   readonly netCents: number;
+  /** What the invoices of the filter still ask for. */
+  readonly openCents: number;
 }
 
 /** A number range that numbered at least one document. */
@@ -155,7 +176,15 @@ export interface InvoiceJournalFilter {
   /** Empty for every type. */
   readonly documentType: JournalDocumentType | "";
   readonly run: JournalRunFilter | null;
+  /** Empty for every state. */
+  readonly status: BillingInvoiceStatus | "";
   readonly search: string;
+}
+
+/** The order of a page; null keeps the order of the journal. */
+export interface JournalOrder {
+  readonly sort: JournalSort;
+  readonly order: "asc" | "desc";
 }
 
 /** The query of a filter, as the backend reads it. */
@@ -171,6 +200,7 @@ function journalQuery(filter: InvoiceJournalFilter) {
     document_type: filter.documentType || undefined,
     run_kind: filter.run?.kind,
     run_id: filter.run?.id,
+    status: filter.status || undefined,
     search: filter.search.trim() || undefined,
   };
 }
@@ -221,20 +251,34 @@ function toDocument(
           number: document.reference.number,
         }
       : null,
+    status: knownEnum(INVOICE_STATUS_VALUES, document.status) ?? null,
+    openCents: document.open_cents,
+    childNames: document.child_names ?? [],
+    debtorNumber: document.debtor_number,
+    familyId: document.family_id ?? null,
   };
 }
 
 /**
- * One page of the journal, the newest document first. Pages start at 1.
+ * One page of the journal, the newest document first unless an order names
+ * a column. Pages start at 1.
  */
 export async function fetchInvoiceJournal(
   filter: InvoiceJournalFilter,
   page: number,
+  order: JournalOrder | null = null,
 ): Promise<InvoiceJournalPage> {
   const { data, pagination } = await bffJson(
     "org",
     "GET /traeger/invoice-journal/",
-    { query: { ...journalQuery(filter), page } },
+    {
+      query: {
+        ...journalQuery(filter),
+        page,
+        sort: order?.sort,
+        order: order?.order,
+      },
+    },
   );
   return {
     documents: (data.documents ?? []).map(toDocument),
@@ -244,6 +288,7 @@ export async function fetchInvoiceJournal(
       grossCents: data.totals.gross_cents,
       taxCents: data.totals.tax_cents,
       netCents: data.totals.net_cents,
+      openCents: data.totals.open_cents,
     },
     gaps: (data.gaps ?? []).map((gap) => ({
       issuer: toIssuer(gap.issuer),

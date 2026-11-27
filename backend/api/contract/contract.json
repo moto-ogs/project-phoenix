@@ -13291,6 +13291,14 @@
           "text_reason": "the creditor identifier of the issuer, or traeger for the Träger"
         },
         {
+          "name": "order",
+          "kind": "string",
+          "values": [
+            "asc",
+            "desc"
+          ]
+        },
+        {
           "name": "page",
           "kind": "int"
         },
@@ -13317,6 +13325,28 @@
           "values": [
             "care",
             "holiday"
+          ]
+        },
+        {
+          "name": "sort",
+          "kind": "string",
+          "values": [
+            "gross",
+            "issued",
+            "number",
+            "open",
+            "recipient"
+          ]
+        },
+        {
+          "name": "status",
+          "kind": "string",
+          "values": [
+            "cancelled",
+            "credited",
+            "nothing_due",
+            "open",
+            "partly_credited"
           ]
         },
         {
@@ -13392,6 +13422,17 @@
           "values": [
             "care",
             "holiday"
+          ]
+        },
+        {
+          "name": "status",
+          "kind": "string",
+          "values": [
+            "cancelled",
+            "credited",
+            "nothing_due",
+            "open",
+            "partly_credited"
           ]
         },
         {
@@ -72516,6 +72557,41 @@
             "nullable": true,
             "ref": "JournalReference"
           }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "open_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
         }
       ]
     },
@@ -72705,6 +72781,12 @@
         },
         {
           "name": "net_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "open_cents",
           "schema": {
             "kind": "int"
           }

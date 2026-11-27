@@ -68,6 +68,27 @@ const (
 // JournalReferenceKinds are the ways a document refers to another one.
 var JournalReferenceKinds = []string{JournalReferenceCancels, JournalReferenceCredits, JournalReferenceReplaces, JournalReferenceAmends}
 
+// Columns a page of the journal is ordered by (#8138).
+const (
+	// JournalSortNumber orders by number range and running number.
+	JournalSortNumber = "number"
+	// JournalSortIssued orders by the issue day.
+	JournalSortIssued = "issued"
+	// JournalSortRecipient orders by the recipient's last and first name.
+	JournalSortRecipient = "recipient"
+	// JournalSortGross orders by the gross amount.
+	JournalSortGross = "gross"
+	// JournalSortOpen orders by what an invoice still asks for.
+	JournalSortOpen = "open"
+)
+
+// JournalSorts are the columns a page of the journal is ordered by.
+var JournalSorts = []string{JournalSortNumber, JournalSortIssued, JournalSortRecipient, JournalSortGross, JournalSortOpen}
+
+// JournalInvoiceStates are the states of an invoice the journal filters by,
+// the states the families show (#4691).
+var JournalInvoiceStates = []string{InvoiceOpen, InvoicePartlyCredited, InvoiceCredited, InvoiceCancelled, InvoiceNothingDue}
+
 // InvoiceJournalPageSize is the number of documents one page of the journal
 // carries.
 const InvoiceJournalPageSize = 100
@@ -104,7 +125,14 @@ type InvoiceJournalFilter struct {
 	// Search matches a part of the number, of the number of the document it
 	// refers to or of the recipient's name.
 	Search string
-	Page   int
+	// Status keeps the invoices in one state of JournalInvoiceStates (#8138).
+	Status string
+	// Sort names the column of JournalSorts that orders a page, Descending
+	// its direction; empty keeps the order of the journal. A file always
+	// stands by number range and number.
+	Sort       string
+	Descending bool
+	Page       int
 }
 
 // JournalRun is the run a document was issued in. A holiday run carries the
@@ -148,6 +176,23 @@ type JournalDocument struct {
 	TaxCents           int64             `json:"tax_cents" contract:"number"`
 	NetCents           int64             `json:"net_cents" contract:"number"`
 	Reference          *JournalReference `json:"reference"`
+	// Status and OpenCents are the state of an invoice and what it still
+	// asks for, as its family shows them (#4691, #8138): nothing once it is
+	// cancelled, otherwise its amount less its credits. moto sees no
+	// payments, so open means not taken back. Empty and zero on a
+	// cancellation and a credit, which ask for nothing of their own, and on
+	// a Jahresbescheid: the families count invoices only, and the journal
+	// shows the same sums.
+	Status    string `json:"status"`
+	OpenCents int64  `json:"open_cents" contract:"number"`
+	// ChildNames are the first names of the children the document bills.
+	ChildNames []string `json:"child_names"`
+	// DebtorNumber is the family's number in the bookkeeping, empty
+	// without one.
+	DebtorNumber string `json:"debtor_number"`
+	// FamilyID opens the family of the document
+	// (BillingFamilies.BillingFamily); nil on a Jahresbescheid.
+	FamilyID *ident.ID `json:"family_id"`
 }
 
 // JournalTotals are the sums of the documents that pass the filter, over
@@ -156,6 +201,9 @@ type JournalTotals struct {
 	GrossCents int64 `json:"gross_cents" contract:"number"`
 	TaxCents   int64 `json:"tax_cents" contract:"number"`
 	NetCents   int64 `json:"net_cents" contract:"number"`
+	// OpenCents is what the invoices among them still ask for, without
+	// the Jahresbescheide, as on the families.
+	OpenCents int64 `json:"open_cents" contract:"number"`
 }
 
 // JournalNumberRange is a number range of the Träger that numbered at least

@@ -6,13 +6,18 @@
 // einem Nummernkreis eine Nummer, steht das als Warnung über der Liste und
 // an der Stelle in der Liste. Ein
 // Dokument steht hier, sobald es seine Nummer hat; Entwürfe eines Laufs
-// haben keine. Nur zum Lesen. Filter, Summen und Seiten rechnet der Server;
-// jedes Lesen steht im Protokoll der gezeigten Läufe.
+// haben keine. Nur zum Lesen. Filter, Summen, Sortierung und Seiten rechnet
+// der Server; jedes Lesen steht im Protokoll der gezeigten Läufe.
+// Seit #8138 ist das Buch auch die Liste, in der das Büro arbeitet: eine
+// Rechnung zeigt ihren Stand und was sie noch fordert, der Empfänger öffnet
+// die Familie, und ein Spaltenkopf sortiert alle Dokumente des Filters.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUS_TONES,
   billingAreaTitle,
   billingTabs,
 } from "~/components/traeger/billing-family-format";
@@ -67,13 +72,17 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { labelOf } from "~/lib/label-of";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import type { BillingInvoiceStatus } from "~/lib/traeger-billing-families-api";
+import { traegerPath } from "~/lib/traeger-url";
 import {
   type InvoiceJournalFilter,
   type InvoiceJournalPage,
   type JournalDocument,
   type JournalDocumentType,
   type JournalNumberGap,
+  type JournalOrder,
   type JournalRangeFilter,
+  type JournalSort,
   downloadInvoiceJournal,
   fetchInvoiceJournal,
 } from "~/lib/traeger-invoice-journal-api";
@@ -83,6 +92,21 @@ const logger = createLogger({ component: "TraegerInvoiceJournalPage" });
 const NO_RANGES: InvoiceJournalPage["numberRanges"] = [];
 const NO_RUNS: InvoiceJournalPage["runs"] = [];
 const NO_GAPS: InvoiceJournalPage["gaps"] = [];
+
+/** The columns the database orders by, under their column key. */
+const SORT_OF_COLUMN: Readonly<Record<string, JournalSort>> = {
+  number: "number",
+  issued: "issued",
+  recipient: "recipient",
+  gross: "gross",
+  open: "open",
+};
+
+/** Without a chosen column the book keeps its own order. */
+const NO_SORT = { key: "", direction: "asc" } as const;
+
+const LINK_CLASS =
+  "rounded-sm text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900";
 
 /** Typing a number or a name asks the server once the person pauses. */
 const SEARCH_PAUSE_MS = 300;
@@ -149,16 +173,61 @@ function typeBadge(document: JournalDocument) {
   );
 }
 
+/**
+ * The state of an invoice, as its family shows it (#4691). A Storno, a
+ * Gutschrift and a Jahresbescheid have none.
+ */
+function stateBadge(document: JournalDocument) {
+  return document.status ? (
+    <StatusBadge
+      tone={INVOICE_STATUS_TONES[document.status]}
+      label={INVOICE_STATUS_LABELS[document.status]}
+    />
+  ) : null;
+}
+
+/** The recipient opens the family with all its documents (#4691). */
+function recipientCell(document: JournalDocument) {
+  const name = document.recipientName || "–";
+  return (
+    <span className="block min-w-0">
+      {document.familyId ? (
+        <NavigationLink
+          href={traegerPath(
+            `/traeger/abrechnung/familien/${encodeURIComponent(document.familyId)}`,
+          )}
+          className={LINK_CLASS}
+        >
+          {name}
+        </NavigationLink>
+      ) : (
+        <span className="text-gray-900">{name}</span>
+      )}
+      {document.childNames.length > 0 ? (
+        <span className="block text-sm text-gray-500">
+          {document.childNames.join(", ")}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** What an invoice still asks for; a document without a state asks nothing. */
+function openCell(document: JournalDocument) {
+  return document.status ? (
+    amountCell(document.openCents)
+  ) : (
+    <span className="text-gray-500">–</span>
+  );
+}
+
 /** The run of a document opens its page: there lie its letters. */
 function runCell(document: JournalDocument) {
   const label = journalRunLabel(document.run);
   const href = journalRunHref(document.run);
   if (!href) return label;
   return (
-    <NavigationLink
-      href={href}
-      className="rounded-sm text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
-    >
+    <NavigationLink href={href} className={LINK_CLASS}>
       {label}
     </NavigationLink>
   );
@@ -218,6 +287,7 @@ function journalColumns({
           </span>
         );
       },
+      serverSortable: true,
       stacked: "title",
     },
     {
@@ -228,6 +298,7 @@ function journalColumns({
           {formatDate(document.issuedOn)}
         </span>
       ),
+      serverSortable: true,
       // On a phone the date leads the line under the number.
       stacked: "hidden",
     },
@@ -235,10 +306,11 @@ function journalColumns({
       key: "type",
       // The reference stands beside its type: „Storno“ and the invoice it
       // takes back read as one fact.
-      header: "Dokumentart und Bezug",
+      header: "Dokumentart, Stand und Bezug",
       render: (document) => (
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {typeBadge(document)}
+          {stateBadge(document)}
           {reference(document)}
         </span>
       ),
@@ -249,15 +321,19 @@ function journalColumns({
             {formatDate(document.issuedOn)}
           </span>
           {typeBadge(document)}
+          {stateBadge(document)}
           {document.reference ? (
             <span className="whitespace-nowrap">
               {journalReferenceWord(document.reference)}{" "}
               <DocumentNumber>{document.reference.number}</DocumentNumber>
             </span>
           ) : null}
-          <span className="basis-full text-gray-900">
-            {document.recipientName || "–"}
-          </span>
+          <span className="basis-full">{recipientCell(document)}</span>
+          {document.status && document.openCents > 0 ? (
+            <span className="basis-full text-gray-900">
+              Offene Forderung: {formatEuro(document.openCents)}
+            </span>
+          ) : null}
           {/* The run leads to the letters of the document, on a phone too. */}
           <span className="basis-full">{runCell(document)}</span>
         </span>
@@ -266,9 +342,8 @@ function journalColumns({
     {
       key: "recipient",
       header: "Empfänger",
-      render: (document) => (
-        <span className="text-gray-900">{document.recipientName || "–"}</span>
-      ),
+      render: recipientCell,
+      serverSortable: true,
       // The phone line under the number already names the recipient.
       stacked: "hidden",
     },
@@ -312,6 +387,18 @@ function journalColumns({
           <span className="text-xs font-normal text-gray-500">brutto</span>
         </span>
       ),
+      serverSortable: true,
+    },
+    {
+      // What an invoice still asks for (#8138): issued and neither
+      // cancelled nor credited. moto sees no payments.
+      key: "open",
+      header: "Offene Forderung",
+      align: "right",
+      render: openCell,
+      serverSortable: true,
+      // The phone line under the number names an open amount.
+      stacked: "hidden",
     },
   ];
 }
@@ -559,6 +646,11 @@ function JournalTotals({
             {formatEuro(page.totals.grossCents)}
           </span>
         </DataField>
+        <DataField label="Offene Forderung">
+          <span className="tabular-nums">
+            {formatEuro(page.totals.openCents)}
+          </span>
+        </DataField>
       </DataGrid>
     </SectionCard>
   );
@@ -591,6 +683,11 @@ export default function TraegerInvoiceJournalPage() {
     "",
   );
   const [run, setRun] = useState<InvoiceJournalFilter["run"]>(null);
+  const [status, setStatus] = useState<BillingInvoiceStatus | "">("");
+  const [sort, setSort] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>(NO_SORT);
   // A jump drops a search still being typed, so it cannot come back after.
   const [jumps, setJumps] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -606,9 +703,17 @@ export default function TraegerInvoiceJournalPage() {
       range: numberRange,
       documentType,
       run,
+      status,
       search,
     }),
-    [from, to, issuerKey, numberRange, documentType, run, search],
+    [from, to, issuerKey, numberRange, documentType, run, status, search],
+  );
+  // Only a chosen column orders the list; without one the book keeps its
+  // own order: the newest first, a number range by number.
+  const sortColumn = SORT_OF_COLUMN[sort.key];
+  const order = useMemo<JournalOrder | null>(
+    () => (sortColumn ? { sort: sortColumn, order: sort.direction } : null),
+    [sortColumn, sort.direction],
   );
   // Every read stands in the trail of each run it shows. The rows appear
   // only once this opening's own read answered: a filter chosen before
@@ -618,8 +723,8 @@ export default function TraegerInvoiceJournalPage() {
     loading,
     error,
   } = useFreshTraegerResource(
-    traegerBillingKeys.invoiceJournal(JSON.stringify(filter)),
-    () => fetchInvoiceJournal(filter, 1),
+    traegerBillingKeys.invoiceJournal(JSON.stringify({ filter, order })),
+    () => fetchInvoiceJournal(filter, 1, order),
     "das Rechnungsausgangsbuch",
   );
   // What does not follow the filter (choices, gaps) outlives its change, so
@@ -669,7 +774,7 @@ export default function TraegerInvoiceJournalPage() {
     const page = (continued?.page ?? 1) + 1;
     setLoadingMore(true);
     try {
-      const result = await fetchInvoiceJournal(filter, page);
+      const result = await fetchInvoiceJournal(filter, page, order);
       setLater({
         after: first,
         page,
@@ -735,6 +840,21 @@ export default function TraegerInvoiceJournalPage() {
         ...JOURNAL_DOCUMENT_TYPES.map((type) => ({
           value: type,
           label: JOURNAL_DOCUMENT_TYPE_LABELS[type],
+        })),
+      ],
+    },
+    {
+      // The states of an invoice, as the families show them (#8138).
+      id: "status",
+      label: "Stand",
+      type: "dropdown",
+      value: status,
+      onChange: (value) => setStatus(value as BillingInvoiceStatus | ""),
+      options: [
+        { value: "", label: "Jeder Stand" },
+        ...Object.entries(INVOICE_STATUS_LABELS).map(([value, label]) => ({
+          value,
+          label,
         })),
       ],
     },
@@ -847,6 +967,15 @@ export default function TraegerInvoiceJournalPage() {
           },
         ]
       : []),
+    ...(status
+      ? [
+          {
+            id: "status",
+            label: INVOICE_STATUS_LABELS[status],
+            onRemove: () => setStatus(""),
+          },
+        ]
+      : []),
     ...(numberRange
       ? [
           {
@@ -882,6 +1011,7 @@ export default function TraegerInvoiceJournalPage() {
   const clearFilters = () => {
     setRange(undefined);
     setDocumentType("");
+    setStatus("");
     setNumberRange(null);
     setRun(null);
     setIssuerKey(null);
@@ -896,6 +1026,7 @@ export default function TraegerInvoiceJournalPage() {
     setJumps((count) => count + 1);
     setRange(undefined);
     setDocumentType("");
+    setStatus("");
     setNumberRange(null);
     setRun(null);
     setIssuerKey(null);
@@ -912,7 +1043,7 @@ export default function TraegerInvoiceJournalPage() {
   const emptySearch = emptySearchText(
     search,
     activeFilters.map((active) => active.label),
-    "Prüfe die Nummer des Dokuments oder den Namen des Empfängers.",
+    "Prüfe die Nummer des Dokuments, den Namen des Empfängers oder den Vornamen des Kindes.",
   );
   // Search and filters in words, for the sums and the download: both must
   // say which documents they cover where the person decides.
@@ -942,13 +1073,13 @@ export default function TraegerInvoiceJournalPage() {
   return (
     <TenantPage
       title={billingAreaTitle("rechnungsausgangsbuch")}
-      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Gebührenbescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus."
+      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Gebührenbescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus. „Offene Forderung“ heißt: Die Rechnung ist ausgestellt und weder storniert noch ganz gutgeschrieben. Ob die Familie bezahlt hat, sieht moto nicht. Jahresbescheide zählen dabei nicht mit. Ein Klick auf den Empfänger öffnet die Familie."
       tabs={billingTabs("rechnungsausgangsbuch")}
       overflowMenu={exportItems}
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "Nummer oder Empfänger",
+        placeholder: "Nummer, Empfänger oder Kind",
         debounceMs: SEARCH_PAUSE_MS,
         resetKey: jumps,
       }}
@@ -981,6 +1112,9 @@ export default function TraegerInvoiceJournalPage() {
         stackedLayout="row"
         stackedDetailKey="type"
         rowHasInteractiveControls
+        // A column orders every document of the filter, not the loaded
+        // rows: the database sorts and the list starts again (#8138).
+        serverSort={{ ...sort, onChange: setSort }}
         moreAction={
           hasMore
             ? {

@@ -76,7 +76,19 @@ func journalFilterErrors(filter parentbilling.InvoiceJournalFilter) validation.E
 	if filter.Page < 0 {
 		errs["page"] = errors.New("must not be negative")
 	}
+	journalViewErrors(filter, errs)
 	return errs
+}
+
+// journalViewErrors adds what the state filter and the order of a page
+// cannot ask for (#8138).
+func journalViewErrors(filter parentbilling.InvoiceJournalFilter, errs validation.Errors) {
+	if filter.Status != "" && !slices.Contains(parentbilling.JournalInvoiceStates, filter.Status) {
+		errs["status"] = errors.New("is no state of an invoice")
+	}
+	if filter.Sort != "" && !slices.Contains(parentbilling.JournalSorts, filter.Sort) {
+		errs["sort"] = errors.New("is no column the journal is ordered by")
+	}
 }
 
 // trailingDigits finds the digits a number ends with.

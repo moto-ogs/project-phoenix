@@ -24,8 +24,15 @@ const { mockFetchJournal, mockDownload, mockDownloadBlob } = vi.hoisted(() => ({
 }));
 
 vi.mock("~/lib/traeger-invoice-journal-api", () => ({
-  fetchInvoiceJournal: (filter: InvoiceJournalFilter, page: number) =>
-    mockFetchJournal(filter, page),
+  // An order is passed on only when a column is chosen.
+  fetchInvoiceJournal: (
+    filter: InvoiceJournalFilter,
+    page: number,
+    order: unknown,
+  ) =>
+    order
+      ? mockFetchJournal(filter, page, order)
+      : mockFetchJournal(filter, page),
   downloadInvoiceJournal: (filter: InvoiceJournalFilter, format: string) =>
     mockDownload(filter, format),
 }));
@@ -67,6 +74,11 @@ const INVOICE: JournalDocument = {
   taxCents: 0,
   netCents: 12000,
   reference: null,
+  status: "open",
+  openCents: 12000,
+  childNames: ["Mia", "Noah"],
+  debtorNumber: "D-100",
+  familyId: "1",
 };
 
 const CANCELLATION: JournalDocument = {
@@ -90,6 +102,11 @@ const CANCELLATION: JournalDocument = {
   taxCents: 0,
   netCents: -4500,
   reference: { kind: "cancels", number: "MB-2026-0001" },
+  status: null,
+  openCents: 0,
+  childNames: ["Lena"],
+  debtorNumber: "",
+  familyId: "-1",
 };
 
 const GAP: JournalNumberGap = {
@@ -111,7 +128,7 @@ function journal(
     documents: [CANCELLATION, INVOICE],
     totalCount: 2,
     hasMore: false,
-    totals: { grossCents: 7500, taxCents: 0, netCents: 7500 },
+    totals: { grossCents: 7500, taxCents: 0, netCents: 7500, openCents: 12000 },
     gaps: [],
     numberRanges: [
       {
@@ -194,6 +211,7 @@ describe("TraegerInvoiceJournalPage", () => {
         range: null,
         documentType: "",
         run: null,
+        status: "",
         search: "",
       },
       1,
@@ -346,6 +364,72 @@ describe("TraegerInvoiceJournalPage", () => {
     ).toHaveLength(2);
   });
 
+  it("shows what an invoice still asks for and opens its family (#8138)", async () => {
+    renderPage();
+
+    const table = await screen.findByRole("table");
+    // The invoice carries its state; the Storno has none of its own.
+    expect(await within(table).findAllByText(/Forderung offen/)).toHaveLength(
+      1,
+    );
+    expect(
+      within(table).getByRole("columnheader", { name: /Offene Forderung/ }),
+    ).toBeInTheDocument();
+    // 120,00 € stands as net, gross and open amount of the invoice.
+    expect(within(table).getAllByText("120,00 €")).toHaveLength(3);
+    expect(within(table).getByText("Mia, Noah")).toBeInTheDocument();
+    expect(
+      within(table).getByRole("link", { name: "Eva Muster" }),
+    ).toHaveAttribute("href", "/traeger/abrechnung/familien/1");
+    expect(
+      within(table).getByRole("link", { name: "Paul Muster" }),
+    ).toHaveAttribute("href", "/traeger/abrechnung/familien/-1");
+    // The open sum of the filter stands with the other sums.
+    expect(screen.getAllByText("120,00 €")).toHaveLength(4);
+  });
+
+  it("orders every document of the filter in the database by a column", async () => {
+    renderPage();
+    const table = await screen.findByRole("table");
+    fireEvent.click(
+      within(table).getByRole("button", { name: /Offene Forderung/ }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "asc",
+      }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("table")).getByRole("button", {
+        name: /Offene Forderung/,
+      }),
+    );
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(expect.anything(), 1, {
+        sort: "open",
+        order: "desc",
+      }),
+    );
+  });
+
+  it("asks the server for the invoices in one state", async () => {
+    renderPage();
+    await screen.findByRole("table");
+    await openFilter("Stand");
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Teilgutschrift" }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "partly_credited" }),
+        1,
+      ),
+    );
+  });
+
   it("asks the server for the chosen document type", async () => {
     renderPage();
     await screen.findByRole("table");
@@ -469,7 +553,7 @@ describe("TraegerInvoiceJournalPage", () => {
       journal({
         documents: [],
         totalCount: 0,
-        totals: { grossCents: 0, taxCents: 0, netCents: 0 },
+        totals: { grossCents: 0, taxCents: 0, netCents: 0, openCents: 0 },
         numberRanges: [],
         runs: [],
       }),

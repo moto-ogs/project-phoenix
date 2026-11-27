@@ -66,12 +66,26 @@ var journalFilter = []common.QueryParam{
 	{Name: "run_kind", Kind: common.QueryString, Values: capability.JournalRunKinds},
 	{Name: "run_id", Kind: common.QueryID},
 	{Name: "search", Kind: common.QueryString},
+	{Name: "status", Kind: common.QueryString, Values: capability.JournalInvoiceStates},
 }
+
+// journalOrder is the order of a page: the column and its direction. A file
+// always stands by number range and number.
+var journalOrder = []common.QueryParam{
+	{Name: "sort", Kind: common.QueryString, Values: capability.JournalSorts},
+	{Name: "order", Kind: common.QueryString, Values: []string{journalOrderAscending, journalOrderDescending}},
+}
+
+// Directions of a sorted page.
+const (
+	journalOrderAscending  = "asc"
+	journalOrderDescending = "desc"
+)
 
 // InvoiceJournalRouteContracts registers the Rechnungsausgangsbuch (#4819),
 // relative to /traeger/invoice-journal. The export answers a file (#2352).
 func InvoiceJournalRouteContracts() []common.RouteContract {
-	page := append([]common.QueryParam{{Name: "page", Kind: common.QueryInt}}, journalFilter...)
+	page := append(append([]common.QueryParam{{Name: "page", Kind: common.QueryInt}}, journalFilter...), journalOrder...)
 	export := append([]common.QueryParam{common.ListFormatQuery}, journalFilter...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: page, Paginated: true, Response: capability.InvoiceJournalPage{},
@@ -94,6 +108,15 @@ func (rs *InvoiceJournalResource) list(w http.ResponseWriter, r *http.Request) {
 	filter, err := journalFilterOf(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	filter.Sort = r.URL.Query().Get("sort")
+	switch order := r.URL.Query().Get("order"); order {
+	case "", journalOrderAscending:
+	case journalOrderDescending:
+		filter.Descending = true
+	default:
+		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("order must be asc or desc: %q", order)))
 		return
 	}
 	filter.Page = 1
@@ -154,6 +177,7 @@ func journalFilterOf(r *http.Request) (capability.InvoiceJournalFilter, error) {
 	query := r.URL.Query()
 	filter := capability.InvoiceJournalFilter{
 		Service: query.Get("service"), DocumentType: query.Get("document_type"), RunKind: query.Get("run_kind"), Search: query.Get("search"),
+		Status:    query.Get("status"),
 		AnyIssuer: true, AnyYear: true,
 	}
 	var err error
@@ -295,6 +319,9 @@ func journalFilterTexts(filter capability.InvoiceJournalFilter, page capability.
 			texts = append(texts, "Lauf: "+journalRunText(run))
 		}
 	}
+	if filter.Status != "" {
+		texts = append(texts, "Stand: "+invoiceStateLabels[filter.Status])
+	}
 	if filter.Search != "" {
 		texts = append(texts, "Suche: "+strings.TrimSpace(filter.Search))
 	}
@@ -322,9 +349,10 @@ func journalFilterIssuer(filter capability.InvoiceJournalFilter, page capability
 // range and number, and the sums at its end.
 func journalTable(filter capability.InvoiceJournalFilter, page capability.InvoiceJournalPage) common.ListTable {
 	table := newListTable("Rechnungsausgangsbuch", "rechnungsausgangsbuch", true,
-		column("number", "Nummer"), column("issued", "Ausgestellt am"), column("type", "Dokumentart"), column("recipient", "Empfänger"),
+		column("number", "Nummer"), column("issued", "Ausgestellt am"), column("type", "Dokumentart"), column("status", "Stand"),
+		column("recipient", "Empfänger"), column("children", "Kinder"), column("debtor", "Debitorennummer"),
 		column("issuer", "Rechnungssteller"), column("range", "Nummernkreis"), column("run", "Lauf"), column("reference", "Bezug"),
-		euroColumn("net", "Netto"), euroColumn("tax", "Steuer"), euroColumn("gross", "Brutto"))
+		euroColumn("net", "Netto"), euroColumn("tax", "Steuer"), euroColumn("gross", "Brutto"), euroColumn("open", "Offene Forderung"))
 	table.Filters = journalFilterTexts(filter, page)
 	for _, document := range page.Documents {
 		reference := ""
@@ -333,14 +361,27 @@ func journalTable(filter capability.InvoiceJournalFilter, page capability.Invoic
 		}
 		table.Rows = append(table.Rows, []string{
 			document.Number, dateText(document.IssuedOn), journalDocumentTypeLabels[document.DocumentType],
-			personName(document.RecipientFirstName, document.RecipientLastName), journalIssuerText(document.Issuer),
+			invoiceStateLabels[document.Status],
+			personName(document.RecipientFirstName, document.RecipientLastName), strings.Join(document.ChildNames, ", "),
+			document.DebtorNumber, journalIssuerText(document.Issuer),
 			journalRangeText(document.Service, document.NumberYear), journalRunText(document.Run), reference,
 			decimalEuro(document.NetCents), decimalEuro(document.TaxCents), decimalEuro(document.GrossCents),
+			journalOpenText(document),
 		})
 	}
 	if len(page.Documents) > 0 {
-		table.Rows = append(table.Rows, []string{"Summe", "", "", "", "", "", "", "",
-			decimalEuro(page.Totals.NetCents), decimalEuro(page.Totals.TaxCents), decimalEuro(page.Totals.GrossCents)})
+		table.Rows = append(table.Rows, []string{"Summe", "", "", "", "", "", "", "", "", "", "",
+			decimalEuro(page.Totals.NetCents), decimalEuro(page.Totals.TaxCents), decimalEuro(page.Totals.GrossCents),
+			decimalEuro(page.Totals.OpenCents)})
 	}
 	return table
+}
+
+// journalOpenText is what an invoice still asks for; empty on a document
+// without a state (a cancellation, a credit, a Jahresbescheid).
+func journalOpenText(document capability.JournalDocument) string {
+	if document.Status == "" {
+		return ""
+	}
+	return decimalEuro(document.OpenCents)
 }
