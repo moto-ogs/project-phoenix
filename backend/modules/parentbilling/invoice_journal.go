@@ -116,6 +116,10 @@ type JournalRun struct {
 	Name  string         `json:"name"`
 	Month *calendar.Date `json:"month"`
 	Year  int            `json:"year"`
+	// IssuedOn is the latest issue day of the run's documents, where the
+	// run stands as a choice of the filter: two runs of one period or month
+	// are told apart by it. Nil on the run of a document.
+	IssuedOn *calendar.Date `json:"issued_on"`
 }
 
 // JournalReference names the document another one belongs to.
@@ -209,8 +213,9 @@ type InvoiceJournalPage struct {
 // recorded in the trail of each run whose documents the page shows.
 type InvoiceJournal interface {
 	// InvoiceJournal reads one page of the journal, the newest document
-	// first, or with the page zero every document by number range and
-	// number. An unknown service, document type or kind of run and a period
+	// first and, once the filter names a service, by number from the
+	// highest down, or with the page zero every document by number range
+	// and number. An unknown service, document type or kind of run and a period
 	// that ends before it starts are validation errors.
 	InvoiceJournal(ctx context.Context, reviewer HolidayReviewer, filter InvoiceJournalFilter) (InvoiceJournalPage, error)
 }

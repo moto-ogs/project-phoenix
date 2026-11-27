@@ -33,6 +33,7 @@ export interface JournalRun {
   name: string;
   month: string | null;
   year: number;
+  issued_on: string | null;
 }
 
 export const JournalRunSchema: z.ZodType<JournalRun, unknown> = object<JournalRun>({
@@ -41,6 +42,7 @@ export const JournalRunSchema: z.ZodType<JournalRun, unknown> = object<JournalRu
   name: str,
   month: nullable(calendarDate),
   year: safeInt,
+  issued_on: nullable(calendarDate),
 });
 
 /** Go: parentbilling.JournalReference */

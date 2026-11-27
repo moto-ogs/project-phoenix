@@ -71,7 +71,10 @@ const journalRowsSQL = `
 // The two orders of the journal.
 const (
 	journalNewestFirst = `issued_on DESC, number_year DESC, service, issuer_key, number_sequence DESC`
-	journalByNumber    = `number_year, issuer_key, service, number_sequence`
+	// A number range is read by number: its documents stand in the order
+	// they were numbered, whatever day each one names as its issue day.
+	journalByNumberDown = `number_year DESC, service, issuer_key, number_sequence DESC`
+	journalByNumber     = `number_year, issuer_key, service, number_sequence`
 )
 
 // journalHeadSQL and journalTailSQL read one page of the journal, the sums
@@ -160,8 +163,9 @@ const journalTailSQL = `, source, id) AS position
 // The journal as a page, the newest document first, and as a file, every
 // number range from its first number on.
 const (
-	journalPageSQL = journalHeadSQL + journalNewestFirst + journalTailSQL
-	journalFileSQL = journalHeadSQL + journalByNumber + journalTailSQL
+	journalPageSQL  = journalHeadSQL + journalNewestFirst + journalTailSQL
+	journalRangeSQL = journalHeadSQL + journalByNumberDown + journalTailSQL
+	journalFileSQL  = journalHeadSQL + journalByNumber + journalTailSQL
 )
 
 type journalDocumentRow struct {
@@ -208,6 +212,7 @@ type journalRunRow struct {
 	RunName  string         `json:"run_name"`
 	RunMonth *calendar.Date `json:"run_month"`
 	RunYear  *int           `json:"run_year"`
+	IssuedOn *calendar.Date `json:"last_issued_on"`
 }
 
 // journalIssuer is the issuer a row names: the Träger for the empty key.
@@ -263,6 +268,9 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 	if filter.Page > 0 {
 		args[12], args[13] = parentbilling.InvoiceJournalPageSize, (filter.Page-1)*parentbilling.InvoiceJournalPageSize
 		query = db.NewRaw(journalPageSQL, args...)
+		if filter.Service != "" {
+			query = db.NewRaw(journalRangeSQL, args...)
+		}
 	}
 	if err := query.Scan(ctx, &rows); err != nil {
 		return parentbilling.InvoiceJournalPage{}, fmt.Errorf("read the invoice journal and record its read: %w", err)
@@ -286,6 +294,7 @@ func (s *Store) ReadInvoiceJournal(ctx context.Context, organizationID, accountI
 	}
 	for i, row := range rows.Runs {
 		page.Runs[i] = journalRun(row.RunKind, row.RunID, row.RunName, row.RunMonth, row.RunYear)
+		page.Runs[i].IssuedOn = row.IssuedOn
 	}
 	return page, nil
 }

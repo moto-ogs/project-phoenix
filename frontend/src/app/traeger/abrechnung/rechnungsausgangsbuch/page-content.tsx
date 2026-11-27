@@ -9,7 +9,7 @@
 // haben keine. Nur zum Lesen. Filter, Summen und Seiten rechnet der Server;
 // jedes Lesen steht im Protokoll der gezeigten Läufe.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
@@ -32,13 +32,14 @@ import {
   journalRangeOf,
   journalRangeValue,
   journalReferenceWord,
+  journalRunChoiceLabels,
   journalRunHref,
   journalRunLabel,
   journalRunOf,
   journalRunValue,
 } from "~/components/traeger/invoice-journal-format";
 import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -165,7 +166,7 @@ function runCell(document: JournalDocument) {
 
 /** What the table needs beside its rows. */
 interface JournalColumnContext {
-  readonly severalIssuers: boolean;
+  readonly showIssuer: boolean;
   /** The gap a document stands at, by `journalGapAnchor`. */
   readonly gapAt: ReadonlyMap<string, string>;
   /** Shows a document and everything that refers to it. */
@@ -173,7 +174,7 @@ interface JournalColumnContext {
 }
 
 function journalColumns({
-  severalIssuers,
+  showIssuer,
   gapAt,
   onShowReference,
 }: JournalColumnContext): DataTableColumn<JournalDocument>[] {
@@ -193,7 +194,7 @@ function journalColumns({
         variant="link"
         size="compact"
         className="whitespace-nowrap"
-        tooltip="Zeigt dieses Dokument und alle Dokumente, die sich darauf beziehen."
+        tooltip="Sucht diese Nummer in allen Dokumenten. Andere Filter werden geleert."
         onClick={() => onShowReference(document.reference?.number ?? "")}
       >
         {journalReferenceWord(document.reference)}{" "}
@@ -271,7 +272,7 @@ function journalColumns({
       // The phone line under the number already names the recipient.
       stacked: "hidden",
     },
-    ...(severalIssuers
+    ...(showIssuer
       ? [
           {
             key: "issuer",
@@ -435,7 +436,7 @@ function NumberGaps({
         variant="surface"
         size="compact"
         aria-label={`Nur Nummernkreis ${name} zeigen`}
-        tooltip="Filtert die Liste auf diesen Nummernkreis, damit du die Stelle der Lücke siehst."
+        tooltip="Zeigt nur diesen Nummernkreis, nach Nummer sortiert. Suche und andere Filter werden geleert."
         onClick={() => {
           setJumpTo(journalRangeValue(range));
           onShowRange(range);
@@ -607,22 +608,17 @@ export default function TraegerInvoiceJournalPage() {
     }),
     [from, to, issuerKey, numberRange, documentType, run, search],
   );
-  // Every read stands in the trail of each run it shows: one read per
-  // opening and filter, none on focus, reconnect or from the dedupe window.
+  // Every read stands in the trail of each run it shows. The rows appear
+  // only once this opening's own read answered: a filter chosen before
+  // shows nothing from the cache that no new trail entry stands for.
   const {
     data: first,
     loading,
     error,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     traegerBillingKeys.invoiceJournal(JSON.stringify(filter)),
     () => fetchInvoiceJournal(filter, 1),
     "das Rechnungsausgangsbuch",
-    {
-      revalidateOnMount: true,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 0,
-    },
   );
   // What does not follow the filter (choices, gaps) outlives its change, so
   // a select never empties and a warning never blinks while an answer loads.
@@ -633,6 +629,10 @@ export default function TraegerInvoiceJournalPage() {
   const gaps = latest?.gaps ?? NO_GAPS;
   const issuers = useMemo(() => journalIssuers(numberRanges), [numberRanges]);
   const severalIssuers = issuers.length > 1;
+  // One issuer needs no column, unless a body issues in place of the Träger:
+  // then the book has to say who.
+  const showIssuer =
+    severalIssuers || issuers.some((issuer) => issuer.key !== "");
   const allCount = numberRanges.reduce(
     (sum, numberRange) => sum + numberRange.documentCount,
     0,
@@ -696,6 +696,7 @@ export default function TraegerInvoiceJournalPage() {
   const rangeOptions = numberRanges.filter(
     (numberRange) => issuerKey === null || numberRange.issuer.key === issuerKey,
   );
+  const runLabels = useMemo(() => journalRunChoiceLabels(runs), [runs]);
   const rangeValue = journalRangeValue(numberRange);
   const runValue = journalRunValue(run);
   const issuerValue = issuerKey === null ? "" : issuerKey || "traeger";
@@ -715,7 +716,6 @@ export default function TraegerInvoiceJournalPage() {
           value={range}
           onChange={setRange}
           presets={rangePresets(today)}
-          toMax={parseISODate(today)}
           fieldLabel="Ausgestellt im Zeitraum"
           className="w-full sm:w-auto"
           triggerClassName="w-full sm:w-auto"
@@ -773,12 +773,12 @@ export default function TraegerInvoiceJournalPage() {
       onChange: (value) => setRun(journalRunOf(value as string, runs)),
       options: [
         { value: "", label: "Alle Läufe" },
-        ...runs.flatMap((option) =>
+        ...runs.flatMap((option, i) =>
           option.kind
             ? [
                 {
                   value: journalRunValue({ kind: option.kind, id: option.id }),
-                  label: journalRunLabel(option),
+                  label: runLabels[i] ?? journalRunLabel(option),
                 },
               ]
             : [],
@@ -818,11 +818,12 @@ export default function TraegerInvoiceJournalPage() {
         year: option.year,
       }) === rangeValue,
   );
-  const shownRun = runs.find(
+  const shownRunAt = runs.findIndex(
     (option) =>
       option.kind !== undefined &&
       journalRunValue({ kind: option.kind, id: option.id }) === runValue,
   );
+  const shownRun = runLabels[shownRunAt];
   const shownIssuer = issuers.find((issuer) => issuer.key === issuerKey);
   const period = journalPeriodLabel(from, to);
   const activeFilters: ActiveFilter[] = [
@@ -859,7 +860,7 @@ export default function TraegerInvoiceJournalPage() {
       ? [
           {
             id: "run",
-            label: shownRun ? `Lauf ${journalRunLabel(shownRun)}` : "Lauf",
+            label: shownRun ? `Lauf ${shownRun}` : "Lauf",
             onRemove: () => setRun(null),
           },
         ]
@@ -887,6 +888,20 @@ export default function TraegerInvoiceJournalPage() {
     setSearch("");
     clearFilters();
   };
+  // A jump shows its target whatever was filtered before: the document a
+  // reference names with all that refers to it, or one whole number range.
+  const showReference = useCallback((number: string) => {
+    setRange(undefined);
+    setDocumentType("");
+    setNumberRange(null);
+    setRun(null);
+    setIssuerKey(null);
+    setSearch(number);
+  }, []);
+  const showRange = (next: JournalRangeFilter) => {
+    resetAll();
+    setNumberRange(next);
+  };
   const searching = search.trim() !== "";
   const filtering = activeFilters.length > 0;
   const filtered = searching || filtering;
@@ -905,8 +920,8 @@ export default function TraegerInvoiceJournalPage() {
     .join(", ");
   const gapAt = useMemo(() => gapAnchors(gaps), [gaps]);
   const columns = useMemo(
-    () => journalColumns({ severalIssuers, gapAt, onShowReference: setSearch }),
-    [severalIssuers, gapAt],
+    () => journalColumns({ showIssuer, gapAt, onShowReference: showReference }),
+    [showIssuer, gapAt, showReference],
   );
   const totalCount = first?.totalCount ?? 0;
 
@@ -942,10 +957,7 @@ export default function TraegerInvoiceJournalPage() {
         severalIssuers={severalIssuers}
         shownRange={rangeValue}
         checkedCount={filtered ? allCount : null}
-        onShowRange={(next) => {
-          setNumberRange(next);
-          setIssuerKey(null);
-        }}
+        onShowRange={showRange}
       />
       {/* Without a hit the way back comes first; its title says how many
           documents the book holds. */}

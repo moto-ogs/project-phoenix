@@ -61,6 +61,7 @@ const INVOICE: JournalDocument = {
     name: "Herbstferien 2026",
     month: null,
     year: 0,
+    issuedOn: null,
   },
   grossCents: 12000,
   taxCents: 0,
@@ -77,7 +78,14 @@ const CANCELLATION: JournalDocument = {
   issuer: TRAEGER,
   service: "care",
   numberYear: 2026,
-  run: { kind: "care", id: "9", name: "", month: "2026-09-01", year: 0 },
+  run: {
+    kind: "care",
+    id: "9",
+    name: "",
+    month: "2026-09-01",
+    year: 0,
+    issuedOn: null,
+  },
   grossCents: -4500,
   taxCents: 0,
   netCents: -4500,
@@ -218,7 +226,11 @@ describe("TraegerInvoiceJournalPage", () => {
     await waitFor(() =>
       expect(mockFetchJournal).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          range: { issuerKey: "", service: "holiday", year: 2026 },
+          range: {
+            issuerKey: "",
+            service: "holiday",
+            year: 2026,
+          },
         }),
         1,
       ),
@@ -234,6 +246,64 @@ describe("TraegerInvoiceJournalPage", () => {
     expect(
       screen.getByText("Lücke im Nummernkreis Ferienbetreuung 2026"),
     ).toBeInTheDocument();
+  });
+
+  it("names the issuer when a body issues in place of the Träger", async () => {
+    mockFetchJournal.mockResolvedValue(
+      journal({
+        documents: [{ ...INVOICE, issuer: STADT }],
+        numberRanges: [
+          {
+            issuer: STADT,
+            service: "holiday",
+            year: 2026,
+            documentCount: 1,
+            firstNumber: "ST-2026-0001",
+            lastNumber: "ST-2026-0001",
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    // The column follows the answer: the choices arrive with the rows.
+    expect(
+      await screen.findByRole("columnheader", { name: "Rechnungssteller" }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table")).getByText("Stadt Musterhausen"),
+    ).toBeInTheDocument();
+  });
+
+  it("clears search and filters when a reference is followed", async () => {
+    renderPage();
+    const table = await screen.findByRole("table");
+    await openFilter("Dokumentart");
+    fireEvent.click(await screen.findByRole("option", { name: "Storno" }));
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ documentType: "cancellation" }),
+        1,
+      ),
+    );
+
+    fireEvent.click(
+      await within(await screen.findByRole("table")).findByRole("button", {
+        name: "zu MB-2026-0001",
+      }),
+    );
+
+    // The original would stay hidden behind the filter on Stornos.
+    await waitFor(() =>
+      expect(mockFetchJournal).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          documentType: "",
+          search: "MB-2026-0001",
+        }),
+        1,
+      ),
+    );
+    expect(table).toBeDefined();
   });
 
   it("collects several gaps in one card", async () => {
@@ -309,10 +379,10 @@ describe("TraegerInvoiceJournalPage", () => {
     );
     renderPage();
 
-    const table = await screen.findByRole("table");
     expect(
-      within(table).getByRole("columnheader", { name: "Rechnungssteller" }),
+      await screen.findByRole("columnheader", { name: "Rechnungssteller" }),
     ).toBeInTheDocument();
+    const table = screen.getByRole("table");
     expect(within(table).getByText("Stadt Musterhausen")).toBeInTheDocument();
     await openFilter("Rechnungssteller");
     fireEvent.click(

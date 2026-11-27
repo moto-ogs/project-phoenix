@@ -93,6 +93,29 @@ export function journalRunLabel(run: JournalRun): string {
   }
 }
 
+/**
+ * The runs as the filter names them. Two runs of one period, month or year
+ * share a name; their issue day tells them apart, and the run number does
+ * where even that is the same.
+ */
+export function journalRunChoiceLabels(
+  runs: readonly JournalRun[],
+): readonly string[] {
+  const count = (labels: readonly string[], label: string) =>
+    labels.filter((other) => other === label).length;
+  const names = runs.map(journalRunLabel);
+  const dated = runs.map((run, i) => {
+    const name = names[i] ?? "";
+    return count(names, name) > 1 && run.issuedOn
+      ? `${name}, ausgestellt am ${formatDate(run.issuedOn)}`
+      : name;
+  });
+  return runs.map((run, i) => {
+    const label = dated[i] ?? "";
+    return count(dated, label) > 1 ? `${label} (Lauf ${run.id})` : label;
+  });
+}
+
 /** The page of a run; null for a kind of run this build does not know. */
 export function journalRunHref(run: JournalRun): string | null {
   const id = encodeURIComponent(run.id);

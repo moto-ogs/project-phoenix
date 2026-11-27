@@ -81,8 +81,9 @@ type journalBody struct {
 		LastNumber    string `json:"last_number"`
 	} `json:"number_ranges"`
 	Runs []struct {
-		Kind string `json:"kind"`
-		ID   wireID `json:"id"`
+		Kind     string  `json:"kind"`
+		ID       wireID  `json:"id"`
+		IssuedOn *string `json:"issued_on"`
 	} `json:"runs"`
 }
 
@@ -208,6 +209,7 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	assert.Equal(t, "FE-0001", journal.NumberRanges[0].FirstNumber)
 	assert.Equal(t, "FE-0007", journal.NumberRanges[0].LastNumber)
 	assert.Len(t, journal.Runs, 2)
+	require.NotNil(t, journal.Runs[0].IssuedOn, "a run of the filter names its issue day")
 
 	require.Len(t, journal.Gaps, 1, "the lost numbers now lie between two documents")
 	assert.EqualValues(t, 5, journal.Gaps[0].FirstMissing)
@@ -232,7 +234,10 @@ func TestInvoiceJournalListsEveryIssuedDocumentAcrossRunsByNumber(t *testing.T) 
 	issued := byNumber["FE-0001"].IssuedOn
 	assert.Equal(t, 5, invoiceJournal(t, f.traeger, billing, url.Values{"from": {issued}, "to": {issued}}).TotalCount)
 	assert.Zero(t, invoiceJournal(t, f.traeger, billing, url.Values{"to": {"2000-01-01"}}).TotalCount)
-	assert.Equal(t, 5, invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"traeger"}, "service": {"holiday"}, "year": {"0"}}).TotalCount)
+	ofRange := invoiceJournal(t, f.traeger, billing, url.Values{"issuer": {"traeger"}, "service": {"holiday"}, "year": {"0"}})
+	assert.Equal(t, 5, ofRange.TotalCount)
+	assert.Equal(t, []string{"FE-0007", "FE-0004", "FE-0003", "FE-0002", "FE-0001"}, journalNumbers(ofRange),
+		"a number range is read by number, the highest first")
 	otherRange := invoiceJournal(t, f.traeger, billing, url.Values{"service": {"care"}})
 	assert.Zero(t, otherRange.TotalCount)
 	assert.Len(t, otherRange.Gaps, 1, "a gap stays in view under every filter")

@@ -49,6 +49,11 @@ export interface JournalRun {
   readonly month: string | null;
   /** The year of a run of Jahresbescheide; 0 for the others. */
   readonly year: number;
+  /**
+   * The latest issue day of the run's documents, "YYYY-MM-DD", on a run of
+   * the filter; null on the run of a document.
+   */
+  readonly issuedOn: string | null;
 }
 
 export interface JournalReference {
@@ -183,6 +188,7 @@ function toRun(run: journalContract.JournalRun): JournalRun {
     name: run.name,
     month: run.month,
     year: run.year,
+    issuedOn: run.issued_on,
   };
 }
 

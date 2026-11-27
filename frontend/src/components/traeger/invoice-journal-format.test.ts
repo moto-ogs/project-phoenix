@@ -17,6 +17,7 @@ import {
   journalRangeOf,
   journalRangeValue,
   journalReferenceWord,
+  journalRunChoiceLabels,
   journalRunHref,
   journalRunLabel,
   journalRunOf,
@@ -110,8 +111,22 @@ describe("invoice journal format", () => {
     expect(journalRangeOf("", ranges)).toBeNull();
 
     const runs: JournalRun[] = [
-      { kind: "care", id: "4", name: "", month: "2026-09-01", year: 0 },
-      { kind: "holiday", id: "4", name: "Herbstferien", month: null, year: 0 },
+      {
+        kind: "care",
+        id: "4",
+        name: "",
+        month: "2026-09-01",
+        year: 0,
+        issuedOn: null,
+      },
+      {
+        kind: "holiday",
+        id: "4",
+        name: "Herbstferien",
+        month: null,
+        year: 0,
+        issuedOn: null,
+      },
     ];
     // Runs of different kinds may share an ID.
     expect(journalRunOf("holiday|4", runs)).toEqual({
@@ -128,6 +143,7 @@ describe("invoice journal format", () => {
       name: "",
       month: null,
       year: 2026,
+      issuedOn: null,
     };
     expect(journalRunLabel(notice)).toBe("Jahresbescheide 2026");
     expect(journalRunHref(notice)).toBe(
@@ -140,10 +156,40 @@ describe("invoice journal format", () => {
         name: "",
         month: "2026-09-01",
         year: 0,
+        issuedOn: null,
       }),
     ).toBe("Monatsbeiträge September 2026");
     // A kind of run this build does not know has no page to open.
     expect(journalRunHref({ ...notice, kind: undefined })).toBeNull();
+  });
+
+  it("tells two runs of one month apart in the filter", () => {
+    const run = (id: string, issuedOn: string): JournalRun => ({
+      kind: "care",
+      id,
+      name: "",
+      month: "2026-09-01",
+      year: 0,
+      issuedOn,
+    });
+    expect(
+      journalRunChoiceLabels([
+        run("1", "2026-09-02"),
+        run("2", "2026-09-20"),
+        { ...run("3", "2026-10-02"), month: "2026-10-01" },
+      ]),
+    ).toEqual([
+      "Monatsbeiträge September 2026, ausgestellt am 02.09.2026",
+      "Monatsbeiträge September 2026, ausgestellt am 20.09.2026",
+      "Monatsbeiträge Oktober 2026",
+    ]);
+    // Issued on the same day, the run number tells them apart.
+    expect(
+      journalRunChoiceLabels([run("1", "2026-09-02"), run("2", "2026-09-02")]),
+    ).toEqual([
+      "Monatsbeiträge September 2026, ausgestellt am 02.09.2026 (Lauf 1)",
+      "Monatsbeiträge September 2026, ausgestellt am 02.09.2026 (Lauf 2)",
+    ]);
   });
 
   it("lists the Träger first among the issuers", () => {

@@ -25,7 +25,7 @@ export function traegerInvoiceJournalTopic(): HelpTopic {
         steps: [
           "Wähle `Abrechnungsläufe` und dann den Reiter `Rechnungsausgangsbuch`.",
           "Pro Dokument steht eine Zeile mit Nummer, Datum der Ausstellung, Dokumentart, Empfänger, Lauf und den Beträgen. Das neueste Dokument steht oben.",
-          "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört. Wähle diese Nummer. Die Liste zeigt die Rechnung und alles, was sich auf sie bezieht.",
+          "Neben einem Storno oder einer Gutschrift steht die Nummer der Rechnung, zu der es gehört. Wähle diese Nummer. moto sucht sie in allen Dokumenten und leert dabei die anderen Filter.",
           "Wähle den Namen in der Spalte `Lauf`. Du kommst zum Lauf mit seinen Schreiben.",
           "Über der Liste stehen die Zahl der Dokumente und die Summen netto, Steuer und brutto. Stornos und Gutschriften sind abgezogen.",
         ],
@@ -48,7 +48,7 @@ export function traegerInvoiceJournalTopic(): HelpTopic {
         steps: [
           "Fehlt eine Nummer, steht über der Liste eine Warnung. Sie nennt den Nummernkreis und die Nummern, die fehlen.",
           "In der Liste steht die Warnung auch am Dokument neben der Lücke, zum Beispiel `Lücke: 2 Nummern`.",
-          "Wähle `Nur diesen Nummernkreis zeigen`. Die Liste zeigt nur die Dokumente dieses Nummernkreises.",
+          "Wähle `Nur diesen Nummernkreis zeigen`. Die Liste zeigt nur diesen Nummernkreis, nach Nummer sortiert. Suche und andere Filter leert moto dabei.",
           "Wende dich an das moto-Team und nenne die Nummern. Wir klären die Ursache mit dir.",
         ],
       },
