@@ -9,10 +9,7 @@ import {
   describeCelebration,
 } from "~/components/dashboard/birthday-list";
 import { useBirthdayWeek } from "~/components/home/birthdays-block";
-import {
-  BlockRowParts,
-  blockStaffShort,
-} from "~/components/timetable/block-row-parts";
+import { blockStaffShort } from "~/components/timetable/block-row-parts";
 import {
   BlockState,
   blockAheadLabel,
@@ -279,9 +276,8 @@ function MyDayRow({
   const room =
     block.roomName ??
     (isDuty && block.roomId === "0" ? null : `Raum ${block.roomId}`);
-  // Eine Angabenzeile, am Telefon nie mehr als eine Zeile: Raum, Kinder,
-  // Gruppe, Personal kurz („Anna Müller +1“). Gekürzt wird hinten, also
-  // zuerst das Personal (das bist meist du) und die Gruppe; alle Namen
+  // Die Angabenzeile: Raum, Kinder, Gruppe, Personal kurz („Anna M. +1“).
+  // Reicht eine Zeile nicht, bricht sie zwischen den Teilen um; alle Namen
   // samt Vertretung stehen im Tagesplan, wohin die Zeile führt.
   const parts = cancelled
     ? [block.cancelReason ? `Fällt aus · ${block.cancelReason}` : "Fällt aus"]
@@ -369,14 +365,13 @@ function MyDayRow({
           </span>
         }
         subtitle={
+          // Erreichbarkeit (#8070): Die Angaben brechen zwischen den Teilen
+          // um, statt dass Gruppe und Personal still entfallen, wenn die
+          // Zeile nicht reicht (der Desktop zeigt sie in der Zeile).
           parts.length > 0 ? (
-            <BlockRowParts
-              parts={parts.map((text, index) => ({
-                key: String(index),
-                text,
-                danger: cancelled,
-              }))}
-            />
+            <span className={cn("block", cancelled && "text-moto-red-strong")}>
+              <NoOrphanParts parts={parts} />
+            </span>
           ) : undefined
         }
         action={

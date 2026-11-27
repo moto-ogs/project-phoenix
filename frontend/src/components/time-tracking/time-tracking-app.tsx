@@ -725,6 +725,13 @@ export interface AppDayListProps {
   ) => void;
   /** Kopf der Karte: die Wahl von Woche oder Monat. */
   readonly header?: ReactNode;
+  /**
+   * „Mein Dienstplan“ als letzte Zeile der Karte (Erreichbarkeit, #8070):
+   * Der Desktop zeigt den Knopf sichtbar in der Kopfkarte; am Telefon stand
+   * er nur im „…“. Die Tage nennen ihren Plan, der Weg zum ganzen Plan
+   * steht darunter.
+   */
+  readonly dienstplanHref?: string;
 }
 
 /**
@@ -744,6 +751,7 @@ export function AppDayList({
   closingDays,
   onEdit,
   header,
+  dienstplanHref,
 }: AppDayListProps) {
   const todayKey = toISODate(today);
   const weeks = useMemo(() => {
@@ -814,7 +822,21 @@ export function AppDayList({
       {header ? (
         <div className="border-b border-gray-100 py-1">{header}</div>
       ) : null}
-      {weeks.map(({ week, days }) => {
+      {weeks.map(({ week, days }, weekIndex) => {
+        const dienstplanRow =
+          dienstplanHref && weekIndex === weeks.length - 1 ? (
+            <CollectionRow
+              key="dienstplan"
+              title="Mein Dienstplan"
+              meta={
+                <ChevronRight
+                  className="h-4 w-4 shrink-0 text-gray-500"
+                  aria-hidden="true"
+                />
+              }
+              href={dienstplanHref}
+            />
+          ) : null;
         const ist = days.reduce(
           (sum, d) => sum + (d.projection?.actualMinutes ?? 0),
           0,
@@ -863,6 +885,7 @@ export function AppDayList({
               }
             >
               {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
+              {dienstplanRow}
             </CollectionGroup>
           );
         }
@@ -886,6 +909,7 @@ export function AppDayList({
             }
           >
             {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
+            {dienstplanRow}
           </CollectionGroup>
         );
       })}
