@@ -181,6 +181,9 @@ export const traegerKeys = {
   // Schließtage und Feiertage eines Jahres (#4702), keine Personendaten.
   closingDays: (from: string, to: string) =>
     `traeger-closing-days-${from}-${to}`,
+  // Geänderte Öffnungszeiten eines Jahres (#8202), keine Personendaten.
+  openingChanges: (from: string, to: string) =>
+    `traeger-opening-changes-${from}-${to}`,
   // Offene Hinweise an Eltern zu Schließtagen in Ferienwochen (#6434):
   // Wochen und Zahlen, keine Namen.
   holidayClosures: () => "traeger-holiday-closures-pending",

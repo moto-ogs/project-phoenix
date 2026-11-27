@@ -18,6 +18,8 @@ export interface OpeningChange {
   readonly closesAt: string;
   readonly reason: string;
   readonly version: string;
+  /** Planned by the school's Träger (#8202): the school reads, never changes it. */
+  readonly fromTraeger: boolean;
 }
 
 /** What the form sends for a new day. */
@@ -38,6 +40,7 @@ function mapOpeningChange(raw: contract.OpeningChangeResponse): OpeningChange {
     closesAt: raw.closes_at,
     reason: raw.reason,
     version: raw.version,
+    fromTraeger: raw.traeger,
   };
 }
 

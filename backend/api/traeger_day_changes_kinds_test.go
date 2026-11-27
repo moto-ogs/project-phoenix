@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -16,11 +17,11 @@ import (
 )
 
 // "Heute anders" of the Träger-Portal shows the changed opening hours, the
-// cancelled lunch and the closed rooms of each school (#8146): each kind on
-// its own field, without the school's reason and without a room name, a
-// school without a change missing, a school of another Träger never shown,
-// the right "Übersicht sehen" required, and the same five statements for any
-// number of schools.
+// cancelled lunch and the closed rooms of each school (#8146, #8202): each
+// kind on its own field, without the school's reason and without a room
+// name, a school without a change missing, a school of another Träger never
+// shown, the right "Übersicht sehen" required, and the same five statements
+// for any number of schools.
 func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	t.Parallel()
 	now := dayChangesDay.BerlinMidnight().Add(10 * time.Hour)
@@ -36,7 +37,6 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	foreign := testpkg.CreateTestSchoolInOrganization(t, db, foreignOrganization, "OGS Fremd Arten")
 
 	yesterday, tomorrow := dayChangesDay.AddDays(-1), dayChangesDay.AddDays(1)
-	insertOpeningChange(t, db, shorter, yesterday, tomorrow, "08:00", "12:30", "Frau Muster ist krank")
 	insertMealCancellation(t, db, noLunch, dayChangesDay, "Caterer Muster liefert nicht")
 	insertRoomClosure(t, db, rooms, dayChangesDay, dayChangesDay, "Turnhalle Muster", "Wasserschaden bei Herrn Muster")
 	insertRoomClosure(t, db, rooms, yesterday, tomorrow, "Werkraum Muster", "Umbau")
@@ -47,7 +47,6 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	insertMealCancellation(t, db, quiet, tomorrow, "Morgen kein Essen")
 	insertRoomClosure(t, db, quiet, tomorrow, tomorrow, "Morgen zu", "Morgen")
 	// A school of another Träger with each kind of its own.
-	insertOpeningChange(t, db, foreign, dayChangesDay, dayChangesDay, "10:00", "14:00", "Fremd kurz")
 	insertMealCancellation(t, db, foreign, dayChangesDay, "Fremd kein Essen")
 	insertRoomClosure(t, db, foreign, dayChangesDay, dayChangesDay, "Fremder Raum", "Fremd zu")
 
@@ -55,10 +54,20 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, db, organization, office.ID, identityaccess.TraegerRoleAdministration)
 	code, answer := traegerSignIn(t, router, office.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
+	saved := traegerJSON(t, router, answer.AccessToken, http.MethodPost, "/traeger/opening-changes/", map[string]any{
+		"start_date": yesterday.String(), "end_date": tomorrow.String(), "opens_at": "08:00", "closes_at": "12:30", "reason": "Träger kurz",
+		"school_ids": []string{fmt.Sprint(shorter)},
+	})
+	require.Equal(t, http.StatusCreated, saved.Code, saved.Body.String())
 	foreignOffice := traegerAccount(t, db, password)
 	testpkg.CreateTestTraegerMember(t, db, foreignOrganization, foreignOffice.ID, identityaccess.TraegerRoleAdministration)
 	code, foreignAnswer := traegerSignIn(t, router, foreignOffice.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
+	saved = traegerJSON(t, router, foreignAnswer.AccessToken, http.MethodPost, "/traeger/opening-changes/", map[string]any{
+		"start_date": dayChangesDay.String(), "end_date": dayChangesDay.String(), "opens_at": "10:00", "closes_at": "14:00", "reason": "Fremd kurz",
+		"school_ids": []string{fmt.Sprint(foreign)},
+	})
+	require.Equal(t, http.StatusCreated, saved.Code, saved.Body.String())
 
 	read := func(token string, counter *testpkg.QueryCounter) (int, string, traegerview.SchoolsDayChanges) {
 		rec := traegerOccupancyRequest(t, router, "/traeger/schools/day-changes", token, counter)
@@ -71,7 +80,7 @@ func TestTraegerDayChangesShowOpeningHoursLunchAndClosedRooms(t *testing.T) {
 	require.Equal(t, http.StatusOK, status, body)
 	require.Len(t, got.Schools, 3, "only schools with a current change: "+body)
 	assert.Equal(t, []string{"OGS Kurzer Tag", "OGS Ohne Essen", "OGS Räume zu"}, []string{got.Schools[0].Name, got.Schools[1].Name, got.Schools[2].Name}, "ordered by name")
-	for _, absent := range []string{"Ruhig", "Gestern", "Morgen", "Fremd", "Muster", "Caterer", "Wasserschaden", "Umbau", "Turnhalle", "Werkraum"} {
+	for _, absent := range []string{"Ruhig", "Gestern", "Morgen", "Fremd", "Muster", "Caterer", "Träger kurz", "Wasserschaden", "Umbau", "Turnhalle", "Werkraum"} {
 		assert.NotContains(t, body, absent, "no quiet school, no other day, no other Träger, no reason and no room name")
 	}
 

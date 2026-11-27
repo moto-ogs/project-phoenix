@@ -77,12 +77,16 @@ type OpeningChangeResponse struct {
 	Reason    string        `json:"reason"`
 	// Version is the token an update sends back as expected_version.
 	Version string `json:"version"`
+	// Traeger marks a change the school's Träger planned for it (#8202):
+	// the school reads it and cannot change it here.
+	Traeger bool `json:"traeger"`
 }
 
 func openingChangeResponse(change openinghours.Change) OpeningChangeResponse {
 	return OpeningChangeResponse{
 		ID: ident.ID(change.ID), StartDate: change.StartDate, EndDate: change.EndDate,
 		OpensAt: change.OpensAt, ClosesAt: change.ClosesAt, Reason: change.Reason, Version: change.Version(),
+		Traeger: change.Traeger,
 	}
 }
 

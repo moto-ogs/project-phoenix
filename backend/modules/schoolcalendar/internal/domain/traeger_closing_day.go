@@ -37,8 +37,8 @@ type SchoolClosing struct {
 }
 
 // SchoolOpening is one opening change that changes the opening hours of a
-// school on a day (#8146). It carries no reason: the Träger sees the hours
-// only.
+// school on a day (#8146, #8202). It carries no reason: the Träger sees the
+// hours only.
 type SchoolOpening struct {
 	SchoolID  int64
 	StartDate calendar.Date

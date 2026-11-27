@@ -10,9 +10,9 @@ import (
 var _ traegercalendar.SchoolDays = (*TraegerClosingDays)(nil)
 
 // SchoolDaysOn reads the closing days (#7672) and the opening changes
-// (#8146) of the Träger's schools on day, grouped by school in the order the
-// store reads them. A school without either is missing; an empty school set
-// reads nothing.
+// (#8146, #8202) of the Träger's schools on day, grouped by school in the
+// order the store reads them. A school without either is missing; an empty
+// school set reads nothing.
 func (t *TraegerClosingDays) SchoolDaysOn(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) (map[int64]traegercalendar.SchoolDay, error) {
 	if organizationID <= 0 {
 		return nil, errTraegerRequired

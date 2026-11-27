@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "6efe4f26fad01ac748509628dabf87da4acec783883fabcc26016d57f008c71c",
+  "catalogSHA256": "015c6e1d56d8bb7e9a17f97384cf76b7498e50c7a583238ef4fad620ef8ec5a9",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -23578,6 +23578,82 @@
           "name": "end_date",
           "type": "date",
           "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "school_ids",
+          "type": "ARRAY",
+          "udt": "_int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "schedule.traeger_opening_changes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "opens_at",
+          "type": "time without time zone",
+          "udt": "time",
+          "nullable": false
+        },
+        {
+          "name": "closes_at",
+          "type": "time without time zone",
+          "udt": "time",
           "nullable": false
         },
         {
