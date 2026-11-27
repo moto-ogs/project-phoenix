@@ -1,5 +1,6 @@
 {{define "billing-letter.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Bestätigungsschreiben</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>

@@ -1,5 +1,6 @@
 {{define "billing-notice-correction-letter.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Gebührenbescheid hat sich geändert</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>

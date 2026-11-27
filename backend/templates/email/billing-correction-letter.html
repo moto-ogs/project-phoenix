@@ -1,5 +1,6 @@
 {{define "billing-correction-letter.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihre Rechnung hat sich geändert</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>

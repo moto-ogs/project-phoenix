@@ -1,5 +1,6 @@
 {{define "care-contract-reminder.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>{{if .Amendment}}Bitte unterschreiben Sie die geänderte Vertragsfassung{{else}}Ihr Betreuungsvertrag wartet auf Ihre Unterschrift{{end}}</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -19,7 +20,9 @@
         <a class="button" href="{{.SigningURL}}">{{if .Amendment}}Änderung ansehen und unterschreiben{{else}}Vertrag lesen und unterschreiben{{end}}</a>
     </div>
 
-    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. {{if .Amendment}}Haben Sie den bisherigen Vertrag auf Papier unterschrieben? Auch die neue Fassung braucht Ihre Unterschrift. Haben Sie diese Fassung schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{else}}Haben Sie schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{end}}</p>
+    <div class="highlight-box">
+        <p>Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. {{if .Amendment}}Haben Sie den bisherigen Vertrag auf Papier unterschrieben? Auch die neue Fassung braucht Ihre Unterschrift. Haben Sie diese Fassung schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{else}}Haben Sie schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{end}}</p>
+    </div>
 
     <p>Haben Sie die moto Eltern-App? Dann finden Sie den Vertrag auch dort unter „Dokumente“.</p>
 

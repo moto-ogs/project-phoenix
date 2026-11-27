@@ -4,10 +4,46 @@
     <h1>Entscheidung zu Ihrer Anmeldung</h1>
     <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
     <p>für alle Kinder Ihrer Anmeldung liegt nun eine Entscheidung vor.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}}</p>
-    {{if .ApprovedNames}}<div class="highlight-box"><strong>Bestätigt</strong><ul>{{range .ApprovedNames}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
-    {{if .WaitlistedNames}}<div class="highlight-box"><strong>Warteliste</strong><ul>{{range .WaitlistedNames}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
-    {{if .RejectedNames}}<div class="highlight-box"><strong>Abgelehnt</strong><ul>{{range .RejectedNames}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
-    {{if .WithdrawnNames}}<div class="highlight-box"><strong>Zurückgezogen</strong><ul>{{range .WithdrawnNames}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+    {{if .ApprovedNames}}
+    <div class="highlight-box">
+        <p class="decision-label" style="margin: 0 0 8px 0; font-size: 14px;"><strong class="decision-confirmed">Bestätigt</strong></p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+            {{range .ApprovedNames}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+    {{if .WaitlistedNames}}
+    <div class="highlight-box">
+        <p class="decision-label" style="margin: 0 0 8px 0; font-size: 14px;"><strong class="decision-waiting">Warteliste</strong></p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+            {{range .WaitlistedNames}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+    {{if .RejectedNames}}
+    <div class="highlight-box">
+        <p class="decision-label" style="margin: 0 0 8px 0; font-size: 14px;"><strong>Abgelehnt</strong></p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+            {{range .RejectedNames}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+    {{if .WithdrawnNames}}
+    <div class="highlight-box">
+        <p class="decision-label" style="margin: 0 0 8px 0; font-size: 14px;"><strong>Zurückgezogen</strong></p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+            {{range .WithdrawnNames}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
     <div class="button-wrapper"><a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a></div>
     {{template "copy-link-hint" .StatusURL}}
 {{template "footer" .}}

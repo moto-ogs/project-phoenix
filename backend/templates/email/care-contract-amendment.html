@@ -1,5 +1,6 @@
 {{define "care-contract-amendment.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Betreuungsvertrag ändert sich</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -16,7 +17,9 @@
         <a class="button" href="{{.SigningURL}}">Änderung ansehen und unterschreiben</a>
     </div>
 
-    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie die neue Fassung aus und geben Sie sie beim Träger ab.</p>
+    <div class="highlight-box">
+        <p>Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie die neue Fassung aus und geben Sie sie beim Träger ab.</p>
+    </div>
 
     <p>Haben Sie die moto Eltern-App? Dann finden Sie die neue Fassung auch dort unter „Dokumente“ und können sie dort unterschreiben.</p>
 

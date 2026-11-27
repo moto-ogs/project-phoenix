@@ -7,9 +7,9 @@
 
     <p>{{.IntroText}} Die Details finden Sie im Eltern-Portal.</p>
 
-    <div class="link-box" style="margin-top: 16px;">
-        <strong>{{.Title}}</strong><br>
-        {{.WhenText}}{{if .Location}}<br>Ort: {{.Location}}{{end}}
+    <div class="highlight-box appointment-details">
+        <p><strong>{{.Title}}</strong><br>
+        {{.WhenText}}{{if .Location}}<br>Ort: {{.Location}}{{end}}</p>
     </div>
 
     {{if .PortalURL}}

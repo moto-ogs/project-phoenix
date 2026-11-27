@@ -1,5 +1,6 @@
 {{define "holiday-closure-notice.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     {{if .ContainsPastDays}}
     <h1>Hinweis zu vergangenen Schließtagen</h1>
     {{else if and .Children .ReopenedChildren}}
@@ -66,7 +67,7 @@
     {{end}}
     {{end}}
 
-    <div class="highlight-box" style="margin-top: 24px;">
+    <div class="highlight-box{{if and .Children (not .ContainsPastDays)}} action-notice{{end}}" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Was heißt das für Sie?</strong></p>
         {{if and .Children (not .ContainsPastDays)}}<p style="margin: 8px 0 0 0; font-size: 14px;">Bitte planen Sie für die geschlossenen Tage eine andere Betreuung.</p>{{end}}
         <p style="margin: 8px 0 0 0; font-size: 14px;">Ihre Buchung bleibt. Sie müssen nichts ändern.</p>

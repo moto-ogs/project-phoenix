@@ -1,5 +1,6 @@
 {{define "care-contract-notice.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>{{if .Heading}}{{.Heading}}{{else if .Withdrawal}}Bestätigung Ihres Widerrufs{{else}}Bestätigung Ihrer Kündigung{{end}}</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>

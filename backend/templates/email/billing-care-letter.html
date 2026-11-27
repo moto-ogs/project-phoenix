@@ -1,5 +1,6 @@
 {{define "billing-care-letter.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihre Rechnung für die Betreuung</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>

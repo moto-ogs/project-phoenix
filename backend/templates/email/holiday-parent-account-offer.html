@@ -1,5 +1,6 @@
 {{define "holiday-parent-account-offer.html"}}
 {{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Elternkonto für die Ferienbetreuung</h1>
 
     <p>Guten Tag {{.GuardianName}},</p>
@@ -13,7 +14,9 @@
         <a class="button" href="{{.SetupURL}}">Elternkonto einrichten</a>
     </div>
 
-    <p style="font-size: 14px; color: #6b7280;">Der Link gilt 30 Tage.</p>
+    <div class="highlight-box">
+        <p>Der Link gilt 30 Tage.</p>
+    </div>
 
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Der Knopf geht nicht? Dann kopieren Sie diesen Link:</p>
     {{template "link-box" .SetupURL}}
