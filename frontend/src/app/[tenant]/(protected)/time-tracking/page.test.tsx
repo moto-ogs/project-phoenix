@@ -1,5 +1,6 @@
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { setViewportWidth } from "~/test/helpers/viewport";
+import { finishSheetClosing } from "~/test/helpers/sheet";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
@@ -493,6 +494,8 @@ vi.mock("lucide-react", () => ({
   ExternalLink: () => <span data-testid="external-link" />,
   // Info-Knopf am Seitentitel (#7565).
   Info: () => <span data-testid="info-icon" />,
+  // „…“ im App-Kopf unter 40rem (#8070).
+  MoreHorizontal: () => <span data-testid="more-horizontal" />,
   MoreVertical: () => <span data-testid="more-vertical" />,
   Pencil: () => <span data-testid="pencil-icon" />,
   Plus: () => <span data-testid="plus-icon" />,
@@ -1439,29 +1442,30 @@ describe("TimeTrackingPage", () => {
       expect(timeTrackingService.checkOut).not.toHaveBeenCalled();
     });
 
+    // Unter 40rem ersetzt die App die Desktop-Oberfläche (#8070): „Pause“
+    // in der Aktionsleiste öffnet das Blatt mit der Pausendauer, dessen
+    // Hauptknopf „Pause starten“ heißt. Den Desktop-Ablauf (Knopf „Pause
+    // starten“, Auswahl mit „Starten“) prüfen die Tests darunter.
     it("uses a bottom sheet for break duration on mobile", async () => {
       setViewportWidth(390);
       setupDefaultMocks({ currentSession: mockActiveSession });
       render(<TimeTrackingPage />);
-      fireEvent.click(screen.getByLabelText("Pause starten"));
+      fireEvent.click(screen.getByRole("button", { name: "Pause" }));
 
-      await waitFor(() => {
-        expect(
-          screen.getByRole("dialog", { name: "Pause stempeln" }),
-        ).toBeInTheDocument();
+      const sheet = await screen.findByRole("dialog", {
+        name: "Pause stempeln",
       });
-      expect(screen.getByText("30")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Starten" })).toBeEnabled();
+      expect(within(sheet).getByText("30")).toBeInTheDocument();
+      expect(
+        within(sheet).getByRole("button", { name: "Pause starten" }),
+      ).toBeEnabled();
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Pausendauer schließen" }),
+        within(sheet).getByRole("button", { name: "Blatt schließen" }),
       );
 
-      await waitFor(() => {
-        expect(
-          screen.queryByRole("dialog", { name: "Pause stempeln" }),
-        ).not.toBeInTheDocument();
-      });
+      await finishSheetClosing("Pause stempeln");
+      expect(timeTrackingService.startBreak).not.toHaveBeenCalled();
     });
 
     it("starts a default 30 minute break", async () => {
@@ -2681,14 +2685,21 @@ describe("TimeTrackingPage", () => {
       setViewportWidth(375);
     });
 
+    // Unter 40rem ersetzt die App-Stempeluhr (Zustand, Einstempeln in der
+    // Aktionsleiste) die Karte „Stempeluhr“ (#8070); die Karte prüfen die
+    // Tests bei Desktop-Breite.
     it("renders mobile card layout on small screens", () => {
       setupDefaultMocks();
       render(<TimeTrackingPage />);
-      // Fire resize event to trigger mobile detection
-      window.dispatchEvent(new Event("resize"));
-      // Mobile should not show table headers
-      // The page should still render
-      expect(screen.getByText("Stempeluhr")).toBeInTheDocument();
+      const head = document.querySelector("header");
+      expect(head).toHaveAttribute("data-app-page-head");
+      const clock = document.querySelector<HTMLElement>("[data-app-clock]");
+      expect(clock).not.toBeNull();
+      expect(
+        within(clock as HTMLElement).getByRole("status"),
+      ).toHaveTextContent("Nicht eingestempelt");
+      expect(screen.getByRole("button", { name: "Einstempeln" })).toBeEnabled();
+      expect(screen.queryByText("Stempeluhr")).not.toBeInTheDocument();
     });
   });
 
@@ -5231,10 +5242,25 @@ describe("TimeTrackingPage", () => {
 
       setupDefaultMocks({ history: [pastSession] });
       render(<TimeTrackingPage />);
-      window.dispatchEvent(new Event("resize"));
 
-      // Should show Woche gesamt
-      expect(screen.getByText("Woche gesamt")).toBeInTheDocument();
+      // Unter 40rem nennt die App die Summe der Woche über den Tagen statt
+      // in der Zeile „Woche gesamt“ der Desktop-Tabelle (#8070), und der
+      // Tag trägt seine Zeiten.
+      expect(
+        screen.getByText(
+          (_, element) =>
+            element?.tagName === "SPAN" &&
+            element.textContent === "8h gearbeitet" &&
+            element.children.length === 1,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(
+            `^\\S+ ${Number(yISO.slice(8))}\\.: 08:00–16:30 bearbeiten$`,
+          ),
+        }),
+      ).toBeInTheDocument();
     });
 
     it("shows absence-only card in mobile view", () => {
