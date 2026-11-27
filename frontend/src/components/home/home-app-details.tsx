@@ -214,23 +214,24 @@ function DayChangeRows({
   // Vorschau: jede Zeile höchstens zwei Zeilen hoch. Der Satz hat Vorrang;
   // die Angabe (Zeitraum, Gruppe) folgt grau dahinter und wird zuerst
   // gekürzt. Der ganze Text steht unter „Alle anzeigen“ und am Ziel.
-  const text = (title: string, subtitle?: string | null) =>
+  // Vorschau wie die Hinweis-Zeile darüber: Satz als Titel, darunter für
+  // wen er gilt („Betrifft dich“ / „Schule“) und die Angabe. So hat jede
+  // Zeile zwei Zeilen, statt einmal Satz allein und einmal Satz mit
+  // Unterzeile (#8070 R21).
+  const text = (
+    title: string,
+    subtitle: string | null | undefined,
+    entry: DayChange,
+  ) =>
     brief
       ? {
-          title: (
-            <span className="line-clamp-2">
-              {title}
-              {subtitle ? (
-                <>
-                  {" "}
-                  <span className="text-sm font-normal text-gray-500">
-                    {subtitle}
-                  </span>
-                </>
-              ) : null}
-            </span>
-          ),
-          subtitle: undefined,
+          title,
+          subtitle: [
+            entry.section === "you" ? "Betrifft dich" : "Schule",
+            subtitle,
+          ]
+            .filter(Boolean)
+            .join(" · "),
         }
       : { title, subtitle: subtitle ?? undefined };
   const rows: ReactNode[] = [];
@@ -240,8 +241,11 @@ function DayChangeRows({
         <CollectionRow
           key={key}
           wrap
-          {...text(entry.notice.title)}
-          subtitle={brief ? undefined : entry.notice.body || undefined}
+          {...text(
+            entry.notice.title,
+            brief ? null : entry.notice.body || null,
+            entry,
+          )}
           meta={
             entry.notice.important ? (
               <StatusBadge label="Wichtig" tone="warning" size="xs" />
@@ -264,7 +268,7 @@ function DayChangeRows({
           <CollectionRow
             key={`${key}:${item.kind}:${item.child.studentId}`}
             wrap
-            {...text(childText, where)}
+            {...text(childText, where, entry)}
             {...(href ? { href: tenantPath(href) } : {})}
           />,
         );
@@ -282,7 +286,7 @@ function DayChangeRows({
       <CollectionRow
         key={key}
         wrap
-        {...text(dayChangeText(entry) ?? "", dayChangeSpan(entry))}
+        {...text(dayChangeText(entry) ?? "", dayChangeSpan(entry), entry)}
         {...(href ? { href } : {})}
       />,
     );

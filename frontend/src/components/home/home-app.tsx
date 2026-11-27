@@ -448,11 +448,11 @@ export function HomeApp({
     loadError,
     showTodo: has("section.day_changes") || has("section.open_requests"),
     onChanged: retry,
-    // Am Telefon zwei Zeilen statt vier (Hinweise zählen mit), auf jedem
-    // Telefon gleich (die Kürzung hängt nicht an der Bildhöhe): „Mein Tag“
-    // steht am SE mit drei Blöcken im ersten Bild; alle Änderungen stehen
-    // hinter „Alle anzeigen · N weitere“.
-    previewLimit: layout === "phone" ? 2 : undefined,
+    // Am Telefon eine Zeile statt vier (Hinweise zur Kenntnisnahme stehen
+    // immer), auf jedem Telefon gleich (die Kürzung hängt nicht an der
+    // Bildhöhe): „Mein Tag“ steht am SE mit mehr Blöcken im ersten Bild;
+    // alle Änderungen stehen hinter „Alle anzeigen · N weitere“.
+    previewLimit: layout === "phone" ? 1 : undefined,
   };
 
   if (isSplit) {

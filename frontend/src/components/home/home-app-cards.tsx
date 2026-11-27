@@ -13,7 +13,11 @@ import {
   BlockRowParts,
   blockStaffShort,
 } from "~/components/timetable/block-row-parts";
-import { BlockState, blockStateLabel } from "~/components/home/day-flow-block";
+import {
+  BlockState,
+  blockAheadLabel,
+  blockStateLabel,
+} from "~/components/home/day-flow-block";
 import {
   LinkRowMeta,
   upcomingFirst,
@@ -168,6 +172,15 @@ export function MyDayCard() {
             block={block}
             now={now}
             nowLine={index === nowIndex}
+            // „in 2 Std 5 Min“ nur am nächsten Block (wie „Als Nächstes“ im
+            // Tagesplan): an jedem Block brach das Abzeichen lange Titel um.
+            next={
+              block.status === "planned" &&
+              block.startTime > now &&
+              shown.find(
+                (other) => other.status === "planned" && other.startTime > now,
+              )?.startTime === block.startTime
+            }
             dayPlanHref={dayPlanHref}
             tenantPath={tenantPath}
             busy={busyId === block.id}
@@ -234,7 +247,10 @@ function MyDayRow({
   busy,
   onStart,
   startInBar = false,
+  next = false,
 }: {
+  /** Der nächste Block, der noch beginnt: nur er nennt „in …“. */
+  readonly next?: boolean;
   readonly block: PlannedTimetableInstance;
   readonly now: string;
   readonly nowLine: boolean;
@@ -283,18 +299,25 @@ function MyDayRow({
           "Vorbei"
         : null;
   const tone = over ? "text-gray-600" : "text-gray-900";
-  const stateText = startable
-    ? null
-    : block.isAbsent
-      ? "Du fehlst"
-      : (overLabel ?? blockStateLabel(block, now));
-  const state = startable ? null : block.isAbsent ? (
-    <StatusBadge tone="gray" label="Du fehlst" size="xs" />
-  ) : overLabel ? (
-    <StatusBadge tone="gray" label={overLabel} size="xs" />
-  ) : (
-    <BlockState block={block} now={now} size="xs" />
-  );
+  // Spätere Blöcke ohne „in …“: Beginn und Ende stehen links.
+  const hiddenAhead =
+    startable || block.isAbsent || overLabel || cancelled || next
+      ? null
+      : blockAheadLabel(block, now);
+  const stateText =
+    startable || hiddenAhead
+      ? null
+      : block.isAbsent
+        ? "Du fehlst"
+        : (overLabel ?? blockStateLabel(block, now));
+  const state =
+    startable || hiddenAhead ? null : block.isAbsent ? (
+      <StatusBadge tone="gray" label="Du fehlst" size="xs" />
+    ) : overLabel ? (
+      <StatusBadge tone="gray" label={overLabel} size="xs" />
+    ) : (
+      <BlockState block={block} now={now} size="xs" />
+    );
   return (
     <>
       {nowLine ? <NowLineRow now={now} /> : null}
@@ -304,10 +327,6 @@ function MyDayRow({
         aria-label={`${block.title}${block.isSubstitute ? " Vertretung" : ""}${stateText ? ` ${stateText}` : ""}, ${hasOpenEnd(block) ? `seit ${block.startTime}` : `${block.startTime} bis ${block.endTime}`}: ${running ? "Kinderliste öffnen" : "unter Heute öffnen"}`}
         leading={
           <span className="w-11 self-start text-sm leading-5 tabular-nums">
-            {hasOpenEnd(block) ? (
-              // Ein spontaner Block hat noch kein Ende: „seit 00:03“.
-              <span className="block text-gray-600">seit</span>
-            ) : null}
             <span
               className={cn(
                 "block font-semibold",
@@ -316,9 +335,11 @@ function MyDayRow({
             >
               {block.startTime}
             </span>
-            {hasOpenEnd(block) ? null : (
-              <span className="block text-gray-600">{block.endTime}</span>
-            )}
+            {/* Beginn und Ende wie jede Zeile; ein spontaner Block hat noch
+                kein Ende („offen“). */}
+            <span className="block text-gray-600">
+              {hasOpenEnd(block) ? "offen" : block.endTime}
+            </span>
           </span>
         }
         title={
@@ -433,10 +454,18 @@ export function MyGroupCard() {
       : group.name
     : null;
 
+  // Die Notiz ist der Grund der Ausnahme: sie bricht zwischen Klasse und
+  // Notiz in die nächste Zeile um, statt gekürzt zu werden
+  // („Sporttermin, Freit…“).
   const subtitle = (
     schoolClass: string | null | undefined,
     note: string | null | undefined,
-  ) => [schoolClass, note].filter(Boolean).join(" · ") || undefined;
+  ) => {
+    const parts = [schoolClass, note].filter((part): part is string =>
+      Boolean(part),
+    );
+    return parts.length > 0 ? <NoOrphanParts parts={parts} /> : undefined;
+  };
 
   let rows: ReactNode;
   if (loadError) {
@@ -467,6 +496,7 @@ export function MyGroupCard() {
             return (
               <CollectionRow
                 key={`missing-${student.id}`}
+                wrap
                 title={`${student.first_name} ${student.last_name}`}
                 subtitle={subtitle(student.school_class, note)}
                 meta={<TimeMeta time={expected} label="Fehlt noch" danger />}
@@ -479,6 +509,7 @@ export function MyGroupCard() {
             return (
               <CollectionRow
                 key={`pickup-${student.id}`}
+                wrap
                 title={`${student.first_name} ${student.last_name}`}
                 subtitle={subtitle(student.school_class, note)}
                 meta={
@@ -505,6 +536,7 @@ export function MyGroupCard() {
           return (
             <CollectionRow
               key={`away-${student.id}`}
+              wrap
               title={`${student.first_name} ${student.last_name}`}
               subtitle={subtitle(
                 student.school_class,

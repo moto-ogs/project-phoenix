@@ -239,6 +239,19 @@ function blockStateBadge(
   };
 }
 
+/**
+ * Der Abstand bis zum Beginn („in 2 Std 5 Min“), sonst `null`. Am Telefon
+ * trägt ihn nur der nächste Block; an jedem Block brach das Abzeichen lange
+ * Titel auf eine eigene Zeile um.
+ */
+export function blockAheadLabel(
+  block: PlannedTimetableInstance,
+  now: string,
+): string | null {
+  const badge = blockStateBadge(block, now);
+  return badge?.tone === "blue" ? badge.label : null;
+}
+
 export function BlockState({
   block,
   now,
