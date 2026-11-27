@@ -70,7 +70,7 @@ var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
 	"analytics/core_actions_middleware.go:CoreActionMiddleware":                                               18,
 	"api/active_test_helpers.go:buildActiveTestModule":                                                        30, // Lowered by #7808: the cross-tenant visitor read left the presence wiring.
-	"api/auth_test_helpers.go:NewAuthTestModule":                                                              25,
+	"api/auth_test_helpers.go:NewAuthTestModule":                                                              24,
 	"api/enrollment_booking_repository_test_helpers.go:(EnrollmentBookingFixture).InsertRequestChildOffering": 18,
 	"api/enrollment_booking_repository_test_helpers.go:(EnrollmentBookingFixture).bookingCommandValues":       22,
 	"api/student_test_helpers.go:newStudentTestModule":                                                        32,

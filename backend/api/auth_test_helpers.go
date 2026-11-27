@@ -249,20 +249,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	mailRenderer := &owners.TransactionalMailRenderer{Logger: logger}
-	mailProvider := &deliveryCompose.MailPushProvider{
-		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
-			owners.TransactionalMailKind: mailRenderer,
-		}), Mailer: mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: deliveryModule.Runtime.Now,
-	}
-	var durable owners.DurableMailOutbox = fixtureMailOutbox{
-		outbox:   owners.OutboxEnqueuer{Runtime: deliveryModule.Runtime},
-		runtime:  deliveryModule.Runtime,
-		provider: mailProvider,
-		logger:   logger,
-	}
-	if mail.outbox != nil {
-		durable = mail.outbox
-	}
+	durable := authTestTransactionalMail(deliveryModule.Runtime, mailRenderer, mail, logger)
 	identity := owners.TenantMailIdentity(organizations, settings.Settings, owners.RootEnvironment{Logger: logger})
 	sessionRepos := owners.SessionRepositoriesOf(r, organizations, audits.AuthEvent, deliveryCompose.NewPushSubscriptionRepository(db.Pool()))
 	if settingsOverrides.staffCreateErr != nil {
@@ -362,6 +349,24 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		SessionSigning: AuthTestSessionSigning{Secret: cfg.JWTSecret, AccessExpiry: cfg.JWTExpiry, RefreshExpiry: cfg.JWTRefreshExpiry},
 		Invitation:     invitation, GuardianInvitation: guardian,
 	}, nil
+}
+
+func authTestTransactionalMail(runtime *deliveryCompose.Runtime, renderer *owners.TransactionalMailRenderer, mail authTestMail, logger *slog.Logger) owners.DurableMailOutbox {
+	if mail.outbox != nil {
+		return mail.outbox
+	}
+	provider := &deliveryCompose.MailPushProvider{
+		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
+			owners.TransactionalMailKind: renderer,
+		}),
+		Mailer: mail.mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: runtime.Now,
+	}
+	return fixtureMailOutbox{
+		outbox:   owners.OutboxEnqueuer{Runtime: runtime},
+		runtime:  runtime,
+		provider: provider,
+		logger:   logger,
+	}
 }
 
 // IdentityAccessForTests composes the Identity & Access module over the
