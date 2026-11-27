@@ -119,6 +119,7 @@ const BACKEND_DETAIL = {
   criteria: null,
   version: "registration-read",
   legal_withdrawals: {},
+  included_in_fee: false,
 } satisfies sharedContract.HolidayRegistrationDetail;
 
 describe("traeger-holiday-registrations-api", () => {

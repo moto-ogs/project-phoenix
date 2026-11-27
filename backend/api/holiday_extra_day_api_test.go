@@ -370,3 +370,31 @@ func TestExtraCareDayOnAStatutoryHolidayIsRefused(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", extraDay(extraDayBridge, true, 0, office.schools[0]))
 	assert.Equal(t, http.StatusCreated, rec.Code, "the bridge day after the holiday can be planned: %s", rec.Body.String())
 }
+
+// A child of another school booked for an extra day joins the group the
+// hosting school picks and is planned for exactly that one day with the care
+// time of the day: group, check-in and the day's lists read it from there.
+func TestExtraCareDayPlansAGuestForItsOneDay(t *testing.T) {
+	t.Parallel()
+	f := newHolidayGuestFixture(t, "Träger Zusatztag Gast")
+	day := f.offer.Weeks[0]
+	// Turn the still unconfirmed fixture week into one extra day, Monday 6
+	// July 2099.
+	_, err := f.db.ExecContext(t.Context(), `UPDATE enrollment.holiday_periods SET kind = 'extra_day'
+		WHERE organization_id = ? AND id = ?`, f.office.organization, f.periodID(t))
+	require.NoError(t, err)
+	_, err = f.db.ExecContext(t.Context(), `UPDATE enrollment.holiday_period_weeks SET starts_on = '2099-07-06', ends_on = '2099-07-06'
+		WHERE organization_id = ? AND id = ?`, f.office.organization, day.ID)
+	require.NoError(t, err)
+	f.confirm(t, f.siblings, "confirm")
+	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
+	rec := f.assign(t, lead, int64(day.ID), f.group)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var studentID int64
+	require.NoError(t, f.db.NewRaw(`SELECT student_id FROM enrollment.holiday_guests
+		WHERE tenant_id = ? AND holiday_period_week_id = ?`, f.nord, day.ID).Scan(t.Context(), &studentID))
+	assert.Equal(t, []string{"2099-07-06 08:00-13:00"}, f.careDays(t, studentID), "the guest is planned for the one day")
+	f.reconcile(t)
+	assert.Equal(t, []string{"2099-07-06 08:00-13:00"}, f.careDays(t, studentID), "the hourly reconciliation keeps the one day")
+}
