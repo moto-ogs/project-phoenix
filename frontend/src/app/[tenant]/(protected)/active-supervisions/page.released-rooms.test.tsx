@@ -527,6 +527,24 @@ function pageHead(): HTMLElement {
   return head;
 }
 
+/**
+ * Unter 1024 px gibt es zwei Oberflächen mit Reitern (#8070): ab 40rem die
+ * Desktop-Oberfläche (iPad hoch), darunter die App. Beide nennen die
+ * Belegung im Seitenkopf, die App knapper („1 da“ statt „1 Kind“).
+ */
+const HEAD_SURFACES = [
+  { surface: "Desktop-Oberfläche unter lg", width: 820, app: false },
+  { surface: "App unter 40rem", width: 500, app: true },
+] as const;
+
+/** Der Kopf der erwarteten Oberfläche, nicht nur irgendein `<header>`. */
+function surfaceHead(app: boolean): HTMLElement {
+  const head = pageHead();
+  if (app) expect(head).toHaveAttribute("data-app-page-head");
+  else expect(head).not.toHaveAttribute("data-app-page-head");
+  return head;
+}
+
 describe("Action button click handlers", () => {
   const mockMutate = vi.fn();
 
@@ -1275,109 +1293,118 @@ describe("open-room tab onTabChange callback", () => {
     expect(screen.queryByTestId("timetable-roster")).not.toBeInTheDocument();
   });
 
-  it("keeps the caller's own block roster when other offerings share the released room", async () => {
-    // Several timetable blocks run side by side in the released Schulhof. The
-    // block the caller supervises keeps its check-in roster, and the other
-    // block stays on the page as a collapsed section (#3281). No ?session=
-    // choice is needed for that any more (#3272 relied on one).
-    navigationMockState.roomParam = "sporthalle";
-    navigationMockState.sessionParam = null;
-    const dashboardData = {
-      supervisedGroups: [
-        {
-          id: "active-fussball",
-          name: "Fußball",
-          room_id: "sporthalle",
-          room: { id: "sporthalle", name: "Sporthalle" },
-          isCurrentUserSupervising: true,
-        },
-        {
-          id: "active-tanzen",
-          name: "Tanzen",
-          room_id: "sporthalle",
-          room: { id: "sporthalle", name: "Sporthalle" },
-          isCurrentUserSupervising: false,
-        },
-      ],
-      unclaimedGroups: [],
-      currentStaff: { id: "staff-1" },
-      educationalGroups: [],
-      firstRoomVisits: [],
-      firstRoomId: "active-fussball",
-      selectedGroupId: "active-fussball",
-      capabilities: { webSpontaneousActivitiesEnabled: true },
-      schulhofStatus: null,
-      openRooms: [
-        {
-          roomId: "sporthalle",
-          name: "Sporthalle",
-          isUserSupervising: true,
-          activeGroupIds: ["active-fussball", "active-tanzen"],
-          studentCount: 1,
-          students: [
-            {
-              studentId: "student-tanzen",
-              studentName: "Theo Tanz",
-              schoolClass: "3b",
-              activeGroupId: "active-tanzen",
-              activityName: "Tanzen",
-              checkInTime: "2026-09-09T10:05:00.000Z",
-              isActive: true,
-            },
-          ],
-          sessions: [
-            blockSession("active-fussball", "Fußball", { own: true }),
-            blockSession("active-tanzen", "Tanzen", { studentCount: 1 }),
-          ],
-        },
-      ],
-    };
-
-    vi.mocked(useSWRAuth).mockImplementation(((key: unknown) =>
-      typeof key === "string" && key.startsWith("active-supervision-dashboard")
-        ? ({
-            data: dashboardData,
-            isLoading: false,
-            error: null,
-            mutate: mockMutate,
-            isValidating: false,
-          } as never)
-        : key === "timetable-roster-instance-active-fussball"
-          ? ({
-              data: {
-                instance: {
-                  id: "instance-active-fussball",
-                  activeGroupId: "active-fussball",
-                },
-                rows: [],
+  it.each(HEAD_SURFACES)(
+    "keeps the caller's own block roster when other offerings share the released room ($surface)",
+    async ({ width, app }) => {
+      setViewportWidth(width);
+      // Several timetable blocks run side by side in the released Schulhof. The
+      // block the caller supervises keeps its check-in roster, and the other
+      // block stays on the page as a collapsed section (#3281). No ?session=
+      // choice is needed for that any more (#3272 relied on one).
+      navigationMockState.roomParam = "sporthalle";
+      navigationMockState.sessionParam = null;
+      const dashboardData = {
+        supervisedGroups: [
+          {
+            id: "active-fussball",
+            name: "Fußball",
+            room_id: "sporthalle",
+            room: { id: "sporthalle", name: "Sporthalle" },
+            isCurrentUserSupervising: true,
+          },
+          {
+            id: "active-tanzen",
+            name: "Tanzen",
+            room_id: "sporthalle",
+            room: { id: "sporthalle", name: "Sporthalle" },
+            isCurrentUserSupervising: false,
+          },
+        ],
+        unclaimedGroups: [],
+        currentStaff: { id: "staff-1" },
+        educationalGroups: [],
+        firstRoomVisits: [],
+        firstRoomId: "active-fussball",
+        selectedGroupId: "active-fussball",
+        capabilities: { webSpontaneousActivitiesEnabled: true },
+        schulhofStatus: null,
+        openRooms: [
+          {
+            roomId: "sporthalle",
+            name: "Sporthalle",
+            isUserSupervising: true,
+            activeGroupIds: ["active-fussball", "active-tanzen"],
+            studentCount: 1,
+            students: [
+              {
+                studentId: "student-tanzen",
+                studentName: "Theo Tanz",
+                schoolClass: "3b",
+                activeGroupId: "active-tanzen",
+                activityName: "Tanzen",
+                checkInTime: "2026-09-09T10:05:00.000Z",
+                isActive: true,
               },
+            ],
+            sessions: [
+              blockSession("active-fussball", "Fußball", { own: true }),
+              blockSession("active-tanzen", "Tanzen", { studentCount: 1 }),
+            ],
+          },
+        ],
+      };
+
+      vi.mocked(useSWRAuth).mockImplementation(((key: unknown) =>
+        typeof key === "string" &&
+        key.startsWith("active-supervision-dashboard")
+          ? ({
+              data: dashboardData,
               isLoading: false,
               error: null,
               mutate: mockMutate,
               isValidating: false,
             } as never)
-          : ({
-              data: null,
-              isLoading: false,
-              error: null,
-              mutate: mockMutate,
-              isValidating: false,
-            } as never)) as never);
+          : key === "timetable-roster-instance-active-fussball"
+            ? ({
+                data: {
+                  instance: {
+                    id: "instance-active-fussball",
+                    activeGroupId: "active-fussball",
+                  },
+                  rows: [],
+                },
+                isLoading: false,
+                error: null,
+                mutate: mockMutate,
+                isValidating: false,
+              } as never)
+            : ({
+                data: null,
+                isLoading: false,
+                error: null,
+                mutate: mockMutate,
+                isValidating: false,
+              } as never)) as never);
 
-    render(<MeinRaumPage />);
+      render(<MeinRaumPage />);
 
-    expect(await screen.findByTestId("timetable-roster")).toHaveAttribute(
-      "data-instance-id",
-      "instance-active-fussball",
-    );
-    expect(screen.queryByText("Theo Tanz")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tanzen" })).toBeInTheDocument();
-    expect(
-      screen.getByText("13:00–14:00 Uhr · Du bist hier nicht eingeplant."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sporthalle" })).toBeVisible();
-    expect(within(pageHead()).getByText("1 Kind")).toBeVisible();
-  });
+      expect(await screen.findByTestId("timetable-roster")).toHaveAttribute(
+        "data-instance-id",
+        "instance-active-fussball",
+      );
+      expect(screen.queryByText("Theo Tanz")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Tanzen" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("13:00–14:00 Uhr · Du bist hier nicht eingeplant."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Sporthalle" })).toBeVisible();
+      expect(
+        within(surfaceHead(app)).getByText(app ? "1 da" : "1 Kind"),
+      ).toBeVisible();
+    },
+  );
 
   it("shows a released room the caller does not supervise", async () => {
     const dashboardData = {

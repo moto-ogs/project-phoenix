@@ -396,6 +396,24 @@ function pageHead(): HTMLElement {
   return head;
 }
 
+/**
+ * Unter 1024 px gibt es zwei Oberflächen mit Reitern (#8070): ab 40rem die
+ * Desktop-Oberfläche (iPad hoch), darunter die App. Beide nennen die
+ * Belegung im Seitenkopf, die App knapper („9 da“ statt „9 Kinder“).
+ */
+const HEAD_SURFACES = [
+  { surface: "Desktop-Oberfläche unter lg", width: 820, app: false },
+  { surface: "App unter 40rem", width: 500, app: true },
+] as const;
+
+/** Der Kopf der erwarteten Oberfläche, nicht nur irgendein `<header>`. */
+function surfaceHead(app: boolean): HTMLElement {
+  const head = pageHead();
+  if (app) expect(head).toHaveAttribute("data-app-page-head");
+  else expect(head).not.toHaveAttribute("data-app-page-head");
+  return head;
+}
+
 describe("MeinRaumPage (Active Supervisions) (1/5)", () => {
   const mockMutate = vi.fn();
 
@@ -4774,203 +4792,218 @@ describe("ID-based selection coverage: switchToRoom via tab click", () => {
     });
   });
 
-  it("merges parallel sessions of a released room into one entry", async () => {
-    const dashboardData = {
-      supervisedGroups: [
-        {
-          id: "yard-primary",
-          name: "Schulhof",
-          room_id: "yard-room",
-          room: { id: "yard-room", name: "Schulhof" },
-        },
-        {
-          id: "yard-parallel",
-          name: "Schulhof",
-          room_id: "yard-room",
-          room: { id: "yard-room", name: "Schulhof" },
-        },
-      ],
-      unclaimedGroups: [],
-      currentStaff: { id: "staff-1" },
-      educationalGroups: [],
-      firstRoomVisits: [],
-      firstRoomId: "yard-primary",
-      capabilities: { webSpontaneousActivitiesEnabled: true },
-      schulhofStatus: {
-        exists: true,
-        roomId: "yard-room",
-        roomName: "Schulhof",
-        activityGroupId: "yard-activity",
-        activeGroupId: "yard-primary",
-        isUserSupervising: true,
-        supervisionId: "sup-primary",
-        supervisorCount: 1,
-        studentCount: 9,
-        supervisors: [
+  it.each(HEAD_SURFACES)(
+    "merges parallel sessions of a released room into one entry ($surface)",
+    async ({ width, app }) => {
+      setViewportWidth(width);
+      const dashboardData = {
+        supervisedGroups: [
           {
-            id: "sup-primary",
-            staffId: "staff-1",
-            name: "Test Teacher",
-            isCurrentUser: true,
+            id: "yard-primary",
+            name: "Schulhof",
+            room_id: "yard-room",
+            room: { id: "yard-room", name: "Schulhof" },
+          },
+          {
+            id: "yard-parallel",
+            name: "Schulhof",
+            room_id: "yard-room",
+            room: { id: "yard-room", name: "Schulhof" },
           },
         ],
-      },
-      openRooms: [
-        {
+        unclaimedGroups: [],
+        currentStaff: { id: "staff-1" },
+        educationalGroups: [],
+        firstRoomVisits: [],
+        firstRoomId: "yard-primary",
+        capabilities: { webSpontaneousActivitiesEnabled: true },
+        schulhofStatus: {
+          exists: true,
           roomId: "yard-room",
-          name: "Schulhof",
+          roomName: "Schulhof",
+          activityGroupId: "yard-activity",
+          activeGroupId: "yard-primary",
           isUserSupervising: true,
-          activeGroupIds: ["yard-primary"],
+          supervisionId: "sup-primary",
+          supervisorCount: 1,
           studentCount: 9,
-          students: [],
+          supervisors: [
+            {
+              id: "sup-primary",
+              staffId: "staff-1",
+              name: "Test Teacher",
+              isCurrentUser: true,
+            },
+          ],
         },
-      ],
-    };
-    const swrNull = {
-      data: null,
-      isLoading: false,
-      error: null,
-      mutate: mockMutate,
-      isValidating: false,
-    } as never;
+        openRooms: [
+          {
+            roomId: "yard-room",
+            name: "Schulhof",
+            isUserSupervising: true,
+            activeGroupIds: ["yard-primary"],
+            studentCount: 9,
+            students: [],
+          },
+        ],
+      };
+      const swrNull = {
+        data: null,
+        isLoading: false,
+        error: null,
+        mutate: mockMutate,
+        isValidating: false,
+      } as never;
 
-    // Switching to the parallel yard session re-runs the aggregate; its next
-    // response carries that session's two visits (#2096).
-    const dashboardRef: { current: unknown } = { current: dashboardData };
-    mockMutate.mockImplementation(async () => {
-      dashboardRef.current = {
-        ...dashboardData,
-        selectedGroupId: "yard-parallel",
+      // Switching to the parallel yard session re-runs the aggregate; its next
+      // response carries that session's two visits (#2096).
+      const dashboardRef: { current: unknown } = { current: dashboardData };
+      mockMutate.mockImplementation(async () => {
+        dashboardRef.current = {
+          ...dashboardData,
+          selectedGroupId: "yard-parallel",
+          firstRoomVisits: [
+            {
+              studentId: "s10",
+              studentName: "Parallel Student A",
+              schoolClass: "4a",
+              groupName: "Gruppe A",
+              activeGroupId: "yard-parallel",
+              checkInTime: new Date().toISOString(),
+              isActive: true,
+            },
+            {
+              studentId: "s11",
+              studentName: "Parallel Student B",
+              schoolClass: "4b",
+              groupName: "Gruppe B",
+              activeGroupId: "yard-parallel",
+              checkInTime: new Date().toISOString(),
+              isActive: true,
+            },
+          ],
+        };
+      });
+      vi.mocked(useSWRAuth).mockImplementation(((key: unknown) =>
+        typeof key === "string" &&
+        key.startsWith("active-supervision-dashboard")
+          ? ({
+              data: dashboardRef.current,
+              isLoading: false,
+              error: null,
+              mutate: mockMutate,
+              isValidating: false,
+            } as never)
+          : swrNull) as never);
+
+      render(<MeinRaumPage />);
+
+      // Beide Sitzungen laufen im freigegebenen Raum, also steht der Raum
+      // genau einmal da — vorher trug jede Sitzung ihren eigenen Reiter mit
+      // demselben Namen (#3065).
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: "Schulhof" })).toBeVisible();
+        expect(
+          within(surfaceHead(app)).getByText(app ? "9 da" : "9 Kinder"),
+        ).toBeVisible();
+      });
+      expect(screen.queryAllByRole("tab", { name: "Schulhof" })).toHaveLength(
+        0,
+      );
+      // Der Zähler kommt aus dem Raum, nicht aus einer der Sitzungen: er zählt
+      // alle Kinder, die dort gerade erfasst sind.
+      expect(mockMutate).not.toHaveBeenCalled();
+      // Eigene Aufsicht im Raum bleibt eigene Aufsicht: die Abgabe steht.
+      expect(
+        screen.getByRole("button", { name: "Aufsicht abgeben" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each(HEAD_SURFACES)(
+    "reports the released room's own occupancy, not the caller's session ($surface)",
+    async ({ width, app }) => {
+      setViewportWidth(width);
+      const dashboardData = {
+        supervisedGroups: [
+          {
+            id: "yard-parallel",
+            name: "Schulhof",
+            room_id: "yard-room",
+            room: { id: "yard-room", name: "Schulhof" },
+          },
+        ],
+        unclaimedGroups: [],
+        currentStaff: { id: "staff-1" },
+        educationalGroups: [],
         firstRoomVisits: [
           {
             studentId: "s10",
-            studentName: "Parallel Student A",
+            studentName: "Parallel Student",
             schoolClass: "4a",
             groupName: "Gruppe A",
             activeGroupId: "yard-parallel",
             checkInTime: new Date().toISOString(),
             isActive: true,
           },
+        ],
+        firstRoomId: "yard-parallel",
+        capabilities: { webSpontaneousActivitiesEnabled: true },
+        schulhofStatus: {
+          exists: true,
+          roomId: "yard-room",
+          roomName: "Schulhof",
+          activityGroupId: "yard-activity",
+          activeGroupId: "yard-primary",
+          isUserSupervising: false,
+          supervisionId: null,
+          supervisorCount: 0,
+          studentCount: 9,
+          supervisors: [],
+        },
+        openRooms: [
           {
-            studentId: "s11",
-            studentName: "Parallel Student B",
-            schoolClass: "4b",
-            groupName: "Gruppe B",
-            activeGroupId: "yard-parallel",
-            checkInTime: new Date().toISOString(),
-            isActive: true,
+            roomId: "yard-room",
+            name: "Schulhof",
+            isUserSupervising: false,
+            activeGroupIds: ["yard-primary"],
+            studentCount: 9,
+            students: [],
           },
         ],
       };
-    });
-    vi.mocked(useSWRAuth).mockImplementation(((key: unknown) =>
-      typeof key === "string" && key.startsWith("active-supervision-dashboard")
-        ? ({
-            data: dashboardRef.current,
-            isLoading: false,
-            error: null,
-            mutate: mockMutate,
-            isValidating: false,
-          } as never)
-        : swrNull) as never);
-
-    render(<MeinRaumPage />);
-
-    // Beide Sitzungen laufen im freigegebenen Raum, also steht der Raum
-    // genau einmal da — vorher trug jede Sitzung ihren eigenen Reiter mit
-    // demselben Namen (#3065).
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Schulhof" })).toBeVisible();
-      expect(within(pageHead()).getByText("9 Kinder")).toBeVisible();
-    });
-    expect(screen.queryAllByRole("tab", { name: "Schulhof" })).toHaveLength(0);
-    // Der Zähler kommt aus dem Raum, nicht aus einer der Sitzungen: er zählt
-    // alle Kinder, die dort gerade erfasst sind.
-    expect(mockMutate).not.toHaveBeenCalled();
-    // Eigene Aufsicht im Raum bleibt eigene Aufsicht: die Abgabe steht.
-    expect(
-      screen.getByRole("button", { name: "Aufsicht abgeben" }),
-    ).toBeInTheDocument();
-  });
-
-  it("reports the released room's own occupancy, not the caller's session", async () => {
-    const dashboardData = {
-      supervisedGroups: [
-        {
-          id: "yard-parallel",
-          name: "Schulhof",
-          room_id: "yard-room",
-          room: { id: "yard-room", name: "Schulhof" },
-        },
-      ],
-      unclaimedGroups: [],
-      currentStaff: { id: "staff-1" },
-      educationalGroups: [],
-      firstRoomVisits: [
-        {
-          studentId: "s10",
-          studentName: "Parallel Student",
-          schoolClass: "4a",
-          groupName: "Gruppe A",
-          activeGroupId: "yard-parallel",
-          checkInTime: new Date().toISOString(),
-          isActive: true,
-        },
-      ],
-      firstRoomId: "yard-parallel",
-      capabilities: { webSpontaneousActivitiesEnabled: true },
-      schulhofStatus: {
-        exists: true,
-        roomId: "yard-room",
-        roomName: "Schulhof",
-        activityGroupId: "yard-activity",
-        activeGroupId: "yard-primary",
-        isUserSupervising: false,
-        supervisionId: null,
-        supervisorCount: 0,
-        studentCount: 9,
-        supervisors: [],
-      },
-      openRooms: [
-        {
-          roomId: "yard-room",
-          name: "Schulhof",
-          isUserSupervising: false,
-          activeGroupIds: ["yard-primary"],
-          studentCount: 9,
-          students: [],
-        },
-      ],
-    };
-    const swrNull = {
-      data: null,
-      isLoading: false,
-      error: null,
-      mutate: mockMutate,
-      isValidating: false,
-    } as never;
-
-    vi.mocked(useSWRAuth)
-      .mockReturnValueOnce({
-        data: dashboardData,
+      const swrNull = {
+        data: null,
         isLoading: false,
         error: null,
         mutate: mockMutate,
         isValidating: false,
-      } as never)
-      .mockReturnValue(swrNull);
+      } as never;
 
-    render(<MeinRaumPage />);
+      vi.mocked(useSWRAuth)
+        .mockReturnValueOnce({
+          data: dashboardData,
+          isLoading: false,
+          error: null,
+          mutate: mockMutate,
+          isValidating: false,
+        } as never)
+        .mockReturnValue(swrNull);
 
-    // The caller's own session runs in the released room, so the room is the
-    // entry — with the occupancy the room reports, not the one session's.
-    expect(
-      await screen.findByRole("heading", { name: "Schulhof" }),
-    ).toBeInTheDocument();
-    expect(within(pageHead()).getByText("9 Kinder")).toBeVisible();
-    expect(screen.getByText("Offener Raum")).toBeInTheDocument();
-    expect(screen.queryByText("Eigene Aufsicht")).not.toBeInTheDocument();
-  });
+      render(<MeinRaumPage />);
+
+      // The caller's own session runs in the released room, so the room is the
+      // entry — with the occupancy the room reports, not the one session's.
+      expect(
+        await screen.findByRole("heading", { name: "Schulhof" }),
+      ).toBeInTheDocument();
+      expect(
+        within(surfaceHead(app)).getByText(app ? "9 da" : "9 Kinder"),
+      ).toBeVisible();
+      expect(screen.getByText("Offener Raum")).toBeInTheDocument();
+      expect(screen.queryByText("Eigene Aufsicht")).not.toBeInTheDocument();
+    },
+  );
 
   it("shows the permission notice when switching to a forbidden session", async () => {
     // The aggregate answers 403 for a session outside the caller's scope;
