@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
 import test from 'node:test';
+import { startLoki } from './logql-alerts-fixture.mjs';
 
 // The outbox alerts of #6737, evaluated with real Loki and promtool in isolated
 // containers. No application or production service is contacted.
@@ -24,22 +24,7 @@ test('outbox mails failed for good alert from the worker log line', { timeout: 9
   // The worker's line when a run dead-lettered a delivery (ErrDeadLettered
   // in backend/modules/delivery/contract/worker.go, logged by the outbox job).
 
-  const name = `moto-email-delivery-alert-test-${process.pid}-${Date.now()}`;
-  t.after(() => docker('rm', '-f', name));
-  const started = docker('run', '-d', '--name', name, '--network', 'none',
-    'grafana/loki:3.4.3', '-config.file=/etc/loki/local-config.yaml',
-    '-ingester.min-ready-duration=0s', '-querier.query-ingesters-within=0',
-    '-querier.split-queries-by-interval=0', '-querier.cache-results=false');
-  assert.equal(started.status, 0, started.stderr);
-  const request = (path, payload) => docker('exec', name, '/busybox/wget', '-qO-',
-    ...(payload ? ['--header=Content-Type: application/json', `--post-data=${JSON.stringify(payload)}`] : []),
-    `http://127.0.0.1:3100${path}`);
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
-    if (request('/ready').status === 0) { ready = true; break; }
-    await setTimeout(500);
-  }
-  assert.ok(ready, 'isolated Loki did not become ready');
+  const request = await startLoki(t);
   const now = Date.now();
   const stamp = ms => String(BigInt(ms) * 1000000n);
   const push = (ms, record, env = 'prod', service = 'worker') => {

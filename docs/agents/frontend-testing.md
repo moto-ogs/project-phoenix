@@ -318,20 +318,19 @@ function and the axe check of `@storybook/addon-a11y` (#7108). A render
 error, a failing `play` or an axe violation fails the story.
 `.storybook/preview.tsx` sets `a11y.test: "error"` for all stories.
 
-- CI runs the job „Storybook tests“ in three shards on hosted runners
-  (`scripts/storybook-test-changed.mjs`, `STORYBOOK_SHARD=1/3`). The full
-  run is CPU-bound and costs about 220 s on one 4-core runner, three
-  quarters of it the fresh iframe every file gets; more workers and
-  `isolate: false` were measured and rejected (#6962). A pull request
-  tests the stories whose imports it changes (`vitest related`); a change
-  to the global
-  inputs in `GLOBAL_INPUTS` (`.storybook/`, its providers, styles,
-  `public/`, dependencies, the config) runs all stories, as do pushes and
-  the nightly run. Copy in `src/i18n/messages` is deliberately not a
-  trigger: it changes in about a quarter of frontend PRs, so the push and
-  nightly runs check it. Locally the full run took about
-  100 s on 16 cores; a selection `pnpm exec vitest related --run -c
-  vitest.storybook.config.ts <files>`.
+- Feature PRs resolve affected stories through Vitest's import graph once.
+  With no stories, CI installs no browser. Up to 64 files run on that same
+  hosted runner; larger selections use two or three shards. Global inputs
+  (configuration, preview runtime imports, styles, fonts, static assets or
+  dependencies) and failed selections run all stories. Locale messages are
+  deliberately not a global trigger. Protected frontend runs and nightly test
+  every story in parallel. Reproduce a PR selection from `frontend/` with
+  `BASE_SHA=<base-commit> node scripts/storybook-test-changed.mjs`.
+- Browser tests use Vite’s development server, not the static Storybook build.
+  CI builds the static bundle for story definitions, Storybook configuration,
+  global assets, toolchain and CI changes, plus protected frontend runs and
+  nightly. An application-only change still runs affected browser tests; a
+  production-only Storybook bundling failure can first appear on a backstop.
 - A story with known violations sets `parameters: { a11y: { test: "todo" } }`
   with a comment above it: `// axe meldet hier noch <Regeln>; Behebung in
   #<Issue>.` (contrast #7110, names and semantics #7112).

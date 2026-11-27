@@ -78,30 +78,31 @@ func TestViolationsNamesWhatTheDecoderRefuses(t *testing.T) {
 func TestViolationsKnowsEveryEnvelope(t *testing.T) {
 	t.Parallel()
 	doc, route := checkedDocument()
+	validator := doc.AnswerValidator()
 
 	noData := Route{Method: "DELETE", Pattern: "/api/rows/{id}", NoData: true}
-	assert.Empty(t, doc.Violations(noData, Answer{Status: 204}))
-	assert.NotEmpty(t, doc.Violations(noData, Answer{Status: 200}), "an empty 200 is not a JSON envelope")
-	assert.Empty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","message":"ok"}`)}))
-	assert.Empty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":null}`)}))
-	assert.NotEmpty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":{}}`)}))
-	assert.NotEmpty(t, doc.Violations(route, Answer{Status: 204}), "a route with data may not answer 204")
+	assert.Empty(t, validator.Violations(noData, Answer{Status: 204}))
+	assert.NotEmpty(t, validator.Violations(noData, Answer{Status: 200}), "an empty 200 is not a JSON envelope")
+	assert.Empty(t, validator.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","message":"ok"}`)}))
+	assert.Empty(t, validator.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":null}`)}))
+	assert.NotEmpty(t, validator.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":{}}`)}))
+	assert.NotEmpty(t, validator.Violations(route, Answer{Status: 204}), "a route with data may not answer 204")
 	file := Route{Method: "GET", Pattern: "/api/rows/export", File: true}
 	assert.Equal(t, []string{"the route registers a file, not the envelope"},
-		doc.Violations(file, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}), "a file route never answers the envelope")
+		validator.Violations(file, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}), "a file route never answers the envelope")
 
 	paginated := route
 	paginated.Paginated = true
 	page := `"pagination":{"current_page":1,"page_size":50,"total_pages":0,"total_records":0}`
-	assert.Empty(t, doc.Violations(paginated, Answer{Status: 200, Body: []byte(`{"status":"success","data":[],` + page + `}`)}))
-	assert.NotEmpty(t, doc.Violations(paginated, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}))
+	assert.Empty(t, validator.Violations(paginated, Answer{Status: 200, Body: []byte(`{"status":"success","data":[],` + page + `}`)}))
+	assert.NotEmpty(t, validator.Violations(paginated, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}))
 
 	names := Schema{Kind: KindArray, Elem: &Schema{Kind: KindString}}
 	variants := Route{Method: "GET", Pattern: "/api/rows/", Variants: &Variants{QueryParam: "view", Default: "full", Cases: map[string]Schema{"full": *route.Response, "names": names}}}
 	body := []byte(`{"status":"success","data":["Ada"]}`)
-	assert.Empty(t, doc.Violations(variants, Answer{Status: 200, Body: body, Variant: "names"}))
-	assert.NotEmpty(t, doc.Violations(variants, Answer{Status: 200, Body: body}), "no selector reads the default case")
-	assert.NotEmpty(t, doc.Violations(variants, Answer{Status: 200, Body: body, Variant: "unknown"}))
+	assert.Empty(t, validator.Violations(variants, Answer{Status: 200, Body: body, Variant: "names"}))
+	assert.NotEmpty(t, validator.Violations(variants, Answer{Status: 200, Body: body}), "no selector reads the default case")
+	assert.NotEmpty(t, validator.Violations(variants, Answer{Status: 200, Body: body, Variant: "unknown"}))
 }
 
 // A plain answer is the data itself, which only a route file reads (#7808).

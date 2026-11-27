@@ -4,9 +4,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { runInNewContext } from "node:vm";
 import { parse } from "yaml";
 
-import { needsFullRun, shardArgs } from "./storybook-test-changed.mjs";
+import {
+  needsFullRun,
+  planFor,
+  runtimeImports,
+  shardArgs,
+} from "./storybook-test-changed.mjs";
 
 test("a global input of every story starts the full run", () => {
   for (const path of [
@@ -43,6 +49,20 @@ test("component, story and copy changes keep the selection", () => {
   );
 });
 
+test("type-only preview dependencies do not force every story to render", () => {
+  const imports = runtimeImports(
+    `import type * as Contract from "./generated";
+     export type { Row } from "./model";
+     import type { UI } from "./mixed";
+     export { Button } from "./mixed";
+     import { type Theme } from "./theme";
+     import "./styles.css";
+     const page = import("./page");`,
+    "provider.tsx",
+  );
+  assert.deepEqual(imports, ["./mixed", "./theme", "./styles.css", "./page"]);
+});
+
 test("a shard passes through to Vitest, an invalid one stops the run", () => {
   assert.deepEqual(shardArgs(undefined), []);
   assert.deepEqual(shardArgs(""), []);
@@ -51,19 +71,65 @@ test("a shard passes through to Vitest, an invalid one stops the run", () => {
     assert.throws(() => shardArgs(value), /STORYBOOK_SHARD/, value);
 });
 
-test("the CI shards cover every story file exactly once", () => {
-  const job = parse(
+test("CI runs each selection on one runner or a complete matrix, never both", () => {
+  const jobs = parse(
     readFileSync(
       new URL("../../.github/workflows/lint.yml", import.meta.url),
       "utf8",
     ),
-  ).jobs["storybook-tests"];
-  const shards = job.strategy.matrix.shard;
-  const step = job.steps.find((s) => s.name === "Storybook tests (a11y)");
-  assert.equal(step.env.STORYBOOK_SHARD, `\${{ matrix.shard }}/${shards.length}`);
-  assert.deepEqual(
-    shards,
-    shards.map((_, i) => i + 1),
+  ).jobs;
+  const primary = jobs["storybook-selected"];
+  const parallel = jobs["storybook-tests"];
+  const install = primary.steps.find(
+    (step) => step.name === "Install Chromium",
   );
-  assert.equal(job.name, `Storybook tests (\${{ matrix.shard }}/${shards.length})`);
+  const a11y = (job) =>
+    job.steps.find((step) => step.name === "Storybook tests (a11y)");
+  function check(scope, files, expected) {
+    const { shards } = planFor(files);
+    const outputs = {
+      count: String(shards.length),
+      shards: JSON.stringify(shards),
+    };
+    const context = {
+      inputs: { "run-frontend": true, "storybook-mode": scope },
+      steps: { select: { outputs } },
+      needs: {
+        "storybook-selected": {
+          result: scope === "select" ? "success" : "skipped",
+          outputs: scope === "select" ? outputs : {},
+        },
+      },
+      cancelled: () => false,
+      fromJSON: JSON.parse,
+    };
+    const evaluate = (source) =>
+      runInNewContext(
+        source
+          .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
+          .replace(/\.([\w]+(?:-[\w]+)+)/g, '["$1"]'),
+        context,
+      );
+    const single = evaluate(primary.if) && evaluate(install.if);
+    assert.equal(single, evaluate(primary.if) && evaluate(a11y(primary).if));
+    const matrix = evaluate(parallel.if)
+      ? evaluate(parallel.strategy.matrix.shard)
+      : [];
+    const runs = single ? ["single"] : [];
+    for (const shard of matrix) {
+      const value = a11y(parallel)
+        .env.STORYBOOK_SHARD.replace("${{ matrix.shard }}", shard)
+        .replace("${{ strategy.job-total }}", matrix.length);
+      runs.push(...shardArgs(value));
+    }
+    assert.deepEqual(runs, expected);
+  }
+  check("skip", [], []);
+  check("select", [], []);
+  check("select", ["selected.stories.tsx"], ["single"]);
+  check("select", Array(100).fill("story"), ["--shard=1/2", "--shard=2/2"]);
+  const full = ["--shard=1/3", "--shard=2/3", "--shard=3/3"];
+  check("select", Array(250).fill("story"), full);
+  check("select", null, full);
+  check("full", null, full);
 });

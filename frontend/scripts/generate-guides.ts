@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
+import { printedGuides } from "./printed-guides";
 
 // Build-time PDF generation for the printed NFC onepager.
 //
@@ -16,21 +17,12 @@ import { PDFDocument, rgb } from "pdf-lib";
 //
 // Run via: pnpm run generate:guides
 
-const GUIDES = [
-  {
-    route: "/help/nfc/erste-schritte",
-    file: "nfc-erste-schritte.pdf",
-    onePager: true,
-  },
-] as const;
-
 const OUT_DIR = path.join(process.cwd(), "public", "help", "pdfs");
 
 // A correctly rendered onepager is always well above this; anything smaller
 // means the page rendered blank or the images never loaded. Failing here is
 // preferable to silently shipping a broken download into the production image.
 const MIN_PDF_BYTES = 20_000;
-const PDF_MARGIN = { top: "18mm", right: "16mm", bottom: "18mm", left: "16mm" };
 const ONE_PAGER_MARGIN = { top: "0", right: "0", bottom: "0", left: "0" };
 const DOT_SPACING_PT = 10.5;
 const DOT_RADIUS_PT = 0.75;
@@ -80,11 +72,11 @@ async function applyGuidePdfBackground(rawPath: string, outPath: string) {
 // Serial so the single render server isn't hammered by parallel page loads.
 test.describe.configure({ mode: "serial" });
 
-for (const guide of GUIDES) {
+for (const guide of printedGuides) {
   test(`generate ${guide.file}`, async ({ page }) => {
-    const onePager = "onePager" in guide && guide.onePager;
     await mkdir(OUT_DIR, { recursive: true });
-    await page.goto(guide.route, { waitUntil: "load" });
+    const response = await page.goto(guide.route, { waitUntil: "load" });
+    expect(response?.ok(), guide.route).toBe(true);
 
     // Wait for the guide title so we never PDF the loading placeholder.
     await page
@@ -129,7 +121,7 @@ for (const guide of GUIDES) {
       format: "A4",
       printBackground: true,
       displayHeaderFooter: false,
-      margin: onePager ? ONE_PAGER_MARGIN : PDF_MARGIN,
+      margin: ONE_PAGER_MARGIN,
       scale: 1,
       omitBackground: true,
     } as Parameters<typeof page.pdf>[0] & { omitBackground: boolean };

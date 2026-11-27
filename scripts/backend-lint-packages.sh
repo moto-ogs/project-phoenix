@@ -8,11 +8,11 @@ set -euo pipefail
 
 packages=(./...)
 if [ "$EVENT_NAME" = pull_request ] && [ "$FULL_BACKEND" != true ]; then
-  : "${BASE_REF:?BASE_REF is required for partial pull-request lint}"
+  base_revision=${BASE_REVISION:-origin/${BASE_REF:?base revision is required for partial pull-request lint}}
   repo_root=$(git rev-parse --show-toplevel)
   script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
   module=$(cd "$repo_root/backend" && go list -m)
-  affected_output=$("$script_dir/backend-affected-packages.sh" "origin/$BASE_REF")
+  affected_output=$("$script_dir/backend-affected-packages.sh" "$base_revision")
 
   if [ -n "$affected_output" ]; then
     packages=()

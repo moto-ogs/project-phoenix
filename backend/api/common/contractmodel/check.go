@@ -27,16 +27,32 @@ var (
 // JSON.parse without rounding.
 const maxSafeInteger = 1<<53 - 1
 
+// AnswerValidator indexes a document's object definitions once for all of
+// its answers. The index is read-only; violations belong to one answer.
+type AnswerValidator struct {
+	types map[string]Object
+}
+
+func (d Document) AnswerValidator() AnswerValidator {
+	types := make(map[string]Object, len(d.Types))
+	for _, object := range d.Types {
+		types[object.Name] = object
+	}
+	return AnswerValidator{types: types}
+}
+
+// Violations checks one answer without retaining an index for another.
+func (d Document) Violations(route Route, answer Answer) []string {
+	return d.AnswerValidator().Violations(route, answer)
+}
+
 // Violations lists where a successful answer leaves the contract of its
 // route. It decides as the generated decoders do (typescript.go and the
 // frontend's runtime.ts): a key the contract does not name is ignored, an
 // absent key needs an optional field and a null a nullable one. The BFF
 // answers 502 for every body this function reports.
-func (d Document) Violations(route Route, answer Answer) []string {
-	c := &checker{types: map[string]Object{}}
-	for _, object := range d.Types {
-		c.types[object.Name] = object
-	}
+func (v AnswerValidator) Violations(route Route, answer Answer) []string {
+	c := &checker{types: v.types}
 	if route.File {
 		return []string{"the route registers a file, not the envelope"}
 	}
@@ -174,32 +190,35 @@ func scalar(kind string, raw json.RawMessage) string {
 	if len(raw) > 0 && raw[0] == '"' {
 		isString = json.Unmarshal(raw, &text) == nil
 	}
-	ok := false
-	want := map[string]string{
-		KindString: "a string", KindEnum: "a string", KindBool: "a boolean",
-		KindInt: "a safe integer", KindNumber: "a number",
-		KindID:   "an identifier as a decimal string",
-		KindDate: "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
-	}[kind]
+	var ok bool
+	var want string
 	switch kind {
 	case KindString, KindEnum:
+		want = "a string"
 		ok = isString
 	case KindBool:
+		want = "a boolean"
 		ok = string(raw) == "true" || string(raw) == "false"
 	case KindInt:
+		want = "a safe integer"
 		ok = safeInteger(raw)
 	case KindNumber:
+		want = "a number"
 		var number float64
 		ok = !isString && json.Unmarshal(raw, &number) == nil
 	case KindID:
+		want = "an identifier as a decimal string"
 		ok = isString && int64Text.MatchString(text)
 	case KindDate:
+		want = "a day as YYYY-MM-DD"
 		_, err := time.Parse(time.DateOnly, text)
 		ok = isString && err == nil
 	case KindInstant:
+		want = "an RFC 3339 instant"
 		_, err := time.Parse(time.RFC3339Nano, text)
 		ok = isString && err == nil
 	case KindClock:
+		want = "a time as HH:MM"
 		ok = isString && clockText.MatchString(text)
 	default:
 		want = "a known kind, not " + kind

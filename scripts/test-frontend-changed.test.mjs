@@ -54,35 +54,31 @@ fi
   };
 }
 
-for (const directory of ["src", "scripts"]) {
-  for (const [api, module] of [
+test("inventory identifies each source import; external consumers need no registration", t => {
+  const f = fixture(t);
+  const probes = [
     ["readFileSync", "node:fs"], ["readdirSync", "node:fs"],
     ["readFile", "fs/promises"], ["readdir", "node:fs/promises"],
     ["readdir", "fs/promises"], ["glob", "glob"], ["globSync", "node:fs"],
     ["existsSync", "node:fs"], ["statSync", "node:fs"],
     ["copyFileSync", "node:fs"], ["createReadStream", "node:fs"],
-    ["futureFileAPI", "node:fs"],
-    ["spawnSync", "node:child_process"], ["execFileSync", "child_process"],
-  ]) {
-    test(`inventory covers ${directory} consumer of ${module}/${api}`, t => {
-      const f = fixture(t);
-      assert.equal(f.run("--check-guards").status, 0);
-      f.write(`frontend/${directory}/probe.spec.ts`, `import { ${api} as input } from "${module}"; input("src/**");`);
-      const result = f.run("--check-guards");
-      if (directory === "src") {
-        assert.equal(result.status, 1, result.stderr);
-        assert.match(result.stderr, /probe\.spec\.ts/);
-      } else {
-        // External consumers need no registration; editing scripts runs in full.
-        assert.equal(result.status, 0, result.stderr);
-        const selected = f.run("HEAD");
-        assert.equal(selected.status, 0, selected.stderr);
-        const args = readFileSync(join(f.root, "args"), "utf8").split("\n");
-        assert.deepEqual(args.filter(Boolean), ["exec", "vitest", "run"]);
-      }
-    });
-  }
-}
+    ["futureFileAPI", "node:fs"], ["spawnSync", "node:child_process"],
+    ["execFileSync", "child_process"],
+  ].map(([api, module]) => ({
+    file: `${module.replace(/[^a-z_]/g, "-")}-${api}.spec.ts`,
+    code: `import { ${api} as input } from "${module}"; input("src/**");`,
+  }));
+  for (const { file, code } of probes) f.write(`frontend/scripts/${file}`, code);
+  assert.equal(f.run("--check-guards").status, 0);
+  const selected = f.run("HEAD");
+  assert.equal(selected.status, 0, selected.stderr);
+  assert.deepEqual(readFileSync(join(f.root, "args"), "utf8").trim().split("\n"), ["exec", "vitest", "run"]);
+
+  for (const { file, code } of probes) f.write(`frontend/src/${file}`, code);
+  const result = f.run("--check-guards");
+  assert.equal(result.status, 1, result.stderr);
+  for (const { file } of probes) assert.ok(result.stderr.includes(`src/${file}`), `unreported input: ${file}`);
+});
 
 test("fixed inputs are selected once alongside Vitest's changed files", t => {
   const f = fixture(t);
@@ -116,6 +112,11 @@ test("CI starts frontend guards for backend-only inputs and the native launcher"
   assert.ok(filter, "frontend input job filter exists");
   assert.match(filter, /- 'backend\/\*\*'/);
   assert.match(filter, /- 'frontend\/\*\*\/\*\.md'/);
+  const product = workflow.match(/            frontend:\n([\s\S]*?)(?=            [\w-]+:)/)?.[1];
+  for (const directory of [".agents", ".claude"]) {
+    assert.ok(filter.includes(`- 'frontend/${directory}/**'`));
+    assert.ok(product?.includes(`- '!frontend/${directory}/**'`));
+  }
   assert.match(filter, /- 'scripts\/dev-native\.sh'/);
   assert.match(filter, /- '\.github\/workflows\/e2e\.yml'/);
   assert.match(workflow, /run-frontend:.*steps\.filter\.outputs\.frontend-fs-inputs == 'true'/);
@@ -319,6 +320,9 @@ test("CI JSON classification uses the same fail-closed decision, including both 
   const f = fixture(t);
   for (const [paths, mode] of [
     [[], "none"], [["frontend/README.md"], "guards"],
+    [["frontend/.agents/skills/ui-skills", "frontend/.claude/skills/example/agents/openai.yaml"], "guards"],
+    [["frontend/.agents/skills/ui-skills", "frontend/src/lib/changed.ts"], "incremental"],
+    [["frontend/.claude/skills/example", "frontend/vitest.config.ts"], "full"],
     [["frontend/public/sw.js"], "full"],
     [["frontend/unknown.input", "frontend/src/lib/moved.ts"], "full"],
     [["backend/catalog.json"], "guards"],
@@ -340,6 +344,15 @@ test("CI JSON classification uses the same fail-closed decision, including both 
   }
 });
 
+test("a test importing an agent input must run in the guards job", t => {
+  const f = fixture(t);
+  f.write("frontend/.agents/skills/example/input.json", "{}");
+  f.write("frontend/src/probe.test.ts", 'import input from "../.agents/skills/example/input.json";');
+  const result = f.run("--check-guards");
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /probe\.test\.ts/);
+});
+
 for (const transitive of [false, true]) {
   test(`resolved imports outside frontend require guards (transitive=${transitive})`, t => {
     const f = fixture(t);
@@ -357,12 +370,14 @@ for (const transitive of [false, true]) {
 test("CI shards full DOM runs using the shared classifier and excludes documentation from lint/build", () => {
   const workflow = readFileSync(new URL("../.github/workflows/main.yml", import.meta.url), "utf8");
   assert.match(workflow, /full-frontend-suite:.*steps\.frontend-mode\.outputs\.mode == 'full'/);
+  assert.match(workflow, /full-frontend-dom:.*steps\.frontend-mode\.outputs\.mode == 'full-dom'/);
+  assert.match(workflow, /full-frontend-dom:.*needs\.detect-changes\.outputs\.full-frontend-dom == 'true'/);
   assert.match(workflow, /node scripts\/test-frontend-changed\.mjs --mode-files/);
   assert.match(workflow, /frontend:\n\s+- 'frontend\/\*\*'\n\s+- '!frontend\/\*\*\/\*\.md'/);
-  assert.match(workflow, /run-frontend-lint:.*frontend-catalog-inputs/);
+  assert.match(workflow, /run-frontend-lint:.*frontend-quality-only/);
   assert.match(workflow, /run-frontend:.*workflow-lint/);
   const testWorkflow = readFileSync(new URL("../.github/workflows/test.yml", import.meta.url), "utf8");
-  assert.match(testWorkflow, /inputs.full-frontend-suite.*'\["node","dom-1","dom-2"\]'/);
+  assert.match(testWorkflow, /inputs.full-frontend-suite \|\| inputs.full-frontend-dom.*'\["node","dom-1","dom-2"\]'/);
   assert.match(testWorkflow, /dom-1\|dom-2\) test_args\+=\(--shard/);
 });
 
@@ -420,6 +435,45 @@ function assertFileMode(f, paths, expected) {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, `${expected}\n`, JSON.stringify(paths));
 }
+test("locale fragments need their own generated catalogue to narrow Node tests", t => {
+  const f = fixture(t);
+  const messages = "frontend/src/i18n/messages";
+  const de = `${messages}/de.generated.ts`;
+  const fragment = `${messages}/de/school/calendar.json`;
+  assertFileMode(f, [fragment, de], "full-dom");
+  assertFileMode(f, [de], "full-dom");
+  for (const paths of [[fragment], [fragment, de, `${messages}/pl/school/calendar.json`],
+    [fragment, de, `${messages}/de/.unknown.json`], [fragment, de, "frontend/vitest.config.ts"]]) {
+    assertFileMode(f, paths, "full");
+  }
+});
+
+test("a locale change narrows only explicit Node projects and retains the second clock", t => {
+  const f = movedClockFixture(t);
+  const fragment = "frontend/src/i18n/messages/de/nested/copy.json";
+  const facade = "frontend/src/i18n/messages/de.generated.ts";
+  f.write(fragment, "{\"original\": true}");
+  f.write(facade, "export default { original: true };");
+  f.git("add", fragment, facade);
+  f.git("commit", "-qm", "catalogue baseline");
+  f.write(fragment, "{}");
+  f.write(facade, "export default {};");
+  f.write("frontend/src/lib/product.test.ts", "export {};");
+  assert.equal(f.run("--mode", "HEAD").stdout, "full-dom\n");
+  const node = ["--disableConsoleIntercept", "--project", "api-node", "--project", "logic-node"];
+  const readArgs = () => readFileSync(join(f.root, "args"), "utf8").trim().split("\n");
+  assert.equal(f.run("HEAD", ...node).status, 0);
+  assert.ok(readArgs().includes("src/lib/service-worker.test.ts"));
+  assert.deepEqual(f.moved()?.slice(5), [...node, "src/lib/product.test.ts"]);
+  for (const projects of [[], ["--project", "api-node", "--project", "app-dom"],
+    ["--project", "app-dom", "--shard", "2/2"], ["--project", "*"]]) {
+    assert.equal(f.run("HEAD", ...projects).status, 0);
+    assert.deepEqual(readArgs(), ["exec", "vitest", "run", ...projects]);
+  }
+  rmSync(join(f.root, facade));
+  assert.equal(f.run("HEAD", ...node).status, 0);
+  assert.deepEqual(readArgs(), ["exec", "vitest", "run", ...node]);
+});
 function assertQualityDispatch(f, base, mode) {
   const classified = f.run("--mode", base);
   assert.equal(classified.status, 0, classified.stderr);
@@ -593,5 +647,5 @@ test("--moved-clock runs only the moved-clock pass, for full CI suites", (t) => 
 
 test("the frontend job runs the moved-clock pass after a full suite", () => {
   const workflow = readFileSync(new URL("../.github/workflows/test.yml", import.meta.url), "utf8");
-  assert.match(workflow, /pnpm vitest run --disableConsoleIntercept "\$\{test_args\[@\]\}"\n\s+if \[ -n "\$BASE_REF" \]; then\n\s+node \.\.\/scripts\/test-frontend-changed\.mjs --moved-clock "origin\/\$BASE_REF" --disableConsoleIntercept "\$\{test_args\[@\]\}"/);
+  assert.match(workflow, /pnpm vitest run --disableConsoleIntercept "\$\{test_args\[@\]\}"\n\s+if \[ -n "\$BASE_REVISION" \]; then\n\s+node \.\.\/scripts\/test-frontend-changed\.mjs --moved-clock "\$BASE_REVISION" --disableConsoleIntercept "\$\{test_args\[@\]\}"/);
 });

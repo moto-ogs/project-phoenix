@@ -28,6 +28,16 @@ on:
     paths:
       - ".github/workflows/perf-nightly.yml"
       - "frontend/scripts/perf/**"
+      # Bundle budgets run in Lint. Navigation/revisit uses a separate
+      # Playwright config, not either trace/render config executed below.
+      - "!frontend/scripts/perf/bundle-*"
+      - "!frontend/scripts/perf/analyze.mjs"
+      - "!frontend/scripts/perf/navigation.perf.ts"
+      - "!frontend/scripts/perf/navigation-probe.ts"
+      - "!frontend/scripts/perf/revisit.ts"
+      - "!frontend/scripts/perf/revisit-*.ts"
+      - "!frontend/scripts/perf/*.test.ts"
+      - "!frontend/scripts/perf/*.node-test.mjs"
       - "frontend/playwright.perf.config.ts"
       - "frontend/playwright.perf-dev.config.ts"
       - "frontend/scripts/secure-chrome.ts"
@@ -208,8 +218,9 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Cache Next.js build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore Next.js build cache
+        id: next-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: frontend/.next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
@@ -284,3 +295,12 @@ jobs:
       - name: Stop backend
         if: always()
         run: kill "$(cat "${RUNNER_TEMP}/server.pid")" 2>/dev/null || true
+
+      # PR-scoped compiler caches compete with the shared seed and Go caches
+      # for space. Only the default branch can publish an entry all PRs read.
+      - name: Save shared Next.js build cache
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.trace.outcome == 'success' && steps.next-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: frontend/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}

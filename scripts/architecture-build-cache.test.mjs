@@ -123,3 +123,36 @@ test('warm job sweeps to one check and runs on every change of the ratchet build
     assert.match(paths, new RegExp(`- '${input.replace(/[.*/]/g, '\\$&')}'`), `push trigger covers ${input}`);
   }
 });
+
+test('Blacksmith backend test and lint jobs restore only the module directory from one development writer', () => {
+  const writer = steps(job(warmSource, 'warm'));
+  const write = step(writer, 'Cache backend Go modules');
+  assert.match(field(write, 'uses', 8), /^actions\/cache@/);
+  const config = section(write, 'with');
+  assert.deepEqual(paths(config), ['${{ steps.go.outputs.GOMODCACHE }}']);
+  assert.match(field(config, 'key', 10), /hashFiles\('backend\/go\.sum', 'scripts\/backend-architecture\/go\.sum'\)/);
+  assert.equal(field(step(writer, 'Setup Go'), 'cache', 10), 'false');
+  const populate = step(writer, 'Download backend Go modules on a cache miss');
+  assert.match(populate, /steps\.modules\.outputs\.cache-hit != 'true'/);
+  for (const dir of ['backend', 'scripts/backend-architecture']) {
+    assert.ok(populate.includes(`go -C ${dir} mod download`));
+  }
+  for (const [source, name] of [[read('test.yml'), 'test-backend'], [read('lint.yml'), 'backend-lint'], [warmSource, 'warm-lint']]) {
+    const reader = steps(job(source, name));
+    assert.equal(field(step(reader, 'Setup Go'), 'cache', 10), 'false', name);
+    const restore = step(reader, 'Restore backend Go modules');
+    assert.match(field(restore, 'uses', 8), /^actions\/cache\/restore@/, name);
+    assert.equal(section(restore, 'with'), config, name);
+  }
+});
+
+test('backend lint cache stays warm across frontend CI edits, not across tool or config changes', () => {
+  const reader = steps(job(read('lint.yml'), 'backend-lint'));
+  const writer = steps(job(warmSource, 'warm-lint'));
+  const inputs = section(step(reader, 'Compute backend lint cache key'), 'env');
+  assert.equal(inputs, section(step(writer, 'Compute backend lint cache key'), 'env'));
+  const prefix = field(inputs, 'LINT_CACHE_PREFIX', 10);
+  assert.ok(prefix.includes('env.GOLANGCI_LINT_VERSION'));
+  assert.ok(prefix.includes("hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml')"));
+  assert.ok(!inputs.includes('.github/workflows/'));
+});

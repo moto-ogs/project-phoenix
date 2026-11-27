@@ -46,6 +46,10 @@ on:
       full-frontend-suite:
         type: boolean
         required: true
+      full-frontend-dom:
+        description: Shard the full DOM suite without forcing unrelated Node tests.
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -129,6 +133,27 @@ jobs:
           --health-retries 10
 
     steps:
+      # A full non-race run always includes the SEPA XSD tests. In the
+      # last warm job installing xmllint blocked go test for 16 s.
+      - name: Start xmllint installation for the full backend suite
+        if: ${{ !inputs.backend-race && (!inputs.changed-scope || inputs.full-backend-suite || inputs.base_ref == '') }}
+        run: |
+          command -v xmllint >/dev/null && exit 0
+          (
+            trap 'echo "$?" > "$RUNNER_TEMP/xmllint-status"' EXIT
+            . /etc/os-release
+            for pocket in updates security; do
+              echo "deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu $VERSION_CODENAME-$pocket main"
+            done > "$RUNNER_TEMP/xmllint.list"
+            sources=(-o "Dir::Etc::sourcelist=$RUNNER_TEMP/xmllint.list" -o Dir::Etc::sourceparts=-)
+            packages=(install -y -qq --no-install-recommends libxml2-utils)
+            if ! sudo apt-get "${sources[@]}" update -qq || ! sudo apt-get "${sources[@]}" "${packages[@]}"; then
+              # A different image or dependency may need the runner's other sources.
+              sudo apt-get update -qq
+              sudo apt-get "${packages[@]}"
+            fi
+          ) > "$RUNNER_TEMP/xmllint.log" 2>&1 < /dev/null &
+
       # Peak memory in use on the runner for the whole job, page cache not
       # counted: test binaries, toolchain, and Postgres with its tmpfs data
       # directory (shared memory is not available memory). "Summarize backend
@@ -150,49 +175,89 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Only the checked-out revision; the next step adds the history and
-          # the files of the comparison commits.
+          # Only the checked-out revision; history and comparison blobs are fetched below.
           fetch-depth: 1
 
-      # Runs in the background while Node, Go and the build cache are set up;
-      # "Finish fetching" below waits for it. None of the steps in between
-      # reads git. With every blob of the history the fetch outlasted those
-      # steps by 7-16 s (#7195).
-      - name: Start fetching backend comparison history
+      - name: Restore migrated DB snapshot
+        if: ${{ matrix.shard != 1 }}
+        id: db-snapshot
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: backend/.db-snapshot
+          # pg17-alpine: bump manually when the postgres service image changes.
+          # No restore-keys on purpose — a stale snapshot must never
+          # be restored; a miss only costs the ~25s migrate path below.
+          key: db-snapshot-pg17-alpine-${{ hashFiles('backend/database/migrations/*.go', 'backend/cmd/migrate.go') }}
+
+      # Neither history nor a warm database restore needs the toolchains.
+      - name: Start backend history and database restore
         env:
           BASE_REF: ${{ inputs.base_ref }}
+          RESTORE_SNAPSHOT: ${{ steps.db-snapshot.outputs.cache-hit == 'true' }}
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+          PHOENIX_AUTH_PASSWORD: phoenix_auth_test
+          PHOENIX_DEMO_PASSWORD: phoenix_demo_test
         run: |
+          restore_snapshot() {
+            # pg_dump omits cluster roles, memberships and settings. Recreate
+            # them before restoring any grants and RLS policies that name them.
+            # db-snapshot-roles.test.mjs compares these statements to migrations.
+            docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d phoenix_test <<EOF
+          CREATE ROLE phoenix_auth LOGIN NOINHERIT PASSWORD '${PHOENIX_AUTH_PASSWORD}';
+          CREATE ROLE phoenix_demo LOGIN NOINHERIT PASSWORD '${PHOENIX_DEMO_PASSWORD}';
+          CREATE ROLE phoenix_tenant NOLOGIN;
+          CREATE ROLE phoenix_admin NOLOGIN BYPASSRLS;
+          CREATE ROLE phoenix_diagnostics NOLOGIN NOINHERIT;
+          CREATE ROLE phoenix_school_erasure NOLOGIN NOINHERIT NOBYPASSRLS;
+          CREATE ROLE phoenix_billing_retention NOLOGIN NOINHERIT NOBYPASSRLS;
+          CREATE ROLE phoenix_data_return NOLOGIN NOINHERIT NOBYPASSRLS;
+          CREATE ROLE phoenix_tenant_export NOLOGIN BYPASSRLS;
+          CREATE ROLE phoenix_holiday_closure_reader NOLOGIN NOINHERIT NOBYPASSRLS;
+          GRANT pg_read_all_data TO phoenix_tenant_export;
+          GRANT phoenix_tenant TO phoenix_auth;
+          GRANT phoenix_admin TO phoenix_auth;
+          ALTER ROLE phoenix_auth SET search_path TO public, platform;
+          EOF
+            docker exec -i "$PG_CONTAINER" psql -q -v ON_ERROR_STOP=1 -U postgres -d phoenix_test \
+              < backend/.db-snapshot/dump.sql
+          }
           (
-            set +e
-            scripts/fetch-comparison-history.sh "$BASE_REF"
-            echo "$?" > "$RUNNER_TEMP/history-status"
-          ) > "$RUNNER_TEMP/history.log" 2>&1 < /dev/null &
-
-      - name: Setup Node.js for error-code generator fixtures
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "26"
+            trap 'echo "$?" > "$RUNNER_TEMP/backend-startup-status"' EXIT
+            scripts/fetch-comparison-history.sh "$BASE_REF" &
+            history_pid=$!
+            if [ "$RESTORE_SNAPSHOT" = true ]; then
+              restore_snapshot
+            fi
+            wait "$history_pid"
+          ) > "$RUNNER_TEMP/backend-startup.log" 2>&1 < /dev/null &
 
       - name: Setup Go
         id: go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
+          cache: false
 
-      # The SEPA direct debit file is checked against the official ISO
-      # schema with xmllint (#4697); the runner image does not carry it.
-      # Refresh the package lists only when the cached ones miss it.
-      - name: Install xmllint for the XML schema tests
-        run: |
-          command -v xmllint >/dev/null && exit 0
-          sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
-            || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
+      - name: Restore backend Go modules
+        id: modules
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.go.outputs.GOMODCACHE }}
+          key: backend-go-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}
 
-      # setup-go's go.sum-only key is immutable. It restores dependencies but
-      # never saves later source builds on an exact hit. Keep a source-keyed
-      # build layer per shard, with the last source build as a warm fallback.
+      # Go serializes concurrent downloads per module. Test and report commands
+      # still fetch what they need and report errors if a download failed.
+      - name: Start cold module downloads for the full backend suite
+        if: ${{ steps.modules.outputs.cache-hit != 'true' && !inputs.backend-race && (!inputs.changed-scope || inputs.full-backend-suite || inputs.base_ref == '') }}
+        run: go -C backend mod download > "$RUNNER_TEMP/backend-mod-download.log" 2>&1 < /dev/null &
+
+      - name: Setup Node.js for error-code generator fixtures
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+
+      # Module downloads depend on the lockfiles; build outputs depend on
+      # source and shard. Do not restore a Go build cache in both archives.
       # Pull requests only restore: a cache a pull request saves is visible to
       # that pull request alone, and the 2 GB saves of every run pushed the
       # repository over its cache limit, so even development's layer was
@@ -203,7 +268,9 @@ jobs:
         id: build-cache-key
         env:
           BACKEND_CACHE_PREFIX: backend-build${{ inputs.backend-race && '-race' || '' }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ matrix.shard }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}-
-          BACKEND_SOURCE_HASH: ${{ hashFiles('backend/**/*.go', 'scripts/backend-architecture/**/*.go', 'scripts/backend-test-matrix.sh') }}
+          # PRs only read the newest layer for this toolchain, dependency set and shard.
+          # Go checks each object's inputs before reuse; only writers need a unique source key.
+          BACKEND_SOURCE_HASH: ${{ github.event_name == 'pull_request' && 'reader' || hashFiles('backend/**/*.go', 'scripts/backend-architecture/**/*.go', 'scripts/backend-test-matrix.sh') }}
         run: |
           echo "prefix=$BACKEND_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
           echo "key=$BACKEND_CACHE_PREFIX$BACKEND_SOURCE_HASH" >> "$GITHUB_OUTPUT"
@@ -215,12 +282,12 @@ jobs:
           key: ${{ steps.build-cache-key.outputs.key }}
           restore-keys: ${{ steps.build-cache-key.outputs.prefix }}
 
-      - name: Finish fetching backend comparison history
+      - name: Finish backend history and database restore
         timeout-minutes: 5
         run: |
-          until test -s "$RUNNER_TEMP/history-status"; do sleep 1; done
-          cat "$RUNNER_TEMP/history.log"
-          exit "$(cat "$RUNNER_TEMP/history-status")"
+          until test -s "$RUNNER_TEMP/backend-startup-status"; do sleep 0.1; done
+          cat "$RUNNER_TEMP/backend-startup.log"
+          exit "$(cat "$RUNNER_TEMP/backend-startup-status")"
 
       # Pull requests and pushes run these in the "ratchets" suite of
       # ci-scripts (main.yml), off this job's critical path. The nightly run
@@ -238,54 +305,6 @@ jobs:
       - name: Verify snapshot roles match migrations
         if: matrix.shard == 0
         run: node --test scripts/db-snapshot-roles.test.mjs
-
-      - name: Restore migrated DB snapshot
-        if: ${{ matrix.shard != 1 }}
-        id: db-snapshot
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: backend/.db-snapshot
-          # pg17-alpine: bump manually when the postgres service image changes.
-          # No restore-keys on purpose — a stale snapshot must never
-          # be restored; a miss only costs the ~25s migrate path below.
-          key: db-snapshot-pg17-alpine-${{ hashFiles('backend/database/migrations/*.go', 'backend/cmd/migrate.go') }}
-
-      - name: Restore database from snapshot
-        if: matrix.shard != 1 && steps.db-snapshot.outputs.cache-hit == 'true'
-        env:
-          PG_CONTAINER: ${{ job.services.postgres.id }}
-          PHOENIX_AUTH_PASSWORD: phoenix_auth_test
-          PHOENIX_DEMO_PASSWORD: phoenix_demo_test
-        run: |
-          # pg_dump omits global objects (roles, ALTER ROLE ... SET). Recreate
-          # them exactly as the role migrations do (001014001_create_tenant_roles.go,
-          # 001015489_tenant_export_reader.go and later),
-          # BEFORE restoring the dump — it contains GRANTs and RLS policies
-          # referencing these roles. If a future migration adds a role, update
-          # this block too, including role memberships such as pg_read_all_data.
-          # A role the dump references fails the restore (ON_ERROR_STOP); a role
-          # used only through SET ROLE fails later, in the tests that need it.
-          # Everything runs inside the postgres service container: the
-          # local socket is trust-auth and the runner's psql is v16, which
-          # refuses a v17 server.
-          docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d phoenix_test <<EOF
-          CREATE ROLE phoenix_auth LOGIN NOINHERIT PASSWORD '${PHOENIX_AUTH_PASSWORD}';
-          CREATE ROLE phoenix_demo LOGIN NOINHERIT PASSWORD '${PHOENIX_DEMO_PASSWORD}';
-          CREATE ROLE phoenix_tenant NOLOGIN;
-          CREATE ROLE phoenix_admin NOLOGIN BYPASSRLS;
-          CREATE ROLE phoenix_diagnostics NOLOGIN NOINHERIT;
-          CREATE ROLE phoenix_school_erasure NOLOGIN NOINHERIT NOBYPASSRLS;
-          CREATE ROLE phoenix_billing_retention NOLOGIN NOINHERIT NOBYPASSRLS;
-          CREATE ROLE phoenix_data_return NOLOGIN NOINHERIT NOBYPASSRLS;
-          CREATE ROLE phoenix_tenant_export NOLOGIN BYPASSRLS;
-          CREATE ROLE phoenix_holiday_closure_reader NOLOGIN NOINHERIT NOBYPASSRLS;
-          GRANT pg_read_all_data TO phoenix_tenant_export;
-          GRANT phoenix_tenant TO phoenix_auth;
-          GRANT phoenix_admin TO phoenix_auth;
-          ALTER ROLE phoenix_auth SET search_path TO public, platform;
-          EOF
-          docker exec -i "$PG_CONTAINER" psql -q -v ON_ERROR_STOP=1 -U postgres -d phoenix_test \
-            < backend/.db-snapshot/dump.sql
 
       - name: Run database migrations
         if: matrix.shard != 1 && steps.db-snapshot.outputs.cache-hit != 'true'
@@ -318,7 +337,9 @@ jobs:
         working-directory: backend
         env:
           TEST_DB_DSN: postgres://postgres:postgres@localhost:5432/phoenix_test?sslmode=disable
-        run: echo "PHX_TEST_TEMPLATE=$(go run ./internal/testdb/cmd/bootstrap)" >> "$GITHUB_ENV"
+        run: |
+          template=$(go run ./internal/testdb/cmd/bootstrap)
+          echo "PHX_TEST_TEMPLATE=$template" >> "$GITHUB_ENV"
 
       - name: Run Go tests
         working-directory: backend
@@ -367,7 +388,10 @@ jobs:
               FULL_SUITE=true
             fi
           fi
-          if [ "$FULL_SUITE" = true ]; then
+          # Only race runs partition the package list. Go expands ./... itself.
+          if [ "$FULL_SUITE" = true ] && [ "$BACKEND_RACE" != true ]; then
+            TEST_PACKAGES=./...
+          elif [ "$FULL_SUITE" = true ]; then
             all_packages=$(go list ./...)
             TEST_PACKAGES=$(printf '%s\n' "$all_packages" | FULL_SUITE=true ../scripts/backend-test-matrix.sh |
               jq -er --argjson shard "$SHARD_INDEX" '.include[] | select(.shard == $shard) | .packages')
@@ -380,19 +404,34 @@ jobs:
             echo "No changed Go packages"
             exit 0
           fi
-          echo "Running ${#packages[@]} selected Go packages"
+          echo "Running ${#packages[@]} Go package pattern(s), starting with ${packages[0]}"
 
-          # Every registered route a test answers through a router, for
-          # "Check every registered route is answered" below (#7563). It
-          # holds them only when this run tested ./api, which links every
-          # owner's handlers. The race run checks nothing.
-          if [ "$BACKEND_RACE" != true ]; then
+          includes_package() {
+            [ "$TEST_PACKAGES" = ./... ] || grep -Fxq "$1" <<< "$TEST_PACKAGES"
+          }
+
+          # Only the SEPA tests validate documents against an XSD (#4697).
+          if includes_package github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application; then
+            if [ -f "$RUNNER_TEMP/xmllint.log" ]; then
+              until test -s "$RUNNER_TEMP/xmllint-status"; do sleep 0.1; done
+              cat "$RUNNER_TEMP/xmllint.log"
+              test "$(cat "$RUNNER_TEMP/xmllint-status")" = 0
+            elif ! command -v xmllint >/dev/null; then
+              sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
+                || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
+            fi
+          fi
+
+          # ./api exports the live JSON route keys; any package can answer them.
+          # A selection checks only the routes its branch adds (#7563).
+          if [ "$BACKEND_RACE" != true ] && includes_package github.com/moto-ogs/project-phoenix/api; then
             export CONTRACT_ANSWERS_FILE="$RUNNER_TEMP/contract-answers.txt"
-            for package in "${packages[@]}"; do
-              if [ "$package" = github.com/moto-ogs/project-phoenix/api ]; then
-                echo "$FULL_SUITE" > "$RUNNER_TEMP/contract-answers-full-suite"
-              fi
-            done
+            export CONTRACT_ANSWERS_REQUIRED="$RUNNER_TEMP/contract-answers-required.txt"
+            : > "$CONTRACT_ANSWERS_FILE"
+            if [ "$FULL_SUITE" != true ]; then
+              export CONTRACT_ANSWERS_BASE="$RUNNER_TEMP/base-contract.json"
+              git show "origin/$BASE_REF:backend/api/contract/contract.json" > "$CONTRACT_ANSWERS_BASE"
+            fi
           fi
 
           # Six package binaries keep eight vCPUs busy, four the small
@@ -422,8 +461,8 @@ jobs:
           head -n 1 /proc/stat > "$RUNNER_TEMP/cpu-before"
           docker exec "$PG_CONTAINER" cat /sys/fs/cgroup/cpu.stat > "$RUNNER_TEMP/postgres-cpu-before" || true
 
-          # Single pass produces junit.xml. No retries: flaky tests should fail
-          # loudly, not be hidden. gotestsum propagates race/test failures.
+          # Stream results so compiling the pinned reporter doesn't delay Go.
+          # The workflow's bash shell sets pipefail: either side can fail the job.
           #
           # GOGC=400 is for the compiler and the linker only: they are
           # short-lived and spent 13 % less CPU with it (549 against 480 CPU s
@@ -441,11 +480,22 @@ jobs:
           # busy seconds, in pull requests with Go changes (14.11.2026, #7045);
           # a full suite of an unchanged tree finds it in the build cache.
           # backend-build-cache.yml builds with the same flag.
-          GOGC=400 "${measure[@]}" go tool gotestsum --format pkgname-and-test-fails \
-            --junitfile junit.xml --jsonfile go-test.json \
-            -- "${race_flags[@]}" -count=1 -vet=off -parallel 8 -p "$PACKAGE_WORKERS" \
+          export GOGC=400
+          "${measure[@]}" go test -json "${race_flags[@]}" -count=1 -vet=off -parallel 8 -p "$PACKAGE_WORKERS" \
             -exec "env -u GOGC" \
-            -debug-actiongraph="$RUNNER_TEMP/actiongraph.json" "${packages[@]}"
+            -debug-actiongraph="$RUNNER_TEMP/actiongraph.json" "${packages[@]}" |
+            go tool gotestsum --raw-command --format pkgname-and-test-fails \
+              --junitfile junit.xml --jsonfile go-test.json -- cat
+
+          if [[ -v CONTRACT_ANSWERS_REQUIRED ]]; then
+            export LC_ALL=C
+            sort -u "$CONTRACT_ANSWERS_FILE" > "$RUNNER_TEMP/contract-answers-sorted.txt"
+            missing=$(comm -23 "$CONTRACT_ANSWERS_REQUIRED" "$RUNNER_TEMP/contract-answers-sorted.txt")
+            if [ -n "$missing" ]; then
+              printf 'No test answered these registered routes. Mount their routers under the full route paths:\n%s\n' "$missing"
+              exit 1
+            fi
+          fi
 
       # The job keeps its cores busy, so its wall time follows CPU work. This
       # table says whose: the compiler and the linker from Go's action
@@ -500,27 +550,6 @@ jobs:
         if: ${{ !cancelled() && !inputs.backend-race && hashFiles('backend/go-test.json') != '' }}
         run: node scripts/backend-package-budgets.mjs check backend/go-test.json
 
-      # A route no test answers through its router can leave the contract
-      # unseen: the BFF then answers 502 (#7563). The check fails on any
-      # registered route no test answers: every route after a full suite,
-      # only the routes this branch adds after a selection. There is no
-      # exception list (#7808). Locally 3 s once the step above built the
-      # api test binary.
-      - name: Check every registered route is answered
-        if: ${{ success() && !inputs.backend-race && hashFiles('backend/go-test.json') != '' }}
-        working-directory: backend
-        env:
-          BASE_REF: ${{ inputs.base_ref }}
-        run: |
-          [ -f "$RUNNER_TEMP/contract-answers-full-suite" ] || { echo "./api was not tested"; exit 0; }
-          export CONTRACT_ANSWERS_FILE="$RUNNER_TEMP/contract-answers.txt" CONTRACT_ANSWERS_CHECK=1
-          touch "$CONTRACT_ANSWERS_FILE"
-          if [ "$(cat "$RUNNER_TEMP/contract-answers-full-suite")" != true ]; then
-            git show "origin/$BASE_REF:backend/api/contract/contract.json" > "$RUNNER_TEMP/base-contract.json"
-            export CONTRACT_ANSWERS_BASE="$RUNNER_TEMP/base-contract.json"
-          fi
-          go test -count=1 -vet=off -run '^TestEveryRegisteredRouteIsAnsweredInATest$' ./api
-
       - name: Save backend build cache
         if: ${{ !cancelled() && github.event_name != 'pull_request' && steps.build-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -562,9 +591,14 @@ jobs:
       fail-fast: false
       matrix:
         # Changed-only PRs keep one DOM job. Full suites split its files with
-        # Vitest's built-in sharding, retaining four workers per DOM runner.
-        project: ${{ fromJSON(inputs.frontend-guards-only && '["guards"]' || (!inputs.changed-scope || inputs.full-frontend-suite || inputs.base_ref == '') && '["node","dom-1","dom-2"]' || '["node","dom"]') }}
-    runs-on: ${{ (matrix.project == 'node' || matrix.project == 'guards') && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-8vcpu-ubuntu-2404' }}
+        # Vitest's built-in sharding.
+        project: ${{ fromJSON(inputs.frontend-guards-only && '["guards"]' || (!inputs.changed-scope || inputs.full-frontend-suite || inputs.full-frontend-dom || inputs.base_ref == '') && '["node","dom-1","dom-2"]' || '["node","dom"]') }}
+    # Both full DOM shards had over two minutes of median headroom on green
+    # PRs (Nov 25–26). Standard GitHub runners are free only while public.
+    runs-on: >-
+      ${{ startsWith(matrix.project, 'dom-') && github.event.repository.visibility == 'public' && 'ubuntu-24.04'
+          || (matrix.project == 'node' || matrix.project == 'guards') && 'blacksmith-4vcpu-ubuntu-2404'
+          || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -573,7 +607,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          # A PR checkout is the tested merge. Its first parent is the exact
+          # base used by both Vitest and the moved-clock pass, including stacks.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
           filter: blob:none
 
       - name: Enable corepack
@@ -599,16 +635,16 @@ jobs:
         run: node --test scripts/test-frontend-changed.test.mjs
 
       # Layout needs a real browser; jsdom/happy-dom compute no boxes (#3328).
-      # Systemweites Google Chrome statt des gebündelten Chromium (#5612):
-      # --force aktualisiert das veraltete Chrome des Runner-Images;
-      # frontend/scripts/secure-chrome.setup.ts lehnt ungepatchte Versionen ab.
+      # Layout uses headless system Chrome, not Xvfb or Playwright's extra font
+      # packs. The Chrome package installs its own libraries; update it even
+      # when the runner ships an older version (#5612).
       - name: Install Google Chrome
         if: ${{ matrix.project == 'node' }}
         working-directory: frontend
         run: |
           # Retry transient download failures, never the tests themselves.
           for attempt in 1 2 3; do
-            if pnpm exec playwright install --with-deps --force chrome; then
+            if pnpm exec playwright install --force chrome; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -627,8 +663,8 @@ jobs:
         env:
           PROJECT: ${{ matrix.project }}
           CHANGED_SCOPE: ${{ inputs.changed-scope }}
-          FULL_SUITE: ${{ inputs.full-frontend-suite }}
-          BASE_REF: ${{ inputs.base_ref }}
+          FULL_SUITE: ${{ inputs.full-frontend-suite || startsWith(matrix.project, 'dom-') }}
+          BASE_REVISION: ${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}
         run: |
           test_args=(--project app-dom --project school-date-dom)
           if [ "$PROJECT" = node ]; then
@@ -640,15 +676,15 @@ jobs:
           case "$PROJECT" in
             dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2") ;;
           esac
-          if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REF" ]; then
-            node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+          if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REVISION" ]; then
+            node ../scripts/test-frontend-changed.mjs "$BASE_REVISION" --disableConsoleIntercept "${test_args[@]}"
           else
             # Full suites already include every guard, with normal sharding.
             # Changed tests then run again on the moved clock, as the
             # selection runner does itself (MOVED_CLOCK there, #7337).
             pnpm vitest run --disableConsoleIntercept "${test_args[@]}"
-            if [ -n "$BASE_REF" ]; then
-              node ../scripts/test-frontend-changed.mjs --moved-clock "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+            if [ -n "$BASE_REVISION" ]; then
+              node ../scripts/test-frontend-changed.mjs --moved-clock "$BASE_REVISION" --disableConsoleIntercept "${test_args[@]}"
             fi
           fi
 

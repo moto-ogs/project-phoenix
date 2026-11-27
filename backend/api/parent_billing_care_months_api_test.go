@@ -192,7 +192,6 @@ func newCareBillingFixtureOn(t *testing.T, name string, today func() calendar.Da
 	_, portal, _, _ := newTraegerPortalOn(t, today)
 	db := testpkg.SetupTestDB(t)
 	office := newTraegerOffice(t, db, portal, name, identityaccess.TraegerRoleBilling)
-	testpkg.OwnTraegerCareContracts(t, db, office.organization)
 	rec := traegerJSON(t, portal, office.token, http.MethodPut, numberRangesPath+"/care", map[string]any{"pattern": "MB-{JJJJ}-{NNNN}"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return careBillingFixture{db: db, traeger: portal, office: office}

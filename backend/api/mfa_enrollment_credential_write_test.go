@@ -123,7 +123,7 @@ func TestTraegerEnrollmentConfirmAfterACredentialWriteRecordsNothing(t *testing.
 			_, err = db.NewRaw(`UPDATE auth.accounts SET mfa_reset_generation = 3 WHERE id = ?`, account.ID).Exec(context.Background())
 			require.NoError(t, err)
 			identity := writeAfterEnrollmentCode{Owner: module.Auth, write: func() error { return tc.write(testpkg.Ctx(t), module, account.ID, password) }}
-			portal := &traegerPortalHandler{Handler: traegerPortalRouter(t, db, identity, unit), mail: mail}
+			portal := newTraegerPortalHandler(traegerPortalRouter(t, db, identity, unit), mail, identity)
 
 			code, login := traegerLogin(t, portal, account.Email, password, 0)
 			require.Equal(t, http.StatusOK, code)

@@ -1,0 +1,242 @@
+name: Frontend image
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      sentry-dsn:
+        required: false
+      sentry-auth-token:
+        required: false
+      posthog-key:
+        required: false
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ghcr.io/moto-ogs/phoenix-frontend
+
+jobs:
+  guide-pdf:
+    name: Prepare printed NFC guide
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # Reuse the perf nightly's shared compiler cache; deploys never write
+      # hundreds of megabytes back for a single printed page.
+      - name: Restore shared Next.js build cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-
+
+      - name: Install render dependencies and patched Chrome
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm exec playwright install --with-deps --force chrome
+
+      - name: Generate guide PDF
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_APP_ENV: ${{ inputs.environment }}
+          SKIP_ENV_VALIDATION: "true"
+          METRICS_BEARER_TOKEN: "ci-guide-render-throwaway-token"
+          API_URL: "http://server:8080"
+          AUTH_JWT_EXPIRY: "15m"
+          AUTH_JWT_REFRESH_EXPIRY: "168h"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "ci-guide-render-throwaway-secret"
+          NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"
+          NEXT_PUBLIC_PARENTS_HOSTNAME: "parents.localhost:3000"
+          NEXT_PUBLIC_SCHOOL_HOSTNAME: "schule.localhost:3000"
+          NEXT_PUBLIC_CATERER_HOSTNAME: "caterer.localhost:3000"
+          NEXT_PUBLIC_TRAEGER_HOSTNAME: "traeger.localhost:3000"
+          TENANT_DOMAIN: "localhost"
+          NEXT_PUBLIC_TENANT_DOMAIN: "localhost"
+        run: pnpm run generate:guides
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nfc-guide
+          path: frontend/public/help/pdfs/*.pdf
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+
+  # Build and push frontend image
+  build-frontend:
+    name: Build frontend image
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    needs: guide-pdf
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@9657a6e02ca6445e6d6ce5ffaf370f4828dea50d # v2.4.0
+        with:
+          # Required since v2. Scopes the sticky-disk layer cache to this
+          # Dockerfile; must differ from the backend job to avoid cache thrash.
+          cache-key: frontend/Dockerfile.prod
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for frontend
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.FRONTEND_IMAGE }}
+          tags: |
+            # Branch name (main for production)
+            type=ref,event=branch,enable=${{ inputs.environment != 'demo' }}
+            # Short SHA for traceability
+            type=sha,prefix=${{ inputs.environment == 'demo' && 'demo-' || '' }},format=short
+            # 'staging' tag for staging deployments
+            type=raw,value=staging,enable=${{ inputs.environment == 'staging' }}
+            type=raw,value=demo,enable=${{ inputs.environment == 'demo' }}
+            # 'latest' tag for production (main branch)
+            type=raw,value=latest,enable=${{ inputs.environment == 'production' }}
+
+      - name: Determine operator hostname
+        id: operator_hostname
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "hostname=operator.staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "hostname=operator.demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "hostname=operator.moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine parents hostname
+        id: parents_hostname
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "hostname=eltern.staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "hostname=eltern.demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "hostname=eltern.moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine school hostname
+        id: school_hostname
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "hostname=schule.staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "hostname=schule.demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "hostname=schule.moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine caterer hostname
+        id: caterer_hostname
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "hostname=caterer.staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "hostname=caterer.demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "hostname=caterer.moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Träger hostname
+        id: traeger_hostname
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "hostname=traeger.staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "hostname=traeger.demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "hostname=traeger.moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine tenant domain
+        id: tenant_domain
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            echo "domain=staging.moto-app.de" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "demo" ]]; then
+            echo "domain=demo.moto-app.de" >> $GITHUB_OUTPUT
+          else
+            echo "domain=moto-app.de" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download the guide PDF
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nfc-guide
+          path: frontend/public/help/pdfs
+
+      - name: Build and push frontend
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          # NEXT_PUBLIC_* values below are build-time-inlined into the client
+          # bundle — THIS is the authoritative source for deployed builds. The
+          # same-named keys in environments/*.sops.env are inert for the
+          # client (kept only for env-check key sync + server-side env
+          # validation); editing them there does NOT change the shipped host.
+          # Staging gets no PostHog key: only production and the demo send
+          # usage analytics (#3601).
+          build-args: |
+            NEXT_PUBLIC_APP_ENV=${{ inputs.environment }}
+            API_URL=http://server:8080
+            NEXT_PUBLIC_OPERATOR_HOSTNAME=${{ steps.operator_hostname.outputs.hostname }}
+            NEXT_PUBLIC_PARENTS_HOSTNAME=${{ steps.parents_hostname.outputs.hostname }}
+            NEXT_PUBLIC_SCHOOL_HOSTNAME=${{ steps.school_hostname.outputs.hostname }}
+            NEXT_PUBLIC_CATERER_HOSTNAME=${{ steps.caterer_hostname.outputs.hostname }}
+            NEXT_PUBLIC_TRAEGER_HOSTNAME=${{ steps.traeger_hostname.outputs.hostname }}
+            TENANT_DOMAIN=${{ steps.tenant_domain.outputs.domain }}
+            NEXT_PUBLIC_TENANT_DOMAIN=${{ steps.tenant_domain.outputs.domain }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.sentry-dsn }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=${{ inputs.environment }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.posthog-key }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+            SENTRY_RELEASE=${{ github.sha }}
+          # Source-map upload for readable Sentry stack traces. Without the
+          # SENTRY_AUTH_TOKEN secret the build skips the upload.
+          secrets: |
+            sentry_auth_token=${{ secrets.sentry-auth-token }}
+          # Layer cache is mounted automatically via Blacksmith sticky disks (per repo + Dockerfile)
+          provenance: false

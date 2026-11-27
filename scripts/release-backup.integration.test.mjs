@@ -43,6 +43,7 @@ services:
     deploy:
       replicas: 2
     network_mode: none
+    init: true
     entrypoint: [sleep, infinity]
     volumes:
       - uploads:/app/public/uploads
@@ -51,6 +52,7 @@ services:
     deploy:
       replicas: 2
     network_mode: none
+    init: true
     entrypoint: [sleep, infinity]
   migrate:
     image: ${image}

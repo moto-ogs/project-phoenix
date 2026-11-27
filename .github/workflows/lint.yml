@@ -6,10 +6,24 @@ on:
       run-backend:
         type: boolean
         default: true
+      check-migration-history:
+        description: Compare migration changes with current base tips.
+        type: boolean
+        default: true
       full-backend:
         type: boolean
         default: true
       run-frontend:
+        type: boolean
+        default: true
+      build-frontend:
+        description: Build application sources; external validator inputs alone need only quality checks.
+        type: boolean
+        default: true
+      storybook-mode:
+        type: string
+        default: full
+      build-storybook:
         type: boolean
         default: true
       run-error-codes:
@@ -58,19 +72,23 @@ jobs:
   backend-quality:
     name: Backend quality
     if: ${{ inputs.run-backend }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      GOFLAGS: -trimpath
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          filter: blob:none
-      # This job already runs for every migration change. Fail before Go setup.
+          # The shrink check reads the tested merge's first parent. Only
+          # migration changes need the head's full ancestry and remote tips.
+          fetch-depth: 2
+          filter: ${{ github.event_name == 'pull_request' && inputs.check-migration-history && 'blob:none' || '' }}
       # development -> main promotes migrations already checked on development;
       # it is a release, not a stack with additions of its own.
       - name: Check new migration names and function redefinitions against current base tips
-        if: github.event_name == 'pull_request' && !(github.base_ref == 'main' && github.head_ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.event_name == 'pull_request' && inputs.check-migration-history && !(github.base_ref == 'main' && github.head_ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository)
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -85,7 +103,9 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          if ! git cat-file -e "$BASE_SHA^{commit}"; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
           node scripts/check-contract-compat.mjs "$BASE_SHA"
 
       # Catalog lines outside the contract only shrink: a new Outside line
@@ -93,41 +113,34 @@ jobs:
       # merge of the PR into its base; its first
       # parent is the base that merge was built on, while base.sha can be
       # older and would blame this PR for what landed on the base since.
-      # Commits and trees suffice: the check reads only changed files' blobs.
       - name: Refuse new catalog lines outside the contract
         if: github.event_name == 'pull_request'
-        run: |
-          git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
-          node scripts/check-contract-shrink.mjs HEAD^1
+        run: node scripts/check-contract-shrink.mjs HEAD^1
 
-      - name: Setup Go with cache
+      # Reuse the seed build's module downloads and matching compiler outputs.
+      # Go recompiles packages whose production files differ under its tags.
+      - name: Setup Go
         id: go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: |
-            backend/go.sum
-            backend/tools/go.sum
+          cache: false
 
-      # setup-go's go.sum-only key is immutable, so the production build and
-      # deadcode started from an old build cache. Keep a source-keyed layer
-      # with the last source build as a warm fallback, as test.yml does.
-      # Only nightly.yml saves it, on development: a ~290 MB save per pull
-      # request push evicted that entry from the 10 GB repository cache.
-      - name: Compute backend quality build cache key
+      - name: Compute seed smoke build cache key
         id: build-cache-key
         env:
-          QUALITY_CACHE_PREFIX: backend-quality-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum', 'backend/tools/go.sum') }}-
-          QUALITY_SOURCE_HASH: ${{ hashFiles('backend/**/*.go') }}
+          SEED_CACHE_PREFIX: seed-smoke-build-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum') }}-
         run: |
-          echo "prefix=$QUALITY_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
-          echo "key=$QUALITY_CACHE_PREFIX$QUALITY_SOURCE_HASH" >> "$GITHUB_OUTPUT"
-      - name: Restore backend quality build cache
-        id: build-cache
+          source_hash=$(git ls-files --stage -- 'backend/*.go' | sha256sum | cut -d' ' -f1)
+          echo "prefix=$SEED_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
+          echo "key=$SEED_CACHE_PREFIX$source_hash" >> "$GITHUB_OUTPUT"
+
+      - name: Restore seed smoke build cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/go-build
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
           key: ${{ steps.build-cache-key.outputs.key }}
           restore-keys: ${{ steps.build-cache-key.outputs.prefix }}
 
@@ -139,13 +152,6 @@ jobs:
           SKIP_SOURCE_RATCHETS: 'true'
         run: bash scripts/check-quality.sh backend
 
-      - name: Save backend quality build cache
-        if: ${{ github.event_name != 'pull_request' && steps.build-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/go-build
-          key: ${{ steps.build-cache-key.outputs.key }}
-
   backend-lint:
     name: Backend lint
     if: ${{ inputs.run-backend }}
@@ -154,24 +160,30 @@ jobs:
     permissions:
       contents: read
     env:
+      GOLANGCI_LINT_VERSION: v2.14.0
       GOLANGCI_LINT_CACHE: /home/runner/.cache/golangci-lint
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-          # Package selection reads file names only; no file contents needed.
+          # Only partial PR lint needs the tested merge's base tree.
+          fetch-depth: ${{ github.event_name == 'pull_request' && !inputs.full-backend && 2 || 1 }}
           filter: blob:none
-      - name: Setup Go with cache
+      - name: Setup Go
         id: go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
+          cache: false
+
+      - name: Restore backend Go modules
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.go.outputs.GOMODCACHE }}
+          key: backend-go-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.sum', 'scripts/backend-architecture/go.sum') }}
+
       # golangci-lint type-checks from Go build cache export data; its own
-      # cache is only ~2 MB. setup-go's go.sum-only key is immutable and holds
-      # build.yml's binary build, so lint started cold. Keep a source-keyed
-      # layer with the last source build as a warm fallback, as test.yml does.
+      # cache is only ~2 MB. Keep a source-keyed layer with the last source
+      # build as a warm fallback, separate from the module downloads above.
       # The golangci-lint action's own cache key is also immutable per week.
       # Pull requests only restore. Each pull request run saved about 240 MB
       # that only its own later runs could read, and those saves pushed
@@ -183,9 +195,8 @@ jobs:
       - name: Compute backend lint cache key
         id: lint-cache-key
         env:
-          # lint.yml pins the golangci-lint version, so a bump starts a new cache.
-          LINT_CACHE_PREFIX: backend-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum', '.github/workflows/lint.yml') }}-
-          LINT_SOURCE_HASH: ${{ hashFiles('backend/**/*.go', 'backend/.golangci.yml') }}
+          LINT_CACHE_PREFIX: backend-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ env.GOLANGCI_LINT_VERSION }}-${{ hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml') }}-
+          LINT_SOURCE_HASH: ${{ hashFiles('backend/**/*.go') }}
         run: |
           echo "prefix=$LINT_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
           echo "key=$LINT_CACHE_PREFIX$LINT_SOURCE_HASH" >> "$GITHUB_OUTPUT"
@@ -201,7 +212,7 @@ jobs:
       - name: Select backend packages
         id: packages
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REVISION: HEAD^1
           EVENT_NAME: ${{ github.event_name }}
           FULL_BACKEND: ${{ inputs.full-backend }}
         run: |
@@ -212,7 +223,7 @@ jobs:
       - name: golang ci lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.14.0
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --timeout 10m ${{ steps.packages.outputs.args }}
           working-directory: backend
           # The step above owns the lint cache.
@@ -235,6 +246,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # React Doctor compares the tested merge to its first parent.
+          fetch-depth: ${{ github.event_name == 'pull_request' && inputs.build-frontend && 2 || 1 }}
+          filter: blob:none
 
       - name: Enable corepack
         run: corepack enable
@@ -250,27 +265,78 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: React Doctor (new issues vs base)
+        if: github.event_name == 'pull_request' && inputs.build-frontend
+        working-directory: frontend
+        run: bash ../scripts/check-quality.sh react-doctor "$(git rev-parse HEAD^1)"
+
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend
 
-      # Storybook supplies its own mock environment and needs no Next build.
-      # Keep it off the serial Next.js/bundle-ratchet critical path.
+      # Browser tests use Vite's dev server. The separate production bundle is
+      # checked for Storybook/CSF/toolchain edits and on the full backstops.
       - name: Build Storybook
+        if: inputs.build-storybook
         working-directory: frontend
         run: pnpm run build-storybook
 
-  # Every story renders in Chromium and fails on an axe violation (#7108).
-  # A pull request tests the stories its changes import; the nightly run tests
-  # all of them (scripts/storybook-test-changed.mjs). Inside "Frontend quality"
-  # the full run of all 284 story files took 221-345 s and that job 311-474 s
-  # (#6962, 15.11.2026); it starts in about 40 % of frontend pull requests.
-  # The run is CPU-bound on four cores: three quarters of it is the fresh
-  # iframe each file gets. More workers made it slower, a shared iframe let
-  # one file's state change what the next one renders. Hosted runners are
-  # free for this repository, so the files are split over three of them.
+  # Select once without installing Chromium. Empty selections end here; a
+  # small selection uses this runner's checkout and dependencies to run axe.
+  storybook-selected:
+    name: Storybook tests (affected)
+    if: inputs.run-frontend && inputs.storybook-mode == 'select'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      count: ${{ steps.select.outputs.count }}
+      shards: ${{ steps.select.outputs.shards }}
+      files: ${{ steps.select.outputs.files }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Select affected stories
+        id: select
+        working-directory: frontend
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/storybook-test-changed.mjs --plan
+
+      - name: Install Chromium
+        if: steps.select.outputs.count == '1'
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Storybook tests (a11y)
+        if: steps.select.outputs.count == '1'
+        working-directory: frontend
+        env:
+          STORYBOOK_FILES: ${{ steps.select.outputs.files }}
+        run: node scripts/storybook-test-changed.mjs
+
   storybook-tests:
-    name: Storybook tests (${{ matrix.shard }}/3)
-    if: ${{ inputs.run-frontend }}
+    name: Storybook tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: storybook-selected
+    if: >-
+      !cancelled() && inputs.run-frontend &&
+      (inputs.storybook-mode == 'full' ||
+       (needs.storybook-selected.result == 'success' && needs.storybook-selected.outputs.count > 1))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -278,7 +344,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: ${{ fromJSON(needs.storybook-selected.outputs.shards || '[1,2,3]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -304,8 +370,8 @@ jobs:
       - name: Storybook tests (a11y)
         working-directory: frontend
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          STORYBOOK_SHARD: ${{ matrix.shard }}/3
+          STORYBOOK_FILES: ${{ needs.storybook-selected.outputs.files || 'null' }}
+          STORYBOOK_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
         run: node scripts/storybook-test-changed.mjs
 
   # The regular build of the tested tree: on pull requests GitHub's synthetic
@@ -314,12 +380,11 @@ jobs:
   # set the wall-clock time of frontend pull requests (306-458 s, 13.11.2026).
   # The bundle comparison reads nothing from it. Inside "Frontend quality" it
   # took 154 s and brought that job to 273-294 s, so it has its own hosted
-  # runner, which is free for this repository. Without a Next.js cache: a
-  # hosted runner would save it into the repository's 10 GB GitHub cache on
-  # every push.
+  # runner. Reuse the default branch's compiler and TypeScript state, not a
+  # built application. The merge tree must still pass the normal Next build.
   frontend-merge-build:
     name: Frontend merge build
-    if: ${{ inputs.run-frontend }}
+    if: ${{ inputs.run-frontend && inputs.build-frontend }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -336,6 +401,16 @@ jobs:
           node-version: "26"
           cache: "pnpm"
           cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      # perf-nightly publishes this cache on development. Missing/evicted
+      # entries build cold; this job never saves a PR-specific copy.
+      - name: Restore shared Next.js compiler cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
         working-directory: frontend
@@ -361,37 +436,9 @@ jobs:
           METRICS_BEARER_TOKEN: "ci-bundle-ratchet-token"
         run: pnpm run build
 
-  frontend-react-doctor:
-    name: Frontend React Doctor
-    # Changed-scope only: the existing codebase has ~1000 findings, so a full
-    # scan would always fail. This gates only issues introduced by the PR
-    # (fails on error severity, warnings are advisory). Push builds skip it —
-    # there is no PR base to diff against.
-    if: ${{ inputs.run-frontend && github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "26"
-
-      - name: React Doctor (new issues vs base)
-        working-directory: frontend
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: bash ../scripts/check-quality.sh react-doctor "origin/$BASE_REF"
-
-
   frontend-build:
     name: Frontend build
-    if: ${{ inputs.run-frontend }}
+    if: ${{ inputs.run-frontend && inputs.build-frontend }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     permissions:

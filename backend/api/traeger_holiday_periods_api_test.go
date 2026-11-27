@@ -78,22 +78,19 @@ type traegerOffice struct {
 	token        string
 }
 
+var officePassword = testpkg.NewTestPassword()
+
 func newTraegerOffice(t *testing.T, db *bun.DB, router *traegerPortalHandler, name, role string) traegerOffice {
 	t.Helper()
-	password := testpkg.NewTestPassword()
 	organization := traegerOrganization(t, db, name, true)
-	testpkg.OwnTraegerHolidayPeriods(t, db, organization)
-	testpkg.OwnTraegerContributionRules(t, db, organization)
-	testpkg.OwnTraegerClosingDays(t, db, organization)
 	schools := []int64{
 		testpkg.CreateTestSchoolInOrganization(t, db, organization, name+" OGS Nord"),
 		testpkg.CreateTestSchoolInOrganization(t, db, organization, name+" OGS Süd"),
 	}
-	account := traegerAccount(t, db, password)
+	account := traegerAccount(t, db, officePassword)
 	testpkg.CreateTestTraegerMember(t, db, organization, account.ID, role)
-	code, answer := traegerSignIn(t, router, account.Email, password, 0)
-	require.Equal(t, http.StatusOK, code)
-	return traegerOffice{organization: organization, schools: schools, token: answer.AccessToken}
+	token := router.officeSession(t, account.ID, organization)
+	return traegerOffice{organization: organization, schools: schools, token: token}
 }
 
 // putHolidayPeriod saves a period over the version its caller reads first,
