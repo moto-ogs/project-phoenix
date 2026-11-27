@@ -355,6 +355,14 @@ printf '{}\n' >"$fixture/backend/architecture/composition.json"
 assert_output $'example.test/project/cmd\nexample.test/project/test'
 rm "$fixture/backend/architecture/composition.json"
 
+mkdir -p "$fixture/backend/api/contract" "$fixture/frontend/src/lib/contract"
+for path in backend/api/contract/contract.json frontend/src/lib/contract/probe.generated.ts; do
+  touch "$fixture/$path"
+  assert_output $'example.test/project/cmd\nexample.test/project/test'
+  assert_output_changed 'example.test/project/cmd'
+  rm "$fixture/$path"
+done
+
 # Fixtures shared across packages select the tests that name them.
 printf '[]\n' >"$fixture/backend/testdata/shared-cases.json"
 assert_output $'example.test/project/sharedfixtureuser\nexample.test/project/test'
@@ -692,6 +700,7 @@ assert_small_runner() {
   rm "$fixture/scope-size"
 }
 assert_small_runner false '[]'
+assert_small_runner true '["backend/api/contract/contract.json","frontend/src/lib/contract/rows.generated.ts"]'
 assert_small_runner true '["backend/api/a_test.go","backend/api/b_test.go"]'
 assert_small_runner true "$(jq -cn '[range(0; 15) | "backend/package\(.)/source_test.go"]')"
 assert_small_runner false "$(jq -cn '[range(0; 16) | "backend/package\(.)/source_test.go"]')"

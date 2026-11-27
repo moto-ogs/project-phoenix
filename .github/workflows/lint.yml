@@ -6,6 +6,10 @@ on:
       run-backend:
         type: boolean
         default: true
+      check-migration-history:
+        description: Compare migration changes with current base tips.
+        type: boolean
+        default: true
       full-backend:
         type: boolean
         default: true
@@ -68,19 +72,23 @@ jobs:
   backend-quality:
     name: Backend quality
     if: ${{ inputs.run-backend }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      GOFLAGS: -trimpath
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          filter: blob:none
-      # This job already runs for every migration change. Fail before Go setup.
+          # The shrink check reads the tested merge's first parent. Only
+          # migration changes need the head's full ancestry and remote tips.
+          fetch-depth: 2
+          filter: ${{ github.event_name == 'pull_request' && inputs.check-migration-history && 'blob:none' || '' }}
       # development -> main promotes migrations already checked on development;
       # it is a release, not a stack with additions of its own.
       - name: Check new migration names and function redefinitions against current base tips
-        if: github.event_name == 'pull_request' && !(github.base_ref == 'main' && github.head_ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.event_name == 'pull_request' && inputs.check-migration-history && !(github.base_ref == 'main' && github.head_ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository)
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -95,7 +103,9 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          if ! git cat-file -e "$BASE_SHA^{commit}"; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
           node scripts/check-contract-compat.mjs "$BASE_SHA"
 
       # Catalog lines outside the contract only shrink: a new Outside line
@@ -103,41 +113,34 @@ jobs:
       # merge of the PR into its base; its first
       # parent is the base that merge was built on, while base.sha can be
       # older and would blame this PR for what landed on the base since.
-      # Commits and trees suffice: the check reads only changed files' blobs.
       - name: Refuse new catalog lines outside the contract
         if: github.event_name == 'pull_request'
-        run: |
-          git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
-          node scripts/check-contract-shrink.mjs HEAD^1
+        run: node scripts/check-contract-shrink.mjs HEAD^1
 
-      - name: Setup Go with cache
+      # Reuse the seed build's module downloads and matching compiler outputs.
+      # Go recompiles packages whose production files differ under its tags.
+      - name: Setup Go
         id: go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: |
-            backend/go.sum
-            backend/tools/go.sum
+          cache: false
 
-      # setup-go's go.sum-only key is immutable, so the production build and
-      # deadcode started from an old build cache. Keep a source-keyed layer
-      # with the last source build as a warm fallback, as test.yml does.
-      # Only nightly.yml saves it, on development: a ~290 MB save per pull
-      # request push evicted that entry from the 10 GB repository cache.
-      - name: Compute backend quality build cache key
+      - name: Compute seed smoke build cache key
         id: build-cache-key
         env:
-          QUALITY_CACHE_PREFIX: backend-quality-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum', 'backend/tools/go.sum') }}-
-          QUALITY_SOURCE_HASH: ${{ hashFiles('backend/**/*.go') }}
+          SEED_CACHE_PREFIX: seed-smoke-build-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/go.sum') }}-
         run: |
-          echo "prefix=$QUALITY_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
-          echo "key=$QUALITY_CACHE_PREFIX$QUALITY_SOURCE_HASH" >> "$GITHUB_OUTPUT"
-      - name: Restore backend quality build cache
-        id: build-cache
+          source_hash=$(git ls-files --stage -- 'backend/*.go' | sha256sum | cut -d' ' -f1)
+          echo "prefix=$SEED_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
+          echo "key=$SEED_CACHE_PREFIX$source_hash" >> "$GITHUB_OUTPUT"
+
+      - name: Restore seed smoke build cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/go-build
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
           key: ${{ steps.build-cache-key.outputs.key }}
           restore-keys: ${{ steps.build-cache-key.outputs.prefix }}
 
@@ -148,13 +151,6 @@ jobs:
         env:
           SKIP_SOURCE_RATCHETS: 'true'
         run: bash scripts/check-quality.sh backend
-
-      - name: Save backend quality build cache
-        if: ${{ github.event_name != 'pull_request' && steps.build-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/go-build
-          key: ${{ steps.build-cache-key.outputs.key }}
 
   backend-lint:
     name: Backend lint

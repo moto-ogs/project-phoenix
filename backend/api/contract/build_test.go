@@ -618,6 +618,7 @@ func TestTypeScriptImportsASharedNameOnlyFromCode(t *testing.T) {
 	assert.Empty(t, shared.namedIn(`/** Go: x.Kind */
 export const PICKUP_VALUES = ["Geht mit anderem Kind", "Wird \"Kind\" abgeholt"] as const; // Kind`))
 	assert.Equal(t, []string{"type Kind"}, shared.namedIn(`  kind: OpenEnum<Kind>; // "x"`))
+	assert.Empty(t, shared.namedIn(`type AndereKind = KindÄnderung | KindSchema | $Kind;`))
 }
 
 func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {

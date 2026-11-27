@@ -18,10 +18,12 @@ fi
 base=${1:-origin/development}
 merge_base=$(git merge-base HEAD "$base")
 
+# cmd's generated-contract check also reads the committed TypeScript output.
+inputs=(backend ':(glob)frontend/src/lib/contract/*.generated.ts')
 backend_changes=$(
   {
-    git diff --no-renames --name-only "$merge_base" -- backend
-    git ls-files --others --exclude-standard -- backend
+    git diff --no-renames --name-only "$merge_base" -- "${inputs[@]}"
+    git ls-files --others --exclude-standard -- "${inputs[@]}"
   } | sort -u
 )
 
@@ -40,6 +42,7 @@ shared_fixture_dirs=$(
 )
 
 changed_dirs=$({ printf '%s\n' "$shared_fixture_dirs"; printf '%s\n' "$backend_changes" | awk -v changed_only="$changed_only" '
+  /^backend\/api\/contract\/contract\.json$/ || /^frontend\/src\/lib\/contract\// { print "test cmd"; next }
   /^backend\/.*\/testdata\// {
     path = $0
     sub(/^backend\//, "", path)

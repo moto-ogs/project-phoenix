@@ -396,6 +396,8 @@ test('shared backend quality fails when an analyzer executable is missing', t =>
   copyFileSync(join(source, 'check-backend-quality.sh'), join(f.root, 'scripts/check-backend-quality.sh'));
   f.write('limited/dirname', '#!/bin/bash\nprintf "%s\\n" "${1%/*}"\n');
   f.write('limited/gofmt', '#!/bin/bash\nexit 0\n');
+  symlinkSync('/usr/bin/mktemp', join(f.root, 'limited/mktemp'));
+  symlinkSync('/bin/rm', join(f.root, 'limited/rm'));
   symlinkSync('/bin/bash', join(f.root, 'limited/bash'));
   const result = f.run('/bin/bash', ['scripts/check-quality.sh', 'backend'], {
     // Keep the shell diagnostic below independent of the host locale.

@@ -133,6 +133,27 @@ jobs:
           --health-retries 10
 
     steps:
+      # A full non-race run always includes the SEPA XSD tests. In the
+      # last warm job installing xmllint blocked go test for 16 s.
+      - name: Start xmllint installation for the full backend suite
+        if: ${{ !inputs.backend-race && (!inputs.changed-scope || inputs.full-backend-suite || inputs.base_ref == '') }}
+        run: |
+          command -v xmllint >/dev/null && exit 0
+          (
+            trap 'echo "$?" > "$RUNNER_TEMP/xmllint-status"' EXIT
+            . /etc/os-release
+            for pocket in updates security; do
+              echo "deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu $VERSION_CODENAME-$pocket main"
+            done > "$RUNNER_TEMP/xmllint.list"
+            sources=(-o "Dir::Etc::sourcelist=$RUNNER_TEMP/xmllint.list" -o Dir::Etc::sourceparts=-)
+            packages=(install -y -qq --no-install-recommends libxml2-utils)
+            if ! sudo apt-get "${sources[@]}" update -qq || ! sudo apt-get "${sources[@]}" "${packages[@]}"; then
+              # A different image or dependency may need the runner's other sources.
+              sudo apt-get update -qq
+              sudo apt-get "${packages[@]}"
+            fi
+          ) > "$RUNNER_TEMP/xmllint.log" 2>&1 < /dev/null &
+
       # Peak memory in use on the runner for the whole job, page cache not
       # counted: test binaries, toolchain, and Postgres with its tmpfs data
       # directory (shared memory is not available memory). "Summarize backend
@@ -383,10 +404,15 @@ jobs:
 
           # Only the SEPA tests validate documents against an XSD (#4697).
           # Full runs and race shards use the same concrete package list.
-          if grep -Fxq 'github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application' <<< "$TEST_PACKAGES" &&
-             ! command -v xmllint >/dev/null; then
-            sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
-              || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
+          if grep -Fxq 'github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application' <<< "$TEST_PACKAGES"; then
+            if [ -f "$RUNNER_TEMP/xmllint.log" ]; then
+              until test -s "$RUNNER_TEMP/xmllint-status"; do sleep 0.1; done
+              cat "$RUNNER_TEMP/xmllint.log"
+              test "$(cat "$RUNNER_TEMP/xmllint-status")" = 0
+            elif ! command -v xmllint >/dev/null; then
+              sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
+                || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
+            fi
           fi
 
           # Every registered route a test answers through a router, for

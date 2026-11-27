@@ -49,6 +49,7 @@ jobs:
       run-backend: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-tests == 'true' || steps.filter.outputs.backend-test-infra == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' }}
       run-frontend: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.frontend-fs-inputs == 'true' || steps.filter.outputs.frontend-test-infra == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-test == 'true' }}
       run-backend-lint: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-lint == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
+      check-migration-history: ${{ steps.filter.outputs.migrations != 'false' || github.event.pull_request.changed_files >= 3000 }}
       run-backend-architecture: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-architecture == 'true' || steps.filter.outputs.workflow-main == 'true' }}
       full-backend-lint: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.backend-lint-full == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
       run-frontend-lint: ${{ steps.filter.outputs.frontend == 'true' || steps.filter.outputs.frontend-quality-only == 'true' || steps.filter.outputs.workflow-main == 'true' || steps.filter.outputs.workflow-lint == 'true' || steps.filter.outputs.quality-scripts == 'true' }}
@@ -131,6 +132,9 @@ jobs:
           predicate-quantifier: "some-with-excludes"
           list-files: json
           filters: |
+            migrations:
+              - 'backend/database/migrations/**'
+              - 'scripts/check-migration-versions*'
             backend-tests:
               - 'backend/**/*.go'
               - 'backend/go.mod'
@@ -155,8 +159,7 @@ jobs:
               - 'backend/modules/organizationtenancy/return_register.json'
               - 'backend/modules/organizationtenancy/inbound/datareturn/openapi.json'
               - 'backend/modules/organizationtenancy/data_lifecycle_catalog.json'
-              # Generated from the Go route registrations (ADR 0270); the
-              # backend quality job checks that they are current.
+              # cmd.TestTheCommittedContractIsCurrent reads both outputs.
               - 'backend/api/contract/contract.json'
               - 'frontend/src/lib/contract/*.generated.ts'
               - 'backend/modules/documentrendering/internal/application/listrenderer/assets/**'
@@ -518,7 +521,8 @@ jobs:
           # fixture, architecture register and query-budget trees specially.
           small=$(jq '
             def local_test_package:
-              if (startswith("backend/") | not) or
+              if . == "backend/api/contract/contract.json" or test("^frontend/src/lib/contract/[^/]*\\.generated\\.ts$") then "backend/cmd"
+              elif (startswith("backend/") | not) or
                  test("^backend/(testdata|architecture/(policy|command-effects|passthrough)|test/query-budgets)/") then null
               elif contains("/testdata/") then split("/testdata/")[0]
               elif endswith("_test.go") or test("^backend/templates/email/[^/]+\\.html$") then
@@ -698,6 +702,7 @@ jobs:
     uses: ./.github/workflows/lint.yml
     with:
       run-backend: ${{ needs.detect-changes.outputs.run-backend-lint == 'true' }}
+      check-migration-history: ${{ needs.detect-changes.outputs.check-migration-history != 'false' }}
       full-backend: ${{ needs.detect-changes.outputs.full-backend-lint == 'true' }}
       run-frontend: ${{ needs.detect-changes.outputs.run-frontend-lint == 'true' }}
       build-frontend: ${{ needs.detect-changes.outputs.build-frontend == 'true' }}
