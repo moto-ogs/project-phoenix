@@ -207,9 +207,14 @@ func executeAdminJSON(t *testing.T, router chi.Router, method, path string, body
 func executeAdminRouteWithPermissions(t *testing.T, rs *Resource, method, path string, permissions []string) *httptest.ResponseRecorder {
 	t.Helper()
 	claims := routetest.TenantUserTestClaims(1, 4242)
-	req := httptest.NewRequest(method, path, nil)
+	claims.Permissions = permissions
+	req := routetest.NewRequest(method, path, nil, routetest.WithJWTBearer(routetest.MintTestJWT(t, claims)))
+	// Keep the request's test runtime even when another test has opened the package database.
 	req = req.WithContext(tenant.WithUnitOfWork(req.Context(), testpkg.PassthroughTenantRuntime()))
-	return routetest.ExecuteWithAuthPermissions(t, rs.Router(scopeTestTenantSession(testpkg.TenantSessionGates())), req, claims, permissions)
+	recorder := httptest.NewRecorder()
+	router := rs.Router(scopeTestTenantSession(testpkg.TenantSessionGates()))
+	routetest.WithSessionVerifier(router).ServeHTTP(recorder, req)
+	return recorder
 }
 
 // makeReqSummary builds an enrollment request summary with the supplied IDs.
