@@ -387,7 +387,7 @@ describe("ShiftEditModal series creation", () => {
     createSeries.mockResolvedValue({
       seriesId: "5",
       created: 19,
-      skippedDates: ["2026-09-14"],
+      skippedDates: ["2026-09-14", "2026-09-21"],
     });
     const onClose = vi.fn();
     renderModal({ onClose });
@@ -398,7 +398,7 @@ describe("ShiftEditModal series creation", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/wurden übersprungen: 14\.09\.2026/),
+        screen.getByText(/wurden übersprungen: 14\.09\.2026, 21\.09\.2026\./),
       ).toBeInTheDocument();
     });
     expect(onClose).not.toHaveBeenCalled();

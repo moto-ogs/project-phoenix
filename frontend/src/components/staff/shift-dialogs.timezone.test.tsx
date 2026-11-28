@@ -129,6 +129,8 @@ describe.each(zones)("shift dialogs in %s", (zone, offsetMinutes) => {
       />,
     );
 
+    // Anker: the dialog names the shift's day at all, so the absence check
+    // below cannot pass on an empty or unrendered dialog.
     expect(
       screen.getAllByText(/Donnerstag, 26\. November 2026/).length,
     ).toBeGreaterThan(0);
