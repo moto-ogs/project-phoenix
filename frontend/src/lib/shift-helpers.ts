@@ -299,7 +299,7 @@ export function formatShiftLabel(shift: StaffShift): string {
 }
 
 /** Longest break a single shift may carry, in minutes. */
-export const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
+const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 
 /**
  * Minutes between two wall-clock times "HH:MM", or null unless both are

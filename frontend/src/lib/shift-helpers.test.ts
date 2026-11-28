@@ -12,7 +12,6 @@ import {
   parseBreakMinutes,
   shiftBreakMaxMinutes,
   shiftDurationMinutes,
-  STAFF_SHIFT_MAX_BREAK_MINUTES,
   summaryLabel,
   summaryTone,
   type SummaryDelta,
@@ -567,12 +566,8 @@ describe("shift time and break rules", () => {
 
   it("caps the break at the shift length and at the general maximum", () => {
     expect(shiftBreakMaxMinutes("08:00", "09:00")).toBe(60);
-    expect(shiftBreakMaxMinutes("06:00", "18:00")).toBe(
-      STAFF_SHIFT_MAX_BREAK_MINUTES,
-    );
-    expect(shiftBreakMaxMinutes("12:00", "08:00")).toBe(
-      STAFF_SHIFT_MAX_BREAK_MINUTES,
-    );
+    expect(shiftBreakMaxMinutes("06:00", "18:00")).toBe(300);
+    expect(shiftBreakMaxMinutes("12:00", "08:00")).toBe(300);
   });
 
   it("accepts a break only as whole minutes from 0 to the maximum", () => {
