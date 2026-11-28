@@ -70,7 +70,7 @@ describe("StaffSchoolPersons (#8208)", () => {
     ).toBeInTheDocument();
     const row = screen.getByText("OGS Nord").closest("li");
     expect(row).toHaveTextContent(
-      "OGS Nord: Vorname „Mira“, Nachname „Sommer“, kein Geburtstag",
+      "OGS Nord: Vorname „Mira“, Nachname „Sommer“, Geburtstag fehlt",
     );
     expect(screen.queryByText("OGS Süd")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /übernehmen/ })).toHaveLength(

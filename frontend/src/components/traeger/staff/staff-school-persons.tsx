@@ -30,7 +30,7 @@ import { STAFF_FIELD_LABELS } from "./staff-record-format";
 
 const logger = createLogger({ component: "TraegerStaffSchoolPersons" });
 
-/** „Vorname „Mira“, Nachname „Sommer“, kein Geburtstag“ */
+/** „Vorname „Mira“, Nachname „Sommer“, Geburtstag fehlt“ */
 function schoolPersonText(person: StaffSchoolPerson): string {
   const part = (field: StaffPersonField): string => {
     if (field === "first_name") {
@@ -41,7 +41,7 @@ function schoolPersonText(person: StaffSchoolPerson): string {
     }
     return person.birthday
       ? `${STAFF_FIELD_LABELS.birthday} ${formatDate(person.birthday)}`
-      : "kein Geburtstag";
+      : `${STAFF_FIELD_LABELS.birthday} fehlt`;
   };
   return person.fields.map(part).join(", ");
 }
