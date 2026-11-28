@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { BELOW_MD } from "~/lib/hooks/use-media-query";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
@@ -288,6 +289,90 @@ describe("ActivitiesPage", () => {
       expect(mockToastSuccess).toHaveBeenCalledWith("Gespeichert");
       expect(mockMutate).toHaveBeenCalled();
     });
+  });
+
+  // #8272: Der Server liefert die Liste schon zum ersten Render. Vor dem
+  // Effekt (also im Server-HTML) müssen Kopfzahl und Kacheln zusammenpassen.
+  it("shows the seeded activities in the first render, matching the count", () => {
+    // Eine Kategorie, damit die „2“ nur die Aktivitäten zählt.
+    vi.mocked(useSWRAuth).mockReturnValue({
+      data: {
+        activities: mockActivities,
+        categories: mockCategories.slice(0, 1),
+        currentStaff: mockStaff,
+      },
+      isLoading: false,
+      error: null,
+      mutate: mockMutate,
+    } as never);
+    // renderToString führt keine Effekte aus: genau der Stand, den der
+    // Browser vor der Hydration zeigt.
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<ActivitiesPage />);
+    const firstRender = within(container);
+
+    expect(firstRender.getByText("2")).toBeDefined();
+    expect(
+      firstRender
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Kunst", "Schach"]);
+    expect(firstRender.queryByText("Keine Aktivitäten vorhanden")).toBeNull();
+  });
+
+  it("counts exactly the tiles that match the filters", () => {
+    render(<ActivitiesPage />);
+
+    fireEvent.change(screen.getByTestId("search-input"), {
+      target: { value: "meyer" },
+    });
+
+    expect(screen.getByText("1 von 2")).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("button", { name: /öffnen$/ })
+        .map((tile) => tile.getAttribute("aria-label")),
+    ).toEqual(["Schach öffnen"]);
+  });
+
+  it("tells a filter without matches apart from an empty list", () => {
+    render(<ActivitiesPage />);
+
+    fireEvent.change(screen.getByTestId("search-input"), {
+      target: { value: "Töpfern" },
+    });
+
+    expect(screen.getByText("0 von 2")).toBeInTheDocument();
+    expect(screen.getByText("Keine Aktivitäten gefunden")).toBeInTheDocument();
+  });
+
+  it("sorts by German name without reordering the cached list", () => {
+    const cached = [
+      { ...mockActivities[0], id: "z", name: "Zirkus" },
+      { ...mockActivities[0], id: "o", name: "Ökogarten" },
+      { ...mockActivities[0], id: "a", name: "Angeln" },
+    ];
+    vi.mocked(useSWRAuth).mockReturnValue({
+      data: {
+        activities: cached,
+        categories: mockCategories,
+        currentStaff: mockStaff,
+      },
+      isLoading: false,
+      error: null,
+      mutate: mockMutate,
+    } as never);
+
+    render(<ActivitiesPage />);
+
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["Angeln", "Ökogarten", "Zirkus"]);
+    expect(cached.map((activity) => activity.name)).toEqual([
+      "Zirkus",
+      "Ökogarten",
+      "Angeln",
+    ]);
   });
 
   it("does not mount activity data hooks without NFC attendance", () => {
