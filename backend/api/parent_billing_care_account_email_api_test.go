@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,9 +26,10 @@ type careAccountLetterBody struct {
 // careAccountRunBody is the run with the addresses of its invoices.
 type careAccountRunBody struct {
 	Invoices []struct {
-		ID         wireID `json:"id"`
-		ContractID wireID `json:"contract_id"`
-		Recipient  struct {
+		ID          wireID `json:"id"`
+		ContractID  wireID `json:"contract_id"`
+		FamilyEmail string `json:"family_email"`
+		Recipient   struct {
 			Email         string `json:"email"`
 			ContractEmail string `json:"contract_email"`
 		} `json:"recipient"`
@@ -174,4 +176,36 @@ func TestCareInvoiceIssuedToTheContractAddressStillGoesOutAfterAnAccountIsLinked
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), fmt.Sprintf("/invoices/%d/mail", mia.ID)), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, []string{signed}, careMailedAddresses(t, f), "the issued invoice keeps the address it copied")
+}
+
+// An imported contract without an address keeps its contract-keyed family,
+// but its parent's account still receives the invoice (#8215).
+func TestCareInvoiceWithoutSignedAddressGoesToTheParentsAccount(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Kontoadresse Import")
+	brandCareTraeger(t, f)
+	school := f.office.schools[0]
+	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
+	accountID, _ := linkPartyAccount(t, f, mia, "eva-import")
+	result, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id = ?`, mia)
+	require.NoError(t, err)
+	changed, err := result.RowsAffected()
+	require.NoError(t, err)
+	require.Positive(t, changed)
+	moved := fmt.Sprintf("eva.import.neu.%d@example.org", mia)
+	changeAccountEmail(t, f, accountID, moved)
+
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	run := f.startRun(t, careMonth)
+	preview := f.run(t, int64(run.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	issued := decodeSchoolPortalData[careAccountRunBody](t, rec.Body.Bytes())
+	require.Len(t, issued.Invoices, 1)
+	assert.Equal(t, moved, issued.Invoices[0].Recipient.Email, "the account address receives the invoice")
+	assert.Empty(t, issued.Invoices[0].Recipient.ContractEmail, "the contract has no signed address")
+	assert.Equal(t, "contract:"+strconv.FormatInt(mia, 10), issued.Invoices[0].FamilyEmail,
+		"the account address does not move the imported contract's family")
 }

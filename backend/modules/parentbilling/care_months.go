@@ -269,6 +269,10 @@ type CareRecipient struct {
 	// parents account's address that differs from it (#8215); the
 	// Träger-Büro sees both. Empty when the invoice goes to the contract's.
 	ContractEmail string `json:"contract_email,omitempty"`
+	// ContractFamily keeps an imported contract without a signed address in
+	// its contract-keyed family when Email is its parent's account address
+	// (#8215). Never on the wire.
+	ContractFamily bool `json:"-"`
 	// AccountEmail is the address of the party's parents account today, as
 	// the contract read names it; never on the wire. The invoice goes there
 	// unless a payer gets it.
@@ -292,6 +296,9 @@ type CareRecipient struct {
 func (r CareRecipient) FamilyOf(contractID int64) string {
 	if r.FamilyContractID > 0 {
 		contractID = r.FamilyContractID
+	}
+	if r.ContractFamily {
+		return ContractFamilyKey("", contractID)
 	}
 	email := r.Email
 	if r.ContractEmail != "" {
