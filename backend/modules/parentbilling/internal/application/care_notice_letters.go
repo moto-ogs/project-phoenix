@@ -447,7 +447,9 @@ func noticePeriodName(notice parentbilling.CareNotice) string {
 // change of its own recipient, so the party of today decides alone.
 func sameNoticeRecipient(notice parentbilling.CareNotice, recipients map[int64]parentbilling.CareRecipient) bool {
 	now, ok := recipients[notice.ContractID.Int64()]
-	return ok && strings.EqualFold(strings.TrimSpace(now.Email), strings.TrimSpace(notice.Recipient.Email))
+	copied := strings.TrimSpace(notice.Recipient.Email)
+	return ok && (strings.EqualFold(strings.TrimSpace(now.Email), copied) ||
+		(now.ContractEmail != "" && strings.EqualFold(strings.TrimSpace(now.ContractEmail), copied)))
 }
 
 // overview builds the state of every notice and records the read.

@@ -128,26 +128,29 @@ type careInvoiceRow struct {
 	DocumentKind       string        `bun:"document_kind"`
 	// The family, the recipient and the payment the release copied
 	// (#4689); NULL on invoices issued before.
-	FamilyEmail         *string        `bun:"family_email"`
-	RecipientKind       *string        `bun:"recipient_kind"`
-	RecipientSecondName *string        `bun:"recipient_second_name"`
-	RecipientStreet     *string        `bun:"recipient_address_street"`
-	RecipientPostalCode *string        `bun:"recipient_address_postal_code"`
-	RecipientCity       *string        `bun:"recipient_address_city"`
-	PaymentMethod       *string        `bun:"payment_method"`
-	DueOn               *calendar.Date `bun:"due_on,type:date"`
-	DueSource           *string        `bun:"due_source"`
-	MandateID           *int64         `bun:"mandate_id"`
-	MandateReference    *string        `bun:"mandate_reference"`
-	MandateSignedOn     *calendar.Date `bun:"mandate_signed_on,type:date"`
-	CreditorID          *string        `bun:"creditor_id"`
-	HolderSealed        []byte         `bun:"account_holder_sealed,nullzero" json:"-"`
-	DebtorIBANMasked    *string        `bun:"debtor_iban_masked"`
-	SequenceType        *string        `bun:"sequence_type"`
-	DebitGap            *string        `bun:"debit_gap"`
-	DebtorNumber        *string        `bun:"debtor_number"`
-	IssuerKey           string         `bun:"issuer_key"`
-	Issuer              *issuerRow     `bun:"issuer,type:jsonb"`
+	FamilyEmail         *string `bun:"family_email"`
+	RecipientKind       *string `bun:"recipient_kind"`
+	RecipientSecondName *string `bun:"recipient_second_name"`
+	// RecipientContractEmail is the contract's address when the invoice went
+	// to the differing address of the parents account (#8215).
+	RecipientContractEmail *string        `bun:"recipient_contract_email"`
+	RecipientStreet        *string        `bun:"recipient_address_street"`
+	RecipientPostalCode    *string        `bun:"recipient_address_postal_code"`
+	RecipientCity          *string        `bun:"recipient_address_city"`
+	PaymentMethod          *string        `bun:"payment_method"`
+	DueOn                  *calendar.Date `bun:"due_on,type:date"`
+	DueSource              *string        `bun:"due_source"`
+	MandateID              *int64         `bun:"mandate_id"`
+	MandateReference       *string        `bun:"mandate_reference"`
+	MandateSignedOn        *calendar.Date `bun:"mandate_signed_on,type:date"`
+	CreditorID             *string        `bun:"creditor_id"`
+	HolderSealed           []byte         `bun:"account_holder_sealed,nullzero" json:"-"`
+	DebtorIBANMasked       *string        `bun:"debtor_iban_masked"`
+	SequenceType           *string        `bun:"sequence_type"`
+	DebitGap               *string        `bun:"debit_gap"`
+	DebtorNumber           *string        `bun:"debtor_number"`
+	IssuerKey              string         `bun:"issuer_key"`
+	Issuer                 *issuerRow     `bun:"issuer,type:jsonb"`
 	// CostShares are the issued cost bearer shares (#4687), read in the same
 	// statement as the invoice.
 	CostShares []parentbilling.CareInvoiceCostShare `bun:"cost_shares,type:jsonb,scanonly"`
@@ -164,7 +167,7 @@ func (row careInvoiceRow) invoice(positions []parentbilling.CarePosition, reduct
 		ID: ident.ID(row.ID), Number: row.Number, IssuedOn: &issuedOn, ContractID: ident.ID(row.CareContractID), Service: row.Service, SchoolID: ident.ID(row.SchoolID),
 		SchoolName: row.SchoolName, ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName, StudentID: row.StudentID,
 		Recipient: parentbilling.CareRecipient{FirstName: row.RecipientFirstName, LastName: row.RecipientLastName, Email: row.RecipientEmail,
-			Kind: textOf(row.RecipientKind), SecondName: textOf(row.RecipientSecondName)},
+			Kind: textOf(row.RecipientKind), SecondName: textOf(row.RecipientSecondName), ContractEmail: textOf(row.RecipientContractEmail)},
 		Positions: positions, Reductions: reductions, TotalCents: row.TotalCents, DocumentKind: row.DocumentKind,
 		FamilyEmail: textOf(row.FamilyEmail), Payment: row.snapshot().payment(), DebtorNumber: textOf(row.DebtorNumber),
 		Issuer: row.Issuer.issuer(),
@@ -524,8 +527,8 @@ func (s *Store) IssueCareInvoices(ctx context.Context, organizationID int64, run
 			RecipientLastName: invoice.Recipient.LastName, RecipientEmail: invoice.Recipient.Email,
 			MonthRule: rule, TotalCents: invoice.TotalCents, ReplacesInvoiceID: replaced[replacedKey{invoice.ContractID.Int64(), invoiceService(invoice)}],
 			StudentID: invoice.StudentID, FamilyEmail: textRef(invoice.FamilyEmail), RecipientKind: textRef(invoice.Recipient.Kind),
-			RecipientSecondName: textRef(invoice.Recipient.SecondName),
-			DocumentKind:        careDocumentKind(invoice.DocumentKind), DebtorNumber: textRef(invoice.DebtorNumber),
+			RecipientSecondName: textRef(invoice.Recipient.SecondName), RecipientContractEmail: textRef(invoice.Recipient.ContractEmail),
+			DocumentKind: careDocumentKind(invoice.DocumentKind), DebtorNumber: textRef(invoice.DebtorNumber),
 			IssuerKey: issuerKey, Issuer: issuer,
 		}
 		if address := invoice.Recipient.Address; address != nil {

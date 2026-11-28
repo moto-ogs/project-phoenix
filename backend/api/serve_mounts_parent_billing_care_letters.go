@@ -5,9 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 
+	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 )
+
+// careBillingContracts are the parties the monthly invoices and the
+// Jahresbescheide go to: the contract party at the address of its parents
+// account today, read in the caller's Träger transaction (#8215).
+func careBillingContracts() parentBillingCareContracts {
+	return parentBillingCareContracts{contracts: careContractCompose.NewContractBilling(identityaccessCompose.NewTraegerEmails())}
+}
 
 // EnqueueCareLetterMail puts the mail of a letter of a monthly run on
 // Delivery's outbox as a mail of the Träger with the PDF in its payload, in

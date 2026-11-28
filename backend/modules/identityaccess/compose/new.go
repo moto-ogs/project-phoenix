@@ -155,11 +155,11 @@ func clockOrReal(now func() time.Time) func() time.Time {
 	return now
 }
 
-// NewSchoolMembershipLock binds the parent write guard's membership lock (#6529).
+// NewSchoolMembershipLock binds the parent write guard's membership lock (#6529); NewTraegerEmails reads account addresses in the caller's Träger unit (#8215).
 func NewSchoolMembershipLock(db *bun.DB) identityaccess.SchoolMembershipLock {
 	return application.NewSchoolMembershipLock(postgres.NewStore(db, time.Now), tenant.FromContext, tenant.TransactionFromContext)
 }
-
+func NewTraegerEmails() identityaccess.TraegerAccountEmails { return postgres.TraegerAccountEmails{} }
 func NewGuardianInvitationAccountLock(db *bun.DB) identityaccess.GuardianInvitationAccountLock {
 	return application.NewGuardianInvitationAccountLock(postgres.NewStore(db, time.Now), tenant.FromContext, tenant.TransactionFromContext)
 }

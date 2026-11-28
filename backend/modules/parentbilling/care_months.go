@@ -265,6 +265,14 @@ type CareRecipient struct {
 	Kind       string         `json:"kind"`
 	SecondName string         `json:"second_name"`
 	Address    *PostalAddress `json:"address"`
+	// ContractEmail is the address in the contract when Email is the
+	// parents account's address that differs from it (#8215); the
+	// Träger-Büro sees both. Empty when the invoice goes to the contract's.
+	ContractEmail string `json:"contract_email,omitempty"`
+	// AccountEmail is the address of the party's parents account today, as
+	// the contract read names it; never on the wire. The invoice goes there
+	// unless a payer gets it.
+	AccountEmail string `json:"-"`
 	// ContractDraft tells that the contract is still a draft, which can be
 	// discarded with everything that hangs on it (#7862); never on the wire.
 	ContractDraft bool `json:"-"`
@@ -279,12 +287,17 @@ type CareRecipient struct {
 
 // FamilyOf is the family of the contract contractID whose party r is
 // (ContractFamilyKey): the mail address of the party, else the leading
-// contract of its family, else the contract itself.
+// contract of its family, else the contract itself. The contract's address
+// keys it, also when the invoice goes to the parents account (#8215).
 func (r CareRecipient) FamilyOf(contractID int64) string {
 	if r.FamilyContractID > 0 {
 		contractID = r.FamilyContractID
 	}
-	return ContractFamilyKey(r.Email, contractID)
+	email := r.Email
+	if r.ContractEmail != "" {
+		email = r.ContractEmail
+	}
+	return ContractFamilyKey(email, contractID)
 }
 
 // OwnContractFamily is the family a contract had before the office joined

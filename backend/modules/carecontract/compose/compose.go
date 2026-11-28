@@ -32,9 +32,10 @@ func storeOn(now func() time.Time) *postgres.Store {
 	return postgres.NewStore(calendar.CalendarDateClock(now))
 }
 
-// NewContractVersions reads the versions in force and the recipients for the billing (#4681, #4684) in the caller's Träger unit; it reads no current version (store without day clock).
-func NewContractVersions() carecontract.ContractBilling {
-	return application.NewBillingReads(postgres.NewStore(nil))
+// NewContractVersions reads the versions in force and the recipients for the billing (#4681, #4684) in the caller's Träger unit; it reads no current version (store without day clock). NewContractBilling also names each recipient's parents account address of today (#8215).
+func NewContractVersions() carecontract.ContractBilling { return NewContractBilling(nil) }
+func NewContractBilling(accounts carecontract.AccountEmails) carecontract.ContractBilling {
+	return application.NewBillingReads(postgres.NewStore(nil), accounts)
 }
 
 // NewContractChanges builds the office's decision of the parents' changes (#5979); it opens its own units and reads no current version (store without day clock).

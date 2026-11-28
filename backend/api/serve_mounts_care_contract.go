@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
@@ -84,6 +85,8 @@ func NewCareContractHTTP(organizations HolidayOrganizations, settings TraegerBra
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time) *careContractHTTP.Resource {
 	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
+	// The office sees where the invoices go today (#8215).
+	contractPorts.Accounts = identityaccessCompose.NewTraegerEmails()
 	paper := careContractCompose.NewPaperSignatures(contractPorts, careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
 	return careContractHTTP.NewResource(careContractCompose.NewContracts(contractPorts, now), careContractCompose.NewIntake(intakePorts, today), paper,
 		common.RequiresPermission(identityaccess.TraegerRightContractsManage), traegerListRenderer(NewSimpleListRenderer()))

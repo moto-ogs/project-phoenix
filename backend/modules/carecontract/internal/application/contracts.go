@@ -33,6 +33,7 @@ type Contracts struct {
 	versions    carecontract.ContractVersions
 	notices     carecontract.DocumentNotices
 	issuers     carecontract.SchoolIssuers
+	accounts    carecontract.AccountEmails
 	periods     withdrawalPeriods
 }
 
@@ -54,6 +55,9 @@ type ContractPorts struct {
 	// contracts of a school (#4811). The roots bind it; a composition
 	// without it knows only the Träger.
 	Issuers carecontract.SchoolIssuers
+	// Accounts names where the parties' invoices go today (#8215); a
+	// composition without it shows the signed addresses only.
+	Accounts carecontract.AccountEmails
 }
 
 var _ carecontract.Contracts = (*Contracts)(nil)
@@ -66,7 +70,7 @@ func NewContracts(store ContractStore, renderer LetterRenderer, ports ContractPo
 	}
 	return &Contracts{store: store, letterheads: ports.Letterheads, renderer: renderer, post: ports.Post, clock: clock,
 		runtime: ports.Runtime, access: ports.Access, ledger: ports.Ledger, links: ports.Links, versions: versions, notices: ports.Notices, issuers: ports.Issuers,
-		periods: withdrawalPeriods{holidays: ports.Holidays}}
+		accounts: ports.Accounts, periods: withdrawalPeriods{holidays: ports.Holidays}}
 }
 
 // ListContracts lists the contracts of the filter, records the read in the
@@ -244,6 +248,9 @@ func (c *Contracts) detail(ctx context.Context, reviewer carecontract.Reviewer, 
 		if corrections, err = c.store.ContractCorrections(ctx, reviewer.OrganizationID, record.Summary.ID.Int64()); err != nil {
 			return carecontract.ContractDetail{}, err
 		}
+	}
+	if err := fillAccountEmails(ctx, c.accounts, reviewer.OrganizationID, record.Parties); err != nil {
+		return carecontract.ContractDetail{}, err
 	}
 	detail := carecontract.ContractDetail{
 		ContractSummary: record.Summary, Version: current, Parties: record.Parties,

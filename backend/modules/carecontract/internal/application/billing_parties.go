@@ -20,14 +20,16 @@ type BillingStore interface {
 // and the recipient of each monthly invoice (#4684).
 type BillingReads struct {
 	*Versions
-	store BillingStore
+	store    BillingStore
+	accounts carecontract.AccountEmails
 }
 
 var _ carecontract.ContractBilling = (*BillingReads)(nil)
 
-// NewBillingReads builds the reads of the parents' billing.
-func NewBillingReads(store BillingStore) *BillingReads {
-	return &BillingReads{Versions: NewVersions(store), store: store}
+// NewBillingReads builds the reads of the parents' billing. Without
+// accounts the recipients carry no account address (#8215).
+func NewBillingReads(store BillingStore, accounts carecontract.AccountEmails) *BillingReads {
+	return &BillingReads{Versions: NewVersions(store), store: store, accounts: accounts}
 }
 
 func (b *BillingReads) BillingChildren(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]carecontract.BillingChild, error) {
@@ -53,6 +55,8 @@ func (b *BillingReads) BillingChildren(ctx context.Context, organizationID int64
 
 // BillingRecipients picks per contract the first party with an e-mail
 // address, else the first party: the invoice goes where a mail can reach.
+// The signed address decides the pick, so the family stays the same when a
+// parent changes the account's address (#8215).
 func (b *BillingReads) BillingRecipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]carecontract.Party, error) {
 	if organizationID <= 0 {
 		return nil, &carecontract.ValidationError{Fields: map[string]string{"organization": "required"}}
@@ -65,8 +69,17 @@ func (b *BillingReads) BillingRecipients(ctx context.Context, organizationID int
 	if err != nil {
 		return nil, fmt.Errorf("care contract: read contract parties: %w", err)
 	}
+	chosen := make([]carecontract.Party, 0, len(parties))
 	for contractID, list := range parties {
 		recipients[contractID] = billingRecipient(list)
+		chosen = append(chosen, recipients[contractID])
+	}
+	emails, err := accountEmails(ctx, b.accounts, organizationID, chosen)
+	if err != nil {
+		return nil, err
+	}
+	for contractID, party := range recipients {
+		recipients[contractID] = withAccountEmail(party, emails)
 	}
 	return recipients, nil
 }

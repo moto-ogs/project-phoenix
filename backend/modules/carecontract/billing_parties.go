@@ -25,9 +25,17 @@ type ContractBilling interface {
 	// BillingRecipients names per contract of the Träger the party its
 	// invoice goes to: the first party with an e-mail address, else the
 	// first party. A contract of another Träger or without a party has
-	// none.
+	// none. Email stays the signed address, which keys the family;
+	// AccountEmail is its parents account's address today (#8215).
 	BillingRecipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]Party, error)
 	// BillingChildren also reads ended contracts that no longer overlap the
 	// billing month. Only the supplied contracts of this Träger are read.
 	BillingChildren(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]BillingChild, error)
+}
+
+// AccountEmails reads the current addresses of parents accounts in the
+// caller's Träger transaction: Identity & Access owns them. Accounts without
+// an address are absent (#8215).
+type AccountEmails interface {
+	TraegerAccountEmails(ctx context.Context, organizationID int64, accountIDs []int64) (map[int64]string, error)
 }

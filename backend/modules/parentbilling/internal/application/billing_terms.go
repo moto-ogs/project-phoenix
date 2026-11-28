@@ -699,9 +699,9 @@ func (p invoicePayments) careInvoice(invoice *parentbilling.CareInvoice, issuedO
 	family := p.family(invoice.FamilyEmail)
 	recipient := parentbilling.ResolveRecipient(parentbilling.BillingRecipient{FirstName: invoice.Recipient.FirstName,
 		LastName: invoice.Recipient.LastName, Email: invoice.Recipient.Email}, family)
-	invoice.Recipient = parentbilling.CareRecipient{FirstName: recipient.FirstName, LastName: recipient.LastName,
+	invoice.Recipient = toAccountAddress(invoice.Recipient, parentbilling.CareRecipient{FirstName: recipient.FirstName, LastName: recipient.LastName,
 		Email: recipient.Email, Kind: recipient.Kind, SecondName: recipient.SecondName, Address: recipient.Address,
-		FamilyContractID: invoice.Recipient.FamilyContractID}
+		FamilyContractID: invoice.Recipient.FamilyContractID})
 	switch {
 	case p.perChild():
 		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID.Int64()], invoice.ContractID.Int64())

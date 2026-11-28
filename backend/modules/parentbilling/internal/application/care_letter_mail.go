@@ -307,9 +307,9 @@ func effectiveRecipients(ctx context.Context, source CareLetterRecipients, store
 	for contractID, applicant := range recipients {
 		effective := parentbilling.ResolveRecipient(parentbilling.BillingRecipient{FirstName: applicant.FirstName,
 			LastName: applicant.LastName, Email: applicant.Email}, byFamily[applicant.FamilyOf(contractID)])
-		recipients[contractID] = parentbilling.CareRecipient{FirstName: effective.FirstName, LastName: effective.LastName,
+		recipients[contractID] = toAccountAddress(applicant, parentbilling.CareRecipient{FirstName: effective.FirstName, LastName: effective.LastName,
 			Email: effective.Email, Kind: effective.Kind, SecondName: effective.SecondName, Address: effective.Address,
-			FamilyContractID: applicant.FamilyContractID}
+			FamilyContractID: applicant.FamilyContractID})
 	}
 	return recipients, nil
 }
@@ -322,7 +322,14 @@ func sameRecipient(invoice parentbilling.CareInvoice, recipients map[int64]paren
 	if !ok {
 		return false
 	}
-	email := now.Email
+	return copiedRecipient(invoice, now.Email) || (now.ContractEmail != "" && copiedRecipient(invoice, now.ContractEmail))
+}
+
+// copiedRecipient follows the invoice's applied recipient changes from the
+// address email and tells whether they end at the address it copied. An
+// invoice issued before #8215 copied the contract's address, which still
+// counts while the contract keeps it.
+func copiedRecipient(invoice parentbilling.CareInvoice, email string) bool {
 	for _, amendment := range invoice.Amendments {
 		if amendment.Kind != parentbilling.AmendRecipient || !amendment.Applied() {
 			continue
@@ -371,7 +378,8 @@ func careMailing(current careLetterRun, letter careSendable, states map[int64]pa
 		InvoiceID: invoice.ID, Kind: letter.kind, Number: invoice.Number, InvoiceNumber: invoice.Number,
 		ChildFirstName: invoice.ChildFirstName, ChildLastName: invoice.ChildLastName, SchoolName: invoice.SchoolName,
 		RecipientFirstName: invoice.Recipient.FirstName, RecipientLastName: invoice.Recipient.LastName,
-		RecipientEmail: invoice.Recipient.Email, TotalCents: invoice.TotalCents, Status: parentbilling.LetterMailNotSent,
+		RecipientEmail: invoice.Recipient.Email, ContractEmail: invoice.Recipient.ContractEmail,
+		TotalCents: invoice.TotalCents, Status: parentbilling.LetterMailNotSent,
 		InInbox: invoice.StudentID != nil,
 	}
 	if invoice.IssuedOn != nil {
