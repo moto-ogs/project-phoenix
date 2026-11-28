@@ -16,5 +16,7 @@
   "errorObjectThread": "групповое сообщение",
   "errorObjectAnswer": "ответ",
   "errorObjectList": "групповые сообщения",
-  "closedNoteWithoutChat": "Это групповое сообщение закрыто."
+  "closedNoteWithoutChat": "Это групповое сообщение закрыто.",
+  "classMoved": "Класс переведён: теперь {className}",
+  "classLeft": "Дети этого класса {className} покинули {careTerm} при переходе в новый учебный год. Поэтому это групповое сообщение закрыто."
 }

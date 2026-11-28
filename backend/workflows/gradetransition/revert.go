@@ -93,6 +93,9 @@ func (w *Workflow) executeRevert(ctx context.Context, actor Actor, transition sc
 	if err := w.revertClassListEntries(ctx, actor, transition.ID, transition.Mappings); err != nil {
 		return result, err
 	}
+	if err := w.deps.ParentTargets.Revert(ctx, transition.ID); err != nil {
+		return result, fmt.Errorf("failed to revert parent class targets: %w", err)
+	}
 
 	if err := w.deps.ResyncOfferingRosters(ctx, w.deps.Today()); err != nil {
 		return result, fmt.Errorf("failed to resync offering-sourced templates: %w", err)

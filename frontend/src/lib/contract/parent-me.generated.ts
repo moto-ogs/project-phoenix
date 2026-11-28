@@ -1741,6 +1741,17 @@ export const GroupThreadChildResponseSchema: z.ZodType<GroupThreadChildResponse,
   last_name: str,
 });
 
+/** Go: parent.ParentGroupThreadClassMoveResponse */
+export interface ParentGroupThreadClassMoveResponse {
+  from_class: string;
+  to_class: string | null;
+}
+
+export const ParentGroupThreadClassMoveResponseSchema: z.ZodType<ParentGroupThreadClassMoveResponse, unknown> = object<ParentGroupThreadClassMoveResponse>({
+  from_class: str,
+  to_class: nullable(str),
+});
+
 /** Go: parent.GroupThreadSummaryResponse */
 export interface GroupThreadSummaryResponse {
   id: string;
@@ -1754,6 +1765,7 @@ export interface GroupThreadSummaryResponse {
   unread: number;
   children: GroupThreadChildResponse[] | null;
   readers: ParentReadersResponse;
+  class_move?: ParentGroupThreadClassMoveResponse;
 }
 
 export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryResponse, unknown> = object<GroupThreadSummaryResponse>({
@@ -1768,6 +1780,7 @@ export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryRespo
   unread: safeInt,
   children: nullable(arr(GroupThreadChildResponseSchema)),
   readers: ParentReadersResponseSchema,
+  class_move: optional(ParentGroupThreadClassMoveResponseSchema),
 });
 
 /** Go: parent.GroupMessageResponse */
@@ -1798,6 +1811,7 @@ export interface GroupThreadViewResponse {
   unread: number;
   children: GroupThreadChildResponse[] | null;
   readers: ParentReadersResponse;
+  class_move?: ParentGroupThreadClassMoveResponse;
   messages: GroupMessageResponse[] | null;
 }
 
@@ -1813,6 +1827,7 @@ export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, u
   unread: safeInt,
   children: nullable(arr(GroupThreadChildResponseSchema)),
   readers: ParentReadersResponseSchema,
+  class_move: optional(ParentGroupThreadClassMoveResponseSchema),
   messages: nullable(arr(GroupMessageResponseSchema)),
 });
 

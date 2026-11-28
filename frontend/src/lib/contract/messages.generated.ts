@@ -104,6 +104,17 @@ export const CountScopeResponseSchema: z.ZodType<CountScopeResponse, unknown> = 
   has_own_groups: bool,
 });
 
+/** Go: messaging.GroupThreadClassMoveResponse */
+export interface GroupThreadClassMoveResponse {
+  from_class: string;
+  to_class: string | null;
+}
+
+export const GroupThreadClassMoveResponseSchema: z.ZodType<GroupThreadClassMoveResponse, unknown> = object<GroupThreadClassMoveResponse>({
+  from_class: str,
+  to_class: nullable(str),
+});
+
 /** Go: messaging.GroupReadersResponse */
 export interface GroupReadersResponse {
   target_type: string;
@@ -127,6 +138,7 @@ export interface StaffGroupThreadSummaryResponse {
   closed_at?: string;
   last_message_at?: string;
   created_at: string;
+  class_move?: GroupThreadClassMoveResponse;
   last_message_body: string;
   message_count: number;
   family_count: number;
@@ -143,6 +155,7 @@ export const StaffGroupThreadSummaryResponseSchema: z.ZodType<StaffGroupThreadSu
   closed_at: optional(instant),
   last_message_at: optional(instant),
   created_at: instant,
+  class_move: optional(GroupThreadClassMoveResponseSchema),
   last_message_body: str,
   message_count: safeInt,
   family_count: safeInt,
@@ -179,6 +192,7 @@ export interface GroupThreadResponse {
   closed_at?: string;
   last_message_at?: string;
   created_at: string;
+  class_move?: GroupThreadClassMoveResponse;
 }
 
 export const GroupThreadResponseSchema: z.ZodType<GroupThreadResponse, unknown> = object<GroupThreadResponse>({
@@ -190,6 +204,7 @@ export const GroupThreadResponseSchema: z.ZodType<GroupThreadResponse, unknown> 
   closed_at: optional(instant),
   last_message_at: optional(instant),
   created_at: instant,
+  class_move: optional(GroupThreadClassMoveResponseSchema),
 });
 
 /** Go: messaging.ParentMessageAttachmentResponse */

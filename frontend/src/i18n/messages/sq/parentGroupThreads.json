@@ -16,5 +16,7 @@
   "errorObjectThread": "mesazhi i grupit",
   "errorObjectAnswer": "përgjigjja",
   "errorObjectList": "mesazhet e grupit",
-  "closedNoteWithoutChat": "Ky mesazh grupi është mbyllur."
+  "closedNoteWithoutChat": "Ky mesazh grupi është mbyllur.",
+  "classMoved": "Klasa kaloi: tani {className}",
+  "classLeft": "Fëmijët e kësaj klase {className} e lanë {careTerm} me ndryshimin e vitit shkollor. Prandaj ky mesazh grupi është mbyllur."
 }

@@ -72,7 +72,15 @@ func parentGroupThread(thread communication.ParentGroupThread) parentportal.Grou
 	return parentportal.GroupThread{
 		ID: thread.ID, TenantID: thread.TenantID, Title: thread.Title, TargetLabel: thread.Target.Label,
 		ClosedAt: thread.ClosedAt, LastMessageAt: thread.LastMessageAt,
+		ClassMove: parentGroupThreadClassMove(thread.ClassMove),
 	}
+}
+
+func parentGroupThreadClassMove(move *communication.ParentGroupClassMove) *parentportal.GroupThreadClassMove {
+	if move == nil {
+		return nil
+	}
+	return &parentportal.GroupThreadClassMove{FromClass: move.FromClass, ToClass: move.ToClass}
 }
 
 func parentGroupThreadError(err error) error {

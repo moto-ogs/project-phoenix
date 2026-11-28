@@ -363,7 +363,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/workforce/compose":       892,
 	"workflows/catererportal/compose": 31, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
-	"workflows/gradetransition/compose": 51,
+	"workflows/gradetransition/compose": 50,
 	// Added by ADR 0209: the holiday allocation workflow and its joining
 	// Träger transaction (ADR 0206).
 	"workflows/holidayallocation/compose": 13,

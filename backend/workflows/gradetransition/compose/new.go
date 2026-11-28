@@ -9,22 +9,21 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
-	"github.com/uptrace/bun"
 )
 
 // Dependencies name the owner capabilities the root binds: School Structure,
 // Student Presence, the bound People Directory and School Membership of the
 // running graph, the Timetable roster reconciliation, the recurrence gate,
-// the offering-roster resync and the class follow-up on targeted Regeltermine
-// (#6841), plus the runtime hooks. The composition builds
-// no other owner (#4004, ADR 0059 point 6).
+// the offering-roster resync, the class follow-up on targeted Regeltermine
+// (#6841) and on the parent class threads (#8214), plus the runtime hooks.
+// The composition builds no other owner (#4004, ADR 0059 point 6).
 type Dependencies struct {
-	DB         *bun.DB
-	Structure  gradetransition.Structure
-	Presence   gradetransition.Presence
-	Directory  gradetransition.Directory
-	Membership gradetransition.Membership
-	Rosters    gradetransition.Rosters
+	Structure     gradetransition.Structure
+	Presence      gradetransition.Presence
+	Directory     gradetransition.Directory
+	Membership    gradetransition.Membership
+	Rosters       gradetransition.Rosters
+	ParentTargets gradetransition.ParentClassTargets
 	// LockRecurrenceWrites is the tenant-wide recurrence gate every timetable
 	// writer takes; apply and revert hold it after the class-writes gate.
 	LockRecurrenceWrites func(context.Context) error

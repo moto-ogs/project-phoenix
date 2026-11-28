@@ -93,6 +93,7 @@ const preview: TransitionPreview = {
   unmappedClasses: [],
   warnings: [],
   fingerprint: "abc",
+  parentTargets: [],
 };
 
 const result: TransitionResult = {

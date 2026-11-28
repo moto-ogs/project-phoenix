@@ -63,6 +63,26 @@ type GroupThreadResponse struct {
 	ClosedAt      *time.Time `json:"closed_at,omitempty"`
 	LastMessageAt *time.Time `json:"last_message_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
+
+	// ClassMove is the newest school-year change that moved a class thread
+	// (#8214); absent when none did.
+	ClassMove *GroupThreadClassMoveResponse `json:"class_move,omitempty"`
+}
+
+// GroupThreadClassMoveResponse says that a school-year change moved a class
+// thread: to the new class, or (to_class null) the class left and the change
+// closed the thread.
+type GroupThreadClassMoveResponse struct {
+	FromClass string  `json:"from_class"`
+	ToClass   *string `json:"to_class"`
+}
+
+// toGroupThreadClassMove renders the newest move of a class thread.
+func toGroupThreadClassMove(move *communication.ParentGroupClassMove) *GroupThreadClassMoveResponse {
+	if move == nil {
+		return nil
+	}
+	return &GroupThreadClassMoveResponse{FromClass: move.FromClass, ToClass: move.ToClass}
 }
 
 type StaffGroupThreadSummaryResponse struct {
@@ -305,6 +325,7 @@ func toGroupThreadResponse(thread communication.ParentGroupThread) GroupThreadRe
 		ID: ident.ID(thread.ID), TargetType: thread.Target.Type, TargetID: targetID,
 		TargetLabel: thread.Target.Label, Title: thread.Title, ClosedAt: thread.ClosedAt,
 		LastMessageAt: thread.LastMessageAt, CreatedAt: thread.CreatedAt,
+		ClassMove: toGroupThreadClassMove(thread.ClassMove),
 	}
 }
 

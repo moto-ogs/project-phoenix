@@ -34,6 +34,18 @@ type GroupThreadSummaryResponse struct {
 	// child's team conversation, so school.kind is always "all_staff". Other
 	// parents never see it.
 	Readers ParentReadersResponse `json:"readers"`
+
+	// ClassMove says that a school-year change moved this class thread
+	// (#8214): to the new class, or (to_class null) the class left and the
+	// thread was closed. Absent when no change moved it.
+	ClassMove *ParentGroupThreadClassMoveResponse `json:"class_move,omitempty"`
+}
+
+// ParentGroupThreadClassMoveResponse is the school-year change note of a class
+// thread.
+type ParentGroupThreadClassMoveResponse struct {
+	FromClass string  `json:"from_class"`
+	ToClass   *string `json:"to_class"`
 }
 
 // GroupMessageResponse is one OGS message of a group thread. The sender is
@@ -105,6 +117,9 @@ func toGroupThreadSummary(thread parentService.GroupThread, school string, child
 		SchoolName: school, CounterpartName: ogsLabel(school), Closed: thread.ClosedAt != nil,
 		Children: make([]GroupThreadChildResponse, 0, len(children)),
 		Readers:  ParentReadersResponse{School: schoolReaders(parentService.MessageAudienceTeam, nil)},
+	}
+	if move := thread.ClassMove; move != nil {
+		out.ClassMove = &ParentGroupThreadClassMoveResponse{FromClass: move.FromClass, ToClass: move.ToClass}
 	}
 	for _, child := range children {
 		out.Children = append(out.Children, GroupThreadChildResponse{

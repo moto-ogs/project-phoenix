@@ -172,6 +172,7 @@ const preview: TransitionPreview = {
   unmappedClasses: [{ className: "3c", studentCount: 15 }],
   warnings: [],
   fingerprint: "preview-fingerprint",
+  parentTargets: [],
 };
 
 beforeEach(() => {

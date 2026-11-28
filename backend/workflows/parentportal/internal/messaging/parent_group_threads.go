@@ -28,6 +28,17 @@ type GroupThread struct {
 	TargetLabel   string
 	ClosedAt      *time.Time
 	LastMessageAt *time.Time
+
+	// ClassMove is the newest school-year change that moved a class thread
+	// (#8214); nil when none did.
+	ClassMove *GroupThreadClassMove
+}
+
+// GroupThreadClassMove says a school-year change moved a class thread to
+// ToClass, or (nil) that the class left and the thread was closed.
+type GroupThreadClassMove struct {
+	FromClass string
+	ToClass   *string
 }
 
 // GroupMessage is one OGS message of a group thread. The sender is always

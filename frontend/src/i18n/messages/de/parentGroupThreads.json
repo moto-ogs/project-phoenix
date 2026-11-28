@@ -16,5 +16,7 @@
   "errorObjectThread": "die Gruppennachricht",
   "errorObjectAnswer": "die Antwort",
   "errorObjectList": "die Gruppennachrichten",
-  "closedNoteWithoutChat": "Diese Gruppennachricht ist geschlossen."
+  "closedNoteWithoutChat": "Diese Gruppennachricht ist geschlossen.",
+  "classMoved": "Klasse wurde versetzt: jetzt {className}",
+  "classLeft": "Die Kinder dieser Klasse {className} haben {careAcc} zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen."
 }

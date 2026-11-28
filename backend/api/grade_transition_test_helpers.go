@@ -9,11 +9,14 @@ import (
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	"github.com/go-chi/chi/v5"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
+	parentStore "github.com/moto-ogs/project-phoenix/modules/communication/parentstore"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 	gradetransitioncompose "github.com/moto-ogs/project-phoenix/workflows/gradetransition/compose"
+	gradetransitionhttp "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
 )
 
 // GradeTransitionTestModule composes the grade transition workflow (#2711)
@@ -64,8 +67,9 @@ func NewGradeTransitionTestModule(db transactionruntime.Database, resync Offerin
 		return GradeTransitionTestModule{}, err
 	}
 	workflow, err := owners.NewGradeTransition(gradetransitioncompose.Dependencies{
-		DB: db.Pool(), Structure: structure, Presence: presence, Directory: people, Membership: membership,
+		Structure: structure, Presence: presence, Directory: people, Membership: membership,
 		Rosters:               tt.RosterMaintenance(slog.Default(), clock),
+		ParentTargets:         NewGradeTransitionParentTargets(db),
 		LockRecurrenceWrites:  recurrenceLock.LockRecurrenceWrites,
 		ResyncOfferingRosters: resync,
 		FollowClassChanges:    gradeTransitionClassChanges(cohorts),
@@ -75,4 +79,15 @@ func NewGradeTransitionTestModule(db transactionruntime.Database, resync Offerin
 		return GradeTransitionTestModule{}, err
 	}
 	return GradeTransitionTestModule{GradeTransition: workflow}, nil
+}
+
+// NewGradeTransitionParentTargets binds the workflow's parent-channel port to
+// Communication's class transitions, as the production root does (#8214).
+func NewGradeTransitionParentTargets(db transactionruntime.Database) gradetransition.ParentClassTargets {
+	return owners.GradeTransitionParentTargets(parentStore.NewParentClassTransitions(db.Pool()))
+}
+
+// Router mounts the grade transition routes over the composed workflow.
+func (m GradeTransitionTestModule) Router() chi.Router {
+	return gradetransitionhttp.NewGradeTransitionResource(m.GradeTransition).Router(ProtectedTenantRoutes)
 }

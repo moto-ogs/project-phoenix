@@ -53,6 +53,17 @@ interface MappingPreview {
   action: MappingAction;
 }
 
+/** Eine Klassen-Nachricht an Eltern oder ein Mitteilungs-Entwurf an eine
+ * Klasse, die der Wechsel mitnimmt (#8214). `toClass` null: die Klasse geht
+ * ab; die Nachricht wird geschlossen, der Entwurf verliert die Klasse. */
+export interface ParentTargetPreview {
+  kind: "group_thread" | "announcement_draft";
+  id: string;
+  title: string;
+  fromClass: string;
+  toClass: string | null;
+}
+
 interface UnmappedClass {
   className: string;
   studentCount: number;
@@ -69,6 +80,7 @@ export interface TransitionPreview {
   warnings: string[];
   /** @see adminContract.TransitionPreviewResponse.fingerprint */
   fingerprint: string;
+  parentTargets: ParentTargetPreview[];
 }
 
 export interface TransitionResult {
@@ -151,6 +163,11 @@ const GRADUATE_STATES: readonly GraduateState[] = [
   "purged",
 ];
 
+const PARENT_TARGET_KINDS: readonly ParentTargetPreview["kind"][] = [
+  "group_thread",
+  "announcement_draft",
+];
+
 const mappingAction = (value: string): MappingAction =>
   knownEnum(MAPPING_ACTIONS, value) ?? "promote";
 
@@ -201,6 +218,21 @@ export function mapPreview(
     })),
     warnings: data.warnings ?? [],
     fingerprint: data.fingerprint,
+    // An unknown kind from a newer backend is left out, not mislabelled.
+    parentTargets: (data.parent_targets ?? []).flatMap((target) => {
+      const kind = knownEnum(PARENT_TARGET_KINDS, target.kind);
+      return kind
+        ? [
+            {
+              kind,
+              id: target.id,
+              title: target.title,
+              fromClass: target.from_class,
+              toClass: target.to_class ?? null,
+            },
+          ]
+        : [];
+    }),
   };
 }
 

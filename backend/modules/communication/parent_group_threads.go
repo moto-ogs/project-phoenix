@@ -42,6 +42,10 @@ type ParentGroupThread struct {
 	ClosedAt      *time.Time
 	LastMessageAt *time.Time
 	CreatedAt     time.Time
+
+	// ClassMove is the newest school-year change that moved a class thread
+	// (#8214); nil when none did.
+	ClassMove *ParentGroupClassMove
 }
 
 // ParentGroupMessage is one OGS message of a group thread.

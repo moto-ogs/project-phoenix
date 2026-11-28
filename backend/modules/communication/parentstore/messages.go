@@ -14,6 +14,12 @@ func NewParentMessageThreadRepository(db *bun.DB, guardians recordports.Guardian
 	return parentpostgres.NewParentMessageThreadRepository(db, guardians, reachable)
 }
 
+// NewParentClassTransitions moves the class threads and the draft class
+// targets with a school-year change (#8214).
+func NewParentClassTransitions(db *bun.DB) communication.ParentClassTransitions {
+	return parentpostgres.NewParentClassTransitions(postgresDatabase(db))
+}
+
 // NewGroupThreadPortal is the guardian side of the group threads (#4784).
 // names gives each thread the current name of its group or AG (#8207).
 func NewGroupThreadPortal(db *bun.DB, names communication.ParentGroupTargetNames) communication.PortalGroupThreads {

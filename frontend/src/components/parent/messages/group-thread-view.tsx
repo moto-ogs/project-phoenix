@@ -8,6 +8,8 @@ import {
 } from "~/lib/message-attachments";
 import { useMessageSendAttempt } from "~/lib/swr/optimistic";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { Alert } from "~/components/ui/alert";
+import { schoolClassName } from "~/lib/school-class-label";
 
 import {
   useCallback,
@@ -243,6 +245,16 @@ export function ParentGroupThreadView({
   const counterpart = thread.school_name
     ? tm("ogsTeam", { school: thread.school_name })
     : thread.counterpart_name;
+  // A school-year change moved the class thread to the new class, or the
+  // class left and the change closed it (#8214).
+  const classMove = thread.class_move;
+  const classMovedTo = classMove?.to_class
+    ? schoolClassName(classMove.to_class)
+    : null;
+  const classLeft =
+    classMove && !classMove.to_class && thread.closed
+      ? schoolClassName(classMove.from_class)
+      : null;
   const readersLine = thread.readers
     ? parentReadersLine(thread.readers, tm)
     : null;
@@ -279,6 +291,14 @@ export function ParentGroupThreadView({
         backLabel={tm("back")}
       />
       {loadError && <LoadErrorAlert error={loadError} />}
+      {/* Der Schuljahreswechsel hat die Klasse versetzt (#8214). */}
+      {classMovedTo && (
+        <Alert
+          type="info"
+          announce="off"
+          message={t("classMoved", { className: classMovedTo })}
+        />
+      )}
 
       <SectionCard>
         <div
@@ -320,6 +340,11 @@ export function ParentGroupThreadView({
           </div>
         ) : thread.closed ? (
           <div className="space-y-2">
+            {classLeft && (
+              <p className="text-sm leading-6 text-gray-600">
+                {t("classLeft", { className: classLeft })}
+              </p>
+            )}
             <p className="text-sm leading-6 text-gray-600">
               {/* Ohne Kind mit OGS-Platz gibt es keinen Chat (#4803). */}
               {chatLink ? t("closedNote") : t("closedNoteWithoutChat")}

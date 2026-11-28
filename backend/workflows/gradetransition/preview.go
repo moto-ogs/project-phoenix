@@ -48,6 +48,9 @@ func (w *Workflow) Preview(ctx context.Context, id int64) (result Preview, err e
 			return err
 		}
 		preview.UnmappedClasses = unmapped
+		if preview.ParentTargets, err = w.parentTargetPreviews(txCtx, transition.Mappings); err != nil {
+			return err
+		}
 		preview.Fingerprint = fingerprintOf(transition.Mappings, cohort)
 		if len(preview.UnmappedClasses) > 0 {
 			preview.Warnings = append(preview.Warnings,
@@ -93,13 +96,25 @@ func (w *Workflow) unmappedClasses(ctx context.Context, mapped map[string]bool) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get distinct classes: %w", err)
 	}
-	counts, err := w.studentCountsByClass(ctx, classes)
+	// Only the classes the transition leaves alone are counted: the mapped
+	// ones are already counted from the cohort, and a transition that maps
+	// every class reads no further children.
+	unmapped := make([]string, 0, len(classes))
+	for _, className := range classes {
+		if !mapped[className] {
+			unmapped = append(unmapped, className)
+		}
+	}
+	result := make([]UnmappedClass, 0)
+	if len(unmapped) == 0 {
+		return result, nil
+	}
+	counts, err := w.studentCountsByClass(ctx, unmapped)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]UnmappedClass, 0)
-	for _, className := range classes {
-		if mapped[className] || counts[className] == 0 {
+	for _, className := range unmapped {
+		if counts[className] == 0 {
 			continue
 		}
 		result = append(result, UnmappedClass{ClassName: className, StudentCount: counts[className]})

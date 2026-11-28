@@ -6,6 +6,7 @@
 
 import { Alert } from "~/components/ui/alert";
 import { FramedList } from "~/components/ui/framed-list";
+import { SectionLabel } from "~/components/ui/section-label";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "~/lib/api-error";
 import { StatCard } from "~/components/ui/stat-card";
@@ -34,6 +35,7 @@ import {
   PREVIEW_STALE_CODE,
   previewGradeTransition,
   type GradeTransition,
+  type ParentTargetPreview,
   type TransitionResult,
 } from "~/lib/grade-transition-api";
 
@@ -203,6 +205,8 @@ export function TransitionPreviewModal({
                   ))}
                 </FramedList>
 
+                <ParentTargetsPreview targets={preview.parentTargets} />
+
                 {preview.toGraduate > 0 && (
                   <Alert
                     type="warning"
@@ -295,4 +299,55 @@ export function TransitionPreviewModal({
       </ConfirmationModal>
     </>
   );
+}
+
+// Was der Wechsel mit den Klassen-Nachrichten an Eltern und den Entwürfen von
+// Mitteilungen macht (#8214): sie gehen mit den Kindern in die neue Klasse,
+// bei einer abgehenden Klasse wird die Nachricht geschlossen.
+function ParentTargetsPreview({
+  targets,
+}: {
+  readonly targets: readonly ParentTargetPreview[];
+}) {
+  if (targets.length === 0) return null;
+  return (
+    <section className="space-y-2" aria-labelledby="transition-parent-targets">
+      <SectionLabel as="h3" id="transition-parent-targets">
+        Nachrichten an Eltern
+      </SectionLabel>
+      <p className="text-sm text-gray-600">
+        Sie gehen mit den Kindern in die neue Klasse. Schon gesendete
+        Nachrichten behalten ihre Empfänger.
+      </p>
+      <FramedList>
+        {targets.map((target) => (
+          <li
+            key={`${target.kind}-${target.id}-${target.fromClass}`}
+            className="flex items-center justify-between gap-3 p-3 text-sm"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-medium text-gray-900">
+                {target.title}
+              </span>
+              <span className="block text-gray-500">
+                {target.kind === "group_thread"
+                  ? "Gruppennachricht"
+                  : "Entwurf einer Mitteilung"}
+              </span>
+            </span>
+            <span className="shrink-0 text-right text-gray-700">
+              {parentTargetOutcome(target)}
+            </span>
+          </li>
+        ))}
+      </FramedList>
+    </section>
+  );
+}
+
+function parentTargetOutcome(target: ParentTargetPreview): string {
+  if (target.toClass) return `${target.fromClass} -> ${target.toClass}`;
+  return target.kind === "group_thread"
+    ? `${target.fromClass}: wird geschlossen`
+    : `${target.fromClass}: Klasse wird entfernt`;
 }

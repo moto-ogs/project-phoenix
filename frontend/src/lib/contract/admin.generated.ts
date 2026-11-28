@@ -137,6 +137,23 @@ export const TransitionUnmappedClassResponseSchema: z.ZodType<TransitionUnmapped
   student_count: safeInt,
 });
 
+/** Go: gradetransitionhttp.TransitionParentTargetResponse */
+export interface TransitionParentTargetResponse {
+  kind: string;
+  id: string;
+  title: string;
+  from_class: string;
+  to_class: string | null;
+}
+
+export const TransitionParentTargetResponseSchema: z.ZodType<TransitionParentTargetResponse, unknown> = object<TransitionParentTargetResponse>({
+  kind: str,
+  id: int64String,
+  title: str,
+  from_class: str,
+  to_class: nullable(str),
+});
+
 /** Go: gradetransitionhttp.TransitionPreviewResponse */
 export interface TransitionPreviewResponse {
   transition_id: string;
@@ -148,6 +165,7 @@ export interface TransitionPreviewResponse {
   unmapped_classes: TransitionUnmappedClassResponse[] | null;
   warnings: string[] | null;
   fingerprint: string;
+  parent_targets: TransitionParentTargetResponse[] | null;
 }
 
 export const TransitionPreviewResponseSchema: z.ZodType<TransitionPreviewResponse, unknown> = object<TransitionPreviewResponse>({
@@ -160,6 +178,7 @@ export const TransitionPreviewResponseSchema: z.ZodType<TransitionPreviewRespons
   unmapped_classes: nullable(arr(TransitionUnmappedClassResponseSchema)),
   warnings: nullable(arr(str)),
   fingerprint: str,
+  parent_targets: nullable(arr(TransitionParentTargetResponseSchema)),
 });
 
 /** Go: gradetransitionhttp.TransitionMappingRequest */

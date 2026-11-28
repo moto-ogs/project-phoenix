@@ -328,6 +328,40 @@ describe("ParentGroupThreadView (#4784)", () => {
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
   });
 
+  // #8214: Die Klassen-Nachricht geht mit dem Kind in die neue Klasse.
+  it("sagt, dass die Klasse versetzt wurde", async () => {
+    mockedThread.mockResolvedValue({
+      ...sommerfest,
+      target_label: "Klasse 4a",
+      class_move: { from_class: "3a", to_class: "4a" },
+    });
+
+    renderView();
+
+    expect(
+      await screen.findByText("Klasse wurde versetzt: jetzt 4a"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Antwort")).toBeInTheDocument();
+  });
+
+  it("nennt den Grund, wenn die Klasse die OGS verlassen hat", async () => {
+    mockedThread.mockResolvedValue({
+      ...sommerfest,
+      closed: true,
+      target_label: "Klasse 4a",
+      class_move: { from_class: "4a", to_class: null },
+    });
+
+    renderView();
+
+    expect(
+      await screen.findByText(
+        "Die Kinder dieser Klasse 4a haben die OGS zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
+  });
+
   // #4803: ein Kind ohne OGS-Platz hat keinen Chat mit der OGS.
   it("führt nur zum Chat eines Kindes mit OGS-Platz", async () => {
     mockedChildren.mockResolvedValue([
