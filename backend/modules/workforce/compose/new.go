@@ -47,6 +47,9 @@ type WorkTime interface {
 	workforce.WorkTimeModelCatalog
 	workforce.ShiftTypeRetirement
 	planning.ShiftReads
+	// ApplyBreakDayShiftStates is the bulk write of the break-day follow-up
+	// (#8205).
+	ApplyBreakDayShiftStates(ctx context.Context, states []workforce.BreakDayShiftState) error
 }
 
 // New composes the Workforce work-time module. Every operation runs on the

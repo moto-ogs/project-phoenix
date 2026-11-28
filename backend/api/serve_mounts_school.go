@@ -89,6 +89,7 @@ func mountStaffRoutes(
 	}
 	staffShifts := newStaffShiftsResource(staffShiftsDependencies{
 		Planning:       workforce.StaffShifts,
+		BreakDays:      shifts.BreakDays,
 		ResolveStaffID: currentStaffID(caller),
 		ActorAccountID: sessiontoken.ActorAccountIDFromCtx,
 	})

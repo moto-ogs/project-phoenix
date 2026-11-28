@@ -1,6 +1,7 @@
 DELETE /api/staff-shifts/series/{id} -> dienstplan
 DELETE /api/staff-shifts/{id} -> dienstplan
 GET /api/staff-shifts/ -> dienstplan
+GET /api/staff-shifts/break-day-shifts -> dienstplan
 GET /api/staff-shifts/overview -> dienstplan
 GET /api/staff-shifts/series/{id} -> dienstplan
 POST /api/staff-shifts/ -> dienstplan

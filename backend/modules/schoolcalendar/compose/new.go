@@ -68,6 +68,9 @@ type AdministrationDependencies struct {
 	Today func() string
 	// ClosingDayNotices tells the school of a changed closing day (#7144).
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
+	// ClosingDayPlans carries a changed closing day into the series shifts
+	// that leave closing days out (#8205).
+	ClosingDayPlans schoolcalendar.ClosingDayPlans
 }
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
@@ -82,6 +85,7 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	return application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
 		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
+		ClosingDayPlans: dependencies.ClosingDayPlans,
 	}, dependencies.Observe)
 }
 

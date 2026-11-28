@@ -113,6 +113,11 @@ type ShiftPlanning struct {
 	Assignments workforce.StaffAssignmentQuery
 	Overview    workforce.StaffScheduleOverviewQuery
 
+	// BreakDays carries a change of the school's closing days into the
+	// planned series shifts and lists the ones left on such days (#8205).
+	// Nil without the School Calendar's non-working days.
+	BreakDays workforce.SeriesBreakDays
+
 	shifts   planning.StaffShiftService
 	series   planning.StaffShiftSeriesService
 	overview planning.StaffScheduleOverviewGetter
@@ -166,7 +171,20 @@ func NewShiftPlanning(deps ShiftPlanningDependencies) (*ShiftPlanning, error) {
 		Holidays: deps.Holidays, TargetOverrides: deps.Workforce,
 	})
 
+	var breakDays workforce.SeriesBreakDays
+	if deps.NonWorkingDays != nil {
+		var err error
+		breakDays, err = planning.NewSeriesBreakDays(planning.BreakDayDependencies{
+			Shifts: deps.Workforce, Absences: deps.Workforce, Calendar: planning.SchoolCalendarBreaks(deps.NonWorkingDays),
+			LockStaffShifts: lockStaffShifts, Today: deps.Today,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &ShiftPlanning{
+		BreakDays:   breakDays,
 		ShiftTypes:  planning.NewShiftTypeAdministration(shiftTypes, deps.CategoryLinker),
 		Assignments: planning.NewStaffAssignmentQuery(assignments),
 		Overview:    planning.NewStaffScheduleOverviewQuery(overview),

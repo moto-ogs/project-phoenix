@@ -1558,6 +1558,7 @@ export const portalRoutes = {
     staffShifts["DELETE /api/staff-shifts/series/{id}"],
     staffShifts["DELETE /api/staff-shifts/{id}"],
     staffShifts["GET /api/staff-shifts/"],
+    staffShifts["GET /api/staff-shifts/break-day-shifts"],
     staffShifts["GET /api/staff-shifts/overview"],
     staffShifts["GET /api/staff-shifts/series/{id}"],
     staffShifts["POST /api/staff-shifts/"],

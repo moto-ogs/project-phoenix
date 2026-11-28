@@ -20,6 +20,7 @@ import (
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
 // The owner modules of the serving roots, observed into the metrics sinks.
@@ -32,9 +33,13 @@ import (
 // A planned, changed or cancelled closing day reaches the whole school and
 // its families through Delivery's notification feed, without the account of
 // the request that changed it (#7144).
-func buildCalendarAdministration(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), records schoolcalendar.Days, lock timetable.RecurrenceWriteLock, offerings careplan.CareOfferingGuards, notifications owners.DeliveryNotifications) (schoolcalendar.Calendar, error) {
+//
+// A changed closing day cancels or plans again the unchanged series shifts
+// of the days it closed or opened, in the same transaction (#8205).
+func buildCalendarAdministration(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), records schoolcalendar.Days, lock timetable.RecurrenceWriteLock, offerings careplan.CareOfferingGuards, notifications owners.DeliveryNotifications, breakDays workforce.SeriesBreakDays) (schoolcalendar.Calendar, error) {
 	return schoolCalendarCompose.NewAdministration(records, schoolCalendarCompose.AdministrationDependencies{
 		DB: db.Pool(), Observe: observe, RecurrenceGate: lock.LockRecurrenceWrites,
+		ClosingDayPlans: owners.NewSchoolCalendarClosingDayPlans(breakDays),
 		ClosingDayNotices: owners.NewSchoolCalendarClosingDayNotices(notifications, func(ctx context.Context) int64 {
 			return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
 		}),

@@ -43,11 +43,13 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
+  BREAK_DAY_LABEL,
   formatColumnDate,
   formatPlannedHours,
   formatShiftLabel,
   summaryLabel,
   summaryTone,
+  type BreakDayShift,
   type StaffScheduleAssignment,
   type StaffScheduleStaff,
   type StaffShift,
@@ -126,6 +128,9 @@ interface DienstplanResourceGridProps {
   readonly holidayCareHref?: string;
   /** Shift type lookup (id -> type) for per-shift color + label fallback. */
   readonly typesById: Map<string, ShiftType>;
+  /** Serienschichten an einem Schließtag oder in den Ferien (#8205), keyed
+   *  by shift id: der Block trägt eine Warnung. */
+  readonly breakDayShifts?: ReadonlyMap<string, BreakDayShift["kind"]>;
   /** Every shift type (Schichtart) for the legend. Data source: the view. */
   readonly shiftTypes: readonly ShiftType[];
   /** Reduced permission path (only `time_tracking:manage`): the row header
@@ -341,6 +346,7 @@ export function DienstplanResourceGrid({
   holidayCare,
   holidayCareHref,
   typesById,
+  breakDayShifts,
   shiftTypes,
   reducedPath = false,
   currentStaffId = null,
@@ -592,9 +598,13 @@ export function DienstplanResourceGrid({
 
     // Zeit und Titel zeigt der Block; hier steht, was er nicht zeigt (#7112).
     const ariaParts: string[] = [];
+    const breakDay = shift.cancelled
+      ? undefined
+      : breakDayShifts?.get(shift.id);
     if (shift.cancelled) {
       ariaParts.push("fällt aus");
     } else {
+      if (breakDay) ariaParts.push(`${BREAK_DAY_LABEL[breakDay]}, prüfen`);
       if (isReplacement) ariaParts.push("Vertretung");
       if (shift.plannedByTraeger) ariaParts.push("vom Träger geplant");
       if (dayIsAbsent) ariaParts.push("abwesend");
@@ -658,6 +668,14 @@ export function DienstplanResourceGrid({
           </p>
         ) : (
           <>
+            {breakDay && (
+              // Warnung an der Schicht (#8205): Farbe nie allein, darum Symbol
+              // und Text.
+              <p className="text-moto-orange-strong flex items-center gap-1 text-xs font-medium">
+                <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+                {BREAK_DAY_LABEL[breakDay]}: Schicht prüfen
+              </p>
+            )}
             {isReplacement && (
               <p className="text-moto-blue-strong text-xs font-medium">
                 Vertretung{shift.changeReason ? ` · ${shift.changeReason}` : ""}
