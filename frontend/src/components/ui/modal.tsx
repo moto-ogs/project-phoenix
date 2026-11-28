@@ -19,6 +19,8 @@ import { Button } from "./button";
 import { CONFIRM_TOOLTIP } from "./confirm-tooltip";
 import { useKitDefault } from "./kit-locale";
 import { CloseIcon } from "./close-icon";
+import type { FormErrorInput } from "./form-error";
+import { FormErrorAlert } from "./form-error-alert";
 import { SpinnerIcon } from "./icons";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
@@ -500,6 +502,13 @@ interface ConfirmationModalProps {
   readonly title: string;
   /** Leading icon in the header, left of the title (e.g. an `IconTile`). */
   readonly icon?: React.ReactNode;
+  /** One line under the title, e.g. the object the step acts on; see `Modal`. */
+  readonly description?: React.ReactNode;
+  /**
+   * The failure of the confirmed step, above the content: a plain string or
+   * the error from `useApiFormError` with its retry and request ID (#2513).
+   */
+  readonly error?: FormErrorInput;
   readonly children: React.ReactNode;
   readonly confirmText?: string;
   readonly cancelText?: string;
@@ -562,6 +571,8 @@ export function ConfirmationModal({
   onConfirm,
   title,
   icon,
+  description,
+  error,
   children,
   confirmText = "Bestätigen",
   cancelText,
@@ -621,6 +632,7 @@ export function ConfirmationModal({
       onClose={onClose}
       title={title}
       icon={icon}
+      description={description}
       footer={modalFooter}
       isDismissDisabled={dismissLocked}
       busy={isConfirmLoading}
@@ -630,6 +642,7 @@ export function ConfirmationModal({
       backdropLabel={backdropLabel}
       mobileSheet={mobileSheet}
     >
+      <FormErrorAlert message={error} className="mb-3" />
       {children}
     </Modal>
   );

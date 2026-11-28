@@ -7,21 +7,18 @@
  * `onConfirm` des Dialogs (BAUARTEN-SPEC Bauart 2 Regel 6).
  */
 
-import { useLayoutEffect, useRef, useState } from "react";
 import { BellRing, FileDown, Pencil, Send, Square, Trash2 } from "lucide-react";
 
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import { Alert } from "~/components/ui/alert";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { IconTile } from "~/components/ui/icon-tile";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
-import { useApiFormError } from "~/contexts/ToastContext";
-import {
-  readStateWaitReason,
-  useReadDraftForm,
-} from "~/lib/hooks/use-swr-load-error";
-import { useActionOn, type ReadAction } from "~/lib/swr/read-draft";
-import { createLogger } from "~/lib/logger";
+import { useConfirmAction } from "~/lib/hooks/use-confirm-action";
+import { useActionOn } from "~/lib/swr/read-draft";
 import {
   closeSurvey,
   deleteSurvey,
@@ -36,8 +33,6 @@ import {
 } from "./survey-meta";
 import { SURVEY_MIN_RESPONSES } from "./survey-questionnaire";
 import { reportsConcept } from "~/lib/concepts/reports";
-
-const logger = createLogger({ component: "SurveyLifecycle" });
 
 /**
  * Wer bei Veröffentlichen und Erinnern etwas bekommt, für Knopf und Menü.
@@ -72,91 +67,17 @@ interface ReadDialogProps extends DialogProps {
   readonly reload: () => Promise<unknown>;
 }
 
-/**
- * Ein Schritt mit Rückfrage: der Fehler bleibt im offenen Dialog. Mit `read`
- * schickt der Schritt den Stand, den der Dialog zeigt (ADR 0311): eine
- * Ablehnung zeigt den neu gelesenen Stand ohne „Wiederholen“, und bis er
- * gelesen ist, geht nichts raus.
- */
-function useSurveyAction<T>(
-  run: () => Promise<T>,
-  {
-    onDone,
-    onClose,
-    object,
-    logEvent,
-    read,
-  }: {
-    onDone: (result: T) => Promise<void> | void;
-    onClose: () => void;
-    object: string;
-    logEvent: string;
-    read?: ReadAction;
-  },
-) {
-  const [pending, setPending] = useState(false);
-  const errors = useApiFormError();
-  const form = useReadDraftForm(read ?? null, errors, object);
-  const latestConfirmRef = useRef<() => void>(() => undefined);
-
-  const confirm = async () => {
-    if (!form.begin()) return;
-    setPending(true);
-    const result = read
-      ? await read.submit(run)
-      : await run().then(
-          (saved) => ({ ok: true as const, saved }),
-          (error: unknown) => ({ ok: false as const, error, refused: false }),
-        );
-    if (!result.ok) {
-      setPending(false);
-      if ("skipped" in result && result.skipped) return;
-      logger.error(logEvent, {
-        error:
-          result.error instanceof Error
-            ? result.error.message
-            : String(result.error),
-      });
-      await errors.show(
-        result.error,
-        result.refused && "reload" in result
-          ? { object, reload: result.reload }
-          : { object, retry: () => latestConfirmRef.current() },
-      );
-      return;
-    }
-    try {
-      await onDone(result.saved);
-    } finally {
-      setPending(false);
-      onClose();
-    }
-  };
-  useLayoutEffect(() => {
-    latestConfirmRef.current = () => void confirm();
-  });
-
-  return {
-    pending,
-    error: errors.error ?? form.loadError,
-    confirm,
-    blocked: read !== undefined && !read.canSubmit,
-    blockedReason: read ? readStateWaitReason(read.status) : undefined,
-  };
-}
-
 export function PublishSurveyDialog({
   survey,
   onClose,
   onDone,
   reload,
 }: ReadDialogProps) {
-  // Veröffentlicht wird der Entwurf, den der Dialog zeigt.
   const read = useActionOn(
     { opening: survey.id, data: survey, reload },
     { token: (shown) => shown.version },
   );
-  const { pending, error, confirm, blocked, blockedReason } = useSurveyAction(
+  const { pending, error, confirm, blocked, blockedReason } = useConfirmAction(
     () => publishSurvey(survey.id, survey.version),
     {
       onDone,
@@ -173,7 +94,11 @@ export function PublishSurveyDialog({
       onClose={onClose}
       onConfirm={() => void confirm()}
       title="Umfrage veröffentlichen"
+      description={`„${survey.title}“`}
+      icon={<IconTile tone="green" icon={<Send aria-hidden />} />}
+      error={error}
       confirmText="Jetzt veröffentlichen"
+      confirmVariant="success"
       confirmTooltip={`Schickt die Umfrage sofort ${surveyRecipients(survey).publish}.`}
       cancelText="Abbrechen"
       isConfirmDisabled={blocked}
@@ -181,32 +106,42 @@ export function PublishSurveyDialog({
       isConfirmLoading={pending}
       loadingText="Wird veröffentlicht …"
     >
-      <div className="space-y-2 text-sm text-gray-700">
-        <FormErrorAlert message={error} />
-        <p>
-          „{survey.title}“ geht an{" "}
-          <span className="font-medium">{describeSurveyAudience(survey)}</span>.
-          Teilnahme bis {formatSurveyClosesAt(survey.closes_at)}.
-        </p>
+      <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Geht an">
+              {describeSurveyAudience(survey)}
+            </DataField>
+            <DataField inline label="Teilnahme bis">
+              {formatSurveyClosesAt(survey.closes_at)}
+            </DataField>
+            <DataField inline label="Antworten">
+              {survey.anonymous ? "Anonym" : "Mit Namen"}
+            </DataField>
+            {survey.audience === "parents" && (
+              <DataField inline label="E-Mail an Eltern">
+                {survey.send_email ? "Ja, zusätzlich" : "Nein"}
+              </DataField>
+            )}
+          </DataGrid>
+        </InsetPanel>
         <p>
           {survey.anonymous
-            ? `Anonym: Niemand sieht, wer was geantwortet hat. Die Auswertung erscheint nach dem Ende und ab ${SURVEY_MIN_RESPONSES} Antworten.`
-            : "Nicht anonym: Bei jeder Antwort steht der Name."}
+            ? `Niemand sieht, wer was geantwortet hat. Die Auswertung erscheint nach dem Ende und ab ${SURVEY_MIN_RESPONSES} Antworten.`
+            : "Bei jeder Antwort steht der Name."}
         </p>
-        {survey.audience === "parents" && survey.send_email && (
-          <p>Die Eltern bekommen zusätzlich eine E-Mail.</p>
-        )}
-        <p className="font-medium text-gray-900">
-          Danach lässt sich nichts mehr ändern, auch nicht, ob die Umfrage
-          anonym ist. Du kannst sie nur noch beenden.
-        </p>
+        <Alert
+          type="warning"
+          size="compact"
+          message="Danach lässt sich nichts mehr ändern, auch nicht, ob die Umfrage anonym ist. Du kannst sie nur noch beenden."
+        />
       </div>
     </ConfirmationModal>
   );
 }
 
 export function CloseSurveyDialog({ survey, onClose, onDone }: DialogProps) {
-  const { pending, error, confirm } = useSurveyAction(
+  const { pending, error, confirm } = useConfirmAction(
     () => closeSurvey(survey.id),
     {
       onDone,
@@ -222,22 +157,32 @@ export function CloseSurveyDialog({ survey, onClose, onDone }: DialogProps) {
       onClose={onClose}
       onConfirm={() => void confirm()}
       title="Umfrage beenden"
+      description={`„${survey.title}“`}
+      icon={<IconTile tone="orange" icon={<Square aria-hidden />} />}
+      error={error}
       confirmText="Jetzt beenden"
+      confirmVariant="warning"
       confirmTooltip="Beendet die Umfrage sofort, danach kann niemand mehr teilnehmen."
       cancelText="Abbrechen"
       isConfirmLoading={pending}
       loadingText="Wird beendet …"
     >
-      <div className="space-y-2 text-sm text-gray-700">
-        <FormErrorAlert message={error} />
+      <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Bisher">
+              {participantLabel(survey.participant_count)}
+            </DataField>
+          </DataGrid>
+        </InsetPanel>
         <p>
-          Danach kann niemand mehr an „{survey.title}“ teilnehmen. Bisher:{" "}
-          {participantLabel(survey.participant_count)}.
+          Danach kann niemand mehr teilnehmen. Die Auswertung bleibt erhalten.
         </p>
-        <p>
-          Die Auswertung bleibt erhalten. Beenden lässt sich nicht rückgängig
-          machen.
-        </p>
+        <Alert
+          type="warning"
+          size="compact"
+          message="Beenden lässt sich nicht rückgängig machen."
+        />
       </div>
     </ConfirmationModal>
   );
@@ -252,7 +197,7 @@ export function RemindSurveyDialog({
   onClose: () => void;
   onReminded: (count: number) => Promise<void> | void;
 }>) {
-  const { pending, error, confirm } = useSurveyAction(
+  const { pending, error, confirm } = useConfirmAction(
     () => remindSurvey(survey.id),
     {
       onDone: onReminded,
@@ -268,18 +213,26 @@ export function RemindSurveyDialog({
       onClose={onClose}
       onConfirm={() => void confirm()}
       title="An die Umfrage erinnern"
+      description={`„${survey.title}“`}
+      icon={<IconTile icon={<BellRing aria-hidden />} />}
+      error={error}
       confirmText="Erinnerung senden"
       confirmTooltip={`Erinnert sofort ${surveyRecipients(survey).remind}.`}
       cancelText="Abbrechen"
       isConfirmLoading={pending}
       loadingText="Wird gesendet …"
     >
-      <div className="space-y-2 text-sm text-gray-700">
-        <FormErrorAlert message={error} />
-        <p>
-          Alle, die bei „{survey.title}“ noch nicht teilgenommen haben, bekommen
-          eine Erinnerung.
-        </p>
+      <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Geht an">
+              {surveyRecipients(survey).remind}
+            </DataField>
+            <DataField inline label="Bisher">
+              {participantLabel(survey.participant_count)}
+            </DataField>
+          </DataGrid>
+        </InsetPanel>
         <p>Du erfährst nur die Zahl, nicht wer das ist.</p>
       </div>
     </ConfirmationModal>
@@ -298,7 +251,7 @@ export function DeleteSurveyDialog({
     { opening: survey.id, data: survey, reload },
     { token: (shown) => shown.fingerprint },
   );
-  const { pending, error, confirm, blocked } = useSurveyAction(
+  const { pending, error, confirm, blocked } = useConfirmAction(
     () => deleteSurvey(survey.id, survey.fingerprint),
     {
       onDone,

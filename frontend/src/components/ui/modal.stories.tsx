@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Modal, ConfirmationModal } from "./modal";
+import { Send } from "lucide-react";
 import { Button } from "./button";
+import { IconTile } from "./icon-tile";
 
 const meta = {
   title: "components/ui/Modal",
@@ -105,6 +107,22 @@ export const ConfirmationLoading: StoryObj<typeof ConfirmationModal> = {
     title: "Wirklich löschen?",
     children: <p>Diese Aktion kann nicht rückgängig gemacht werden.</p>,
     isConfirmLoading: true,
+  },
+};
+
+export const ConfirmationWithSummary: StoryObj<typeof ConfirmationModal> = {
+  render: (args) => <ConfirmationModal {...args} />,
+  args: {
+    isOpen: true,
+    onClose: () => undefined,
+    onConfirm: () => undefined,
+    title: "Umfrage veröffentlichen",
+    description: "„Wünsche für das Sommerfest“",
+    icon: <IconTile tone="green" icon={<Send aria-hidden />} />,
+    error: "Das Veröffentlichen der Umfrage hat nicht geklappt.",
+    confirmText: "Jetzt veröffentlichen",
+    confirmVariant: "success",
+    children: <p>Danach lässt sich nichts mehr ändern.</p>,
   },
 };
 
