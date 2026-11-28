@@ -66,6 +66,27 @@ func (d *Decisions) followRewrittenClass(ctx context.Context, studentID int64, p
 	return nil
 }
 
+// followJoinedClass lets a child who has just come into OGS care with its
+// class, a new child of an approval or a child without an OGS place (#4803)
+// that has just got one, join the already planned occurrences of the
+// Regeltermine with a Klasse or Jahrgang target (#8279), as a class change
+// does (#6841): with no class before. It joins them from its care start,
+// today at the earliest, so no past day and no day before its care changes.
+// The caller holds the recurrence gate.
+func (d *Decisions) followJoinedClass(ctx context.Context, studentID int64, schoolClass string, careFrom *calendar.Date) error {
+	if schoolClass == "" {
+		return nil
+	}
+	from := d.todayDate()
+	if careFrom != nil && careFrom.After(from) {
+		from = *careFrom
+	}
+	if err := d.followClassChanges(ctx, map[int64]string{studentID: ""}, from); err != nil {
+		return fmt.Errorf("follow joined class on targeted templates: %w", err)
+	}
+	return nil
+}
+
 // materializeEnrollmentsForApproval writes the roster rows of the child's
 // bookings during an approval. Wired without Care Plan bookings it skips:
 // approvals still create the student record; the admin can attach activity

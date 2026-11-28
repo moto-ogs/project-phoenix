@@ -137,6 +137,12 @@ func (d *Decisions) approveNewStudent(
 	if err := d.materializeApprovedOfferings(ctx, child.ID, student.ID, phase); err != nil {
 		return nil, err
 	}
+	// The new child joins the planned Regeltermine of its class from its
+	// care start on (#8279), under the gates Decide took; after the guardian
+	// attachment, like the roster inserts above.
+	if err := d.followJoinedClass(ctx, student.ID, student.SchoolClass, student.EnrolledFrom); err != nil {
+		return nil, fmt.Errorf("decision: new child: %w", err)
+	}
 	if err := d.stampActivationPlan(ctx, child.ID, activationPlan); err != nil {
 		return nil, err
 	}

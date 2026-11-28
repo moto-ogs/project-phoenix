@@ -46,7 +46,7 @@ func (d *Decisions) attachApprovalToExistingStudent(
 	if err != nil {
 		return nil, err
 	}
-	existing, previousSchoolClass := renewal.student, renewal.previousSchoolClass
+	existing := renewal.student
 	// Reconcile the submitted primary guardian BEFORE the targeted-field
 	// dispatch, so the resolved profile is the one the dispatch enriches with
 	// the submitted phone number.
@@ -62,8 +62,8 @@ func (d *Decisions) attachApprovalToExistingStudent(
 	// The class-writes and recurrence gates remain held from before the
 	// student write. Changed classes must update all sourced future rosters
 	// in the same transaction (#2147, #2709).
-	if err := d.followRewrittenClass(ctx, studentID, previousSchoolClass, existing.SchoolClass); err != nil {
-		return nil, fmt.Errorf("decision: approval class change: %w", err)
+	if err := d.followRenewedStudent(ctx, renewal); err != nil {
+		return nil, err
 	}
 	if syncTargetedFields {
 		weeklyPlanOn := d.renewalWeeklyPlanDay(phase, renewal.careRunning)
@@ -159,8 +159,27 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	}
 	return &existingStudentRenewal{
 		student: existing, previousSchoolClass: previousSchoolClass, activationPlan: plan,
-		careRunning: beforeStatus == studentStatusActive,
+		careRunning: beforeStatus == studentStatusActive, grantedPlace: existing.WithoutCarePlace && !deferred,
 	}, nil
+}
+
+// followRenewedStudent keeps the class-filtered rosters in step with the
+// renewal: a changed class moves the child (#2147, #6841). A child without an
+// OGS place stood in no Regeltermin (ADR 0282); with the place it joins those
+// of its class, which a class change does not reach when the class stays
+// (#8279).
+func (d *Decisions) followRenewedStudent(ctx context.Context, renewal *existingStudentRenewal) error {
+	student := renewal.student
+	if err := d.followRewrittenClass(ctx, student.ID, renewal.previousSchoolClass, student.SchoolClass); err != nil {
+		return fmt.Errorf("decision: approval class change: %w", err)
+	}
+	if !renewal.grantedPlace || renewal.previousSchoolClass != student.SchoolClass {
+		return nil
+	}
+	if err := d.followJoinedClass(ctx, student.ID, student.SchoolClass, student.EnrolledFrom); err != nil {
+		return fmt.Errorf("decision: approval grants the OGS place: %w", err)
+	}
+	return nil
 }
 
 // existingStudentRenewal is the outcome of renewExistingStudent.
@@ -170,6 +189,9 @@ type existingStudentRenewal struct {
 	activationPlan      approvalActivationPlan
 	// careRunning: the school cared for the child before the approval.
 	careRunning bool
+	// grantedPlace: the renewal gave a child without an OGS place its place
+	// at once (#4803); a deferred renewal grants it with the class switch.
+	grantedPlace bool
 }
 
 // auditRenewedStatus records a status change of the renewal: attributed to

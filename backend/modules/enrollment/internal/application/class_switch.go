@@ -87,13 +87,19 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 	applied := 0
 	previousClasses := make(map[int64]string, len(due))
 	for _, change := range due {
-		ok, err := d.applyDueClassSwitch(ctx, change)
+		outcome, err := d.applyDueClassSwitch(ctx, change)
 		if err != nil {
 			return applied, err
 		}
-		if ok {
+		if outcome.applied {
 			applied++
 			previousClasses[*change.CreatedStudentID] = change.From
+		}
+		// A child without an OGS place stood in no Regeltermin (ADR 0282):
+		// with its place it joins those of its class, whatever class it
+		// had before (#8279).
+		if outcome.grantedPlace {
+			previousClasses[*change.CreatedStudentID] = ""
 		}
 	}
 	if applied > 0 {
@@ -112,24 +118,36 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 // place starts with this switch. A full Kinderkontingent holds this one
 // switch; the plan stays, so a later run grants the place once one is free,
 // and the other switches of the school still apply.
-func (d *Decisions) applyDueClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
-	ok, err := d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
-		return d.applyClassSwitch(applyCtx, change)
+func (d *Decisions) applyDueClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (classSwitchOutcome, error) {
+	var outcome classSwitchOutcome
+	_, err := d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
+		var err error
+		outcome, err = d.applyClassSwitch(applyCtx, change)
+		return outcome.applied, err
 	})
 	if isChildQuotaReached(err) {
 		d.logger().Warn("class switch: place held, child quota reached",
 			slog.Int64("request_child_id", change.RequestChildID))
-		return d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
+		ok, err := d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
 			return d.applyClassHoldingPlace(applyCtx, change)
 		})
+		return classSwitchOutcome{applied: ok}, err
 	}
 	if err != nil {
-		return false, err
+		return classSwitchOutcome{}, err
 	}
 	if err := d.deps.Children.SetChildClassSwitch(ctx, change.RequestChildID, nil); err != nil {
-		return false, fmt.Errorf("class switch: clear request child %d: %w", change.RequestChildID, err)
+		return classSwitchOutcome{}, fmt.Errorf("class switch: clear request child %d: %w", change.RequestChildID, err)
 	}
-	return ok, nil
+	return outcome, nil
+}
+
+// classSwitchOutcome is what one due switch did: applied, it moved the child
+// into its new class; grantedPlace, it gave a child without an OGS place
+// (#4803) the place the approval deferred to this day.
+type classSwitchOutcome struct {
+	applied      bool
+	grantedPlace bool
 }
 
 // applyClassHoldingPlace applies the class of a switch the Kinderkontingent
@@ -174,20 +192,21 @@ func (d *Decisions) inSavepoint(ctx context.Context, step func(context.Context) 
 	return ok, err
 }
 
-func (d *Decisions) applyClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
+func (d *Decisions) applyClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (classSwitchOutcome, error) {
 	if change.ChildStatus != enrollmentNative.ChildStatusApproved || change.CreatedStudentID == nil {
-		return false, nil
+		return classSwitchOutcome{}, nil
 	}
 	student, err := d.readEnrollmentStudent(ctx, *change.CreatedStudentID, "update")
 	if err != nil && d.deps.Runtime.NotFound(err) {
-		return false, nil
+		return classSwitchOutcome{}, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("class switch: load student %d: %w", *change.CreatedStudentID, err)
+		return classSwitchOutcome{}, fmt.Errorf("class switch: load student %d: %w", *change.CreatedStudentID, err)
 	}
 	if student == nil || (student.Status != studentStatusActive && student.Status != studentStatusPending) {
-		return false, nil
+		return classSwitchOutcome{}, nil
 	}
+	granted := classSwitchOutcome{grantedPlace: student.WithoutCarePlace}
 	if student.SchoolClass != change.From {
 		d.logger().Info("class switch skipped: class changed since approval",
 			slog.Int64("request_child_id", change.RequestChildID),
@@ -196,16 +215,17 @@ func (d *Decisions) applyClassSwitch(ctx context.Context, change enrollmentNativ
 		// approval deferred to this day; the renewal keeps the school's
 		// class. A child with a place has nothing left to apply.
 		if !student.WithoutCarePlace {
-			return false, nil
+			return classSwitchOutcome{}, nil
 		}
 		if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, enrollmentStudentInput(student)); err != nil {
-			return false, fmt.Errorf("class switch: grant place to student %d: %w", student.ID, err)
+			return classSwitchOutcome{}, fmt.Errorf("class switch: grant place to student %d: %w", student.ID, err)
 		}
-		return false, nil
+		return granted, nil
 	}
 	student.SchoolClass = change.To
 	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, enrollmentStudentInput(student)); err != nil {
-		return false, fmt.Errorf("class switch: update student %d: %w", student.ID, err)
+		return classSwitchOutcome{}, fmt.Errorf("class switch: update student %d: %w", student.ID, err)
 	}
-	return true, nil
+	granted.applied = true
+	return granted, nil
 }
