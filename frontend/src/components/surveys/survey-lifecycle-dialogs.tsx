@@ -133,6 +133,7 @@ export function PublishSurveyDialog({
         <Alert
           type="warning"
           size="compact"
+          announce="off"
           message="Danach lässt sich nichts mehr ändern, auch nicht, ob die Umfrage anonym ist. Du kannst sie nur noch beenden."
         />
       </div>
@@ -181,6 +182,7 @@ export function CloseSurveyDialog({ survey, onClose, onDone }: DialogProps) {
         <Alert
           type="warning"
           size="compact"
+          announce="off"
           message="Beenden lässt sich nicht rückgängig machen."
         />
       </div>
@@ -233,7 +235,7 @@ export function RemindSurveyDialog({
             </DataField>
           </DataGrid>
         </InsetPanel>
-        <p>Du erfährst nur die Zahl, nicht wer das ist.</p>
+        <p>Danach siehst du, wie viele erinnert wurden, aber nicht wer.</p>
       </div>
     </ConfirmationModal>
   );
@@ -251,7 +253,7 @@ export function DeleteSurveyDialog({
     { opening: survey.id, data: survey, reload },
     { token: (shown) => shown.fingerprint },
   );
-  const { pending, error, confirm, blocked } = useConfirmAction(
+  const { pending, error, confirm, blocked, blockedReason } = useConfirmAction(
     () => deleteSurvey(survey.id, survey.fingerprint),
     {
       onDone,
@@ -297,6 +299,7 @@ export function DeleteSurveyDialog({
       onClose={onClose}
       loading={pending}
       confirmDisabled={blocked}
+      confirmDisabledReason={blockedReason}
       error={error}
     />
   );

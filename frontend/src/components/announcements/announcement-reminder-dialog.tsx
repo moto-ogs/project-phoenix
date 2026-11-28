@@ -179,7 +179,7 @@ export function AnnouncementReminderDialog({
         }),
       );
       if (!result.ok) {
-        if ("skipped" in result && result.skipped) {
+        if (result.skipped) {
           setPending(null);
           return;
         }

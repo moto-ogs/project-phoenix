@@ -74,7 +74,11 @@ export function PublishAnnouncementDialog({
       error={error}
       confirmText="Jetzt veröffentlichen"
       confirmVariant="success"
-      confirmTooltip="Zeigt die Mitteilung sofort den gewählten Eltern."
+      confirmTooltip={
+        announcement.send_email
+          ? "Zeigt die Mitteilung sofort den gewählten Eltern und schickt ihnen eine E-Mail."
+          : "Zeigt die Mitteilung sofort den gewählten Eltern."
+      }
       cancelText="Abbrechen"
       isConfirmDisabled={blocked}
       confirmDisabledReason={blockedReason}
@@ -136,40 +140,48 @@ export function UnpublishAnnouncementDialog({
       error={error}
       confirmText="Zurückziehen"
       confirmVariant="warning"
-      confirmTooltip="Macht die Mitteilung sofort wieder zum Entwurf."
+      confirmTooltip="Macht den Eintrag sofort wieder zum Entwurf."
       cancelText="Abbrechen"
       isConfirmLoading={pending}
       loadingText="Wird zurückgezogen …"
     >
       <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Bisher sichtbar für">
+              {summarizeTargets(announcement.targets)}
+            </DataField>
+          </DataGrid>
+        </InsetPanel>
         {declaration ? (
           // Wer schon geantwortet hat, behält das Einverständnis, damit eine
           // Zustimmung widerrufbar bleibt (#6290).
-          <p>
-            Das Einverständnis wird wieder ein Entwurf. Eltern können nicht mehr
-            neu antworten.
-          </p>
+          <>
+            <p>
+              Das Einverständnis wird wieder ein Entwurf. Eltern können nicht
+              mehr neu antworten.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-gray-600">
+              <li>{UNSENT_MAILS_STOP}</li>
+              <li>Bisherige Antworten bleiben gespeichert.</li>
+              <li>
+                Wer schon geantwortet hat, sieht das Einverständnis weiter und
+                kann eine Zustimmung widerrufen.
+              </li>
+              <li>
+                Änderst du danach den Text, müssen die Eltern noch einmal
+                antworten.
+              </li>
+            </ul>
+          </>
         ) : (
-          <p>
-            Die Mitteilung wird für die Eltern nicht mehr sichtbar und wird
-            wieder ein Entwurf.
-          </p>
-        )}
-        {declaration ? (
-          <ul className="list-disc space-y-1 pl-5 text-gray-600">
-            <li>{UNSENT_MAILS_STOP}</li>
-            <li>Bisherige Antworten bleiben gespeichert.</li>
-            <li>
-              Wer schon geantwortet hat, sieht das Einverständnis weiter und
-              kann eine Zustimmung widerrufen.
-            </li>
-            <li>
-              Änderst du danach den Text, müssen die Eltern noch einmal
-              antworten.
-            </li>
-          </ul>
-        ) : (
-          <p className="text-gray-600">{UNSENT_MAILS_STOP}</p>
+          <>
+            <p>
+              Die Mitteilung wird für die Eltern nicht mehr sichtbar und wird
+              wieder ein Entwurf.
+            </p>
+            <p className="text-gray-600">{UNSENT_MAILS_STOP}</p>
+          </>
         )}
       </div>
     </ConfirmationModal>
@@ -182,8 +194,6 @@ export function DeleteAnnouncementDialog({
   onDone,
   apiBase,
 }: LifecycleDialogProps) {
-  // Ein Einverständnis mit Antworten (#3430) lässt der Server als Nachweis
-  // nicht löschen.
   const { pending, error, confirm } = useConfirmAction(
     () => withApiBase(deleteAnnouncement, announcement.id, apiBase),
     {

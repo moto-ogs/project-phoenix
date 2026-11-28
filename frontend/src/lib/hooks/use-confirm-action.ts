@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useLatest } from "~/lib/hooks/use-latest";
@@ -39,33 +39,43 @@ export function useConfirmAction<T>(
   const errors = useApiFormError();
   const form = useReadDraftForm(read ?? null, errors, object);
 
+  // Synchronous for a second call before the render: it sends nothing and
+  // leaves the running attempt's lock on the dialog alone.
+  const running = useRef(false);
+
+  const release = () => {
+    running.current = false;
+    setPending(false);
+  };
+
   const confirm = async () => {
-    if (!form.begin()) return;
+    if (running.current || !form.begin()) return;
+    running.current = true;
     setPending(true);
     const result = await (read ? read.submit(run) : sendUnread(run));
-    if (!result.ok) {
-      setPending(false);
-      if (result.skipped) return;
-      logger.error(logEvent, {
-        error:
-          result.error instanceof Error
-            ? result.error.message
-            : String(result.error),
-      });
-      await errors.show(
-        result.error,
-        result.refused && result.reload
-          ? { object, reload: result.reload }
-          : { object, retry: () => void latestConfirm.current() },
-      );
+    if (result.ok) {
+      try {
+        await onDone(result.saved);
+      } finally {
+        release();
+        onClose();
+      }
       return;
     }
-    try {
-      await onDone(result.saved);
-    } finally {
-      setPending(false);
-      onClose();
-    }
+    release();
+    if (result.skipped) return;
+    logger.error(logEvent, {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    await errors.show(
+      result.error,
+      result.refused && result.reload
+        ? { object, reload: result.reload }
+        : { object, retry: () => void latestConfirm.current() },
+    );
   };
   const latestConfirm = useLatest(confirm);
 

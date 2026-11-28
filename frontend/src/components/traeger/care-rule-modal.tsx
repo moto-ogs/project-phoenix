@@ -21,7 +21,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { useDraftOn, sendUnread } from "~/lib/swr/read-draft";
 import {
   type CareRule,
   type CareRuleInput,
@@ -364,10 +364,7 @@ export function CareRuleModal({
         ? await stored.submit((version) =>
             saveCareRule(changedId, input, version),
           )
-        : await saveCareRule(null, input).then(
-            (saved) => ({ ok: true, saved }) as const,
-            (error: unknown) => ({ ok: false, error, refused: false }) as const,
-          );
+        : await sendUnread(() => saveCareRule(null, input));
       if (result.ok) {
         if (op.isCurrent()) onSaved(result.saved);
         success(`Die Regel „${input.name}“ ist gespeichert.`);
@@ -384,7 +381,7 @@ export function CareRuleModal({
       // of the draft, without a retry (ADR 0311).
       void formErrors.show(result.error, {
         object: "die Regel",
-        reload: "reload" in result ? result.reload : undefined,
+        reload: result.reload,
       });
     });
   };

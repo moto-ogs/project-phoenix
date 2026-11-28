@@ -115,6 +115,32 @@ describe("useConfirmAction", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("closes and stops pending also when the follow-up fails", async () => {
+    const failed = new Error("refresh failed");
+    const onClose = vi.fn();
+    let outcome: Promise<void> | undefined;
+    function Harness() {
+      const action = useConfirmAction(() => Promise.resolve(1), {
+        onDone: () => Promise.reject(failed),
+        onClose,
+        object: OBJECT,
+        logEvent: "confirm_failed",
+      });
+      return (
+        <button type="button" onClick={() => (outcome = action.confirm())}>
+          {action.pending ? "Läuft" : "Bestätigen"}
+        </button>
+      );
+    }
+    render(<Harness />);
+
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    await expect(outcome).rejects.toBe(failed);
+    expect(confirmButton()).toBeInTheDocument();
+  });
+
   it("keeps a failure in the open dialog and retries with the current step", async () => {
     const first = vi.fn(() =>
       Promise.reject(new ApiError("boom", 500, { code: "general.server" })),
@@ -142,6 +168,43 @@ describe("useConfirmAction", () => {
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
     expect(onDone).toHaveBeenCalledWith("ok");
+  });
+
+  it("sends once and stays pending when confirm is called twice before the render", async () => {
+    const sent = deferred<number>();
+    const run = vi.fn(() => sent.promise);
+    const onClose = vi.fn();
+    function Twice() {
+      const action = useConfirmAction(run, {
+        onDone: vi.fn(),
+        onClose,
+        object: OBJECT,
+        logEvent: "confirm_failed",
+      });
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            void action.confirm();
+            void action.confirm();
+          }}
+        >
+          {action.pending ? "Läuft" : "Bestätigen"}
+        </button>
+      );
+    }
+    render(<Twice />);
+
+    fireEvent.click(confirmButton());
+
+    expect(await screen.findByRole("button", { name: "Läuft" })).toBeVisible();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      sent.resolve(1);
+      await sent.promise;
+    });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
   it("sends once when confirm is clicked again before the answer", async () => {

@@ -20,7 +20,7 @@ import { berlinTodayISO } from "~/lib/date-helpers";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { useDraftOn, sendUnread } from "~/lib/swr/read-draft";
 import type {
   CareCostShareKind,
   CareCostShareScope,
@@ -275,10 +275,7 @@ export function CareCostShareModal({
         ? await stored.submit((version) =>
             saveCareCostShare(changedId, input, version),
           )
-        : await saveCareCostShare(null, input).then(
-            (saved) => ({ ok: true, saved }) as const,
-            (error: unknown) => ({ ok: false, error, refused: false }) as const,
-          );
+        : await sendUnread(() => saveCareCostShare(null, input));
       if (result.ok) {
         if (op.isCurrent()) onSaved(result.saved);
         success(`Der Anteil für ${child} ist gespeichert.`);
@@ -295,7 +292,7 @@ export function CareCostShareModal({
       // of the draft, without a retry (ADR 0311).
       void formErrors.show(result.error, {
         object: "die Kostenübernahme",
-        reload: "reload" in result ? result.reload : undefined,
+        reload: result.reload,
       });
     });
   };
