@@ -93,6 +93,8 @@ export function editStudentTopic(): HelpTopic {
       // Feld an einem Betreuungstag (care-weekly-plan-editor.tsx).
       "Steht unter einem leeren Feld zum Beispiel `16:00 Uhr eintragen`? Ein Klick trägt die übliche Zeit deiner Schule ein.",
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
+      // #8216: care-day-meal-notice.tsx; das Essen geht nicht von selbst mit.
+      "Ist das Kind an einem Tag mit `Kommt nicht` oder `Keine Abholung` noch zum Essen angemeldet? Dann steht unter `Betreuungszeiten` `Essen noch angemeldet`. Wähle `Auch abmelden`, um das Essen für diesen Tag abzumelden.",
     ],
     related: [
       HELP_TOPICS.studentSearch,

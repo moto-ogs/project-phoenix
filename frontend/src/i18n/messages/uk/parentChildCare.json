@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "Школа вже внесла записи на ці дні. Вона перевірить ваше повідомлення. До того часу діє її запис.",
     "requestSentPartlyBodyWithoutCarePlace": "Вільні дні повідомлено. Щодо інших днів школа перевірить ваше повідомлення. До того часу діє її запис.",
     "submitBlockedWithoutCarePlace": "Школа зараз не приймає тут повідомлення про відсутність.",
-    "schoolSickDayWithoutCarePlace": "{date}: школа позначила хворобу"
+    "schoolSickDayWithoutCarePlace": "{date}: школа позначила хворобу",
+    "appliedTitle": "Відсутність повідомлено",
+    "appliedBody": "Відсутність збережено.",
+    "mealTitle": "Обід досі замовлено",
+    "mealIntro": "{count, plural, one {На цей день обід досі замовлено.} other {На ці дні обід досі замовлено.}} Його не скасовують автоматично.",
+    "mealDayLocked": "{date}: строк скасування минув",
+    "mealLockedHint": "Після строку скасувати обід може лише {careTerm}. Будь ласка, звернися до {careTerm}.",
+    "mealLockedHintWithoutCarePlace": "Після строку скасувати обід може лише школа. Будь ласка, звернися до школи.",
+    "mealCancel": "Скасувати й обід",
+    "mealCancelTooltip": "Одразу скасовує обід у ці дні.",
+    "mealCancelling": "Скасування …",
+    "mealCancelled": "Обід на ці дні скасовано.",
+    "mealErrorObject": "скасування обіду"
   },
   "summary": {
     "none": "Немає повідомлення про відсутність",

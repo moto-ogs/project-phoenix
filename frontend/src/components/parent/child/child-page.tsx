@@ -386,6 +386,7 @@ function ChildSections({
           careExceptions={care.careExceptions}
           sickDays={care.sickDays}
           withoutCarePlace={withoutCarePlace}
+          mealRegistrationEnabled={care.features.meal_registration_enabled}
         />
       )}
       {modal === "pickup" && (

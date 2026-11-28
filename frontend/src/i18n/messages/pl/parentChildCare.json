@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "Szkoła wpisała już coś na te dni. Sprawdzi Państwa zgłoszenie. Do tego czasu obowiązuje jej wpis.",
     "requestSentPartlyBodyWithoutCarePlace": "Wolne dni są zgłoszone. Na pozostałe dni szkoła sprawdzi Państwa zgłoszenie. Do tego czasu obowiązuje jej wpis.",
     "submitBlockedWithoutCarePlace": "Szkoła nie przyjmuje tu teraz zgłoszeń nieobecności.",
-    "schoolSickDayWithoutCarePlace": "{date}: zgłoszone jako chore przez szkołę"
+    "schoolSickDayWithoutCarePlace": "{date}: zgłoszone jako chore przez szkołę",
+    "appliedTitle": "Nieobecność zgłoszona",
+    "appliedBody": "Nieobecność została zapisana.",
+    "mealTitle": "Obiad nadal zamówiony",
+    "mealIntro": "{count, plural, one {W tym dniu obiad jest nadal zamówiony.} other {W tych dniach obiad jest nadal zamówiony.}} Nie zostanie odwołany automatycznie.",
+    "mealDayLocked": "{date}: termin odwołania minął",
+    "mealLockedHint": "Po terminie tylko {careTerm} może odwołać obiad. Skontaktuj się z {careTerm}.",
+    "mealLockedHintWithoutCarePlace": "Po terminie tylko szkoła może odwołać obiad. Skontaktuj się ze szkołą.",
+    "mealCancel": "Odwołaj też obiad",
+    "mealCancelTooltip": "Od razu odwołuje obiad w tych dniach.",
+    "mealCancelling": "Odwoływanie …",
+    "mealCancelled": "Obiad w tych dniach jest odwołany.",
+    "mealErrorObject": "odwołanie obiadu"
   },
   "summary": {
     "none": "Brak zwolnienia",

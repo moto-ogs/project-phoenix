@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "Okul bu günler için zaten bir kayıt girdi. Bildiriminizi kontrol edecek. O zamana kadar onun kaydı geçerlidir.",
     "requestSentPartlyBodyWithoutCarePlace": "Boş günler bildirildi. Diğer günler için okul bildiriminizi kontrol edecek. O zamana kadar onun kaydı geçerlidir.",
     "submitBlockedWithoutCarePlace": "Okul şu anda burada yokluk bildirimi almıyor.",
-    "schoolSickDayWithoutCarePlace": "{date}: okul tarafından hasta bildirildi"
+    "schoolSickDayWithoutCarePlace": "{date}: okul tarafından hasta bildirildi",
+    "appliedTitle": "Devamsızlık bildirildi",
+    "appliedBody": "Devamsızlık kaydedildi.",
+    "mealTitle": "Yemek hâlâ kayıtlı",
+    "mealIntro": "{count, plural, one {Bu gün için yemek hâlâ kayıtlı.} other {Bu günler için yemek hâlâ kayıtlı.}} Kendiliğinden iptal edilmez.",
+    "mealDayLocked": "{date}: iptal süresi doldu",
+    "mealLockedHint": "Süre dolduktan sonra yemeği yalnızca {careTerm} iptal edebilir. Lütfen {careTerm} ile iletişime geç.",
+    "mealLockedHintWithoutCarePlace": "Süre dolduktan sonra yemeği yalnızca okul iptal edebilir. Lütfen okulla iletişime geç.",
+    "mealCancel": "Yemeği de iptal et",
+    "mealCancelTooltip": "Bu günlerin yemeğini hemen iptal eder.",
+    "mealCancelling": "İptal ediliyor …",
+    "mealCancelled": "Bu günlerin yemeği iptal edildi.",
+    "mealErrorObject": "yemek iptali"
   },
   "summary": {
     "none": "Mazeret bildirimi yok",
