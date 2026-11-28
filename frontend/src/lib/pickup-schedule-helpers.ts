@@ -92,6 +92,10 @@ export interface DayPickupPersonEntry {
   guardianProfileId?: string;
   /** Ohne dauerhafte Berechtigung: nur der Name, Ausweis prüfen. */
   oneTime: boolean;
+  /** Von der Familie für den Tag angefragt und genehmigt (#8162). */
+  requestedByGuardian?: boolean;
+  /** Die Abholerlaubnis gilt an diesem Tag nicht mehr (#8206). */
+  permissionWithdrawn?: boolean;
 }
 
 export interface PickupData {
@@ -236,6 +240,8 @@ export function mapPickupDataResponse(data: PickupDataResponse): PickupData {
       name: person.name,
       guardianProfileId: person.guardian_profile_id,
       oneTime: person.one_time,
+      requestedByGuardian: person.requested_by_guardian,
+      permissionWithdrawn: person.permission_withdrawn,
     })),
     weeklyPlanVersion: data.weekly_plan_version ?? "",
   };

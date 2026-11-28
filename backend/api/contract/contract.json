@@ -46595,6 +46595,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "permission_withdrawn",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },
@@ -87219,6 +87226,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "permission_withdrawn",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },
@@ -87282,6 +87296,18 @@
         },
         {
           "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "requested_by_guardian",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "permission_withdrawn",
           "schema": {
             "kind": "bool"
           }

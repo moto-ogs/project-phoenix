@@ -48,14 +48,21 @@ type PickupPersonResponse struct {
 	GuardianProfileID *ident.ID `json:"guardian_profile_id,omitempty"`
 	// OneTime is true for a person without a standing pickup permission:
 	// the staff check the ID card at the pickup.
-	OneTime   bool   `json:"one_time"`
-	UpdatedAt string `json:"updated_at"`
+	OneTime bool `json:"one_time"`
+	// RequestedByGuardian is true for a day a family's one-day request
+	// named (#8162).
+	RequestedByGuardian bool `json:"requested_by_guardian"`
+	// PermissionWithdrawn is true when the contact's pickup permission no
+	// longer holds on the day (#8206): the name is no valid pickup person.
+	PermissionWithdrawn bool   `json:"permission_withdrawn"`
+	UpdatedAt           string `json:"updated_at"`
 }
 
 func mapPickupPersonToResponse(value careplan.PickupPerson) PickupPersonResponse {
 	return PickupPersonResponse{
 		ID: ident.ID(value.ID), StudentID: ident.ID(value.StudentID), ExceptionDate: string(value.ExceptionDate),
 		Name: value.Name, GuardianProfileID: (*ident.ID)(value.GuardianProfileID), OneTime: value.OneTime(),
+		RequestedByGuardian: value.RequestedByGuardian != nil, PermissionWithdrawn: value.PermissionWithdrawn,
 		UpdatedAt: value.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }

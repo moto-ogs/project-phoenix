@@ -827,11 +827,13 @@ export const DayClosingSchema: z.ZodType<DayClosing, unknown> = object<DayClosin
 export interface ChildPickupPerson {
   name: string;
   one_time: boolean;
+  permission_withdrawn?: boolean;
 }
 
 export const ChildPickupPersonSchema: z.ZodType<ChildPickupPerson, unknown> = object<ChildPickupPerson>({
   name: str,
   one_time: bool,
+  permission_withdrawn: optional(bool),
 });
 
 /** Go: daychangesview.Child */

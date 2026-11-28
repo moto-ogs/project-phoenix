@@ -225,7 +225,7 @@ func childDayPickups(pickups []careplan.DayPickup, accountID int64) []daychanges
 			entries = append(entries, daychangesview.SourceEntry{
 				Kind: daychangesview.KindChildPickupPerson, Involved: true,
 				EnteredByYou: enteredBy(accountID, person.RequestedByGuardian),
-				Child:        &daychangesview.Child{PickupPerson: &daychangesview.ChildPickupPerson{Name: person.Name, OneTime: person.OneTime()}},
+				Child:        &daychangesview.Child{PickupPerson: &daychangesview.ChildPickupPerson{Name: person.Name, OneTime: person.OneTime(), PermissionWithdrawn: person.PermissionWithdrawn}},
 			})
 		}
 	}

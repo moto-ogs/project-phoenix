@@ -4,6 +4,7 @@
 // Person oder eine einmalige Person mit Namen. Bei der einmaligen Person
 // speichert moto nur den Namen; das Personal prüft beim Abholen den Ausweis.
 import { UserCheck } from "lucide-react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -118,6 +119,13 @@ export function CarePickupPersonSection({
           </p>
         </div>
       </div>
+      {stored?.permissionWithdrawn ? (
+        <Alert
+          type="warning"
+          className="mb-3"
+          message={`Die Abholerlaubnis von ${stored.name} gilt an diesem Tag nicht mehr. Wähl eine andere Person.`}
+        />
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2">
         {options.map(([value, text]) => (
           <Button

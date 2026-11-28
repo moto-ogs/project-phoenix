@@ -56,6 +56,8 @@ func TestStudentPickupPersonsGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	require.EqualValues(t, 1, result.RowCounts["schedule.student_pickup_persons"], "the one pickup person of the school")
 
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(ctx, db))
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('schedule.student_pickup_persons') IS NOT NULL`).Scan(ctx, &exists))
@@ -68,4 +70,5 @@ func TestStudentPickupPersonsGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", eraseSchoolAsCLI(t, db, other, beginErasure(t, db, other)).Status, "the erasure works after the rollback")
 
 	require.NoError(t, studentPickupPersonsUp(ctx, db), "the migration applies again")
+	require.NoError(t, pickupPersonRelationshipUp(ctx, db), "the later pickup-person link (#8206) applies again")
 }

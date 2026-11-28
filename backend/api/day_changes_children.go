@@ -220,7 +220,7 @@ func dayPickupChanges(pickups []careplan.DayPickup) []childChange {
 			changes = append(changes, childChange{kind: daychangesview.KindChildGoesAlone, child: daychangesview.Child{StudentID: ident.ID(pickup.StudentID)}})
 		}
 		if pickup.Person != nil {
-			person := daychangesview.ChildPickupPerson{Name: pickup.Person.Name, OneTime: pickup.Person.OneTime()}
+			person := daychangesview.ChildPickupPerson{Name: pickup.Person.Name, OneTime: pickup.Person.OneTime(), PermissionWithdrawn: pickup.Person.PermissionWithdrawn}
 			changes = append(changes, childChange{kind: daychangesview.KindChildPickupPerson, child: daychangesview.Child{StudentID: ident.ID(pickup.StudentID), PickupPerson: &person}})
 		}
 	}

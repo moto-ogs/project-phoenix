@@ -1528,11 +1528,13 @@ export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
 export interface PickupPerson {
   name: string;
   one_time: boolean;
+  permission_withdrawn?: boolean;
 }
 
 export const PickupPersonSchema: z.ZodType<PickupPerson, unknown> = object<PickupPerson>({
   name: str,
   one_time: bool,
+  permission_withdrawn: optional(bool),
 });
 
 /** Go: grouplive.PickupTime */
@@ -2607,6 +2609,8 @@ export interface PickupPersonResponse {
   name: string;
   guardian_profile_id?: string;
   one_time: boolean;
+  requested_by_guardian: boolean;
+  permission_withdrawn: boolean;
   updated_at: string;
 }
 
@@ -2617,6 +2621,8 @@ export const PickupPersonResponseSchema: z.ZodType<PickupPersonResponse, unknown
   name: str,
   guardian_profile_id: optional(int64String),
   one_time: bool,
+  requested_by_guardian: bool,
+  permission_withdrawn: bool,
   updated_at: str,
 });
 

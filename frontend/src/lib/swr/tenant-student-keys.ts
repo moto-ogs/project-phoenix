@@ -38,6 +38,9 @@ export const tenantStudentKeys = {
    */
   careWeek: (studentId: string, from: string, to: string) =>
     `care-week-${encodeURIComponent(studentId)}-${from}-${to}`,
+  /** Every combined arrival and pickup-week read of one child. */
+  careWeekFamily: (studentId: string) =>
+    `care-week-${encodeURIComponent(studentId)}-`,
   /** The school's arrival settings: care days source, periods, defaults (`fetchArrivalSettings`). */
   arrivalSettings: () => "arrival-settings",
   /** Whether the reader has an RSS link for new parent requests (`getRequestFeedStatus`). */

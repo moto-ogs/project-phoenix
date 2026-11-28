@@ -567,7 +567,7 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 			pickup.DayDepartureMode = value.Departure.DepartureMode
 		}
 		if value.Person != nil {
-			pickup.DayPickupPerson = &grouplive.PickupPerson{Name: value.Person.Name, OneTime: value.Person.OneTime()}
+			pickup.DayPickupPerson = &grouplive.PickupPerson{Name: value.Person.Name, OneTime: value.Person.OneTime(), PermissionWithdrawn: value.Person.PermissionWithdrawn}
 		}
 		result[value.StudentID] = pickup
 	}

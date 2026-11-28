@@ -25,6 +25,11 @@ const mockRemoveGuardianFromStudent = vi.fn();
 const mockDeleteGuardian = vi.fn();
 const mockFetchGuardianDeletePreview = vi.fn();
 const mockInviteGuardianToStudent = vi.fn();
+const mockUpcomingPickupDaysOf = vi.fn();
+const swrMocks = vi.hoisted(() => ({
+  invalidateFamily: vi.fn(),
+  tenantMutate: vi.fn(),
+}));
 
 // Real subclass exported from the guardian-api mock so any code path that
 // branches on `err instanceof GuardianApiError` still resolves against the
@@ -71,6 +76,18 @@ vi.mock("@/lib/guardian-api", () => ({
     email: string,
     options?: unknown,
   ) => mockInviteGuardianToStudent(studentId, email, options),
+}));
+
+vi.mock("~/lib/pickup-withdrawal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/pickup-withdrawal")>()),
+  upcomingPickupDaysOf: (...args: unknown[]) =>
+    mockUpcomingPickupDaysOf(...args),
+}));
+
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
+  useInvalidateFamily: () => swrMocks.invalidateFamily,
+  useTenantMutate: () => swrMocks.tenantMutate,
 }));
 
 // Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
@@ -221,7 +238,7 @@ vi.mock("./guardian-form-modal", () => ({
         <button
           type="button"
           onClick={() =>
-            onSubmit(
+            void onSubmit(
               [
                 {
                   id: "test-id",
@@ -244,7 +261,7 @@ vi.mock("./guardian-form-modal", () => ({
                 },
               ],
               undefined,
-            )
+            ).catch(() => undefined)
           }
           data-testid="submit-form"
         >
@@ -484,6 +501,9 @@ describe("StudentGuardianManager", () => {
     // clearAllMocks() clears call records but NOT implementations, so the
     // save's default is set here.
     mockSaveStudentGuardian.mockResolvedValue(null);
+    mockUpcomingPickupDaysOf.mockResolvedValue([]);
+    swrMocks.invalidateFamily.mockReset().mockResolvedValue([]);
+    swrMocks.tenantMutate.mockReset().mockResolvedValue(undefined);
     mockPermissions = [];
   });
 
@@ -790,6 +810,41 @@ describe("StudentGuardianManager", () => {
           "Die Angaben von Test Guardian sind gespeichert.",
         );
       });
+    });
+
+    it("saves a withdrawal when its pickup days cannot be loaded", async () => {
+      mockUpcomingPickupDaysOf.mockRejectedValueOnce(
+        new ApiError("schedule unavailable", 503, {
+          code: "general.unavailable",
+        }),
+      );
+      render(<StudentGuardianManager studentId="student-123" />);
+
+      fireEvent.click(await screen.findByTestId("edit-guardian-1"));
+      fireEvent.click(screen.getByTestId("submit-form"));
+
+      await waitFor(() =>
+        expect(mockUpcomingPickupDaysOf).toHaveBeenCalledWith(
+          "student-123",
+          "guardian-1",
+        ),
+      );
+      await waitFor(() => expect(mockSaveStudentGuardian).toHaveBeenCalled());
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "Die Angaben von Test Guardian sind gespeichert.",
+      );
+      expect(swrMocks.tenantMutate).toHaveBeenCalledWith(
+        "pickup-data-student-123",
+      );
+      expect(swrMocks.invalidateFamily).toHaveBeenCalledWith(
+        "care-plan-day-student-123-",
+      );
+      expect(swrMocks.invalidateFamily).toHaveBeenCalledWith(
+        "care-plan-week-student-123-",
+      );
+      expect(swrMocks.invalidateFamily).toHaveBeenCalledWith(
+        "care-week-student-123-",
+      );
     });
 
     // After a refused save (ADR 0311) the form shows the stored guardian

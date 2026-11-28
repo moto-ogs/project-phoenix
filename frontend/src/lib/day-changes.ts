@@ -42,6 +42,8 @@ export interface DayChangeChild {
   readonly pickupPerson?: {
     readonly name: string;
     readonly oneTime: boolean;
+    /** Die Abholerlaubnis gilt an dem Tag nicht mehr (#8206). */
+    readonly permissionWithdrawn?: boolean;
   } | null;
 }
 
@@ -186,6 +188,8 @@ function mapChild(child: Child): DayChangeChild {
       ? {
           name: child.pickup_person.name,
           oneTime: child.pickup_person.one_time,
+          permissionWithdrawn:
+            child.pickup_person.permission_withdrawn ?? false,
         }
       : null,
   };

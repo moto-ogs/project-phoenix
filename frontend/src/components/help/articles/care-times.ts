@@ -74,6 +74,8 @@ export function careTimesTopic(): HelpTopic {
       "Den Wochenplan kannst du schon beim Anlegen des Kindes mitgeben.",
       // #7655: nur der Name wird gespeichert und nach dem Tag gelöscht.
       "Wer an diesem Tag abholt, steht auf der Kinderkarte in der Gruppe unter `Holt heute ab` und in `Heute anders`. Bei einer anderen Person steht `Ausweis prüfen` dabei. moto speichert nur den Namen und löscht ihn nach dem Tag.",
+      // #8206: guardian-store cascade, Anzeige in pickup-person-row.tsx.
+      "Nimmst du einer Person beim Kind das Häkchen `Abholberechtigt` weg, entfernt moto ihre eingetragenen Abholtage. Die Meldung nach dem Speichern nennt die Tage. Gilt die Abholerlaubnis an einem Tag nicht mehr, steht dort `Abholerlaubnis entzogen`.",
       // #3372: Die Auswahl erscheint nur mit gepflegten Schulstunden
       // (school-period-select.tsx) und kopiert die Uhrzeit ins Zeitfeld.
       "Schneller geht es mit `Nach Schulstunde` unter dem Feld `Ankunft`: Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",

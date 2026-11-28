@@ -73,6 +73,8 @@ func TestRoomHistoryStopsGoWithTheSchoolAndRollBack(t *testing.T) {
 
 	// The opening changes (#7654) and pickup persons (#7655) follow the room
 	// history stops at the head; pickup persons go first.
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(ctx, db))
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, mealCancellationsDown(ctx, db))

@@ -3,6 +3,9 @@ package careplan
 import (
 	"context"
 	"errors"
+	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Pickup permissions of a guardian (#2756). Whether a guardian may collect a
@@ -40,6 +43,11 @@ type GuardianPickupPermissionChange struct {
 	// state. It prevents a request correction from overwriting a later change
 	// made by staff.
 	Expected *GuardianPickupPermissionState
+	// Removed, when set, hears the pickup persons a withdrawal removed in the
+	// same transaction (#8206), ordered by day; it is not called when none
+	// were. A day before the caller's today may be among them: it was due for
+	// the nightly retention and is shown nowhere.
+	Removed func([]RemovedPickupDay)
 }
 
 // GuardianPickupPermissionState is the safety-relevant portion of a pickup
@@ -47,6 +55,23 @@ type GuardianPickupPermissionChange struct {
 type GuardianPickupPermissionState struct {
 	CanPickup bool
 	Weekdays  []int
+}
+
+// Allows reports whether the permission holds on the plan weekday
+// (1 = Monday … 5 = Friday).
+func (s GuardianPickupPermissionState) Allows(weekday int) bool {
+	return s.CanPickup && (len(s.Weekdays) == 0 || slices.Contains(s.Weekdays, weekday))
+}
+
+// RemovedPickupDay is a future day whose pickup person a withdrawn pickup
+// permission removed (#8206): the contact no longer may collect the child
+// on that day. RequestedByGuardian is the guardian account whose one-day
+// request had named the contact, nil for a day the staff set.
+type RemovedPickupDay struct {
+	StudentID           int64
+	Date                calendar.Date
+	Name                string
+	RequestedByGuardian *int64
 }
 
 // GuardianPickupPermissions is the command side of the pickup permission.
@@ -58,7 +83,10 @@ type GuardianPickupPermissions interface {
 	// relationship.
 	CreateGuardianPickupPermission(context.Context, GuardianPickupPermission) error
 	// ChangeGuardianPickupPermission writes the supplied columns and reports
-	// whether the relationship has a pickup permission in that school.
+	// whether the relationship has a pickup permission in that school. A
+	// change that withdraws the permission on some weekdays (or entirely)
+	// removes the contact's pickup persons on those weekdays in the same
+	// transaction and names them to Removed (#8206).
 	ChangeGuardianPickupPermission(context.Context, GuardianPickupPermissionChange) (bool, error)
 }
 
