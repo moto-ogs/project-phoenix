@@ -12,11 +12,8 @@ import {
   dayChangeText,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
-import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { LinkRowMeta } from "~/components/home/home-card-rows";
-import { AwayBadge } from "~/components/home/my-group-block";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
 import {
   Collection,
   CollectionGroup,
@@ -24,17 +21,10 @@ import {
 } from "~/components/ui/collection";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { blockTimeRange } from "~/lib/block-children";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
-import type {
-  DayChange,
-  DayChangeNotice,
-  DayChangesOverview,
-} from "~/lib/day-changes";
+import type { DayChange, DayChangesOverview } from "~/lib/day-changes";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
-import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useDayChangeHref } from "~/components/home/day-change-link";
 import {
   DaySwitch,
@@ -48,15 +38,11 @@ import { fetchDayChanges } from "~/lib/day-changes";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
-import type { HomeGroupSnapshot } from "~/lib/hooks/use-home-group";
-import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { useDeviceContext } from "~/lib/device-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /**
- * Detailflächen der App-Startseite (#8070): rechts neben der Liste (iPad
- * quer), im Blatt (Telefon) oder als zweite Spalte (iPad hoch). Jede Fläche
- * ist EINE Liste mit Trennlinien und nutzt die Daten, die die Startseite
+ * Detailflächen der App-Startseite (#8070), im Blatt. Jede Fläche ist EINE
+ * Liste mit Trennlinien und nutzt die Daten, die die Startseite
  * schon geladen hat.
  */
 
@@ -67,7 +53,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
  * Schule, was schon vorbei ist. `include` wählt den Ausschnitt (Kinder oder
  * Team und Schule).
  */
-export function DayChangesList({
+function DayChangesList({
   overview,
   include,
   label,
@@ -378,185 +364,4 @@ function DayChangeRows({
     );
   }
   return <>{rows}</>;
-}
-
-// ─── Hinweis der Leitung ───────────────────────────────────────────────────
-
-/** Ein Hinweis mit ganzem Text und „Zur Kenntnis nehmen“ (iPad quer). */
-export function NoticeDetail({
-  notice,
-  onChanged,
-}: {
-  readonly notice: DayChangeNotice;
-  readonly onChanged: () => Promise<unknown>;
-}) {
-  const { confirm, pending, error } = useNoticeAcknowledge(notice, onChanged);
-  return (
-    <SectionCard
-      title={notice.title}
-      titleBadge={
-        notice.important ? (
-          <StatusBadge label="Wichtig" tone="warning" size="xs" />
-        ) : undefined
-      }
-    >
-      {notice.body ? (
-        <p className="text-base whitespace-pre-line text-gray-800">
-          {notice.body}
-        </p>
-      ) : null}
-      <LoadErrorAlert error={error} className="mt-2" />
-      <Button
-        type="button"
-        variant="primary"
-        size="md"
-        className="mt-4"
-        disabled={pending}
-        aria-label={`${notice.title}: zur Kenntnis nehmen`}
-        tooltip="Bestätigt sofort, dass du den Hinweis gelesen hast."
-        onClick={() => void confirm()}
-      >
-        {pending ? "Wird gespeichert …" : "Zur Kenntnis nehmen"}
-      </Button>
-    </SectionCard>
-  );
-}
-
-// ─── Meine Gruppe ──────────────────────────────────────────────────────────
-
-/** Zwei Spalten, zeilenweise gefüllt, ohne leere Zelle neben einem Kind. */
-const WIDE_DETAIL_COLUMNS =
-  "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0";
-
-/**
- * Die eigene Gruppe mit ihren Kindern: wer fehlt noch, wer wird abgeholt,
- * wer ist heute nicht da. Dieselben Daten und Wörter wie „Meine Gruppe
- * heute“ auf dem Desktop; jede Zeile führt zur Gruppe.
- */
-export function GroupDetail({
-  snapshot,
-}: {
-  readonly snapshot: HomeGroupSnapshot;
-}) {
-  const tenantPath = useTenantAwarePath();
-  const { isSplit } = useDeviceContext();
-  const href = tenantPath("/ogs-groups");
-  const { group, present, total, missing, pickups, away } = snapshot;
-  if (!group) return null;
-  const missingIds = new Set(missing.map((entry) => entry.student.id));
-  const pickedIds = new Set(pickups.map((entry) => entry.student.id));
-  const awayRest = away.filter(
-    (student) => !missingIds.has(student.id) && !pickedIds.has(student.id),
-  );
-  const name = (student: HomeGroupSnapshot["away"][number]) =>
-    `${student.first_name} ${student.last_name}`;
-  const label = group.viaSubstitution
-    ? `${group.name} (Vertretung)`
-    : group.name;
-
-  return (
-    <Collection
-      label={`Meine Gruppe: ${label}`}
-      // iPad quer: Das Detail ist ⅔ breit. Die Kinder stehen zeilenweise in
-      // zwei Spalten, damit die Abholzeit nah am Namen steht.
-      className={isSplit ? WIDE_DETAIL_COLUMNS : undefined}
-    >
-      <CollectionGroup title={label} meta={`${present} von ${total} da`}>
-        {missing.length + pickups.length + awayRest.length === 0 ? (
-          <CollectionRow
-            title="Alle da, keine Abholung mehr heute"
-            href={href}
-          />
-        ) : null}
-      </CollectionGroup>
-      {missing.length > 0 ? (
-        <CollectionGroup title="Fehlt noch" count={missing.length}>
-          {missing.map(({ student, expected, note }) => (
-            <CollectionRow
-              key={`missing-${student.id}`}
-              title={name(student)}
-              subtitle={note ?? student.school_class ?? undefined}
-              meta={<StatusBadge tone="red" label={`erwartet ${expected}`} />}
-              href={href}
-            />
-          ))}
-        </CollectionGroup>
-      ) : null}
-      {pickups.length > 0 ? (
-        <CollectionGroup title="Abholungen" count={pickups.length}>
-          {pickups.map(({ student, time, note, isException }) => (
-            <CollectionRow
-              key={`pickup-${student.id}`}
-              title={name(student)}
-              subtitle={note ?? student.school_class ?? undefined}
-              meta={
-                <span className="flex items-center gap-1.5">
-                  {isException ? (
-                    <StatusBadge tone="warning" label="Ausnahme" size="xs" />
-                  ) : null}
-                  <span className="font-semibold text-gray-900">{time}</span>
-                </span>
-              }
-              href={href}
-            />
-          ))}
-        </CollectionGroup>
-      ) : null}
-      {awayRest.length > 0 ? (
-        <CollectionGroup title="Nicht da" count={awayRest.length}>
-          {awayRest.map((student) => (
-            <CollectionRow
-              key={`away-${student.id}`}
-              title={name(student)}
-              subtitle={student.school_class ?? undefined}
-              meta={
-                <AwayBadge
-                  student={student}
-                  onlyIfLessonCancelled={snapshot.onlyIfLessonCancelled.has(
-                    student.id,
-                  )}
-                />
-              }
-              href={href}
-            />
-          ))}
-        </CollectionGroup>
-      ) : null}
-    </Collection>
-  );
-}
-
-// ─── Mein Tag ──────────────────────────────────────────────────────────────
-
-/** Die eigenen Einsätze von heute in Reihenfolge, mit Zeit und Raum. */
-export function DayDetail({
-  blocks,
-}: {
-  readonly blocks: readonly PlannedTimetableInstance[];
-}) {
-  const { href: dayPlanHref } = useDayPlanLink();
-  if (blocks.length === 0) return null;
-  return (
-    <Collection label="Mein Tag">
-      <CollectionGroup title="Mein Tag" count={blocks.length}>
-        {blocks.map((block) => (
-          <CollectionRow
-            key={block.id}
-            title={`${block.startTime} ${block.title}`}
-            subtitle={[blockTimeRange(block), block.roomName]
-              .filter(Boolean)
-              .join(" · ")}
-            meta={
-              block.status === "active" ? (
-                <StatusBadge tone="green" label="Läuft" size="xs" />
-              ) : block.status === "completed" ? (
-                <StatusBadge tone="gray" label="Beendet" size="xs" />
-              ) : undefined
-            }
-            href={dayPlanHref}
-          />
-        ))}
-      </CollectionGroup>
-    </Collection>
-  );
 }

@@ -33,7 +33,6 @@ import {
 import { DataField } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { SpinnerIcon } from "~/components/ui/icons";
-import { SplitView } from "~/components/ui/split-view";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import type { LaborHint } from "~/lib/labor-time-hints";
 import type {
@@ -49,7 +48,6 @@ import {
   formatTime,
   type DayProjection,
 } from "~/lib/time-tracking-helpers";
-import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
@@ -235,14 +233,6 @@ export function AppClockPanel(props: AppClockPanelProps) {
             ),
           ),
         ].join(" · ");
-  // iPad quer: Die Leiste gehört zur linken Spalte der `SplitView`, steht
-  // aber außerhalb von ihr; die Spalte scrollt und blendet unten aus und
-  // würde eine Leiste in ihr abschneiden.
-  const { isSplit } = useDeviceContext();
-  const portalBars = (bars: ReactNode) =>
-    isSplit && typeof document !== "undefined"
-      ? createPortal(bars, document.body)
-      : bars;
   const spinner = pending ? <SpinnerIcon className="mr-1.5 h-4 w-4" /> : null;
   // Noch nichts gestempelt: die Karte nennt den Dienst wie heute auf dem
   // Desktop („Geplant: Schichtart 08:00–16:30 · Pause 30 min“), die Leiste
@@ -404,84 +394,81 @@ export function AppClockPanel(props: AppClockPanelProps) {
         </SectionCard>
       )}
 
-      {portalBars(
-        terminalOnly ? (
-          state === "idle" ? (
-            <ActionBar column="list">
+      {terminalOnly ? (
+        state === "idle" ? (
+          <ActionBar>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={props.onAddAbsence}
+              tooltip="Öffnet ein Fenster, um eine Abwesenheit einzutragen."
+            >
+              Abwesenheit melden
+            </Button>
+          </ActionBar>
+        ) : null
+      ) : (
+        <>
+          {state === "idle" ? (
+            <ActionBar>
               <Button
                 type="button"
-                variant="outline"
+                variant="success"
                 size="md"
-                onClick={props.onAddAbsence}
-                tooltip="Öffnet ein Fenster, um eine Abwesenheit einzutragen."
+                disabled={disabled || pending}
+                onClick={() => setStatusSheetOpen(true)}
+                tooltip="Öffnet die Auswahl, wo du heute arbeitest."
               >
-                Abwesenheit melden
+                {spinner}
+                Einstempeln
               </Button>
             </ActionBar>
-          ) : null
-        ) : (
-          <>
-            {state === "idle" ? (
-              <ActionBar column="list">
+          ) : null}
+          {state === "working" ? (
+            <ActionBar
+              secondary={
                 <Button
                   type="button"
-                  variant="success"
+                  variant="outline"
                   size="md"
                   disabled={disabled || pending}
-                  onClick={() => setStatusSheetOpen(true)}
-                  tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+                  onClick={() => props.onBreakSheetOpenChange(true)}
+                  tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
                 >
-                  {spinner}
-                  Einstempeln
+                  Pause
                 </Button>
-              </ActionBar>
-            ) : null}
-            {state === "working" ? (
-              <ActionBar
-                column="list"
-                secondary={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    disabled={disabled || pending}
-                    onClick={() => props.onBreakSheetOpenChange(true)}
-                    tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
-                  >
-                    Pause
-                  </Button>
-                }
+              }
+            >
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onCheckOut}
+                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
               >
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  disabled={disabled || pending}
-                  onClick={props.onCheckOut}
-                  tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-                >
-                  {spinner}
-                  Ausstempeln
-                </Button>
-              </ActionBar>
-            ) : null}
-            {state === "break" ? (
-              <ActionBar column="list">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  disabled={disabled || pending}
-                  onClick={props.onEndBreak}
-                  tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
-                >
-                  {spinner}
-                  Pause beenden
-                </Button>
-              </ActionBar>
-            ) : null}
-          </>
-        ),
+                {spinner}
+                Ausstempeln
+              </Button>
+            </ActionBar>
+          ) : null}
+          {state === "break" ? (
+            <ActionBar>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onEndBreak}
+                tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
+              >
+                {spinner}
+                Pause beenden
+              </Button>
+            </ActionBar>
+          ) : null}
+        </>
       )}
 
       <OverlaySheet
@@ -1231,14 +1218,10 @@ export function AppAccountCard({
 // ─── Aufbau ──────────────────────────────────────────────────────────────────
 
 /**
- * Telefon und iPad hoch: Stempeluhr, die Tage, dann Heute geplant, Urlaub
- * und Kontingente. iPad quer (`split`): `SplitView` – links der Tag
- * (Stempeluhr, Heute geplant, Urlaub) mit der Aktionsleiste darunter, in
- * Daumennähe; rechts die Tage und Kontingente. Beide Spalten scrollen für
- * sich, die Kopfkarte bleibt stehen.
+ * Telefon: Stempeluhr, die Tage, dann Heute geplant, Urlaub und
+ * Kontingente.
  */
 export function AppTimeTrackingLayout({
-  split,
   errors,
   clock,
   days,
@@ -1247,7 +1230,6 @@ export function AppTimeTrackingLayout({
   leave,
   allowances,
 }: Readonly<{
-  split: boolean;
   errors: ReactNode;
   clock: ReactNode;
   days: ReactNode;
@@ -1257,30 +1239,6 @@ export function AppTimeTrackingLayout({
   leave: ReactNode;
   allowances: ReactNode;
 }>) {
-  if (split) {
-    return (
-      <div className="space-y-4" data-app-time-tracking="split">
-        {errors}
-        <SplitView
-          list={
-            <div className={SPLIT_STACK}>
-              {clock}
-              {today}
-              {leave}
-            </div>
-          }
-          detail={
-            <div className={SPLIT_STACK}>
-              {days}
-              {account}
-              {allowances}
-            </div>
-          }
-          empty={null}
-        />
-      </div>
-    );
-  }
   return (
     <div
       // Das Polster der ActionBar gehört ans Seitenende, nicht unter die
@@ -1298,10 +1256,6 @@ export function AppTimeTrackingLayout({
     </div>
   );
 }
-
-/** Karten einer Spalte untereinander, jede so hoch wie ihr Inhalt. */
-const SPLIT_STACK =
-  "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto";
 
 // ─── Angaben des Tages (Blatt) ───────────────────────────────────────────────
 

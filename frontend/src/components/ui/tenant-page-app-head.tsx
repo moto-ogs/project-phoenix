@@ -133,12 +133,7 @@ export function AppTenantHead({
   const [menuOpen, setMenuOpen] = useState(false);
   const compactHeadStats =
     compactStats ?? (statsInline && statusLine != null ? statusLine : null);
-  // In der Detailspalte einer `SplitView` (iPad quer) scrollt die Spalte,
-  // nicht die Seite: Kopfkarte und Leiste kleben oben an der Spalte, die
-  // schmale Kopfkarte über die ganze Breite entfällt.
-  const splitHeadHeight = useSplitDetailHeadHeight(headRef);
-  const inSplitDetail = splitHeadHeight !== null;
-  const scrolledAway = useScrolledAway(headRef) && !inSplitDetail;
+  const scrolledAway = useScrolledAway(headRef);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const statsScroll = useScrollsSideways(statsRef);
@@ -155,16 +150,14 @@ export function AppTenantHead({
   const hasToolbar = tabs != null || toolbar != null;
   // Klebt die Leiste, hängt sie unter der schmalen Kopfkarte. Rollt sie mit
   // weg (`toolbarScrollsAway` oder `shrinkToTitle`), ist die schmale
-  // Kopfkarte allein eine ganze Karte; in der Detailspalte klebt sie immer.
-  const toolbarSticks =
-    hasToolbar && (!(toolbarScrollsAway || shrinkToTitle) || inSplitDetail);
+  // Kopfkarte allein eine ganze Karte.
+  const toolbarSticks = hasToolbar && !(toolbarScrollsAway || shrinkToTitle);
   useStickyOffset(toolbarRef, scrolledAway, toolbarSticks);
   // Die Leiste hängt beim Scrollen ohne Fuge an der schmalen Kopfkarte:
   // eine Karte wie oben auf der Seite, kein Spalt, durch den Inhalt blitzt.
-  let stickyTop = scrolledAway
+  const stickyTop = scrolledAway
     ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX}px)`
     : TOP_GAP;
-  if (inSplitDetail) stickyTop = `${splitHeadHeight + 6}px`;
 
   const menuButton = hasMenu ? (
     <Button
@@ -194,9 +187,6 @@ export function AppTenantHead({
             "opacity-0 transition-opacity duration-200 motion-reduce:transition-none",
           // Telefon: Kopf und Leiste bilden eine Karte (spart Fuge und Rand).
           hasToolbar && "phone:rounded-b-none phone:border-b-0",
-          // Die Fuge zur Leiste darunter deckt der Seitengrund.
-          inSplitDetail &&
-            `sticky top-0 ${Z_LAYER.nav} after:absolute after:inset-x-0 after:top-full after:h-2 after:bg-gray-50! after:content-['']`,
           printHideHeader && "print:hidden",
         )}
       >
@@ -216,7 +206,7 @@ export function AppTenantHead({
           <h1
             suppressHydrationWarning
             className={cn(
-              "tablet:text-xl min-w-0 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              "min-w-0 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
               statsInline && statusLine != null ? "shrink-0" : "flex-1",
               // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
               // dem Pfeil ohne zusätzlichen Einzug.
@@ -320,7 +310,7 @@ export function AppTenantHead({
         aria-hidden={!scrolledAway || undefined}
         inert={!scrolledAway}
         className={cn(
-          `tablet:inset-x-8 fixed inset-x-4 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
+          `fixed inset-x-4 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
           FLOATING_CARD,
           // Mit Leiste bilden schmale Kopfkarte und Leiste eine Karte.
           toolbarSticks && "phone:rounded-b-none phone:border-b-0",
@@ -334,7 +324,7 @@ export function AppTenantHead({
         {backLink ? <span className={ICON_BACK}>{backLink}</span> : null}
         <p
           className={cn(
-            "tablet:text-lg min-w-0 flex-1 truncate text-base font-semibold text-gray-900",
+            "min-w-0 flex-1 truncate text-base font-semibold text-gray-900",
             !backLink && "pl-2.5",
           )}
         >
@@ -449,9 +439,7 @@ export function AppTenantHead({
           {info != null && (
             <section className="space-y-1.5">
               <SectionLabel as="h3">Über diese Seite</SectionLabel>
-              <div className="tablet:text-base text-sm leading-6 text-gray-700">
-                {info}
-              </div>
+              <div className="text-sm leading-6 text-gray-700">{info}</div>
             </section>
           )}
           {/* Nur das Hilfe-Symbol, auf jeder App-Breite (der Link blendet
@@ -525,30 +513,6 @@ function useStuck(
     return () => window.removeEventListener("scroll", update);
   }, [toolbarRef]);
   return stuck || scrolledAway;
-}
-
-/**
- * Höhe der Kopfkarte, wenn sie in der Detailspalte einer `SplitView` steht
- * (sonst `null`). Darunter klebt die Leiste.
- */
-function useSplitDetailHeadHeight(
-  ref: RefObject<HTMLElement | null>,
-): number | null {
-  const [height, setHeight] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (node?.closest("[data-split-detail]") == null) {
-      setHeight(null);
-      return undefined;
-    }
-    const update = () => setHeight(node.offsetHeight);
-    update();
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    observer?.observe(node);
-    return () => observer?.disconnect();
-  }, [ref]);
-  return height;
 }
 
 /** Ob die Kopfkarte oben aus dem Bild gescrollt ist, auch nur teilweise. */

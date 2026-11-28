@@ -503,8 +503,8 @@ export function TagesplanView() {
   const overviewScope = useOperationalOverviewScope();
   const weekendOpen = useWeekendFollowsFriday();
   const now = useMinuteClock();
-  // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
-  const { isApp, isSplit } = useDeviceContext();
+  // App (Telefon): eigene Tagesliste, Desktop unverändert (#8070).
+  const { isApp } = useDeviceContext();
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -714,9 +714,7 @@ export function TagesplanView() {
 
   if (isApp) {
     // Der Titel nennt den Tag in Worten („Heute“), das Datum steht nur in
-    // der Tagesleiste. Die Chips zählen die Blöcke des Tages. Am iPad quer
-    // steht die Leiste über der Listenspalte (in `TagesplanApp`), damit sie
-    // die Detailspalte nie verdeckt; ohne Blöcke bleibt sie im Kopf.
+    // der Tagesleiste. Die Chips zählen die Blöcke des Tages.
     const showMine = overviewScope === "all_staff";
     const appStats = tagesplanAppStats(instances ?? [], showMine, scopeHint);
     const dayBar = (
@@ -728,7 +726,6 @@ export function TagesplanView() {
         onNext={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
       />
     );
-    const barInList = isSplit && groups.length > 0;
     return (
       <TenantPage
         title={tagesplanAppTitle(day, today)}
@@ -752,7 +749,7 @@ export function TagesplanView() {
         // Titel, Datum und „…“. Vorher klappte sie erst nach 160 px ein, am
         // iPhone 15 also nie (die Seite war kürzer).
         appToolbarScrollsAway
-        searchSlot={barInList ? undefined : dayBar}
+        searchSlot={dayBar}
         searchSlotHeight="natural"
         loading={showSkeleton}
         error={pageError}
@@ -781,7 +778,6 @@ export function TagesplanView() {
           startBusyId={startBusyId}
           onOpenSession={openSession}
           onStart={(entry) => void handleStart(entry)}
-          dayBar={dayBar}
         />
       </TenantPage>
     );

@@ -7,7 +7,6 @@
 import type { CSSProperties } from "react";
 import { TIMETABLE_UNTYPED_EDGE_COLOR } from "~/components/timetable/timetable-colors";
 import { LOCATION_COLORS } from "~/lib/location-helper";
-import { cn } from "~/lib/utils";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 
 type BlockColorFields = Pick<
@@ -107,55 +106,4 @@ export interface BlockRowPart {
    * der nicht passt, entfällt mit seinem Trenner).
    */
   readonly shrink?: "room" | "count" | "staff";
-}
-
-// Nur der Raum schrumpft mit „…“; die Kinder haben eine feste Obergrenze
-// (lange Angaben wie „3 nicht mehr im Raum“), das Personal bleibt ganz.
-// Schrumpften alle anteilig, kürzte schon ein halber Pixel „Julia K.“.
-const SHRINK_CLASS: Record<NonNullable<BlockRowPart["shrink"]>, string> = {
-  room: "min-w-0 shrink truncate",
-  count: "max-w-[60%] shrink-0 truncate",
-  staff: "shrink-0",
-};
-
-/**
- * Angabenzeile einer Blockzeile am Telefon: genau eine Zeile, gekürzt wird
- * an den Teilgrenzen. Ein Teil, der nicht mehr ganz passt, entfällt mit
- * seinem Trenner (statt „OGS-Raum 2 · 16 Kind…“); vorne steht das
- * Wichtigste (Raum, Kinder). Alle Angaben stehen am Ziel der Zeile.
- * Tragen Teile `shrink`, entfällt keiner: Raum und Personal kürzen mit
- * „…“, damit am SE nicht still ein Name fehlt, der am iPhone 15 steht.
- */
-export function BlockRowParts({
-  parts,
-}: Readonly<{ parts: readonly BlockRowPart[] }>) {
-  const fits = parts.some((part) => part.shrink != null);
-  return (
-    <span
-      className={cn(
-        "flex h-5 overflow-hidden",
-        fits ? "min-w-0 flex-nowrap" : "flex-wrap",
-      )}
-    >
-      {parts.map((part, index) => (
-        <span
-          key={part.key}
-          className={cn(
-            "whitespace-nowrap",
-            fits
-              ? part.shrink
-                ? SHRINK_CLASS[part.shrink]
-                : "shrink-0"
-              : index === 0 && "min-w-0 truncate",
-            part.danger && "text-moto-red-strong",
-          )}
-        >
-          {index > 0 ? (
-            <span className="text-gray-500">{"\u00a0·\u00a0"}</span>
-          ) : null}
-          {part.text}
-        </span>
-      ))}
-    </span>
-  );
 }

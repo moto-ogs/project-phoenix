@@ -6,8 +6,6 @@
 // gleich. Jede Zeile nennt Zeit, Raum, Gruppe, Kinderzahl und Personal. Ein
 // Tipp auf einen Block öffnet seine Angaben mit den Aktionen, die der
 // Tagesplan heute schon anbietet (Kinderliste öffnen, Aufsicht starten).
-// Am iPad quer steht die Liste samt Tagesleiste links (⅓), der gewählte
-// Block rechts (⅔) mit der Aktion unten in Daumennähe.
 //
 // Daten, Tageswechsel, Start und Öffnen kommen aus `TagesplanView`; dieser
 // Baustein lädt nichts selbst.
@@ -18,14 +16,12 @@ import {
   Fragment,
   type ReactNode,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 
 import {
-  BlockRowParts,
   type BlockRowPart,
   blockStaffNames,
   blockStaffShort,
@@ -41,10 +37,7 @@ import {
 } from "~/components/ui/collection";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
-import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
-import { SectionCard } from "~/components/ui/section-card";
-import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   blockChildrenLabel,
@@ -124,8 +117,8 @@ export function TagesplanDayBar({
   // des gewählten Tags steht im Kopf („Fr, 27.11.“), auch über einen
   // Monatswechsel hinweg eindeutig. Nur die breite Fassung außerhalb der
   // Telefon-Ansicht zeigt in anderen Wochen den Monat mit.
-  const { isSplit, isApp } = useDeviceContext();
-  const withMonth = !isSplit && !isApp && !todayInStrip;
+  const { isApp } = useDeviceContext();
+  const withMonth = !isApp && !todayInStrip;
   return (
     <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
@@ -316,11 +309,6 @@ export interface TagesplanAppProps {
   startBusyId: string | null;
   onOpenSession: (activeGroupId: string) => void;
   onStart: (instance: PlannedTimetableInstance) => void;
-  /**
-   * Die Tagesleiste. Am iPad quer steht sie über der Listenspalte statt
-   * über der ganzen Breite, damit sie die Detailspalte nie verdeckt.
-   */
-  dayBar: ReactNode;
 }
 
 interface Entry {
@@ -347,9 +335,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
     startBusyId,
     onOpenSession,
     onStart,
-    dayBar,
   } = props;
-  const { isSplit } = useDeviceContext();
   const isToday = day === today;
 
   const entries = useMemo(() => {
@@ -424,30 +410,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
     return earliest;
   }, [entries, isToday, nowHHMM]);
 
-  // Auswahl: am iPad quer in der Adresse (Liste neben Detail), sonst ein
-  // Blatt über der Liste.
-  const { selected, select } = useSplitSelection("block");
+  // Auswahl: ein Blatt über der Liste.
   const [sheetId, setSheetId] = useState<string | null>(null);
   const sheetEntry = sheetId ? entries.get(sheetId) : undefined;
-
-  // Am iPad quer ist immer ein Block gewählt: der laufende, sonst der
-  // nächste, sonst der erste des Tages.
-  const defaultId = useMemo(() => {
-    const all = [...entries.values()];
-    return (
-      all.find((entry) => entry.state.running)?.instance.id ??
-      all.find((entry) => entry.instance.startTime === nextStart)?.instance
-        .id ??
-      all[0]?.instance.id ??
-      null
-    );
-  }, [entries, nextStart]);
-  const splitId = isSplit
-    ? selected && entries.has(selected)
-      ? selected
-      : defaultId
-    : null;
-  const splitEntry = splitId ? entries.get(splitId) : undefined;
 
   // Beim Öffnen von heute zur Jetzt-Linie scrollen (einmal je Tag). Kommt
   // man aus einer Kinderliste zurück, stellt `TagesplanView` danach die
@@ -478,7 +443,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
   }, [entries, nextStart, showMine]);
   const scrollTargetKey = scrollTargetIds.join(",");
   useEffect(() => {
-    if (!isToday || scrolledForDay.current === day || isSplit) return;
+    if (!isToday || scrolledForDay.current === day) return;
     if (groups.length === 0) return;
     scrolledForDay.current = day;
     const rows = scrollTargetKey
@@ -521,32 +486,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
     const anchor = span > limit - STICKY_HEAD_PX ? rows[0]! : top;
     anchor.style.scrollMarginTop = NOW_SCROLL_MARGIN.scrollMarginTop as string;
     anchor.scrollIntoView({ block: "start" });
-  }, [isToday, day, groups.length, isSplit, scrollTargetKey]);
-
-  // Am iPad quer steht die vorgewählte Zeile (meist der laufende Block)
-  // im eigenen Scroll der Liste im Bild, einmal je Tag.
-  const splitScrolledForDay = useRef<string | null>(null);
-  useEffect(() => {
-    if (!isSplit || splitId == null || splitScrolledForDay.current === day) {
-      return;
-    }
-    splitScrolledForDay.current = day;
-    const pane = document.querySelector<HTMLElement>("[data-split-list]");
-    const row = pane?.querySelector<HTMLElement>(
-      "[data-collection-row][data-selected]",
-    );
-    if (!pane || !row) return;
-    const offset =
-      row.getBoundingClientRect().top - pane.getBoundingClientRect().top;
-    pane.scrollTop += offset - pane.clientHeight / 3;
-  }, [isSplit, splitId, day]);
-
-  const splitTop = useSplitTop(isSplit);
-
-  const openEntry = (id: string) => {
-    if (isSplit) select(id);
-    else setSheetId(id);
-  };
+  }, [isToday, day, groups.length, scrollTargetKey]);
 
   // Der früheste eigene startbereite Block: ihn startet die Leiste über
   // der Pill (Telefon).
@@ -569,7 +509,6 @@ export function TagesplanApp(props: TagesplanAppProps) {
     // steht „Starten“ wie am Desktop und auf der Startseite in seiner Zeile;
     // die Leiste startet nur den frühesten.
     const rowStart =
-      !isSplit &&
       entry.state.startable &&
       entry.instance.isAssigned &&
       entry.instance.id !== ownStart?.instance.id;
@@ -579,9 +518,8 @@ export function TagesplanApp(props: TagesplanAppProps) {
         entry={entry}
         next={entry.instance.startTime === nextStart && !entry.state.over}
         mine={showMine && entry.instance.isAssigned}
-        selected={splitId === entry.instance.id}
         inPast={inPast}
-        onOpen={() => openEntry(entry.instance.id)}
+        onOpen={() => setSheetId(entry.instance.id)}
         start={
           rowStart
             ? {
@@ -621,7 +559,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // Telefon, heute: Was schon vorbei ist, steht eingeklappt als eine Zeile
   // „8 Blöcke vorbei“ oben. So öffnet die Seite ohne Scrollen mit dem Kopf
   // samt Tagesleiste, und der laufende Block steht im ersten Bild.
-  const pastGroups = isToday && !isSplit ? countPastGroups(groups, entries) : 0;
+  const pastGroups = isToday ? countPastGroups(groups, entries) : 0;
   const pastBlocks = groups
     .slice(0, pastGroups)
     .reduce((sum, group) => sum + group.cells.length, 0);
@@ -729,43 +667,6 @@ export function TagesplanApp(props: TagesplanAppProps) {
     />
   );
 
-  if (isSplit) {
-    return (
-      <div
-        style={
-          {
-            "--tagesplan-split-top": splitTop,
-            "--tagesplan-split-height": SPLIT_PANE_HEIGHT,
-          } as CSSProperties
-        }
-      >
-        <SplitView
-          // Die Listenspalte endet wie die Detailspalte über der Pill.
-          className="[&>[data-split-list]]:max-h-(--tagesplan-split-height)"
-          list={<SplitListColumn dayBar={dayBar} list={list} />}
-          detail={
-            splitEntry ? (
-              <SplitDetail
-                entry={splitEntry}
-                next={
-                  splitEntry.instance.startTime === nextStart &&
-                  !splitEntry.state.over
-                }
-                mine={showMine && splitEntry.instance.isAssigned}
-                action={
-                  splitEntry.state.openable || splitEntry.state.startable
-                    ? actionFor(splitEntry)
-                    : null
-                }
-              />
-            ) : null
-          }
-          empty="Wähle links einen Block, um seine Angaben zu sehen."
-        />
-      </div>
-    );
-  }
-
   // Am Telefon steht „Starten“ nicht als Knopf in der Zeile (die Zeile
   // brach dadurch auf vier Zeilen um): Die Zeile trägt „Nicht gestartet“
   // bzw. „Startbereit“, ihr Blatt den Knopf. Der eigene startbereite Block
@@ -822,119 +723,10 @@ export function TagesplanApp(props: TagesplanAppProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// iPad quer
-
-/**
- * Höhe beider Spalten: vom Beginn der Spalten bis über die Pill (6,5 rem
- * samt Abstand). So passt die Seite ins Bild, nichts scrollt unter die Pill
- * und die Aktion unten in der Detailspalte bleibt frei.
- */
 /** Höhe von schwebender Aktionsleiste und Pill samt Abständen, in px. */
 const BOTTOM_BARS_PX = 170;
 /** Schmale Kopfkarte samt Abstand, unter der ein Ziel beim Öffnen steht. */
 const STICKY_HEAD_PX = 80;
-
-const SPLIT_PANE_HEIGHT = "calc(100dvh - var(--tagesplan-split-top) - 6.5rem)";
-
-/** Abstand der Spalten vom Seitenanfang, als CSS-Variable am Split. */
-function useSplitTop(active: boolean): string {
-  const [top, setTop] = useState(0);
-  useLayoutEffect(() => {
-    if (!active) return;
-    const measure = () => {
-      const split = document.querySelector<HTMLElement>("[data-split-view]");
-      if (!split) return;
-      setTop(Math.round(split.getBoundingClientRect().top + window.scrollY));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(measure);
-    const head = document.querySelector("[data-app-page-head]");
-    if (head) observer?.observe(head);
-    return () => {
-      window.removeEventListener("resize", measure);
-      observer?.disconnect();
-    };
-  }, [active]);
-  return `${top}px`;
-}
-
-/**
- * Linke Spalte: die Tagesleiste klebt oben in der Spalte, die Gruppenköpfe
- * der Liste kleben darunter. Unten bleibt Platz, damit der letzte Block über
- * die Pill scrollen kann.
- */
-function SplitListColumn({
-  dayBar,
-  list,
-}: Readonly<{ dayBar: ReactNode; list: ReactNode }>) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const [barHeight, setBarHeight] = useState(0);
-  useLayoutEffect(() => {
-    const bar = barRef.current;
-    if (!bar) return;
-    const update = () => setBarHeight(bar.offsetHeight);
-    update();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(update);
-    observer.observe(bar);
-    return () => observer.disconnect();
-  }, []);
-  return (
-    <>
-      <div ref={barRef} className={`sticky top-0 ${Z_LAYER.nav}`}>
-        <SectionCard padding="none" className="py-1.5">
-          {dayBar}
-        </SectionCard>
-      </div>
-      <div
-        className="mt-2"
-        style={{ "--app-sticky-offset": `${barHeight}px` } as CSSProperties}
-      >
-        {list}
-      </div>
-    </>
-  );
-}
-
-/**
- * Rechte Spalte: der gewählte Block in einer Karte, höchstens so hoch wie
- * die Liste. Die Angaben scrollen, die Hauptaktion steht unter ihnen.
- */
-function SplitDetail({
-  entry,
-  next,
-  mine,
-  action,
-}: Readonly<{
-  entry: Entry;
-  next: boolean;
-  mine: boolean;
-  action: ReactNode;
-}>) {
-  return (
-    <SectionCard
-      title={entry.instance.title}
-      namedRegion
-      testId="tagesplan-detail"
-      className="sticky flex flex-col"
-      bodyClassName="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain"
-      // So hoch wie die Angaben, höchstens so hoch wie die Liste: Die
-      // Aktion steht direkt unter den Angaben statt unter einer leeren Fläche.
-      style={{
-        top: "var(--app-sticky-offset, 1rem)",
-        maxHeight: "var(--tagesplan-split-height)",
-      }}
-      footer={action ?? undefined}
-    >
-      <BlockDetail entry={entry} next={next} mine={mine} />
-    </SectionCard>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Zeile und Angaben
@@ -1095,7 +887,6 @@ function BlockRow({
   entry,
   next,
   mine,
-  selected,
   inPast = false,
   onOpen,
   start = null,
@@ -1103,7 +894,6 @@ function BlockRow({
   entry: Entry;
   next: boolean;
   mine: boolean;
-  selected: boolean;
   /** Steht unter „N Blöcke vorbei“: das Wort „Vorbei“ entfällt. */
   inPast?: boolean;
   onOpen: () => void;
@@ -1128,9 +918,6 @@ function BlockRow({
   const mineInMeta = mine && labels[0] != null && !startHidesChip;
   const children = childrenPart(entry);
   const openEnd = hasOpenEnd(instance);
-  // Am iPad hoch ist die Zeile breit genug für alle Namen.
-  const { layout, isSplit } = useDeviceContext();
-  const wide = layout === "tablet" && !isSplit;
   // Unterzeile: Zustand (vorbei, Dienst), Raum, Kinder, Gruppe, Personal.
   // Sie bricht zwischen den Teilen um statt gekürzt zu werden: am Telefon
   // stand sonst „OGS-Ra…“ und „Anna Müll…“. Ein Ausfall nennt seinen Grund
@@ -1163,22 +950,15 @@ function BlockRow({
   if (state.cancelled) push("reason", instance.cancelReason, true);
   if (state.isDuty) push("duty", "Dienst");
   // Reicht die Zeile nicht (SE), bricht sie zwischen den Teilen um: kein
-  // Wort-Stumpf wie „OGS-R…“ und keine Angabe entfällt still. Nur die
-  // Liste neben dem Detail (iPad quer) bleibt einzeilig gekürzt.
-  push("room", state.room, false, wide ? undefined : "room");
-  push("count", count, false, wide ? undefined : "count");
-  // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
-  // betreut, sucht man im Plan. Alle Namen stehen im Blatt.
-  if (wide) {
-    push("group", instance.groupName);
-    if (!state.cancelled) push("staff", staff);
-  } else {
-    // Erreichbarkeit (#8070): Die Gruppe steht wie am Desktop in der
-    // Zeile; die Angabenzeile bricht zwischen den Teilen um.
-    push("group", instance.groupName);
-    if (!state.cancelled) {
-      push("staff", blockStaffShort(instance), false, "staff");
-    }
+  // Wort-Stumpf wie „OGS-R…“ und keine Angabe entfällt still.
+  push("room", state.room, false, "room");
+  push("count", count, false, "count");
+  // Erreichbarkeit (#8070): Die Gruppe steht wie am Desktop in der Zeile.
+  // Personal kurz („Julia K. +1“, Vertretung benannt): wer betreut, sucht
+  // man im Plan. Alle Namen stehen im Blatt.
+  push("group", instance.groupName);
+  if (!state.cancelled) {
+    push("staff", blockStaffShort(instance), false, "staff");
   }
   // Der Bereich („Randzeiten“) steht im Blatt („Bereich“), nicht in der
   // Zeile: als Abzeichen brach er die Titelzeile um, als Wort die
@@ -1186,7 +966,6 @@ function BlockRow({
   return (
     <CollectionRow
       onClick={onOpen}
-      selected={selected}
       wrap
       action={
         start ? (
@@ -1222,7 +1001,7 @@ function BlockRow({
       leading={
         <span
           data-tagesplan-row={instance.id}
-          className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums"
+          className="w-11 self-start text-sm leading-5 tabular-nums"
         >
           <span
             className={cn(
@@ -1264,9 +1043,7 @@ function BlockRow({
         </span>
       }
       subtitle={
-        parts.length > 0 && isSplit ? (
-          <BlockRowParts parts={parts} />
-        ) : parts.length > 0 ? (
+        parts.length > 0 ? (
           <span className="block">
             {parts.map((part, index) => (
               <Fragment key={part.key}>

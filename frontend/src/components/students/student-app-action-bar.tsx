@@ -169,12 +169,10 @@ export function StudentAppActionBar({
   const [primary] = entries;
   if (!primary) return null;
 
-  // Die Seite reicht die Leiste in ihre Spalte; am iPad quer ist das die
-  // Detailspalte mit eigenem Scroll und Ausblend-Maske. Die Maske gilt auch
-  // für feste Kinder und blendete die Leiste ganz aus. Darum hängt sie am
-  // Dokument; ihre Lage liest sie weiter aus der Spalte (`column`).
+  // Die Leiste hängt am Dokument, nicht in der Akte: So beschneidet kein
+  // Vorfahr mit Maske oder eigenem Scroll die feste Leiste.
   const bar = (
-    <ActionBar column="detail">
+    <ActionBar>
       <Button
         type="button"
         variant="primary"

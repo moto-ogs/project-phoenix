@@ -201,10 +201,7 @@ function MessagesInboxContent() {
     );
 
   // App: „Neue Nachricht“ beschriftet in Daumennähe statt als Symbol oben.
-  // Auf dem Telefon und dem iPad hoch schwebt sie als ActionBar über der
-  // Pill. Im Split (iPad quer) klebt sie unten in der Listenspalte, über
-  // der Pill: unten mittig läge die Leiste über dem Schreibfeld des
-  // Verlaufs rechts.
+  // Auf dem Telefon schwebt sie als ActionBar über der Pill.
   const appComposeButton = messagingEnabled ? (
     <Button
       type="button"

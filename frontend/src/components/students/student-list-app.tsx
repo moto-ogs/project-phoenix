@@ -7,12 +7,10 @@
 // Nachnamen sortiert. Wer nach Status, Raum oder Gehzeit sehen will, wählt
 // die Gruppierung im Filter; dann übernimmt die Liste deren Gruppen.
 //
-// Ein Tipp öffnet das Kind-Blatt (Telefon, iPad hoch), im iPad-Querformat
-// steht das Kind rechts neben der Liste (`?kind=<id>`).
+// Ein Tipp öffnet das Kind-Blatt.
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -31,7 +29,6 @@ import { PresenceHint } from "~/components/students/presence/presence-hint";
 import { resolvePresence } from "~/lib/presence-status";
 
 import { Avatar } from "~/components/ui/avatar";
-import { ButtonLink } from "~/components/ui/button";
 import {
   Collection,
   CollectionGroup,
@@ -39,9 +36,7 @@ import {
   CollectionRow,
 } from "~/components/ui/collection";
 import { IndexRail } from "~/components/ui/index-rail";
-import { SectionCard } from "~/components/ui/section-card";
-import { SplitView, useSplitSelection } from "~/components/ui/split-view";
-import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
+import { ChildSheet } from "~/components/students/child-sheet";
 import {
   SearchStudentStatusBadge,
   searchStudentDay,
@@ -56,7 +51,6 @@ import {
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
-import { useDeviceContext } from "~/lib/device-context";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
 import { getDayPlanningNotComingLabel } from "~/lib/day-planning-helper";
 import type { DepartureMode } from "~/lib/departure-plan";
@@ -388,7 +382,6 @@ function StudentListAppContent({
   /** Merkpunkte der Schule, wie auf der Karte; das Blatt zeigt sie. */
   trackingData?: TrackingIndicatorsResponse;
 }>) {
-  const { selected, select } = useSplitSelection("kind");
   const [sheetId, setSheetId] = useState<string | null>(null);
   const byId = useMemo(
     () => new Map(students.map((student) => [student.id.toString(), student])),
@@ -398,13 +391,6 @@ function StudentListAppContent({
     if (groups.length > 0) return groups;
     return alphabetic ? alphabeticGroups(students) : [];
   }, [groups, alphabetic, students]);
-
-  const { isSplit } = useDeviceContext();
-  // iPad quer: Die Detailspalte ist nie leer, das erste Kind steht vorgewählt.
-  const firstId = (shownGroups[0]?.items[0] ?? students[0])?.id.toString();
-  useEffect(() => {
-    if (isSplit && !selected && firstId) select(firstId);
-  }, [isSplit, selected, firstId, select]);
 
   const row = (student: Student) => {
     const id = student.id.toString();
@@ -454,16 +440,15 @@ function StudentListAppContent({
             homeway={homeway}
           />
         }
-        selected={selected === id}
-        onClick={() => (isSplit ? select(id) : setSheetId(id))}
+        onClick={() => setSheetId(id)}
       />
     );
   };
 
-  // Buchstaben-Sprungleiste (Telefon, iPad hoch): bei langen Namenslisten.
+  // Buchstaben-Sprungleiste: bei langen Namenslisten.
   const listRef = useRef<HTMLDivElement>(null);
   const railLetters =
-    alphabetic && groups.length === 0 && !isSplit && shownGroups.length >= 5
+    alphabetic && groups.length === 0 && shownGroups.length >= 5
       ? shownGroups.map((group) => group.label)
       : [];
   const scrollToLetter = useCallback((index: number) => {
@@ -510,7 +495,6 @@ function StudentListAppContent({
       list
     );
 
-  const selectedStudent = selected ? (byId.get(selected) ?? null) : null;
   const sheetStudent = sheetId ? (byId.get(sheetId) ?? null) : null;
   // Alles, was die Karte am Desktop zeigt, steht im Blatt (#8070).
   const cardFactsOf = (student: Student) => ({
@@ -524,36 +508,7 @@ function StudentListAppContent({
 
   return (
     <>
-      <SplitView
-        list={listWithRail}
-        detail={
-          selectedStudent ? (
-            <SectionCard>
-              <ChildSummary
-                student={selectedStudent}
-                href={studentHref(selectedStudent)}
-                isToday={isToday}
-                classLabel={classLabel(selectedStudent)}
-                header
-                actionsLast
-                cardFacts={cardFactsOf(selectedStudent)}
-              />
-              {/* Wie im Blatt und in der Aufsicht: alle Aktionen unten
-                  gebündelt, die Akte als Nebenweg darunter. */}
-              <ButtonLink
-                href={studentHref(selectedStudent)}
-                variant="outline"
-                size="md"
-                className="mt-2 w-full"
-                tooltip="Öffnet die ganze Akte mit allen Angaben."
-              >
-                Ganze Akte öffnen
-              </ButtonLink>
-            </SectionCard>
-          ) : null
-        }
-        empty="Wähle links ein Kind, um seine Angaben zu sehen."
-      />
+      {listWithRail}
       <ChildSheet
         student={sheetStudent}
         onOpenChange={(open) => {

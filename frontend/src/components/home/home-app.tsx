@@ -1,16 +1,12 @@
 "use client";
 
-import { Suspense, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
   DayChangesDaySheet,
-  DayChangesList,
   DayChangesPreview,
-  DayDetail,
-  GroupDetail,
-  NoticeDetail,
 } from "~/components/home/home-app-details";
 import {
   BirthdaysCard,
@@ -22,7 +18,6 @@ import {
 import { shownEntries } from "~/components/home/day-changes-block";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { useBerlinClock } from "~/components/home/home-card-rows";
-import { STUDENT_SEARCH_LINK_TOOLTIP } from "~/components/home/home-link-tooltips";
 import {
   NowRunningText,
   NowText,
@@ -44,13 +39,10 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
-import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { blockChildrenLabel } from "~/lib/block-children";
-import { presentConcept } from "~/lib/concepts/present";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -83,17 +75,6 @@ import type { MotoConcept } from "~/lib/moto-concepts";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
-import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { cn } from "~/lib/utils";
-
-/** Kinder-Arten von „Heute anders“, die „Zu erledigen“ zusammenfasst. */
-const CHILD_KINDS = new Set([
-  "child_absent",
-  "child_goes_alone",
-  "child_pickup_changed",
-  "child_pickup_note",
-  "child_pickup_person",
-]);
 
 /** Ein Hinweis, dessen Kenntnisnahme verlangt ist und noch fehlt. */
 function openNotice(entry: DayChange): entry is DayChange & {
@@ -104,13 +85,6 @@ function openNotice(entry: DayChange): entry is DayChange & {
   );
 }
 
-/** Ein Kind der eigenen Gruppen, das heute anders ist (#7665). */
-function isChildChange(entry: DayChange): boolean {
-  return (
-    !openNotice(entry) && entry.section === "you" && CHILD_KINDS.has(entry.kind)
-  );
-}
-
 /** Alles aus „Heute anders“ außer offenen Hinweisen (die stehen einzeln). */
 function isDayChange(entry: DayChange): boolean {
   return !openNotice(entry);
@@ -118,16 +92,14 @@ function isDayChange(entry: DayChange): boolean {
 
 /**
  * Ein Eintrag der Startseite: eine Zeile in „Zu erledigen“ oder „Überblick“
- * und, wo es eins gibt, sein Detail. Das Detail steht am iPad quer rechts
- * neben der Liste, am Telefon und iPad hoch im Blatt (`sheet`). Ein Eintrag
- * mit `href` führt dort weiter statt ins Blatt.
+ * und, wo es eins gibt, sein Blatt (`sheet`). Ein Eintrag mit `href` führt
+ * weiter statt ins Blatt.
  */
 interface HomeEntry {
   readonly id: string;
   readonly row: Omit<CollectionRowProps, "href" | "onClick" | "selected">;
   readonly href?: string;
-  readonly detail?: ReactNode;
-  /** Blatt am Telefon und iPad hoch; ohne `href` öffnet die Zeile es. */
+  /** Blatt; ohne `href` öffnet die Zeile es. */
   readonly sheet?:
     | { readonly kind: "notice"; readonly notice: DayChangeNotice }
     | {
@@ -148,9 +120,7 @@ interface HomeEntry {
  *    heute anders sind, und was sich im Team und in der Schule ändert.
  * 3. Überblick: Aufsicht, Gruppe, als Nächstes, Geburtstage.
  *
- * Telefon: eine Spalte, Details im Blatt. iPad hoch: links die Liste, rechts
- * die eigene Gruppe mit ihren Kindern und der Tag. iPad quer: Liste neben
- * Detail.
+ * Telefon: eine Spalte, Details im Blatt.
  *
  * Dieselben Abfragen und Schlüssel wie die Bausteine des Desktops; was die
  * Fläche zeigt, entscheiden weiter Modul-Register, Rechte und Anordnung
@@ -181,7 +151,7 @@ export function HomeApp({
   readonly notices: ReactNode;
   readonly renderBlock: (key: HomeBlockKey) => ReactNode;
 }) {
-  const { layout, isSplit } = useDeviceContext();
+  const { layout } = useDeviceContext();
   const has = (key: HomeBlockKey) => placed.includes(key);
   const { data: session } = useSession();
   const accountId = session?.user?.id ?? "";
@@ -216,23 +186,10 @@ export function HomeApp({
   const group = useHomeGroup(showGroup, clock);
   const requests = useOpenRequestRows(has("section.open_requests"));
 
-  // Kurzformen ersetzen diese Bausteine; alles andere bleibt als Karte.
-  // „Ablauf des Tages“ hat keine Kurzform: am Handy steht die Karte des
-  // Desktops, damit kein Block der anderen fehlt.
-  const SHORT: readonly HomeBlockKey[] = [
-    "section.day_changes",
-    "section.my_day",
-    "section.my_group",
-    "section.open_requests",
-    "section.birthdays",
-  ];
-  const rest = placed.filter((key) => !SHORT.includes(key));
-
   // ── Zu erledigen ──
   const overview = dayChanges.data;
   const shown = overview ? shownEntries(overview) : [];
   const openNotices = shown.filter(openNotice);
-  const children = shown.filter(isChildChange);
   const todo: HomeEntry[] = [];
   for (const entry of openNotices) {
     todo.push({
@@ -256,7 +213,6 @@ export function HomeApp({
         // Der Titel bricht um statt „Neuer Notfallplan …“ am SE.
         wrap: true,
       },
-      detail: <NoticeDetail notice={entry.notice} onChanged={retry} />,
       sheet: { kind: "notice", notice: entry.notice },
     });
   }
@@ -296,9 +252,6 @@ export function HomeApp({
       : null;
 
   // ── Überblick ──
-  // iPad hoch zeigt Gruppe und Tag daneben als ganze Liste; die
-  // Kurzzeilen im Überblick wiederholten sie nur.
-  const inlineDetails = layout === "tablet" && !isSplit;
   const overviewEntries: HomeEntry[] = [];
   const running = (now.dayBlocks ?? []).find(
     (block) => block.isAssigned && block.status === "active",
@@ -326,8 +279,8 @@ export function HomeApp({
     });
   }
   // Am Telefon stehen Gruppe, Tag und Geburtstage als eigene Karten wie am
-  // Desktop (`placedCards`); die Kurzzeilen brauchen nur iPad-Ansichten.
-  if (showGroup && group.group && !inlineDetails && layout !== "phone") {
+  // Desktop (`placedCards`); die Kurzzeilen gelten nur vor der Hydration.
+  if (showGroup && group.group && layout !== "phone") {
     overviewEntries.push({
       id: "gruppe",
       row: {
@@ -339,7 +292,6 @@ export function HomeApp({
             : group.group.name,
       },
       href: tenantPath("/ogs-groups"),
-      detail: <GroupDetail snapshot={group} />,
     });
   }
   const showDay = has("section.my_day") || has("section.day_flow");
@@ -348,7 +300,7 @@ export function HomeApp({
         .filter((block) => block.isAssigned && !block.isDuty)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
-  if (mine.length > 0 && !inlineDetails && layout !== "phone") {
+  if (mine.length > 0 && layout !== "phone") {
     // Der nächste Block steht schon in der Jetzt-Karte; die Zeile nennt
     // den ganzen Tag.
     const coming = mine.filter(
@@ -370,7 +322,6 @@ export function HomeApp({
             : `${total}, ${coming === 1 ? "1 kommt" : `${coming} kommen`} noch`,
       },
       href: dayPlanHref,
-      detail: <DayDetail blocks={mine} />,
     });
   }
   const todays = has("section.birthdays")
@@ -394,22 +345,6 @@ export function HomeApp({
     layout === "phone" && nowShowsSupervision
       ? tenantPath("/active-supervisions")
       : null;
-  const nowCard = (
-    <NowCard
-      now={now}
-      stamp={stamp}
-      running={layout === "phone" ? running : undefined}
-      // Am Telefon trägt die Pill „Alle Kinder“ (Lupe) und die Leiste „Zur
-      // Aufsicht“: die Karte wiederholt sie nicht und bleibt zwei Zeilen
-      // hoch, damit am SE „Heute anders“ im ersten Bild steht.
-      withoutHrefs={
-        layout === "phone"
-          ? [tenantPath("/students/search"), supervisionHref ?? ""]
-          : []
-      }
-      withoutStart={layout === "phone"}
-    />
-  );
   // Steht ein eigener Block zum Start an, ist „Aufsicht starten“ die
   // Hauptaktion der Leiste (wie in der Jetzt-Zone des Desktops), auch wenn
   // daneben schon eine Aufsicht läuft: Die Jetzt-Karte nennt dann diesen
@@ -433,14 +368,6 @@ export function HomeApp({
       }
     />
   );
-  const extra =
-    rest.length > 0 ? (
-      <div className="space-y-4">
-        {rest.map((key) => (
-          <div key={key}>{renderBlock(key)}</div>
-        ))}
-      </div>
-    ) : null;
   const todoLoading = has("section.day_changes") && !overview && !loadError;
   const listProps = {
     todo,
@@ -458,67 +385,6 @@ export function HomeApp({
     previewLimit: layout === "phone" ? 1 : undefined,
   };
 
-  if (isSplit) {
-    // iPad quer: links Jetzt, Zu erledigen und Überblick, rechts das Detail
-    // des gewählten Eintrags. Ohne Wahl steht der erste Eintrag mit Detail.
-    const fallback = (
-      <HomeSplit
-        {...listProps}
-        nowCard={nowCard}
-        notices={notices}
-        extra={extra}
-        selection={null}
-      />
-    );
-    return (
-      <>
-        <Suspense fallback={fallback}>
-          <HomeSplitWithSelection
-            {...listProps}
-            nowCard={nowCard}
-            notices={notices}
-            extra={extra}
-          />
-        </Suspense>
-        {actionBar}
-      </>
-    );
-  }
-
-  const lists = <HomeLists {...listProps} />;
-  if (layout === "tablet") {
-    // iPad hoch: links Jetzt und die Liste, rechts die eigene Gruppe mit
-    // ihren Kindern und der Tag – die Fläche trägt, was sonst erst ein
-    // Tipp zeigt.
-    const groupDetail =
-      showGroup && group.group ? <GroupDetail snapshot={group} /> : null;
-    const childList =
-      !groupDetail && overview && children.length > 0 ? (
-        <DayChangesList
-          overview={overview}
-          include={isDayChange}
-          label="Heute anders"
-        />
-      ) : null;
-    return (
-      <>
-        <div className="grid grid-cols-2 items-start gap-4" data-home-app="">
-          <div className="space-y-4">
-            {nowCard}
-            {notices}
-            {lists}
-            <DayDetail blocks={mine} />
-          </div>
-          <div className="space-y-4">
-            {groupDetail}
-            {childList}
-            {extra}
-          </div>
-        </div>
-        {actionBar}
-      </>
-    );
-  }
   // Telefon: jeder Baustein des Desktops in seiner Reihenfolge, als Liste
   // in einer Karte. „Heute anders“ steht schon oben in `lists`.
   const placedCards = placed.map((key) => {
@@ -578,9 +444,8 @@ interface ListProps {
 }
 
 /**
- * „Zu erledigen“ und „Überblick“. Ohne `selection` (Telefon, iPad hoch)
- * führt eine Zeile weiter oder öffnet ihr Blatt; mit `selection` (iPad quer)
- * wählt sie das Detail rechts.
+ * „Zu erledigen“ und „Überblick“. Eine Zeile führt weiter oder öffnet ihr
+ * Blatt.
  */
 function HomeLists({
   todo,
@@ -591,15 +456,10 @@ function HomeLists({
   showTodo,
   onChanged,
   previewLimit,
-  selection,
   withoutRequests = false,
 }: ListProps & {
   /** Telefon: „Offene Anfragen“ steht als eigene Karte an ihrem Platz. */
   readonly withoutRequests?: boolean;
-  readonly selection?: {
-    readonly current: string | null;
-    readonly select: (id: string) => void;
-  };
 }) {
   const [sheetId, setSheetId] = useState<string | null>(null);
   const all = [
@@ -610,16 +470,6 @@ function HomeLists({
   const sheetEntry = all.find((entry) => entry.id === sheetId);
 
   const row = (entry: HomeEntry) => {
-    if (selection && entry.detail) {
-      return (
-        <CollectionRow
-          key={entry.id}
-          {...entry.row}
-          selected={selection.current === entry.id}
-          onClick={() => selection.select(entry.id)}
-        />
-      );
-    }
     if (entry.href) {
       return <CollectionRow key={entry.id} {...entry.row} href={entry.href} />;
     }
@@ -731,67 +581,6 @@ function ListSheet({
   );
 }
 
-/** Vorwahl am iPad quer, in dieser Reihenfolge. */
-const DEFAULT_ORDER = ["gruppe", "kinder", "team", "tag"];
-
-type SplitProps = ListProps & {
-  readonly nowCard: ReactNode;
-  readonly notices: ReactNode;
-  readonly extra: ReactNode;
-};
-
-function HomeSplitWithSelection(props: SplitProps) {
-  const { selected, select } = useSplitSelection("eintrag");
-  return <HomeSplit {...props} selection={{ selected, select }} />;
-}
-
-function HomeSplit({
-  nowCard,
-  notices,
-  extra,
-  selection,
-  ...listProps
-}: SplitProps & {
-  readonly selection: {
-    readonly selected: string | null;
-    readonly select: (id: string | null) => void;
-  } | null;
-}) {
-  const withDetail = [...listProps.todo, ...listProps.overviewEntries].filter(
-    (entry) => entry.detail,
-  );
-  // Ohne Wahl: die Liste, die die Fläche am besten füllt (die eigene
-  // Gruppe mit ihren Kindern), sonst der erste Eintrag mit Detail.
-  const current =
-    withDetail.find((entry) => entry.id === selection?.selected) ??
-    DEFAULT_ORDER.map((id) => withDetail.find((entry) => entry.id === id)).find(
-      Boolean,
-    ) ??
-    withDetail[0];
-  return (
-    <div data-home-app="">
-      <SplitView
-        list={
-          <div className="space-y-4">
-            {nowCard}
-            {notices}
-            <HomeLists
-              {...listProps}
-              selection={{
-                current: current?.id ?? null,
-                select: (id) => selection?.select(id),
-              }}
-            />
-            {extra}
-          </div>
-        }
-        detail={current?.detail ?? null}
-        empty="Heute ist nichts offen."
-      />
-    </div>
-  );
-}
-
 // ─── Jetzt ─────────────────────────────────────────────────────────────────
 
 /**
@@ -879,169 +668,6 @@ function stampLabel(state: HomeStampState): string | null {
     default:
       return null;
   }
-}
-
-const NO_HREFS: readonly string[] = [];
-
-/**
- * Die Jetzt-Karte wie am Desktop (#2180): die Uhr groß links als Anker, daneben
- * was gerade läuft oder als Nächstes kommt, darunter wie viele Kinder da
- * sind. Wer die Startseite von heute kennt, erkennt sie wieder. Knöpfe nur
- * für das, was die Pill nicht schon trägt: den eigenen Block starten und
- * Ausstempeln (selten, deshalb hier statt in der Leiste).
- */
-function NowCard({
-  now,
-  stamp,
-  running,
-  withoutHrefs = NO_HREFS,
-  withoutStart = false,
-}: {
-  readonly now: ReturnType<typeof useHomeNow>;
-  readonly stamp: ReturnType<typeof useHomeStamp>;
-  /** Der eigene Block, der laut Tagesplan gerade läuft (nur Telefon). */
-  readonly running?: PlannedTimetableInstance;
-  /** Wege, die Leiste oder Pill schon tragen (nur Telefon). */
-  readonly withoutHrefs?: readonly string[];
-  /** Die Leiste startet den eigenen Block (nur Telefon). */
-  readonly withoutStart?: boolean;
-}) {
-  const tenantPath = useTenantAwarePath();
-  const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
-  const stampText = stamped ? stampLabel(stamp.state) : null;
-  const checkOut = stamp.state.kind === "in";
-  // Wie am Desktop: die Wege des Moments („Zur Aufsicht“ bzw. „Aufsicht
-  // starten“, „Alle Kinder“) stehen in der Karte, Ausstempeln daneben.
-  const actions = now.actions.filter((action) =>
-    action.kind === "link"
-      ? !withoutHrefs.includes(action.href)
-      : !withoutStart,
-  );
-  const footer = !now.loading && (actions.length > 0 || checkOut);
-  // Zwei Zeilen: Uhrzeit klein vor dem Blocktitel, darunter Zustand, Raum,
-  // Ende und die Kinder da. Keine eigene Zeile je Angabe.
-  const time = (
-    <time
-      dateTime={`${now.today}T${now.now}`}
-      className="shrink-0 font-semibold text-gray-900 tabular-nums"
-    >
-      {now.now}
-    </time>
-  );
-  const present =
-    now.presentCount !== undefined ? (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <MotoConceptIcon concept={presentConcept} size={14} />
-        <span className="font-semibold text-gray-700 tabular-nums">
-          {now.presentCount}
-        </span>
-        {now.presentCount === 1 ? "Kind da" : "Kinder da"}
-      </span>
-    ) : null;
-  // Die Kinder da stehen rechts in der Titelzeile, der Stempelzustand am
-  // Ende der Angabenzeile.
-  const extra = stampText ? (
-    <StatusBadge
-      tone={stamp.state.kind === "in" ? "green" : "gray"}
-      label={stampText}
-    />
-  ) : undefined;
-  // Läuft ein eigener Block, der in den Einsätzen fehlt (spontan gestartet),
-  // nennt die Karte ihn statt „alles erledigt“ oder „Als Nächstes“.
-  const runningOverride =
-    running && now.state.kind !== "own_running" ? running : null;
-  const buttons = [
-    ...actions.map((action, index) =>
-      action.kind === "start" ? (
-        <Button
-          key={`start-${action.block.id}`}
-          type="button"
-          variant={index === 0 ? "primary" : "outline"}
-          size="md"
-          className="w-full whitespace-nowrap"
-          disabled={now.busyId !== null}
-          onClick={() => void now.start(action.block)}
-          tooltip={START_OWN_BLOCK_TOOLTIP}
-        >
-          {now.busyId === action.block.id ? "Startet..." : action.label}
-        </Button>
-      ) : (
-        <ButtonLink
-          key={action.href}
-          href={action.href}
-          variant={index === 0 ? "primary" : "outline"}
-          size="md"
-          className="w-full gap-2 whitespace-nowrap"
-          tooltip={
-            action.href === tenantPath("/active-supervisions")
-              ? "Öffnet deine laufende Aufsicht."
-              : STUDENT_SEARCH_LINK_TOOLTIP
-          }
-        >
-          {action.label}
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </ButtonLink>
-      ),
-    ),
-    checkOut ? (
-      // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
-      <Button
-        key="ausstempeln"
-        type="button"
-        variant="success"
-        size="md"
-        className="w-full whitespace-nowrap"
-        disabled={stamp.disabled}
-        onClick={stamp.checkOut}
-        tooltip="Stempelt dich sofort aus und beendet deine Arbeitszeit."
-      >
-        Ausstempeln
-      </Button>
-    ) : null,
-  ].filter(Boolean);
-  return (
-    <SectionCard testId="home-now" padding="none">
-      <div className="px-4 py-3">
-        {now.loading ? (
-          <div className="space-y-2" aria-hidden="true">
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-3 w-4/5" />
-          </div>
-        ) : runningOverride ? (
-          <NowRunningText
-            block={runningOverride}
-            next={now.state.kind === "own_next" ? now.state.block : null}
-            lead={time}
-            extra={extra}
-            aside={present}
-          />
-        ) : (
-          <NowText
-            state={now.state}
-            analytics={now.analytics.data}
-            today={now.today}
-            wrap
-            withoutDate
-            lead={time}
-            extra={extra}
-            aside={present}
-          />
-        )}
-        {footer ? (
-          <div
-            className={cn(
-              "mt-3 grid gap-2",
-              buttons.length > 1 ? "grid-cols-2" : "grid-cols-1",
-              // Drei Knöpfe: der dritte (Ausstempeln) über die ganze Breite.
-              buttons.length === 3 && "[&>*:last-child]:col-span-2",
-            )}
-          >
-            {buttons}
-          </div>
-        ) : null}
-      </div>
-    </SectionCard>
-  );
 }
 
 /**

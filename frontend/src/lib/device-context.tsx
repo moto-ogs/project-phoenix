@@ -9,9 +9,9 @@
  *   - `desktop`: ab 640 px, also Desktop und iPad. Der heutige Code, unverändert.
  *   - `phone`:   App unter 640 px (Telefon).
  *
- * `tablet` und `split` kommen nicht mehr vor: Das iPad behält die heutige
- * Oberfläche (Entscheid nach dem Prototyp). CSS-Gegenstücke: `app:`, `desk:`, `phone:`,
- * `tablet:`, `split:` in `styles/globals.css`.
+ * Das iPad behält die heutige Oberfläche (Entscheid nach dem Prototyp,
+ * ADR 0323). CSS-Gegenstücke: `app:`, `desk:`, `phone:` in
+ * `styles/globals.css`.
  *
  * Vor der Hydration ist der Kontext unbekannt (`resolved: false`). Bausteine
  * schalten bis dahin per CSS (`DeviceSwitch`), damit Server- und Client-
@@ -50,38 +50,29 @@ function useResolvedMediaQuery(query: string): boolean | null {
 }
 
 export const APP_QUERY = "(width < 40rem)";
-const PHONE_QUERY = "(width < 40rem)";
-// Das iPad behält die heutige Oberfläche: kein `split`, kein `tablet`.
-const SPLIT_QUERY = "not all";
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
-type DeviceLayout = "phone" | "tablet" | "desktop";
+type DeviceLayout = "phone" | "desktop";
 
 export interface DeviceContextValue {
   /** `false` bis zur Hydration; dann gelten die Defaults (Desktop). */
   resolved: boolean;
   layout: DeviceLayout;
-  /** App-Oberfläche (Telefon oder iPad). */
+  /** App-Oberfläche (Telefon). */
   isApp: boolean;
-  /** iPad quer: Liste neben Detail. */
-  isSplit: boolean;
   input: "touch" | "pointer";
 }
 
 export function useDeviceContext(): DeviceContextValue {
   const app = useResolvedMediaQuery(APP_QUERY);
-  const phone = useResolvedMediaQuery(PHONE_QUERY);
-  const split = useResolvedMediaQuery(SPLIT_QUERY);
   const coarse = useResolvedMediaQuery("(pointer: coarse)");
   const resolved = app !== null;
   const isApp = app === true;
-  let layout: DeviceLayout = "desktop";
-  if (isApp) layout = phone === true ? "phone" : "tablet";
+  const layout: DeviceLayout = isApp ? "phone" : "desktop";
   return {
     resolved,
     layout,
     isApp,
-    isSplit: isApp && split === true,
     input: coarse === true ? "touch" : "pointer",
   };
 }

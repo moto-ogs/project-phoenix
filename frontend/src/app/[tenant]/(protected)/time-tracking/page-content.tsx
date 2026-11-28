@@ -321,7 +321,6 @@ function TimeTrackingContent() {
         }
       >
         <AppTimeTrackingLayout
-          split={device.isSplit}
           errors={
             clock.loadError || (clock.data && clock.shiftError) ? (
               <div className="space-y-3">

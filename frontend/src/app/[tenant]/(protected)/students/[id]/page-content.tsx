@@ -114,7 +114,6 @@ import {
   StudentAppQuickActionRow,
   studentAppQuickActions,
 } from "~/components/students/student-app-action-bar";
-import { StudentSplitFrame } from "~/components/students/student-split-frame";
 import {
   RequestedQuickAction,
   STUDENT_QUICK_ACTION_PARAM,
@@ -1629,14 +1628,12 @@ function StudentDetailPageContent() {
     />
   );
 
-  const page = (
+  return (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
           Aufenthaltsort als Aktion und die Schnellaktionen darunter. */
     <TenantPage
-      // iPad quer (#8070): Die Liste steht daneben, ein Zurück-Pfeil führte
-      // nur zu ihr.
-      back={!(appHead && device.isSplit)}
+      back
       backHref={referrer}
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
@@ -2077,12 +2074,6 @@ function StudentDetailPageContent() {
         />
       )}
     </TenantPage>
-  );
-  // iPad quer (#8070): Kinderliste ⅓ links, Akte ⅔ rechts.
-  return (
-    <StudentSplitFrame studentId={studentId} from={searchParams.get("from")}>
-      {page}
-    </StudentSplitFrame>
   );
 }
 

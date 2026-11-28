@@ -1,10 +1,8 @@
 "use client";
 
 // Kind-Blatt (#8070): Schnellinfos und Schnellaktionen eines Kindes, ohne die
-// Liste zu verlassen. Am Telefon ein Blatt (halb, hochziehbar), am iPad eine
-// Karte; im iPad-Querformat steht derselbe Inhalt (`ChildSummary`) rechts
-// neben der Liste. Andere Listen (Aufsicht, Gruppen) nutzen es mit eigenen
-// Kontext-Aktionen.
+// Liste zu verlassen. Am Telefon ein Blatt (halb, hochziehbar). Andere
+// Listen (Aufsicht, Gruppen) nutzen es mit eigenen Kontext-Aktionen.
 
 import { AlertTriangle, Clock, Route } from "lucide-react";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
@@ -96,7 +94,7 @@ export interface ChildSheetProps {
 }
 
 /** Was die Kinderkarte zusätzlich zeigt (siehe `ChildSheetProps.cardFacts`). */
-export interface ChildCardFacts {
+interface ChildCardFacts {
   /** Merkpunkte der Schule (Räume/Angebote heute besucht), wie auf der Karte. */
   readonly tracking?: { labels: string[]; results: boolean[] };
 }
@@ -194,7 +192,7 @@ function studentName(student: Student): string {
  * Inhalt des Blatts: Status, Aktionen, dann die Angaben des Tages. Zeigt nur,
  * was die Liste über das Kind schon weiß.
  */
-export function ChildSummary({
+function ChildSummary({
   student,
   href,
   isToday = true,

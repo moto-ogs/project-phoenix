@@ -11,9 +11,9 @@ import {
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
 import { Avatar } from "~/components/ui/avatar";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import type { ChildDayStatus } from "~/components/students/child-day-status";
-import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
+import { ChildSheet } from "~/components/students/child-sheet";
 import { RowParentAttention } from "~/components/students/student-list-app";
 import {
   Collection,
@@ -22,7 +22,6 @@ import {
 } from "~/components/ui/collection";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
-import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { EmptyStudentResults } from "~/components/students/empty-student-results";
 import { useToast } from "~/contexts/ToastContext";
 import { overbookedHintFor } from "~/lib/activity-occupancy";
@@ -76,8 +75,7 @@ import {
  * Die Hauptaktion der Aufgabe steht in der Leiste über der Pill.
  *
  * Gleiche Daten und Aktionen wie `TimetableRosterContent` am Computer; nur
- * der Zuschnitt ist anders. Am iPad quer steht das Kind rechts neben der
- * Liste (`?kind=<id>`), sonst geht es als Blatt auf.
+ * der Zuschnitt ist anders. Ein Tipp auf das Kind öffnet sein Blatt.
  */
 export type TimetableRosterAppProps = Omit<
   TimetableRosterContentProps,
@@ -409,7 +407,7 @@ function RosterChildRow({
 }: Readonly<
   Pick<
     ComponentProps<typeof CollectionRow>,
-    "onClick" | "selected" | "leading" | "title" | "subtitle" | "action"
+    "onClick" | "leading" | "title" | "subtitle" | "action"
   > & {
     studentId: string;
     label: string;
@@ -481,7 +479,7 @@ function TimetableRosterAppContent({
 }: TimetableRosterAppProps) {
   const now = useMinuteClock();
   const toast = useToast();
-  const { isSplit, layout } = useDeviceContext();
+  const { layout } = useDeviceContext();
   const nfcEnabled = useNFCEnabled();
 
   // Rechte wie in der Liste am Computer (#3167, #3622).
@@ -587,8 +585,7 @@ function TimetableRosterAppContent({
   };
 
   const openChild = (row: TimetableRosterRow) => {
-    if (isSplit) split.select(row.studentId);
-    else setSheetChildId(row.studentId);
+    setSheetChildId(row.studentId);
   };
 
   const inBlockStudentIds = new Set(
@@ -613,15 +610,6 @@ function TimetableRosterAppContent({
     },
   ];
 
-  // Am iPad quer bleibt die Detailspalte nie leer: ohne Auswahl steht dort
-  // das erste Kind der Liste.
-  const firstListed =
-    sections.find((section) => section.rows.length > 0)?.rows[0] ?? null;
-  const split = useSplitSelection("kind", {
-    defaultId: firstListed?.studentId ?? null,
-  });
-  const splitRow =
-    roster.rows.find((row) => row.studentId === split.selected) ?? null;
   // Eine Gruppe, die alle Kinder teilen, sagt in der Zeile nichts; dann
   // bleibt Platz für Gehzeit und Klasse.
   const groupNames = new Set(roster.rows.map((row) => row.groupName));
@@ -753,9 +741,6 @@ function TimetableRosterAppContent({
   };
 
   const rowAction = (row: TimetableRosterRow) => {
-    // Am iPad quer steht das Kind rechts mit allen Aktionen; in der Zeile
-    // stünde dieselbe Aktion doppelt.
-    if (isSplit) return undefined;
     const action = primaryRowAction(row, access);
     // „Raum verlassen“ steht nicht in jeder Zeile: zwölfmal derselbe Knopf
     // machte die Liste zum Formular und schob Hinweise in eine dritte
@@ -795,16 +780,7 @@ function TimetableRosterAppContent({
   ) : (
     <Collection
       label={`Kinder in ${roster.instance.title}`}
-      // iPad hoch: die Kinder stehen zeilenweise in zwei Spalten (links,
-      // rechts, nächste Zeile), damit die Aktion nah am Namen steht und keine
-      // Zelle neben einem Kind leer bleibt.
-      className={
-        layout === "phone"
-          ? SHORT_PHONE_ROWS
-          : layout === "tablet" && !isSplit
-            ? "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0"
-            : undefined
-      }
+      className={layout === "phone" ? SHORT_PHONE_ROWS : undefined}
     >
       {sections.map(({ key, rows }) =>
         rows.length === 0 ? null : (
@@ -819,7 +795,6 @@ function TimetableRosterAppContent({
                 key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
                 studentId={row.studentId}
                 onClick={() => openChild(row)}
-                selected={isSplit && splitRow?.studentId === row.studentId}
                 // Beginnt mit dem sichtbaren Text (Name, Klasse), damit
                 // Sprachsteuerung die Zeile beim gelesenen Namen findet.
                 label={[childName(row), schoolClassName(row.schoolClass ?? "")]
@@ -982,27 +957,8 @@ function TimetableRosterAppContent({
           message="Die Gehzeiten konnten nicht geladen werden. Die Liste bleibt verfügbar."
         />
       ) : null}
-      <SplitView
-        list={list}
-        detail={
-          splitRow ? (
-            // Am iPad quer stehen die Karten vom Listenende (Kinder
-            // unterwegs, beendete Blöcke) unter dem Kind in der rechten
-            // Spalte statt unter der ganzen Fläche.
-            <div className="flex flex-col gap-4">
-              <SupervisionChildDetail
-                row={splitRow}
-                href={studentProfileHref?.(splitRow)}
-                lines={linesFor(splitRow)}
-                actions={contextFor(splitRow, false)}
-              />
-              {footer}
-            </div>
-          ) : null
-        }
-        empty="Tippe links auf ein Kind, um es hier zu sehen."
-      />
-      {isSplit && splitRow ? null : footer}
+      {list}
+      {footer}
 
       <SupervisionChildSheet
         row={sheetRow}
@@ -1232,50 +1188,6 @@ function SupervisionChildSheet({
  * kennt nur den Stand in diesem Block.
  */
 const NO_STATUS: ChildDayStatus | null = null;
-
-/** Dasselbe Kind rechts neben der Liste (iPad quer). */
-function SupervisionChildDetail({
-  row,
-  href,
-  lines,
-  actions,
-}: Readonly<{
-  row: TimetableRosterRow;
-  href?: string;
-  lines: ReactNode;
-  actions: ReactNode;
-}>) {
-  const { student, loaded } = useRosterStudent(row, href !== undefined);
-  if (!student) return null;
-  return (
-    <SectionCard>
-      <ChildSummary
-        student={student}
-        href={href}
-        quickActions={false}
-        status={loaded ? undefined : NO_STATUS}
-        contextActions={lines}
-        header
-      />
-      {/* Alle Aktionen in einer Reihe am Ende, gleich gebaut wie im Blatt:
-          die Aufsicht-Aktionen zuerst, die Akte als Nebenweg. */}
-      <div className="mt-5 flex flex-col gap-2">
-        {actions}
-        {href ? (
-          <ButtonLink
-            href={href}
-            variant="outline"
-            size="md"
-            className="w-full"
-            tooltip="Öffnet die ganze Akte mit allen Angaben."
-          >
-            Ganze Akte öffnen
-          </ButtonLink>
-        ) : null}
-      </div>
-    </SectionCard>
-  );
-}
 
 /**
  * Was nur die Aufsicht über das Kind weiß (Ankunft, Hinweise der Planung,
