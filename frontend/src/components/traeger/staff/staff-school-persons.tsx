@@ -31,7 +31,7 @@ import { STAFF_FIELD_LABELS } from "./staff-record-format";
 const logger = createLogger({ component: "TraegerStaffSchoolPersons" });
 
 /** „Vorname „Mira“, Nachname „Sommer“, kein Geburtstag“ */
-export function schoolPersonText(person: StaffSchoolPerson): string {
+function schoolPersonText(person: StaffSchoolPerson): string {
   const part = (field: StaffPersonField): string => {
     if (field === "first_name") {
       return `${STAFF_FIELD_LABELS.first_name} „${person.firstName}“`;

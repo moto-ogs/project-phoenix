@@ -9,6 +9,18 @@ import (
 // enters in the first record (#8208).
 const seedTraegerStaffBirthday = "1988-03-14"
 
+// seedTraegerStaffFirstRecord keeps an IBAN in the first record and enters
+// its birthday; 0 means another school's run created it, nothing to do.
+func seedTraegerStaffFirstRecord(client *Client, auth AuthRef, first int64) error {
+	if first <= 0 {
+		return nil
+	}
+	if err := seedTraegerStaffFinancial(client, auth, first); err != nil {
+		return err
+	}
+	return seedTraegerStaffPerson(client, auth, first)
+}
+
 // seedTraegerStaffPerson enters a birthday in the first record that its
 // schools do not know, through the correction of the person (#7379), as
 // the form does. The record then names every Einsatzort under „Andere
