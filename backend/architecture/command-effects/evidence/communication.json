@@ -433,6 +433,38 @@
       "target_owner": "parent-announcement-audience"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "binding_digest": "18f4a378d8dc7dbeef53115c2e2bc574",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "binding_digest": "cdccc13940c026eb9c26d2d7c300cda1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListGroups",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "binding_digest": "dfd439e3adee407ea0960cd7c1f6f56c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.ListGroups",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "binding_digest": "b8e841b5f81dbab147bfa7728d48281e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.EducationGroupNames.EducationGroupNames",
+      "target_owner": "timetable-activities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterAccessLog.RecordParentLetterAccess",
       "binding_digest": "36f42ae44a624502f5045578ed46a995",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
