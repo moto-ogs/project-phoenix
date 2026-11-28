@@ -151,9 +151,10 @@ describe("useChangeRequestsPending", () => {
       expect(result.error).toBe(error);
     });
 
+    // useChangeRequestAccess reports a refusal as settled.
     it("stays inactive when the server refuses the access check", () => {
       const error = new ApiError("no", 403, { code: "general.permission" });
-      expect(stateWith({ error }).state).toBe("inactive");
+      expect(stateWith({ settled: true, error }).state).toBe("inactive");
     });
 
     it("stays inactive once the server granted no review area", () => {

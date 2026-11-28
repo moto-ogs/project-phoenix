@@ -120,6 +120,16 @@ describe("OpenRequestsBlock (#2180)", () => {
     expect(list[0]!.closest("[data-home-card-fit]")).not.toBeNull();
   });
 
+  it("führt die Anträge des Teams direkt in ihren Reiter", () => {
+    set("staffAbsences", { unreadCount: 1 });
+
+    render(<OpenRequestsBlock />);
+
+    expect(
+      screen.getByRole("link", { name: /Anträge des Teams/ }),
+    ).toHaveAttribute("href", "/test-tenant/anfragen?reiter=mitarbeitende");
+  });
+
   // Ungelesene Anmeldungen (#3778): eigene Zeile, führt zu den Anmeldungen.
   it("zeigt ungelesene Anmeldungen als eigene Zeile", () => {
     set("unreadEnrollments", { unreadCount: 2 });

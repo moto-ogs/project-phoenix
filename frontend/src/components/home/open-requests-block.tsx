@@ -93,7 +93,9 @@ export function OpenRequestsBlock() {
       key: "staff",
       label: "Anträge des Teams",
       hint: "Urlaub und Abwesenheiten von Mitarbeitenden",
-      href: tenantPath("/anfragen"),
+      // Direkt in den Reiter der Anträge; ohne ihn zeigte die Seite einer
+      // Leitung mit beiden Reitern zuerst die Wünsche von Eltern.
+      href: tenantPath("/anfragen?reiter=mitarbeitende"),
       reader: staffAbsences,
     },
   ];

@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { isReadRefusal } from "~/lib/access-refusal";
 import { fetchPendingChangeRequestCount } from "~/lib/change-requests-api";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
@@ -61,7 +60,7 @@ export function useChangeRequestsPending(): UseUnreadCountResult {
     return reader;
   }
   if (access.isLoading) return { ...reader, state: "loading" };
-  if (access.error !== undefined && !isReadRefusal(access.error)) {
+  if (access.error !== undefined) {
     return {
       ...reader,
       state: "failed",

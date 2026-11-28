@@ -3,7 +3,7 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
 import { AggregatedRequestList } from "~/components/students/aggregated-request-list";
@@ -174,7 +174,15 @@ export default function AnfragenPage() {
     [handleParentCount],
   );
 
-  const [selectedTab, setSelectedTab] = useState<AnfragenTabId>("eltern");
+  // `?reiter=mitarbeitende` öffnet die Anträge des Teams, etwa aus der
+  // Startkarte „Offene Anfragen“ (#8268). Ohne den Reiter gilt der erste
+  // sichtbare (unten).
+  const searchParams = useSearchParams();
+  const [selectedTab, setSelectedTab] = useState<AnfragenTabId>(() =>
+    searchParams?.get("reiter") === "mitarbeitende"
+      ? "mitarbeitende"
+      : "eltern",
+  );
   // Fällt die Auswahl aus den sichtbaren Reitern (z. B. Session noch am
   // Laden), gilt der erste sichtbare — so flackert nie ein leerer Inhalt.
   const activeTab = visibleTabs.some((tab) => tab.id === selectedTab)
