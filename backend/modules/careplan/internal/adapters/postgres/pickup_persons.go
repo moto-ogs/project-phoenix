@@ -71,12 +71,9 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 	if studentIDs != nil && len(studentIDs) == 0 {
 		return []careplan.DayPickup{}, domain.OperationStats{}, nil
 	}
-	weekendFollowsFriday := false
-	if rangeIncludesWeekend(from, to) {
-		weekendFollowsFriday, err = calendar.WeekendFollowsFriday(ctx)
-		if err != nil {
-			return nil, domain.OperationStats{}, fmt.Errorf("care plan postgres: resolve weekend plan: %w", err)
-		}
+	weekendFollowsFriday, err := weekendPlanForPickupRange(ctx, from, to)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
 	}
 	// A NULL end or child list reads without that limit.
 	var until, students any
@@ -123,6 +120,17 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 	}
 	stats.Rows = int64(len(rows))
 	return mapRows(rows, func(row dayPickupRow) careplan.DayPickup { return row.toPublic(tid) }), stats, nil
+}
+
+func weekendPlanForPickupRange(ctx context.Context, from, to calendar.Date) (bool, error) {
+	if !rangeIncludesWeekend(from, to) {
+		return false, nil
+	}
+	followsFriday, err := calendar.WeekendFollowsFriday(ctx)
+	if err != nil {
+		return false, fmt.Errorf("care plan postgres: resolve weekend plan: %w", err)
+	}
+	return followsFriday, nil
 }
 
 // rangeIncludesWeekend avoids resolving the tenant setting for weekday-only
