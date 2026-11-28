@@ -32,7 +32,12 @@ import {
   weekPatternForDate,
   type CalendarPeriod,
 } from "~/lib/calendar-period-helpers";
-import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import {
+  berlinTodayISO,
+  formatDate,
+  parseISODate,
+  toISODate,
+} from "~/lib/date-helpers";
 import {
   readStateWaitReason,
   useReadDraftForm,
@@ -52,7 +57,13 @@ import {
   type SeriesResult,
   type SeriesRule,
 } from "~/lib/shift-api";
-import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
+import {
+  parseBreakMinutes,
+  shiftBreakMaxMinutes,
+  shiftDurationMinutes,
+  type StaffScheduleStaff,
+  type StaffShift,
+} from "~/lib/shift-helpers";
 import {
   isShiftTypeOffered,
   shiftTypeOptionLabel,
@@ -81,7 +92,6 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
 
 const logger = createLogger({ component: "ShiftEditModal" });
-const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 // Stable empty default so the optional staffOptions prop does not create a new
 // array reference each render (oxlint react/no-object-type-as-default-prop).
 const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
@@ -457,17 +467,11 @@ export function ShiftEditModal({
     seriesHasDateRange &&
     (seriesPeriod === null || seriesEditClosingDayWindow?.dates.length !== 0);
   const seriesNoOccurrenceMessage = seriesHasDateRange
-    ? `Für die gewählten Wochentage und den Wochenrhythmus bleibt ab ${formatShortDate(seriesAppliesFrom)} kein Termin mehr. Setze „Gültig bis" auf ein späteres Datum oder ändere die Wiederholung.`
-    : `Diese Serie endet am ${formatShortDate(seriesValidUntil)}, Änderungen wirken aber erst ab ${formatShortDate(seriesAppliesFrom)}. Setze „Gültig bis" auf ein späteres Datum, um die Serie fortzuführen.`;
+    ? `Für die gewählten Wochentage und den Wochenrhythmus bleibt ab ${formatDate(seriesAppliesFrom)} kein Termin mehr. Setze „Gültig bis" auf ein späteres Datum oder ändere die Wiederholung.`
+    : `Diese Serie endet am ${formatDate(seriesValidUntil)}, Änderungen wirken aber erst ab ${formatDate(seriesAppliesFrom)}. Setze „Gültig bis" auf ein späteres Datum, um die Serie fortzuführen.`;
 
-  const timesValid = startTime !== "" && endTime !== "" && startTime < endTime;
-  const breakMaxMinutes = timesValid
-    ? Math.min(
-        STAFF_SHIFT_MAX_BREAK_MINUTES,
-        shiftDurationMinutes(startTime, endTime) ??
-          STAFF_SHIFT_MAX_BREAK_MINUTES,
-      )
-    : STAFF_SHIFT_MAX_BREAK_MINUTES;
+  const timesValid = shiftDurationMinutes(startTime, endTime) !== null;
+  const breakMaxMinutes = shiftBreakMaxMinutes(startTime, endTime);
   const breakMinutes = parseBreakMinutes(breakMinutesStr, breakMaxMinutes);
   const breakValid = breakMinutes !== null;
   const seriesValid =
@@ -660,7 +664,7 @@ export function ShiftEditModal({
     if (result.skippedDates.length > 0) {
       notices.push(
         `An folgenden Tagen besteht bereits eine Schicht, sie wurden übersprungen: ${result.skippedDates
-          .map(formatShortDate)
+          .map((day) => formatDate(day))
           .join(", ")}.`,
       );
     }
@@ -1018,8 +1022,8 @@ export function ShiftEditModal({
   const title = seriesEditOpen
     ? "Serie bearbeiten"
     : mode === "edit"
-      ? `Schicht bearbeiten · ${formatLongDate(date)}`
-      : `Schicht anlegen · ${formatLongDate(date)}`;
+      ? `Schicht bearbeiten · ${formatDate(date, true)}`
+      : `Schicht anlegen · ${formatDate(date, true)}`;
 
   // The series editor writes the rule, not this day — so it gets its own
   // footer: no per-day delete, and a back route to the single occurrence.
@@ -1327,7 +1331,7 @@ export function ShiftEditModal({
                 {seriesEditOpen && seriesRule && (
                   <InsetPanel tone="white" className="space-y-3">
                     <p className="text-xs text-gray-600">
-                      {`Die Änderungen gelten ab ${formatShortDate(seriesAppliesFrom)} für alle weiteren Termine der Serie. Termine davor bleiben unverändert, ebenso Termine bis heute.`}
+                      {`Die Änderungen gelten ab ${formatDate(seriesAppliesFrom)} für alle weiteren Termine der Serie. Termine davor bleiben unverändert, ebenso Termine bis heute.`}
                     </p>
                     <FieldGroup label="Wochentage">
                       <WeekdayPicker
@@ -1348,7 +1352,7 @@ export function ShiftEditModal({
                         periodHasCycle={seriesPeriodHasCycle}
                         weekHint={
                           seriesDefaultAbPattern !== null
-                            ? `Die Woche vom ${formatShortDate(seriesAppliesFrom)} ist Woche ${
+                            ? `Die Woche vom ${formatDate(seriesAppliesFrom)} ist Woche ${
                                 seriesDefaultAbPattern === 1 ? "A" : "B"
                               }.`
                             : undefined
@@ -1363,7 +1367,7 @@ export function ShiftEditModal({
                         <Input
                           controlSize="compact"
                           type="text"
-                          value={formatShortDate(seriesAppliesFrom)}
+                          value={formatDate(seriesAppliesFrom)}
                           disabled
                         />
                       </Field>
@@ -1586,7 +1590,7 @@ export function ShiftEditModal({
                             periodHasCycle={periodHasCycle}
                             weekHint={
                               defaultAbPattern !== null
-                                ? `Die Woche vom ${formatShortDate(date)} ist Woche ${
+                                ? `Die Woche vom ${formatDate(date)} ist Woche ${
                                     defaultAbPattern === 1 ? "A" : "B"
                                   }.`
                                 : undefined
@@ -1598,7 +1602,7 @@ export function ShiftEditModal({
                             <Input
                               controlSize="compact"
                               type="text"
-                              value={formatShortDate(date)}
+                              value={formatDate(date)}
                               disabled
                             />
                           </Field>
@@ -1649,12 +1653,12 @@ export function ShiftEditModal({
         description={
           isSeriesRow ? (
             <>
-              Die Schicht am <strong>{formatLongDate(date)}</strong> für{" "}
+              Die Schicht am <strong>{formatDate(date, true)}</strong> für{" "}
               <strong>{staffName}</strong> ist Teil einer Serie.
             </>
           ) : (
             <>
-              Die geplante Schicht am <strong>{formatLongDate(date)}</strong>{" "}
+              Die geplante Schicht am <strong>{formatDate(date, true)}</strong>{" "}
               für <strong>{staffName}</strong> wird gelöscht.
             </>
           )
@@ -1742,7 +1746,7 @@ function describeSeriesRule(rule: SeriesRule): string {
   parts.push(
     rule.validUntil
       ? // valid_until is exclusive; the last day WITH a shift is the day before.
-        `bis ${formatShortDate(dayBeforeISO(rule.validUntil))}`
+        `bis ${formatDate(dayBeforeISO(rule.validUntil))}`
       : "bis Ende des Kalenderzeitraums",
   );
   return parts.filter(Boolean).join(" · ");
@@ -1832,58 +1836,6 @@ function isoWeekdayOf(isoDate: string): number {
   const [y, m, d] = isoDate.split("-").map(Number);
   const day = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).getDay();
   return day === 0 ? 7 : day;
-}
-
-function formatShortDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatLongDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function shiftDurationMinutes(
-  startTime: string,
-  endTime: string,
-): number | null {
-  const start = parseClockMinutes(startTime);
-  const end = parseClockMinutes(endTime);
-  if (start === null || end === null || end <= start) return null;
-  return end - start;
-}
-
-function parseClockMinutes(value: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(value);
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-}
-
-function parseBreakMinutes(raw: string, maxMinutes: number): number | null {
-  const trimmed = raw.trim();
-  if (trimmed === "") return null;
-  const n = Number(trimmed);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > maxMinutes) {
-    return null;
-  }
-  return n;
 }
 
 /** Ferien und Schließtage je Serie (#3820). Ohne Haken bleiben sie frei;
