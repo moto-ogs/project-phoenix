@@ -480,87 +480,78 @@ describe("StudentFeedbackHistoryPage", () => {
 
 // #8270: the API sends the Berlin school day and wall-clock time apart. The
 // filter, the day groups and the time must all show that school time,
-// whatever zone the browser runs in.
-describe.each(["Europe/Berlin", "UTC", "America/New_York"])(
-  "school day and time in a browser in %s (#8270)",
-  (zone) => {
-    const apiEntries = [
-      { id: "1", day: "2026-11-25", time: "08:05:00", value: "neutral" },
-      { id: "2", day: "2026-11-26", time: "15:30:23", value: "negative" },
-      { id: "3", day: "2026-11-26", time: "23:30:23", value: "positive" },
-    ].map((entry) => ({
-      ...entry,
-      student_id: "1",
-      is_mensa_feedback: entry.id === "1",
-      created_at: "2026-11-26T22:30:23Z",
-      updated_at: "2026-11-26T22:30:23Z",
-    }));
+// whatever zone the browser runs in. The zone matrix lives in
+// feedback-history-view.test.ts; this page case proves the wiring in UTC.
+describe("school day and time in a browser in UTC (#8270)", () => {
+  const apiEntries = [
+    { id: "1", day: "2026-11-25", time: "08:05:00", value: "neutral" },
+    { id: "2", day: "2026-11-26", time: "15:30:23", value: "negative" },
+    { id: "3", day: "2026-11-26", time: "23:30:23", value: "positive" },
+  ].map((entry) => ({
+    ...entry,
+    student_id: "1",
+    is_mensa_feedback: entry.id === "1",
+    created_at: "2026-11-26T22:30:23Z",
+    updated_at: "2026-11-26T22:30:23Z",
+  }));
 
-    it("groups by school day and shows the school clock", async () => {
-      vi.clearAllMocks();
-      vi.stubEnv("TZ", zone);
-      // Friday 27.11., 12:00 in Berlin.
-      setTestClock("2026-11-27T11:00:00Z");
-      // The zone change took effect, or the cases below prove nothing. The
-      // old code read the offset-less "23:30" in this zone and then formatted
-      // it for Berlin: 00:30 on the 27th in UTC, 05:30 in New York.
-      const late = new Date("2026-11-26T22:30:23Z");
-      expect(late.getHours()).toBe(
-        { "Europe/Berlin": 23, UTC: 22, "America/New_York": 17 }[zone],
+  it("groups by school day and shows the school clock", async () => {
+    vi.clearAllMocks();
+    vi.stubEnv("TZ", "UTC");
+    // Friday 27.11., 12:00 in Berlin.
+    setTestClock("2026-11-27T11:00:00Z");
+    // The zone change took effect, or the cases below prove nothing. The
+    // old code read the offset-less "23:30" in UTC and then formatted it
+    // for Berlin: 00:30 on the 27th.
+    expect(new Date("2026-11-26T22:30:23Z").getHours()).toBe(22);
+    const actual =
+      await vi.importActual<typeof import("~/lib/date-helpers")>(
+        "~/lib/date-helpers",
       );
-      const actual =
-        await vi.importActual<typeof import("~/lib/date-helpers")>(
-          "~/lib/date-helpers",
-        );
-      const { mapFeedbackResponse } =
-        await vi.importActual<typeof import("~/lib/feedback-api")>(
-          "~/lib/feedback-api",
-        );
-      const rangeHelper = vi.mocked(getStartDateForTimeRange);
-      const previous = rangeHelper.getMockImplementation()!;
-      rangeHelper.mockImplementation(actual.getStartDateForTimeRange);
-      try {
-        vi.mocked(fetchStudentFeedback).mockResolvedValueOnce(
-          apiEntries.map(mapFeedbackResponse),
-        );
-        render(<StudentFeedbackHistoryPage />);
-        fireEvent.click(await screen.findByText(/Alle Einträge anzeigen/));
+    const { mapFeedbackResponse } =
+      await vi.importActual<typeof import("~/lib/feedback-api")>(
+        "~/lib/feedback-api",
+      );
+    const rangeHelper = vi.mocked(getStartDateForTimeRange);
+    const previous = rangeHelper.getMockImplementation()!;
+    rangeHelper.mockImplementation(actual.getStartDateForTimeRange);
+    try {
+      vi.mocked(fetchStudentFeedback).mockResolvedValueOnce(
+        apiEntries.map(mapFeedbackResponse),
+      );
+      render(<StudentFeedbackHistoryPage />);
+      fireEvent.click(await screen.findByText(/Alle Einträge anzeigen/));
 
-        // Day groups by calendar day, the latest first; no 27.11.
-        expect(
-          screen
-            .getAllByRole("heading", { level: 3 })
-            .map((h) => h.textContent),
-        ).toEqual([
-          "Donnerstag, 26. November 2026",
-          "Mittwoch, 25. November 2026",
-        ]);
-        const thursday = screen
-          .getByRole("heading", { name: "Donnerstag, 26. November 2026" })
-          .closest("section")!;
-        expect(
-          within(thursday)
-            .getAllByTestId(/^feedback-indicator-/)
-            .map((row) => row.textContent),
-        ).toEqual([
-          expect.stringContaining("23:30"),
-          expect.stringContaining("15:30"),
-        ]);
-        expect(thursday).not.toHaveTextContent("00:30");
+      // Day groups by calendar day, the latest first; no 27.11.
+      expect(
+        screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+      ).toEqual([
+        "Donnerstag, 26. November 2026",
+        "Mittwoch, 25. November 2026",
+      ]);
+      const thursday = screen
+        .getByRole("heading", { name: "Donnerstag, 26. November 2026" })
+        .closest("section")!;
+      expect(
+        within(thursday)
+          .getAllByTestId(/^feedback-indicator-/)
+          .map((row) => row.textContent),
+      ).toEqual([
+        expect.stringContaining("23:30"),
+        expect.stringContaining("15:30"),
+      ]);
+      expect(thursday).not.toHaveTextContent("00:30");
 
-        // The filter agrees: today (27.11.) has no feedback.
-        fireEvent.click(screen.getByText("Heute"));
-        expect(
-          await screen.findByText(
-            /Kein Feedback für den ausgewählten Zeitraum/,
-          ),
-        ).toBeInTheDocument();
-      } finally {
-        rangeHelper.mockImplementation(previous);
-      }
-    });
-  },
-);
+      // The filter agrees: today (27.11.) has no feedback.
+      fireEvent.click(screen.getByText("Heute"));
+      expect(
+        await screen.findByText(/Kein Feedback für den ausgewählten Zeitraum/),
+      ).toBeInTheDocument();
+    } finally {
+      rangeHelper.mockImplementation(previous);
+    }
+  });
+});
 
 function ReloadFeedback() {
   const invalidate = useInvalidateFamily();

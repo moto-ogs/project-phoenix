@@ -1,13 +1,13 @@
 import { formatDate, parseISODate } from "~/lib/date-helpers";
 import type { FeedbackEntry } from "~/lib/feedback-api";
+import { formatColumnDate } from "~/lib/shift-helpers";
+import { isoWeekdayShortLabel } from "~/lib/weekdays";
 
 // Ansichtsmodell der Feedbackhistorie (#8270). Ein Eintrag trägt den
 // Berliner Schultag ("YYYY-MM-DD") und die Wanduhrzeit ("HH:MM:SS") getrennt.
 // Beides bleibt Text: kein `new Date(...)`, sonst rechnet der Browser in
 // seiner eigenen Zeitzone um und ein Feedback von 23:30 Uhr rutscht auf den
 // Folgetag.
-
-const WEEKDAY_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
 
 export interface FeedbackDayGroup {
   /** Schultag als "YYYY-MM-DD": Schlüssel und Sortierwert der Gruppe. */
@@ -20,7 +20,7 @@ export interface FeedbackDayGroup {
 
 export interface FeedbackChartPoint {
   /** Achsenbeschriftung, der Wochentag: „Do“. */
-  readonly day: string;
+  readonly weekday: string;
   /** Kopf des Tooltips: „Do 26.11.“. */
   readonly label: string;
   readonly positive: number;
@@ -43,12 +43,8 @@ export function feedbackClock(time: string): string {
 
 /** Wochentag eines Schultags, unabhängig von der Gerätezeitzone. */
 function weekdayShort(day: string): string {
-  return WEEKDAY_SHORT[parseISODate(day).getDay()] ?? "";
-}
-
-/** „26.11.“ eines Schultags. */
-function dayMonth(day: string): string {
-  return `${day.slice(8, 10)}.${day.slice(5, 7)}.`;
+  // parseISODate liefert lokale Mitternacht: getDay() ist der Schultag.
+  return isoWeekdayShortLabel(((parseISODate(day).getDay() + 6) % 7) + 1) ?? "";
 }
 
 function latestFirst(a: FeedbackEntry, b: FeedbackEntry): number {
@@ -92,8 +88,8 @@ export function feedbackChartData(
   return Array.from(counts)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([day, count]) => ({
-      day: weekdayShort(day),
-      label: `${weekdayShort(day)} ${dayMonth(day)}`,
+      weekday: weekdayShort(day),
+      label: `${weekdayShort(day)} ${formatColumnDate(day)}`,
       ...count,
     }));
 }

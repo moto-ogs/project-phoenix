@@ -23,7 +23,7 @@ function FeedbackAxes({ interval }: { readonly interval: number }) {
     <>
       <CartesianGrid vertical={false} />
       <XAxis
-        dataKey="day"
+        dataKey="weekday"
         tickLine={false}
         axisLine={false}
         tickMargin={8}
