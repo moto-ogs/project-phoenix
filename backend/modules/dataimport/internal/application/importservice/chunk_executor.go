@@ -79,7 +79,7 @@ func (a *batchImportAttempt[T]) applyChunk(ctx context.Context, batch *importMod
 	var attemptErr error
 	a.batchFailure = nil
 	err := service.transactions.Savepoint(ctx, func(ctx context.Context) error {
-		if attemptErr = a.applySegments(ctx, writer, batch); attemptErr != nil {
+		if attemptErr = a.applyChunkRows(ctx, service, writer, batch); attemptErr != nil {
 			return failed
 		}
 		return nil
@@ -140,6 +140,22 @@ func (a *batchImportAttempt[T]) replayChunk(ctx context.Context, service *Import
 		return replay, err
 	}
 	return replay, a.applyAcceptedRows(ctx, fresh, replay)
+}
+
+// applyChunkRows writes the chunk's segments inside the follow-up the row
+// path owes its writes too (#8204): its gates come before the chunk's first
+// statement and its follow-up after the last segment, so both roll back with
+// the savepoint and the replay takes them afresh. A failure of either has no
+// batch failure, so it is returned instead of replayed.
+func (a *batchImportAttempt[T]) applyChunkRows(ctx context.Context, service *ImportService[T], writer ports.ChunkWriter[T], batch *importModels.ImportResult[T]) error {
+	ctx, finish, err := beginRowWrites(ctx, service.config)
+	if err != nil {
+		return err
+	}
+	if err := a.applySegments(ctx, writer, batch); err != nil {
+		return err
+	}
+	return finish(ctx)
 }
 
 // applySegments splits the accepted rows of the chunk into segments of

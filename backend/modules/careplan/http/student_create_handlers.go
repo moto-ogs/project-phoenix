@@ -209,6 +209,11 @@ func (rs *Resource) persistNewStudent(ctx context.Context, person *peopleModule.
 		}
 	}
 
+	cohortGatesHeld, err := rs.acquireNewStudentCohortGates(ctx, student)
+	if err != nil {
+		return err
+	}
+
 	// Create person - the retained person service validates it
 	created, err := rs.Persons.CreatePerson(ctx, peopleModule.CreatePerson{
 		FirstName: person.FirstName, LastName: person.LastName,
@@ -235,7 +240,45 @@ func (rs *Resource) persistNewStudent(ctx context.Context, person *peopleModule.
 		}
 	}
 
-	return rs.persistNewStudentAttachments(ctx, student.ID, req, staffID)
+	if err := rs.persistNewStudentAttachments(ctx, student.ID, req, staffID); err != nil {
+		return err
+	}
+	return rs.followNewStudentCohort(ctx, student, cohortGatesHeld)
+}
+
+// acquireNewStudentCohortGates takes the gates the cohort follow-up of a new
+// child needs (#8204), before the insert, in the order the class edit takes
+// them (acquirePreRowLockGates): the shared class-writes gate first, the
+// recurrence gate second. A child without Klasse and Gruppe reaches no
+// target, so it takes none.
+func (rs *Resource) acquireNewStudentCohortGates(ctx context.Context, student *peopleModule.StudentState) (bool, error) {
+	if rs.FollowCohortChanges == nil || (student.SchoolClass == "" && student.GroupID == nil) {
+		return false, nil
+	}
+	if rs.LockTemplateRecurrence == nil {
+		return false, errors.New("template recurrence lock is not configured")
+	}
+	if err := rs.PeopleDirectory.LockEnrollmentClassWrites(ctx); err != nil {
+		return false, err
+	}
+	if err := rs.LockTemplateRecurrence(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// followNewStudentCohort adds the new child to the already planned
+// occurrences, from today on, of every Regeltermin whose Klasse, Jahrgang or
+// Gruppe target the child is in (#8204): the same follow-up a class change
+// runs (#6841), with no Klasse and no Gruppe before. A failure aborts the
+// create, so no child is committed without the rosters it belongs to.
+func (rs *Resource) followNewStudentCohort(ctx context.Context, student *peopleModule.StudentState, gatesHeld bool) error {
+	if !gatesHeld {
+		return nil
+	}
+	return rs.FollowCohortChanges(ctx, []TargetCohortChange{{
+		StudentID: student.ID, SchoolClassChanged: student.SchoolClass != "", GroupChanged: student.GroupID != nil,
+	}}, rs.todayDate())
 }
 
 // persistNewStudentAttachments writes the optional records that hang off a

@@ -59,7 +59,9 @@ func newImportCohorts(bookings careplan.BookingMaterializationCapability, roster
 		Lock: bookings.LockOfferingDerivedWrites,
 		Follow: func(ctx context.Context, changes []importPorts.CohortChange, from calendar.Date) error {
 			for _, change := range changes {
-				if change.SchoolClassChanged {
+				// A new child has no bookings yet, so no offering-sourced
+				// roster can owe it a row (#8204).
+				if change.SchoolClassChanged && !change.Created {
 					if err := bookings.ResyncOfferingSourcedTemplates(ctx, from); err != nil {
 						return err
 					}
