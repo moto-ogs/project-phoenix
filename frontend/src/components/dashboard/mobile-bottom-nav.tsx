@@ -1054,11 +1054,8 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind fixed nav */}
-      {/* `split:block`: das iPad quer bekommt die Pill der App (#8070). */}
       {/* Am Telefon hält `PortalShell` den Platz der Pill frei (#8070). */}
-      {pillHidden ? null : (
-        <div className="split:block app:hidden h-16 lg:hidden" />
-      )}
+      {pillHidden ? null : <div className="app:hidden h-16 lg:hidden" />}
 
       <LogoutModal
         isOpen={logoutModalOpen}
@@ -1082,8 +1079,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         look={isApp ? "card" : "pill"}
         indicator={indicator}
         hidden={pillHidden}
-        // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.
-        className={`split:block tablet:px-[calc(50vw-22rem)] ${className}`}
+        className={className}
         open={isOverflowMenuOpen}
         onOpenChange={setIsOverflowMenuOpen}
         // In der App ist „Mehr“ eine eigene Seite (#8070, Vorschlag); im

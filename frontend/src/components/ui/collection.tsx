@@ -172,9 +172,7 @@ export function CollectionGroup({
             </Button>
           </h3>
         ) : (
-          <h3 className="tablet:text-[0.9375rem] text-sm font-semibold text-gray-700">
-            {heading}
-          </h3>
+          <h3 className="text-sm font-semibold text-gray-700">{heading}</h3>
         )}
         {meta ? (
           <div className="shrink-0 text-sm text-gray-500">{meta}</div>
@@ -194,7 +192,7 @@ export function CollectionGroup({
 
 /**
  * Ob der klebende Kopf gerade klebt (unter ihm laufen Zeilen weg). Prüft bei
- * jedem Scrollen, auch in Spalten mit eigenem Scroll (`SplitView`).
+ * jedem Scrollen.
  */
 function useHeadStuck(
   ref: RefObject<HTMLDivElement | null>,
@@ -287,7 +285,7 @@ export function CollectionRow({
   const titleNode = (
     <span
       className={cn(
-        "tablet:text-base tablet:leading-6 block text-[0.9375rem] leading-5 font-medium text-gray-900",
+        "block text-[0.9375rem] leading-5 font-medium text-gray-900",
         wrap ? "break-words" : "truncate",
       )}
     >
@@ -342,7 +340,7 @@ export function CollectionRow({
         {subtitle ? (
           <span
             className={cn(
-              "tablet:text-[0.9375rem] mt-0.5 block text-sm leading-5 text-gray-500",
+              "mt-0.5 block text-sm leading-5 text-gray-500",
               wrap ? "break-words whitespace-pre-line" : "truncate",
             )}
           >
@@ -351,7 +349,7 @@ export function CollectionRow({
         ) : null}
       </span>
       {meta ? (
-        <span className="tablet:text-[0.9375rem] shrink-0 text-right text-sm text-gray-600 tabular-nums">
+        <span className="shrink-0 text-right text-sm text-gray-600 tabular-nums">
           {meta}
         </span>
       ) : null}

@@ -151,7 +151,7 @@ export function ResponsivePanelSheet({
       >
         {/* Jedes Blatt der App hat ein X (#8070). */}
         <div className="flex items-center gap-3 pr-2 pl-4">
-          <DrawerTitle className="tablet:text-lg min-w-0 flex-1 truncate text-base leading-6">
+          <DrawerTitle className="min-w-0 flex-1 truncate text-base leading-6">
             {label}
           </DrawerTitle>
           <Button

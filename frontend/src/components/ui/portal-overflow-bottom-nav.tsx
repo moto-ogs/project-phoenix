@@ -77,7 +77,7 @@ export function PortalOverflowBottomNav({
   search,
   className,
 }: {
-  /** Zusätzliche Klassen der Leiste (iPad quer im Personal-Portal, #8070). */
+  /** Zusätzliche Klassen der Leiste. */
   readonly className?: string;
   readonly items: readonly PortalOverflowNavItem[];
   /** Das Attribut, das jeden Eintrag für Touren und Tests benennt. */

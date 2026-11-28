@@ -43,9 +43,9 @@
  *              Pill, Blätter, Seitenmuster.
  *   - `desk:`  Alles andere, also Desktop und iPad: der heutige Code.
  *   - `phone:` gleich `app:`.
- *   - `tablet:`, `split:` treffen nie zu. Das iPad behält die heutige
- *              Oberfläche (Entscheid nach dem Prototyp); die Varianten
- *              bleiben stehen, damit die Bausteine nicht umgebaut werden.
+ *
+ * Das iPad behält die heutige Oberfläche (Entscheid nach dem Prototyp,
+ * ADR 0323); eigene iPad-Varianten gibt es nicht.
  *
  * Genau eine von `app:`/`desk:` trifft zu. Desktop und iPad sehen keine
  * `app:`-Regel, deshalb bleiben sie pixelgleich.
@@ -56,8 +56,6 @@
 @custom-variant in-flow (&:where(:not(.absolute, .fixed, .sticky)));
 @custom-variant desk (@media (width >= 40rem));
 @custom-variant phone (@media (width < 40rem));
-@custom-variant tablet (@media not all);
-@custom-variant split (@media not all);
 
 /*
  * moto brand tokens
@@ -421,32 +419,6 @@
     transparent 0
   );
   background-size: 14px 14px;
-}
-
-/* Liste neben Detail am iPad quer (#8070, `SplitView`): Die Seite steht,
-   die Spalten scrollen je für sich. Die Spalte, in der die ActionBar steht,
-   endet über ihr; ohne Zuordnung enden beide Spalten über ihr. */
-html[data-split-page] {
-  overflow: hidden;
-}
-
-/* Eine Spalte, unter der noch Inhalt folgt, läuft unten auf 2,5 rem weich
-   aus; nur der Inhalt, nicht eine unten klebende Aktion der Spalte
-   (`--split-fade-inset` = deren Höhe, gesetzt von `SplitView`). */
-[data-split-view] > [data-more-below] {
-  --split-fade-end: calc(100% - var(--split-fade-inset, 0px));
-  mask-image: linear-gradient(
-    to bottom,
-    black calc(var(--split-fade-end) - 2.5rem),
-    transparent var(--split-fade-end),
-    black var(--split-fade-end)
-  );
-}
-
-html[data-action-bar-column="list"] [data-split-view] > [data-split-list],
-html[data-action-bar-column="detail"] [data-split-view] > [data-split-detail],
-html[data-action-bar-column="all"] [data-split-view] > * {
-  max-height: calc(100% - var(--app-action-bar-space, 0px));
 }
 
 /* Deckende Zonen der App (#8070): hinter der schmalen Kopfkarte, der

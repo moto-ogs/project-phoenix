@@ -91,7 +91,6 @@ import {
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
 import { FOCUSABLE_SELECTOR, useScrollRegion } from "./hooks/useScrollRegion";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
-import { SHEET_TABLET_CARD_CLASSES } from "./drawer";
 
 /**
  * Unter sm fährt das Panel von unten ein, darüber von rechts. Im Server-Render
@@ -107,8 +106,8 @@ function useSlideOverDirection(): {
   isResolved: boolean;
 } {
   const belowSm = useResolvedMediaQuery(BELOW_SM);
-  // In der App (auch iPad hoch und quer) ist das Panel das eine Blatt der
-  // App: von unten, am iPad als Karte (#8070). Der Desktop behält die Seite.
+  // In der App ist das Panel das eine Blatt der App: von unten (#8070).
+  // Desktop und iPad behalten die Seite.
   const app = useIsApp();
   return {
     direction: belowSm === true || app ? "bottom" : "right",
@@ -469,7 +468,7 @@ const SlideOverContent = React.forwardRef<
               ? // Blatt von unten: an drei Kanten bündig, oben abgerundet, nie
                 // höher als 90vh — der Rest der Seite bleibt als Kontext sichtbar.
                 // Am iPad schwebt es als Karte wie jedes Blatt der App.
-                `inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl ${SHEET_TABLET_CARD_CLASSES}`
+                "inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl"
               : // `max-w-full` fängt den einen Frame vor dem matchMedia-Effect ab:
                 // ein per Deep-Link (?block=…) sofort offenes Panel würde sonst
                 // kurz mit 420px auf einem schmaleren Display stehen.

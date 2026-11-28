@@ -476,7 +476,7 @@ function AppStatsChips({
           </>
         );
         const chip =
-          "tablet:h-7 tablet:px-3 tablet:text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2.5 text-xs text-gray-700";
+          "inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2.5 text-xs text-gray-700";
         return (
           <span key={`${index}-${item.label}`} className={chip}>
             {item.onSelect ? (

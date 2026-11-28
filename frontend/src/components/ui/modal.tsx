@@ -404,7 +404,7 @@ export function Modal({
             <div
               className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
                 appSheet
-                  ? `tablet:mx-4 tablet:mb-[calc(1rem+env(safe-area-inset-bottom))] tablet:w-[calc(100%-2rem)] tablet:max-w-[35rem] tablet:rounded-2xl max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl`
+                  ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl`
                   : mobileSheet
                     ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
                     : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`

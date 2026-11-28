@@ -161,13 +161,9 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 // the rounded inner edge looked off against the page chrome, and the
 // outer edge is flush against the viewport so nothing's there to round.
 // Width caps live in className overrides at the call site.
-// iPad (`tablet:`, hoch und quer): Das Blatt schwebt als Karte unten in der
-// Mitte, höchstens 560 px breit, mit Rand zu allen Seiten (#8070).
-export const SHEET_TABLET_CARD_CLASSES =
-  "tablet:inset-x-4 tablet:mx-auto tablet:max-w-[35rem] tablet:bottom-[calc(1rem+env(safe-area-inset-bottom))] tablet:max-h-[85dvh] tablet:rounded-2xl tablet:overflow-hidden tablet:shadow-xl tablet:after:hidden";
 
 const directionContentClasses: Record<DrawerDirection, string> = {
-  bottom: `fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl ${SHEET_TABLET_CARD_CLASSES}`,
+  bottom: `fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl`,
   left: "fixed inset-y-0 left-0 flex h-full w-full max-w-lg flex-col",
 };
 
