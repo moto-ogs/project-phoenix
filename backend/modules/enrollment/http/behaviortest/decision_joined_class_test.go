@@ -169,6 +169,45 @@ func TestDecisionService_InactiveExistingStudentRenewalJoinsClassFromFutureCareS
 	assert.Equal(t, []int64{existing.ID}, classSwitchRoster(t, env, fromCareStart), "the child joins when care starts")
 }
 
+// TestDecisionService_InactiveExistingStudentRenewalJoinsUnchangedClassFromFutureCareStart
+// pins #8279 for a re-enrollment that starts care again without changing the
+// class: the unchanged class must not hide that the child newly joins its
+// class's planned Regeltermine.
+func TestDecisionService_InactiveExistingStudentRenewalJoinsUnchangedClassFromFutureCareStart(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	futureStart := calendar.NewDate(2030, 8, 1)
+	env.sourcePhase.Kind = capability.PhaseKindSchoolYear
+	env.sourcePhase.ServiceStartDate = capability.Date(futureStart)
+	env.sourcePhase.ServiceEndDate = capability.Date(calendar.NewDate(2031, 7, 31))
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+
+	occurrences := newJoinedClassOccurrences(t, env)
+	class2 := occurrences.template(t, "target_school_class", "2")
+	beforeCare := occurrences.on(t, class2, decisionTestToday.AddDays(1))
+	fromCareStart := occurrences.on(t, class2, futureStart)
+
+	existing := testpkg.CreateTestStudent(t, env.db, "Mia", "Rueckkehr", "2")
+	student, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.repos.Student.FindByID, any(existing.ID))
+	require.NoError(t, err)
+	student.Status = peopleValues.StudentStatusInactive
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Student.Update, student))
+
+	requestID, childID := submitReEnrollment(t, env, "Eltern", "Rueckkehr", "renewal-future-unchanged@example.com", nil,
+		"Mia", "Rueckkehr", map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true})
+	matchChildToExistingStudent(t, env, childID, existing.ID)
+
+	_, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: requestID, ChildID: childID, Status: capability.DecisionApproved, ReviewedBy: env.creatorID,
+	})
+	require.NoError(t, err)
+
+	assert.Empty(t, classSwitchRoster(t, env, beforeCare), "the child must not join before care starts")
+	assert.Equal(t, []int64{existing.ID}, classSwitchRoster(t, env, fromCareStart), "the child joins when care starts")
+}
+
 // joinedClassOccurrences builds Regeltermine with a Klasse or Jahrgang target
 // and their planned occurrences in one calendar period.
 type joinedClassOccurrences struct {

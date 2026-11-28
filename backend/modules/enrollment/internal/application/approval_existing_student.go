@@ -164,20 +164,19 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 }
 
 // followRenewedStudent keeps the class-filtered rosters in step with the
-// renewal: a changed class moves the child (#2147, #6841). A child without an
-// OGS place stood in no Regeltermin (ADR 0282); with the place it joins those
-// of its class, which a class change does not reach when the class stays
-// (#8279).
+// renewal: a changed class moves the child (#2147, #6841). A child that newly
+// enters care — after being inactive or by receiving an OGS place — joins its
+// class's Regeltermine even when its class stays the same (#8279).
 func (d *Decisions) followRenewedStudent(ctx context.Context, renewal *existingStudentRenewal) error {
 	student := renewal.student
 	if err := d.followRewrittenClass(ctx, student.ID, renewal.previousSchoolClass, student.SchoolClass, student.EnrolledFrom); err != nil {
 		return fmt.Errorf("decision: approval class change: %w", err)
 	}
-	if !renewal.grantedPlace || renewal.previousSchoolClass != student.SchoolClass {
+	if renewal.previousSchoolClass != student.SchoolClass || (renewal.careRunning && !renewal.grantedPlace) {
 		return nil
 	}
 	if err := d.followJoinedClass(ctx, student.ID, student.SchoolClass, student.EnrolledFrom); err != nil {
-		return fmt.Errorf("decision: approval grants the OGS place: %w", err)
+		return fmt.Errorf("decision: approval joins class: %w", err)
 	}
 	return nil
 }
