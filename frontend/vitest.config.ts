@@ -39,6 +39,7 @@ const schoolDateTestFiles = [
   "src/app/traeger/einstellungen/zugriffsprotokoll/page.test.tsx",
   "src/app/operator/organizations/[slug]/traeger-erasure-order-section.test.tsx",
   "src/app/[tenant]/(protected)/students/[id]/feedback-history/page.test.tsx",
+  "src/app/[tenant]/(protected)/students/[id]/feedback-history/feedback-history-view.test.ts",
   "src/components/students/care-weekly-plan-editor.test.tsx",
   "src/app/[tenant]/(protected)/calendar/page.test.tsx",
   "src/app/[tenant]/(protected)/time-tracking/page.test.tsx",

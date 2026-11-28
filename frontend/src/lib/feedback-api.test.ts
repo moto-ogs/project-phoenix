@@ -51,13 +51,15 @@ describe("fetchStudentFeedback", () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({
       id: "10",
-      timestamp: "2026-04-01T15:30:23",
+      day: "2026-04-01",
+      time: "15:30:23",
       feedbackType: "positive",
       isMensaFeedback: false,
     });
     expect(result[1]).toEqual({
       id: "11",
-      timestamp: "2026-04-02T14:10:05",
+      day: "2026-04-02",
+      time: "14:10:05",
       feedbackType: "negative",
       isMensaFeedback: true,
     });

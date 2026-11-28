@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
 } from "~/components/ui/chart";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import type { FeedbackChartPoint } from "./feedback-history-view";
 
 const feedbackChartConfig = {
   positive: { label: "Positiv", color: MOTO_COLOR_PALETTE.green.base },
@@ -17,20 +18,12 @@ const feedbackChartConfig = {
   negative: { label: "Negativ", color: MOTO_COLOR_PALETTE.red.base },
 } satisfies ChartConfig;
 
-interface FeedbackChartPoint {
-  readonly day: string;
-  readonly label: string;
-  readonly positive: number;
-  readonly neutral: number;
-  readonly negative: number;
-}
-
 function FeedbackAxes({ interval }: { readonly interval: number }) {
   return (
     <>
       <CartesianGrid vertical={false} />
       <XAxis
-        dataKey="day"
+        dataKey="weekday"
         tickLine={false}
         axisLine={false}
         tickMargin={8}
