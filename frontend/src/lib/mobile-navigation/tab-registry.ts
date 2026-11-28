@@ -50,32 +50,17 @@ const INHERIT_RULES: readonly InheritRule[] = [
 
 /**
  * Seiten, auf denen die Pill in der App ausgeblendet ist (Produktentscheid,
- * Vorschlag #8070 „Nachrichten“). Eine Regel für alle Geräte: Die Pill fehlt,
- * solange der Chat-Verlauf allein den Bildschirm füllt, wie in Chat-Apps. Er
- * braucht die Höhe, das Schreibfeld klebt unten, und Zurück führt zur Liste,
- * also zum Reiter. Das gilt auf dem Telefon und dem iPad hoch. Auf dem iPad
- * quer (`split`) steht der Verlauf nie allein: `/messages/<id>` öffnet dort
- * die Liste mit dem Verlauf rechts daneben, und diese Ansicht ist die Wurzel
- * des Reiters, also mit Pill.
+ * Vorschlag #8070 „Nachrichten“): Die Pill fehlt, solange der Chat-Verlauf
+ * allein den Bildschirm füllt, wie in Chat-Apps. Er braucht die Höhe, das
+ * Schreibfeld klebt unten, und Zurück führt zur Liste, also zum Reiter.
  */
-interface PillHiddenRule {
-  readonly pattern: RegExp;
-  /** Auch im `split` (iPad quer) ausblenden. */
-  readonly inSplit: boolean;
-}
-
-const PILL_HIDDEN_RULES: readonly PillHiddenRule[] = [
-  { pattern: /^\/messages\/(?!groups(?:\/|$))[^/]+\/?$/, inSplit: false },
+const PILL_HIDDEN_PATTERNS: readonly RegExp[] = [
+  /^\/messages\/(?!groups(?:\/|$))[^/]+\/?$/,
 ];
 
 /** Ob die App auf `pathname` (ohne Mandanten-Präfix) ohne Pill läuft. */
-export function hidesPill(
-  pathname: string,
-  { split }: { readonly split: boolean },
-): boolean {
-  return PILL_HIDDEN_RULES.some(
-    (rule) => rule.pattern.test(pathname) && (!split || rule.inSplit),
-  );
+export function hidesPill(pathname: string): boolean {
+  return PILL_HIDDEN_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 type TabResolution =

@@ -26,13 +26,13 @@ export function usePillHidden(): boolean {
   const rawPathname = usePathname();
   const tenantSlug = useTenantSlugSafe();
   const routingMode = useTenantRoutingModeSafe();
-  const { isApp, isSplit } = useDeviceContext();
+  const { isApp } = useDeviceContext();
   const pathname = normalizeTenantPathname(
     rawPathname,
     tenantSlug,
     routingMode,
   );
-  const hidden = isApp && hidesPill(pathname, { split: isSplit });
+  const hidden = isApp && hidesPill(pathname);
 
   useEffect(() => {
     if (!hidden) return;

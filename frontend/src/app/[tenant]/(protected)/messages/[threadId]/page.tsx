@@ -62,9 +62,7 @@ import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useTenant } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
-import { ListRowLink } from "~/components/ui/list-row-link";
 import { ChevronRight } from "lucide-react";
-import { INBOX_SELECTION_PARAM } from "~/components/messaging/messages-inbox-app";
 import {
   type InboxThread,
   type Message,
@@ -126,14 +124,8 @@ const MESSAGES_BACK = {
   backLabel: "Zurück zu Nachrichten",
 } as const;
 
-/**
- * Der Verlauf einer Unterhaltung. `embedded` (#8070, iPad quer): rechts
- * neben der Liste in `/messages`, ohne eigenes Seitengerüst.
- */
-export function MessageThreadContent({
-  threadId,
-  embedded = false,
-}: Readonly<{ threadId: string; embedded?: boolean }>) {
+/** Der Verlauf einer Unterhaltung. */
+function MessageThreadContent({ threadId }: Readonly<{ threadId: string }>) {
   // App (#8070): einzeiliger Kopf, Kinderprofil als Symbol, Pill aus.
   const { isApp } = useDeviceContext();
   const router = useTenantRouter();
@@ -653,34 +645,6 @@ export function MessageThreadContent({
     </div>
   ) : null;
 
-  const markUnreadMenu = (
-    <OverflowMenu
-      ariaLabel="Weitere Aktionen"
-      items={[
-        {
-          label: MARK_UNREAD_LABEL,
-          description: "Für das ganze Team, bis jemand die Unterhaltung öffnet",
-          onClick: () => void handleMarkUnread(),
-        },
-      ]}
-    />
-  );
-  // Eingebetteter Verlauf (iPad quer): Der Weg zum Kind ist eine
-  // beschriftete Zeile über dem Verlauf, denn dort gibt es keine eigene
-  // Kopfkarte. Sie nennt zugleich, wessen Elternteil hier schreibt.
-  const childRow =
-    isApp && embedded && thread ? (
-      <ListRowLink
-        onClick={() =>
-          router.push(`/students/${thread.student_id}?from=/messages`)
-        }
-        className="mb-2 border-b border-gray-100 px-1 py-2"
-        icon={<MotoConceptIcon concept={childrenConcept} size={20} />}
-        title={`${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`}
-        subtitle="Zum Kinderprofil"
-      />
-    ) : null;
-
   const chat = (
     <div
       ref={containerRef}
@@ -695,10 +659,7 @@ export function MessageThreadContent({
       <SectionCard
         className="moto-scroll-surface flex min-h-0 flex-1 flex-col"
         bodyClassName="flex min-h-0 flex-1 flex-col"
-        title={embedded ? (thread?.guardian_name ?? "Unterhaltung") : undefined}
-        action={embedded && thread ? markUnreadMenu : undefined}
       >
-        {childRow}
         {showSkeleton ? (
           <ThreadSkeleton />
         ) : (
@@ -859,15 +820,6 @@ export function MessageThreadContent({
     />
   );
 
-  if (embedded) {
-    return (
-      <>
-        {chat}
-        {requestModal}
-      </>
-    );
-  }
-
   return (
     <TenantPage
       info={THREAD_INFO}
@@ -1012,21 +964,5 @@ function AnchorBottom({
 export default function MessageThreadPage() {
   const params = useParams();
   const threadId = params.threadId as string;
-  const { isSplit } = useDeviceContext();
-  // iPad quer: Der Verlauf steht immer rechts neben der Liste (⅓ : ⅔), auch
-  // bei direktem Aufruf oder aus einer Mitteilung. Die Liste mit Auswahl
-  // ist dieselbe Ansicht; ersetzt wird nur der Verlaufseintrag, Zurück führt
-  // dorthin, woher man kam.
-  if (isSplit) return <OpenInSplit threadId={threadId} />;
   return <MessageThreadContent threadId={threadId} />;
-}
-
-function OpenInSplit({ threadId }: Readonly<{ threadId: string }>) {
-  const router = useTenantRouter();
-  useEffect(() => {
-    router.replace(
-      `/messages?${INBOX_SELECTION_PARAM}=${encodeURIComponent(threadId)}`,
-    );
-  }, [router, threadId]);
-  return <TenantPage title="Nachrichten" loading />;
 }

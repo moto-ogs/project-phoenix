@@ -46,7 +46,6 @@ import { ActionBar } from "~/components/ui/action-bar";
 import { SearchBar } from "~/components/ui/page-header/SearchBar";
 import { ToggleChip } from "~/components/ui/toggle-chip";
 import { EmptyState } from "~/components/ui/empty-state";
-import { MessageThreadContent } from "./[threadId]/page";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const MESSAGES_INFO =
@@ -73,9 +72,9 @@ function MessagesInboxContent() {
   // turned off — composing would otherwise hit a backend 403 dead-end. Existing
   // threads stay readable.
   const messagingEnabled = tenant?.messagingEnabled === true;
-  // App (#8070): Liste in einer Karte, „Neu“ als Symbol, iPad quer mit
-  // Verlauf daneben. Der Desktop-Zweig bleibt unverändert.
-  const { isApp, isSplit } = useDeviceContext();
+  // App (#8070): Liste in einer Karte, „Neu“ als Symbol. Der Desktop-Zweig
+  // bleibt unverändert.
+  const { isApp } = useDeviceContext();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -449,9 +448,7 @@ function MessagesInboxContent() {
               }
             />
           ) : null}
-          {/* Im Split steht der Knopf über der Liste; ohne Liste (leer,
-              Fehler) braucht er auch dort die Leiste. */}
-          {isApp && appComposeButton && (!isSplit || bodyReplaced) ? (
+          {isApp && appComposeButton ? (
             <ActionBar>{appComposeButton}</ActionBar>
           ) : null}
         </>
@@ -463,7 +460,6 @@ function MessagesInboxContent() {
         {isApp ? (
           <MessagesInboxApp
             threads={filteredThreads}
-            listAction={isSplit ? appComposeButton : null}
             summary={
               threads === undefined
                 ? undefined
@@ -476,13 +472,6 @@ function MessagesInboxContent() {
                 description="Ändere die Suche oder den Filter."
               />
             }
-            renderDetail={(threadId) => (
-              <MessageThreadContent
-                key={threadId}
-                threadId={threadId}
-                embedded
-              />
-            )}
           />
         ) : (
           <ul className="space-y-3">
