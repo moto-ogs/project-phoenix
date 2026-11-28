@@ -9,19 +9,13 @@ export async function upcomingPickupDaysOf(
   studentId: string,
   guardianId: string,
 ): Promise<string[]> {
-  try {
-    const data = await fetchStudentPickupData(studentId);
-    return (data.pickupPersons ?? [])
-      .filter(
-        (person) =>
-          person.guardianProfileId === guardianId &&
-          !person.permissionWithdrawn,
-      )
-      .map((person) => person.exceptionDate);
-  } catch {
-    // Without the days the save still runs; the message then names none.
-    return [];
-  }
+  const data = await fetchStudentPickupData(studentId);
+  return (data.pickupPersons ?? [])
+    .filter(
+      (person) =>
+        person.guardianProfileId === guardianId && !person.permissionWithdrawn,
+    )
+    .map((person) => person.exceptionDate);
 }
 
 /** Die Meldung nach dem Entzug: welche Abholtage moto entfernt hat. */

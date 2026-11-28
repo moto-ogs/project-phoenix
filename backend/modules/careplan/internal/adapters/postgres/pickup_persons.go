@@ -61,8 +61,8 @@ type dayPickupRow struct {
 // statement would grow their query budgets. A zero to has no end. The
 // statement also reads the pickup permission a staff-set contact rests on,
 // through the relationship the database links to every contact's day, and
-// marks the day when it no longer holds (#8206); a weekend day exists only
-// where it follows Friday's plan, so it counts as Friday.
+// marks the day when it no longer holds (#8206). A weekend counts as Friday
+// only where the tenant's weekend follows Friday's plan.
 func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error) {
 	db, tid, err := s.database(ctx)
 	if err != nil {
@@ -70,6 +70,13 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 	}
 	if studentIDs != nil && len(studentIDs) == 0 {
 		return []careplan.DayPickup{}, domain.OperationStats{}, nil
+	}
+	weekendFollowsFriday := false
+	if rangeIncludesWeekend(from, to) {
+		weekendFollowsFriday, err = calendar.WeekendFollowsFriday(ctx)
+		if err != nil {
+			return nil, domain.OperationStats{}, fmt.Errorf("care plan postgres: resolve weekend plan: %w", err)
+		}
 	}
 	// A NULL end or child list reads without that limit.
 	var until, students any
@@ -90,7 +97,9 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 		), p AS (
 			SELECT person.*, (person.guardian_profile_id IS NOT NULL AND person.requested_by_guardian IS NULL
 				AND NOT COALESCE(permission.can_pickup AND (permission.pickup_weekdays IS NULL
-					OR LEAST(date_part('isodow', person.exception_date)::int, 5) = ANY(permission.pickup_weekdays)), false)) AS permission_withdrawn
+					OR CASE WHEN ?4::bool THEN LEAST(date_part('isodow', person.exception_date)::int, 5)
+						ELSE date_part('isodow', person.exception_date)::int END = ANY(permission.pickup_weekdays))
+					AND (date_part('isodow', person.exception_date)::int <= 5 OR ?4::bool), false)) AS permission_withdrawn
 			FROM schedule.student_pickup_persons AS person
 			LEFT JOIN users.student_guardian_pickup_permissions AS permission
 				ON permission.tenant_id = person.tenant_id AND permission.relationship_id = person.relationship_id
@@ -107,13 +116,28 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 			p.requested_by_guardian AS person_requested_by_guardian,
 			COALESCE(p.permission_withdrawn, false) AS person_permission_withdrawn
 		FROM d FULL JOIN p ON p.student_id = d.student_id AND p.exception_date = d.exception_date
-		ORDER BY 2, 1`, tid, from, until, students).Scan(ctx, &rows)
+		ORDER BY 2, 1`, tid, from, until, students, weekendFollowsFriday).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("care plan postgres: list day pickups: %w", err)
 	}
 	stats.Rows = int64(len(rows))
 	return mapRows(rows, func(row dayPickupRow) careplan.DayPickup { return row.toPublic(tid) }), stats, nil
+}
+
+// rangeIncludesWeekend avoids resolving the tenant setting for weekday-only
+// reads. Every seven-day span contains a weekend; checking the shorter range
+// directly keeps ListDayPickups one statement for its ordinary weekday paths.
+func rangeIncludesWeekend(from, to calendar.Date) bool {
+	if to.IsZero() || !to.Before(from.AddDays(6)) {
+		return true
+	}
+	for day := from; !to.Before(day); day = day.AddDays(1) {
+		if calendar.IsWeekend(day) {
+			return true
+		}
+	}
+	return false
 }
 
 func (row dayPickupRow) toPublic(tenantID int64) careplan.DayPickup {

@@ -76,23 +76,26 @@ func TestWithdrawnPickupPermissionRemovesTheFutureDays(t *testing.T) {
 	relationship := relationshipOf(t, tc.db, student.ID, grandma.ID)
 
 	// studentsTestToday is a Monday.
-	tuesday, wednesday, thursday, friday, nextMonday := studentsTestToday.AddDays(1), studentsTestToday.AddDays(2),
-		studentsTestToday.AddDays(3), studentsTestToday.AddDays(4), studentsTestToday.AddDays(7)
+	tuesday, wednesday, thursday, friday, saturday, nextMonday := studentsTestToday.AddDays(1), studentsTestToday.AddDays(2),
+		studentsTestToday.AddDays(3), studentsTestToday.AddDays(4), studentsTestToday.AddDays(5), studentsTestToday.AddDays(7)
 	for _, day := range []calendar.Date{tuesday, wednesday, nextMonday} {
 		code, body := putPickupPerson(t, tc, admin, student.ID, day, map[string]any{"guardian_profile_id": fmt.Sprint(grandma.ID)})
 		require.Equal(t, http.StatusOK, code, body)
 	}
 	familyPickupDay(t, tc.db, student.ID, grandma.ID, relationship, parent.ID, thursday, "Oma Berta")
+	// A legacy weekend row is not part of Friday's plan at the default setting.
+	// It remains visible as withdrawn, but withdrawing Friday must not delete it.
+	familyPickupDay(t, tc.db, student.ID, grandma.ID, relationship, parent.ID, saturday, "Oma Berta")
 	code, body := putPickupPerson(t, tc, admin, student.ID, friday, map[string]any{"guardian_profile_id": fmt.Sprint(grandpa.ID)})
 	require.Equal(t, http.StatusOK, code, body)
 
 	permissions, err := careplanCompose.NewGuardianPickupPermissions(tc.db, func(careplanCompose.Observation) {})
 	require.NoError(t, err)
-	change := func(tenant int64, change careplan.GuardianPickupPermissionChange) changedPermission {
+	change := func(commandCtx context.Context, tenant int64, change careplan.GuardianPickupPermissionChange) changedPermission {
 		t.Helper()
 		var changed changedPermission
 		change.Removed = func(days []careplan.RemovedPickupDay) { changed.RemovedDays = days }
-		require.NoError(t, testpkg.WithTenantTx(t, ctx, tc.db, tenant, func(ctx context.Context, _ testpkg.Tx) error {
+		require.NoError(t, testpkg.WithTenantTx(t, commandCtx, tc.db, tenant, func(ctx context.Context, _ testpkg.Tx) error {
 			var err error
 			changed.Found, err = permissions.ChangeGuardianPickupPermission(ctx, change)
 			return err
@@ -134,37 +137,46 @@ func TestWithdrawnPickupPermissionRemovesTheFutureDays(t *testing.T) {
 		}))
 		assert.False(t, changed.Found)
 		assert.Empty(t, changed.RemovedDays)
-		assert.Len(t, days(), 5)
+		assert.Len(t, days(), 6)
 	})
 
 	t.Run("narrowing the weekdays removes the withdrawn weekday", func(t *testing.T) {
 		canPickup := true
-		changed := change(tenantID, careplan.GuardianPickupPermissionChange{
+		changed := change(ctx, tenantID, careplan.GuardianPickupPermissionChange{
 			TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup, SetWeekdays: true, Weekdays: []int{1, 2, 4, 5},
 		})
 		require.True(t, changed.Found)
 		assert.Equal(t, []string{wednesday.String() + " Oma Berta"}, removedDays(changed))
 		assert.Equal(t, []string{
-			tuesday.String() + " Oma Berta", thursday.String() + " Oma Berta", friday.String() + " Opa Kurt", nextMonday.String() + " Oma Berta",
+			tuesday.String() + " Oma Berta", thursday.String() + " Oma Berta", friday.String() + " Opa Kurt", saturday.String() + " Oma Berta", nextMonday.String() + " Oma Berta",
 		}, days())
 	})
 
 	t.Run("a full withdrawal removes the rest and names the family's day", func(t *testing.T) {
 		canPickup := false
-		changed := change(tenantID, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup})
+		changed := change(ctx, tenantID, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup})
 		require.True(t, changed.Found)
 		assert.Equal(t, []string{tuesday.String() + " Oma Berta", thursday.String() + " Oma Berta", nextMonday.String() + " Oma Berta"}, removedDays(changed))
 		require.NotNil(t, changed.RemovedDays[1].RequestedByGuardian, "the family that named the day")
 		assert.Equal(t, parent.ID, *changed.RemovedDays[1].RequestedByGuardian)
 		assert.Nil(t, changed.RemovedDays[0].RequestedByGuardian)
-		assert.Equal(t, []string{friday.String() + " Opa Kurt"}, days(), "the other contact's day stays")
+		assert.Equal(t, []string{friday.String() + " Opa Kurt", saturday.String() + " Oma Berta"}, days(), "the other contact and a closed-weekend day stay")
 	})
 
 	t.Run("granting again removes nothing", func(t *testing.T) {
 		canPickup := true
-		changed := change(tenantID, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup})
+		changed := change(ctx, tenantID, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup})
 		require.True(t, changed.Found)
 		assert.Empty(t, changed.RemovedDays)
+	})
+
+	t.Run("a Friday-plan weekend follows the withdrawal", func(t *testing.T) {
+		canPickup := false
+		weekendCtx := calendar.WithWeekendPlan(ctx, func(context.Context) (bool, error) { return true, nil })
+		changed := change(weekendCtx, tenantID, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationship, CanPickup: &canPickup})
+		require.True(t, changed.Found)
+		assert.Equal(t, []string{saturday.String() + " Oma Berta"}, removedDays(changed))
+		assert.Equal(t, []string{friday.String() + " Opa Kurt"}, days())
 	})
 }
 
@@ -197,16 +209,24 @@ func TestPickupDayWithoutPermissionReadsAsWithdrawn(t *testing.T) {
 	testpkg.CreateTestPickupPerson(t, tc.db, student.ID, studentsTestToday.AddDays(3), 0, "Oma Erlaubt", allowed.ID)
 	family := testpkg.CreateTestAccount(t, tc.db, "lesen-parent")
 	familyPickupDay(t, tc.db, student.ID, neighbour.ID, relationshipOf(t, tc.db, student.ID, neighbour.ID), family.ID, studentsTestToday.AddDays(4), "Nachbar Ohne")
+	saturday := studentsTestToday.AddDays(5)
+	testpkg.CreateTestPickupPerson(t, tc.db, student.ID, saturday, 0, "Oma Erlaubt", allowed.ID)
 	testpkg.CreateTestPickupPerson(t, tc.db, student.ID, studentsTestToday.AddDays(7), 0, "Tante Frieda", 0)
 
-	assert.Equal(t, []pickupDayWire{
+	expected := []pickupDayWire{
 		{ExceptionDate: studentsTestToday.String(), Name: "Opa Montags"},
 		{ExceptionDate: tuesday.String(), Name: "Opa Montags", PermissionWithdrawn: true},
 		{ExceptionDate: studentsTestToday.AddDays(2).String(), Name: "Nachbar Ohne", PermissionWithdrawn: true},
 		{ExceptionDate: studentsTestToday.AddDays(3).String(), Name: "Oma Erlaubt"},
 		{ExceptionDate: studentsTestToday.AddDays(4).String(), Name: "Nachbar Ohne", RequestedByGuardian: true},
+		{ExceptionDate: saturday.String(), Name: "Oma Erlaubt", PermissionWithdrawn: true},
 		{ExceptionDate: studentsTestToday.AddDays(7).String(), Name: "Tante Frieda"},
-	}, listedPickupDays(t, tc, admin, student.ID, studentsTestToday))
+	}
+	assert.Equal(t, expected, listedPickupDays(t, tc, admin, student.ID, studentsTestToday))
+
+	// The same Saturday is valid when this tenant runs it on Friday's plan.
+	expected[5].PermissionWithdrawn = false
+	assert.Equal(t, expected, listedPickupDaysWithWeekendPlan(t, tc, admin, student.ID, studentsTestToday, true))
 }
 
 func putPickupPerson(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, studentID int64, date calendar.Date, body map[string]any) (int, string) {
@@ -221,6 +241,21 @@ func putPickupPerson(t *testing.T, tc *testContext, claims sessiontoken.AppClaim
 func listedPickupDays(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, studentID int64, from calendar.Date) []pickupDayWire {
 	t.Helper()
 	req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/pickup-schedules?from=%s&to=%s", studentID, from, from.AddDays(13)), nil)
+	rr := authExec(t, tc, req, claims, []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var response struct {
+		Data struct {
+			PickupPersons []pickupDayWire `json:"pickup_persons"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	return response.Data.PickupPersons
+}
+
+func listedPickupDaysWithWeekendPlan(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, studentID int64, from calendar.Date, followsFriday bool) []pickupDayWire {
+	t.Helper()
+	req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/pickup-schedules?from=%s&to=%s", studentID, from, from.AddDays(13)), nil)
+	req = req.WithContext(calendar.WithWeekendPlan(req.Context(), func(context.Context) (bool, error) { return followsFriday, nil }))
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var response struct {

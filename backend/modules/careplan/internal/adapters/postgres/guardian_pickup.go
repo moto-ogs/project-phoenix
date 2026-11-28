@@ -109,8 +109,8 @@ type removedPickupPersonRow struct {
 // deleteWithdrawnPickupPersons removes the relationship's pickup persons whose
 // plan weekday is withdrawn. The command carries no clock: a day before today
 // is no longer shown anywhere and is due for the nightly retention, so taking
-// it along changes nothing anybody sees. A weekend day exists only where it
-// follows Friday's plan, so it counts as Friday.
+// it along changes nothing anybody sees. A weekend counts as Friday only for
+// a tenant whose weekend follows Friday's plan.
 func (s *Store) deleteWithdrawnPickupPersons(ctx context.Context, tenantID, relationshipID int64, weekdays []int) ([]careplan.RemovedPickupDay, domain.OperationStats, error) {
 	if len(weekdays) == 0 {
 		return nil, domain.OperationStats{}, nil
@@ -119,14 +119,20 @@ func (s *Store) deleteWithdrawnPickupPersons(ctx context.Context, tenantID, rela
 	if err != nil {
 		return nil, domain.OperationStats{}, err
 	}
+	weekendFollowsFriday, err := calendar.WeekendFollowsFriday(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, fmt.Errorf("care plan postgres: resolve weekend plan: %w", err)
+	}
 	rows := []removedPickupPersonRow{}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`DELETE FROM schedule.student_pickup_persons
 		WHERE tenant_id = ? AND relationship_id = ?
-			AND LEAST(date_part('isodow', exception_date)::int, 5) = ANY(?::int[])
+			AND (date_part('isodow', exception_date)::int <= 5 OR ?::bool)
+			AND CASE WHEN ?::bool THEN LEAST(date_part('isodow', exception_date)::int, 5)
+				ELSE date_part('isodow', exception_date)::int END = ANY(?::int[])
 		RETURNING student_id, exception_date, person_name, requested_by_guardian`,
-		tenantID, relationshipID, pgdialect.Array(weekdays)).Scan(ctx, &rows)
+		tenantID, relationshipID, weekendFollowsFriday, weekendFollowsFriday, pgdialect.Array(weekdays)).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("care plan postgres: delete withdrawn pickup persons: %w", err)
