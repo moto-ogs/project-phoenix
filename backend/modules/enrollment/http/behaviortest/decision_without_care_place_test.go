@@ -94,6 +94,51 @@ func TestDecisionService_SkippedClassSwitchStillGrantsThePlace(t *testing.T) {
 	assert.Equal(t, "1b", class, "the school's class stays")
 }
 
+// TestDecisionService_SkippedClassSwitchResyncsOfferingRosterWhenGrantingPlace
+// pins #8279 for a child whose school class changed before its deferred place
+// is granted: the place makes its offering-sourced planned roster follow too.
+func TestDecisionService_SkippedClassSwitchResyncsOfferingRosterWhenGrantingPlace(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+
+	newYearStart := calendar.NewDate(2030, 8, 1)
+	env.sourcePhase.Kind = capability.PhaseKindSchoolYear
+	env.sourcePhase.ServiceStartDate = capability.Date(newYearStart)
+	env.sourcePhase.ServiceEndDate = capability.Date(calendar.NewDate(2031, 7, 31))
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+
+	offering := createSourceOffering(t, env, "Aufgeschobener Platz", nil)
+	period := offeringSourcePeriod(t, env)
+	template := createSourcedTemplate(t, env, "Aufgeschobener Platz", offering.ID, nil, period)
+	template.SourceSchoolClasses = []string{"1b"}
+	_, err := env.db.NewUpdate().Model(template).Column("source_school_classes").WherePK().Exec(ctx)
+	require.NoError(t, err)
+	occurrence := testpkg.CreateTestActivityInstance(t, env.db, calendar.NewDate(2030, 8, 5), *template.PlannedRoomID,
+		testpkg.ActivityInstanceOpts{ActivityGroupID: &template.ID, CalendarPeriodID: &period.ID})
+
+	child := testpkg.CreateTestStudent(t, env.db, "Nele", "Angebot", "1a")
+	testpkg.MarkTestStudentWithoutCarePlace(t, env.db, child.ID)
+	requestID, childID := submitReEnrollment(t, env, "Eltern", "Angebot", "renewal-offering-roster@example.com", nil,
+		"Nele", "Angebot", map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true})
+	createChildOfferingLink(t, env, childID, offering.ID, nil, nil)
+	matchChildToExistingStudent(t, env, childID, child.ID)
+	_, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: requestID, ChildID: childID, Status: capability.DecisionApproved, ReviewedBy: env.creatorID,
+	})
+	require.NoError(t, err)
+	_, err = env.db.ExecContext(ctx, `UPDATE users.student_school_memberships SET school_class = '1b'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID)
+	require.NoError(t, err)
+	assert.Empty(t, classSwitchRoster(t, env, occurrence.ID), "without its place the child is absent")
+
+	applied, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), decisionOwner(t, env.decision).ApplyDueClassSwitches, newYearStart)
+	require.NoError(t, err)
+	assert.Zero(t, applied, "the school class changed before the deferred switch")
+	assert.Equal(t, []int64{child.ID}, classSwitchRoster(t, env, occurrence.ID), "the granted place refreshes the offering-sourced roster")
+}
+
 // TestDecisionService_FullChildQuotaHoldsOnlyThePlace keeps the rollover
 // running when the Kinderkontingent is full on the first day of the school
 // year (#4803 review): the child without an OGS place moves into its new

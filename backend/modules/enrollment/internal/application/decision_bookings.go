@@ -52,18 +52,46 @@ func (d *Decisions) followClassChanges(ctx context.Context, previousClasses map[
 
 // followRewrittenClass keeps the class-filtered rosters in step once a
 // decision rewrote one child's class: the offering-sourced templates (#2147)
-// and the Regeltermine with a Klasse or Jahrgang target (#6841).
-func (d *Decisions) followRewrittenClass(ctx context.Context, studentID int64, previous, current string) error {
+// and the Regeltermine with a Klasse or Jahrgang target (#6841). It follows
+// from the care start at the earliest, so a future enrollment never enters a
+// planned roster before its care begins.
+func (d *Decisions) followRewrittenClass(ctx context.Context, studentID int64, previous, current string, careFrom *calendar.Date) error {
 	if previous == current {
 		return nil
 	}
-	if err := d.resyncOfferingSourcedTemplates(ctx, d.todayDate()); err != nil {
+	from := d.effectiveRosterFollowStart(careFrom)
+	if err := d.resyncOfferingSourcedTemplates(ctx, from); err != nil {
 		return fmt.Errorf("resync sourced templates after class change: %w", err)
 	}
-	if err := d.followClassChanges(ctx, map[int64]string{studentID: previous}, d.todayDate()); err != nil {
+	if err := d.followClassChanges(ctx, map[int64]string{studentID: previous}, from); err != nil {
 		return fmt.Errorf("follow class change on targeted templates: %w", err)
 	}
 	return nil
+}
+
+// followJoinedClass lets a child who has just come into OGS care with its
+// class, a new child of an approval or a child without an OGS place (#4803)
+// that has just got one, join the already planned occurrences of the
+// Regeltermine with a Klasse or Jahrgang target (#8279), as a class change
+// does (#6841): with no class before. It joins them from its care start,
+// today at the earliest, so no past day and no day before its care changes.
+// The caller holds the recurrence gate.
+func (d *Decisions) followJoinedClass(ctx context.Context, studentID int64, schoolClass string, careFrom *calendar.Date) error {
+	if schoolClass == "" {
+		return nil
+	}
+	if err := d.followClassChanges(ctx, map[int64]string{studentID: ""}, d.effectiveRosterFollowStart(careFrom)); err != nil {
+		return fmt.Errorf("follow joined class on targeted templates: %w", err)
+	}
+	return nil
+}
+
+func (d *Decisions) effectiveRosterFollowStart(careFrom *calendar.Date) calendar.Date {
+	from := d.todayDate()
+	if careFrom != nil && careFrom.After(from) {
+		from = *careFrom
+	}
+	return from
 }
 
 // materializeEnrollmentsForApproval writes the roster rows of the child's

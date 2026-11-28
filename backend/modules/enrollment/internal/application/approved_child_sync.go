@@ -331,7 +331,7 @@ func (d *Decisions) syncApprovedChildClass(ctx context.Context, run *approvedChi
 	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, input); err != nil {
 		return fmt.Errorf("decision: sync approved child student: %w", err)
 	}
-	if err := d.followRewrittenClass(ctx, student.ID, previousSchoolClass, student.SchoolClass); err != nil {
+	if err := d.followRewrittenClass(ctx, student.ID, previousSchoolClass, student.SchoolClass, student.EnrolledFrom); err != nil {
 		return fmt.Errorf("decision: %w", err)
 	}
 	return nil

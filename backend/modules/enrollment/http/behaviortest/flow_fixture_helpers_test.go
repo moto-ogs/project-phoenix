@@ -237,20 +237,21 @@ func testStudentEnrollment(db *bun.DB) owners.EnrollmentDecisionPeople {
 type careTemplateGroup struct {
 	bun.BaseModel `bun:"table:activities.groups,alias:grp"`
 
-	ID                    int64   `bun:"id,pk,autoincrement"`
-	TenantID              int64   `bun:"tenant_id,notnull"`
-	Name                  string  `bun:"name,notnull"`
-	MaxParticipants       int     `bun:"max_participants,nullzero"`
-	IsOpen                bool    `bun:"is_open,notnull"`
-	CategoryID            int64   `bun:"category_id,notnull"`
-	PlannedRoomID         *int64  `bun:"planned_room_id"`
-	Type                  string  `bun:"type,notnull"`
-	IsTemplate            bool    `bun:"is_template,notnull"`
-	SeriesRootID          *int64  `bun:"series_root_id"`
-	CalendarPeriodID      *int64  `bun:"calendar_period_id"`
-	TargetGroupType       string  `bun:"target_group_type,notnull"`
-	SourceCareOfferingIDs []int64 `bun:"source_care_offering_ids,type:jsonb,nullzero"`
-	SourceGradeLevels     []int   `bun:"source_grade_levels,type:jsonb,nullzero"`
+	ID                    int64    `bun:"id,pk,autoincrement"`
+	TenantID              int64    `bun:"tenant_id,notnull"`
+	Name                  string   `bun:"name,notnull"`
+	MaxParticipants       int      `bun:"max_participants,nullzero"`
+	IsOpen                bool     `bun:"is_open,notnull"`
+	CategoryID            int64    `bun:"category_id,notnull"`
+	PlannedRoomID         *int64   `bun:"planned_room_id"`
+	Type                  string   `bun:"type,notnull"`
+	IsTemplate            bool     `bun:"is_template,notnull"`
+	SeriesRootID          *int64   `bun:"series_root_id"`
+	CalendarPeriodID      *int64   `bun:"calendar_period_id"`
+	TargetGroupType       string   `bun:"target_group_type,notnull"`
+	SourceCareOfferingIDs []int64  `bun:"source_care_offering_ids,type:jsonb,nullzero"`
+	SourceGradeLevels     []int    `bun:"source_grade_levels,type:jsonb,nullzero"`
+	SourceSchoolClasses   []string `bun:"source_school_classes,type:jsonb,nullzero"`
 }
 
 func (g *careTemplateGroup) SetTenantID(id int64) { g.TenantID = id }
