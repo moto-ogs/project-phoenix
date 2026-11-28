@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { DataGrid } from "~/components/ui/data-field";
 import {
   InvoiceAccountEmail,
   PartyInvoiceEmail,
+  PartyInvoiceEmailField,
   differentEmail,
 } from "./account-email-note";
 
@@ -17,6 +19,24 @@ describe("account email notes (#8215)", () => {
     expect(screen.getByText(/Rechnungen gehen an/)).toHaveTextContent(
       "Rechnungen gehen an eva.neu@example.org. Diese Adresse steht im Elternkonto. Der Vertrag bleibt, wie er unterschrieben wurde.",
     );
+  });
+
+  it("gives a single party its own field with the account's address", () => {
+    render(
+      <DataGrid>
+        <PartyInvoiceEmailField
+          email="eva@example.org"
+          accountEmail="eva.neu@example.org"
+        />
+      </DataGrid>,
+    );
+    expect(screen.getByText("Rechnungen per E-Mail an")).toBeInTheDocument();
+    expect(screen.getByText("eva.neu@example.org")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Adresse aus dem Elternkonto. Der Vertrag bleibt, wie er unterschrieben wurde.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("says at the invoice that it goes to the account and names the contract's address", () => {

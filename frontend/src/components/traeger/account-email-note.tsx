@@ -1,3 +1,5 @@
+import { DataField } from "~/components/ui/data-field";
+
 // Rechnungen gehen an die E-Mail-Adresse des Elternkontos, der Vertrag
 // bleibt wie unterschrieben (#8215). Weichen beide ab, sagt der Träger-Büro
 // das an Vertrag und Rechnung, damit niemand die Vertragsadresse für die
@@ -31,6 +33,26 @@ export function PartyInvoiceEmail({
       . Diese Adresse steht im Elternkonto. Der Vertrag bleibt, wie er
       unterschrieben wurde.
     </span>
+  );
+}
+
+/**
+ * The field of a single contract party: where the invoices go today, when
+ * the parents account has another address than the contract.
+ */
+export function PartyInvoiceEmailField({
+  email,
+  accountEmail,
+}: Readonly<{ email: string; accountEmail?: string }>) {
+  if (!differentEmail(email, accountEmail)) return null;
+  return (
+    <DataField label="Rechnungen per E-Mail an">
+      <span className="wrap-anywhere">{accountEmail}</span>
+      <span className="block text-sm font-normal text-gray-600">
+        Adresse aus dem Elternkonto. Der Vertrag bleibt, wie er unterschrieben
+        wurde.
+      </span>
+    </DataField>
   );
 }
 
