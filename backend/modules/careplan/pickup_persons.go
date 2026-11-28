@@ -55,6 +55,12 @@ type PickupPerson struct {
 	// named the person (#8162); the OGS approval wrote the value. Nil for a
 	// value the staff set.
 	RequestedByGuardian *int64
+	// PermissionWithdrawn is set on read: the staff set the contact through
+	// its standing pickup permission, and that permission no longer holds on
+	// the day (#8206). The day stays visible, but never as a valid pickup
+	// person. A day a family's signed one-day request named rests on that
+	// request instead and is never marked.
+	PermissionWithdrawn bool
 }
 
 // PickupPersonGuardianAuthorization names the relationship and plan weekday

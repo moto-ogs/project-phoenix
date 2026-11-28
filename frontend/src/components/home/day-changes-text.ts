@@ -138,11 +138,13 @@ const CHILD_TEXTS: Readonly<
     `Hinweis zum Abholen von ${childName(child)}: ${child.note ?? ""}`,
   // Wer heute abholt (#7655); bei einer einmaligen Person den Ausweis prüfen.
   child_pickup_person: (child, w) =>
-    child.pickupPerson
-      ? `${child.pickupPerson.name} holt ${childName(child)} ${w} ab.${
-          child.pickupPerson.oneTime ? " Bitte den Ausweis prüfen." : ""
-        }`
-      : `${childName(child)} wird ${w} von einer anderen Person abgeholt.`,
+    child.pickupPerson?.permissionWithdrawn
+      ? `${child.pickupPerson.name} darf ${childName(child)} ${w} nicht abholen. Die Abholerlaubnis ist entzogen.`
+      : child.pickupPerson
+        ? `${child.pickupPerson.name} holt ${childName(child)} ${w} ab.${
+            child.pickupPerson.oneTime ? " Bitte den Ausweis prüfen." : ""
+          }`
+        : `${childName(child)} wird ${w} von einer anderen Person abgeholt.`,
 };
 
 export function childChangeText(

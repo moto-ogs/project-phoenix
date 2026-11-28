@@ -73,6 +73,10 @@ import { StudentPaymentCard } from "./student-payment-card";
 import { hasPermission } from "~/lib/auth-utils";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { Loading } from "~/components/ui/loading";
+import {
+  pickupWithdrawalMessage,
+  upcomingPickupDaysOf,
+} from "~/lib/pickup-withdrawal";
 
 const logger = createLogger({ component: "StudentGuardianManager" });
 
@@ -405,6 +409,12 @@ export default function StudentGuardianManager({
     if (!first) return;
 
     const { guardianData, relationshipData, phoneNumbers } = first;
+    // Withdrawing the pickup permission removes the contact's pickup days of
+    // today and later (#8206); read them first, so the message names them.
+    const removedPickupDays =
+      editingGuardian.canPickup && !relationshipData.canPickup
+        ? await upcomingPickupDaysOf(studentId, editingGuardian.id)
+        : [];
     // A number the form added carries a temporary id; only stored ids stay.
     const storedPhoneIds = new Set(
       (editingGuardian.phoneNumbers ?? []).map((phone) => phone.id),
@@ -427,8 +437,11 @@ export default function StudentGuardianManager({
     await guardiansAfterWrite.refresh();
     onUpdate?.();
     setEditingGuardian(undefined);
+    const savedName = `${guardianData.firstName} ${guardianData.lastName}`;
     toastSuccess(
-      `Die Angaben von ${guardianData.firstName} ${guardianData.lastName} sind gespeichert.`,
+      removedPickupDays.length > 0
+        ? pickupWithdrawalMessage(savedName, removedPickupDays)
+        : `Die Angaben von ${savedName} sind gespeichert.`,
     );
   };
 

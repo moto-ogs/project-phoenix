@@ -196,6 +196,9 @@ type Pickup struct {
 type PickupPerson struct {
 	Name    string `json:"name"`
 	OneTime bool   `json:"one_time"`
+	// PermissionWithdrawn: the contact's pickup permission no longer holds
+	// on the day (#8206); the name is no valid pickup person.
+	PermissionWithdrawn bool `json:"permission_withdrawn,omitempty"`
 }
 
 // Day-planning reason codes are part of the students API wire contract

@@ -42,6 +42,8 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	// Pickup persons (#7655), opening changes (#7654), and days without lunch
 	// (#7656) follow the room closures at the head, so roll them back first
 	// just as the migration runner does.
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(ctx, db))
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, mealCancellationsDown(ctx, db))
@@ -58,5 +60,6 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.NoError(t, mealCancellationsUp(ctx, db), "the later migration applies again")
 	require.NoError(t, openingChangesUp(ctx, db), "the later migration applies again")
 	require.NoError(t, studentPickupPersonsUp(ctx, db), "the later migration applies again")
+	require.NoError(t, pickupPersonRelationshipUp(ctx, db), "the later pickup-person link (#8206) applies again")
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 }

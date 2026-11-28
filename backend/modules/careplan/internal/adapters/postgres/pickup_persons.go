@@ -28,6 +28,9 @@ type pickupPersonRow struct {
 	GuardianProfileID *int64        `bun:"guardian_profile_id"`
 	CreatedBy         *int64        `bun:"created_by"`
 	RequestedBy       *int64        `bun:"requested_by_guardian"`
+	// RelationshipID is set by the database from student and contact
+	// (#8206); a write leaves it to the trigger.
+	RelationshipID *int64 `bun:"relationship_id"`
 }
 
 // dayPickupRow is one child of the day with its Abholart, its pickup person,
@@ -49,12 +52,17 @@ type dayPickupRow struct {
 	PersonGuardianID    *int64     `bun:"person_guardian_profile_id"`
 	PersonCreatedBy     *int64     `bun:"person_created_by"`
 	PersonRequestedBy   *int64     `bun:"person_requested_by_guardian"`
+	PersonWithdrawn     bool       `bun:"person_permission_withdrawn"`
 	ExceptionDateString string     `bun:"exception_date"`
 }
 
 // ListDayPickups reads the Abholart and pickup person of every child and
 // day in one statement. Day views read both for many children, and a second
-// statement would grow their query budgets. A zero to has no end.
+// statement would grow their query budgets. A zero to has no end. The
+// statement also reads the pickup permission a staff-set contact rests on,
+// through the relationship the database links to every contact's day, and
+// marks the day when it no longer holds (#8206); a weekend day exists only
+// where it follows Friday's plan, so it counts as Friday.
 func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error) {
 	db, tid, err := s.database(ctx)
 	if err != nil {
@@ -80,9 +88,14 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 			WHERE tenant_id = ?0 AND exception_date >= ?1 AND (?2::date IS NULL OR exception_date <= ?2::date)
 				AND (?3::bigint[] IS NULL OR student_id = ANY(?3::bigint[]))
 		), p AS (
-			SELECT * FROM schedule.student_pickup_persons
-			WHERE tenant_id = ?0 AND exception_date >= ?1 AND (?2::date IS NULL OR exception_date <= ?2::date)
-				AND (?3::bigint[] IS NULL OR student_id = ANY(?3::bigint[]))
+			SELECT person.*, (person.guardian_profile_id IS NOT NULL AND person.requested_by_guardian IS NULL
+				AND NOT COALESCE(permission.can_pickup AND (permission.pickup_weekdays IS NULL
+					OR LEAST(date_part('isodow', person.exception_date)::int, 5) = ANY(permission.pickup_weekdays)), false)) AS permission_withdrawn
+			FROM schedule.student_pickup_persons AS person
+			LEFT JOIN users.student_guardian_pickup_permissions AS permission
+				ON permission.tenant_id = person.tenant_id AND permission.relationship_id = person.relationship_id
+			WHERE person.tenant_id = ?0 AND person.exception_date >= ?1 AND (?2::date IS NULL OR person.exception_date <= ?2::date)
+				AND (?3::bigint[] IS NULL OR person.student_id = ANY(?3::bigint[]))
 		)
 		SELECT COALESCE(d.student_id, p.student_id) AS student_id,
 			COALESCE(d.exception_date, p.exception_date)::text AS exception_date,
@@ -91,7 +104,8 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 			d.entered_by_traeger AS departure_entered_by_traeger,
 			p.id AS person_id, p.created_at AS person_created_at, p.updated_at AS person_updated_at,
 			p.person_name, p.guardian_profile_id AS person_guardian_profile_id, p.created_by AS person_created_by,
-			p.requested_by_guardian AS person_requested_by_guardian
+			p.requested_by_guardian AS person_requested_by_guardian,
+			COALESCE(p.permission_withdrawn, false) AS person_permission_withdrawn
 		FROM d FULL JOIN p ON p.student_id = d.student_id AND p.exception_date = d.exception_date
 		ORDER BY 2, 1`, tid, from, until, students).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
@@ -118,7 +132,7 @@ func (row dayPickupRow) toPublic(tenantID int64) careplan.DayPickup {
 		person := careplan.PickupPerson{
 			ID: *row.PersonID, TenantID: tenantID, StudentID: row.StudentID, ExceptionDate: day,
 			Name: *row.PersonName, GuardianProfileID: row.PersonGuardianID, CreatedBy: row.PersonCreatedBy,
-			RequestedByGuardian: row.PersonRequestedBy,
+			RequestedByGuardian: row.PersonRequestedBy, PermissionWithdrawn: row.PersonWithdrawn,
 		}
 		person.CreatedAt, person.UpdatedAt = instant(row.PersonCreatedAt), instant(row.PersonUpdatedAt)
 		out.Person = &person

@@ -18,6 +18,8 @@ func TestRetireDirectPermissionsMigrationRoundTrip(t *testing.T) {
 	// The room history stops (#3844) follow the device history at the head; they go first.
 	// The opening changes (#7654) and pickup persons (#7655) follow the room
 	// history stops at the head; pickup persons go first.
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(t.Context(), db))
 	require.NoError(t, studentPickupPersonsDown(t.Context(), db))
 	require.NoError(t, openingChangesDown(t.Context(), db))
 	require.NoError(t, mealCancellationsDown(t.Context(), db))

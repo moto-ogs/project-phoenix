@@ -252,6 +252,9 @@ type Child struct {
 type ChildPickupPerson struct {
 	Name    string `json:"name"`
 	OneTime bool   `json:"one_time"`
+	// PermissionWithdrawn: the contact's pickup permission no longer holds
+	// on the day (#8206); the name is no valid pickup person.
+	PermissionWithdrawn bool `json:"permission_withdrawn,omitempty"`
 }
 
 // ChildItem is one row of a child summary.

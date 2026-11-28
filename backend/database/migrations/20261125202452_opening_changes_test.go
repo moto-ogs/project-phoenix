@@ -31,6 +31,8 @@ func TestOpeningChangesGoWithTheSchoolAndRollBack(t *testing.T) {
 	assert.EqualValues(t, 1, result.RowCounts["schedule.opening_changes"], "the one day of the school")
 
 	// The pickup persons follow the opening changes at the head and roll back first.
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(ctx, db))
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	assert.False(t, exists())
@@ -43,6 +45,7 @@ func TestOpeningChangesGoWithTheSchoolAndRollBack(t *testing.T) {
 
 	require.NoError(t, openingChangesUp(ctx, db), "the migration applies again")
 	require.NoError(t, studentPickupPersonsUp(ctx, db), "the later pickup-person migration applies again")
+	require.NoError(t, pickupPersonRelationshipUp(ctx, db), "the later pickup-person link (#8206) applies again")
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())
 	again := testpkg.UniqueTestTenantID(t)

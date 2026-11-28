@@ -45,6 +45,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	// The room history stops (#3844) follow the device history at the head; they go first.
 	// The pickup persons (#7655), opening changes (#7654), days without lunch
 	// (#7656), and room closures (#7653) follow the room history stops at the head; they go first.
+	// The pickup person link (#8206) follows the pickup persons at the head; it goes first.
+	require.NoError(t, pickupPersonRelationshipDown(ctx, db))
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, mealCancellationsDown(ctx, db))
@@ -72,6 +74,7 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.NoError(t, mealCancellationsUp(ctx, db))
 	require.NoError(t, openingChangesUp(ctx, db))
 	require.NoError(t, studentPickupPersonsUp(ctx, db))
+	require.NoError(t, pickupPersonRelationshipUp(ctx, db), "the later pickup-person link (#8206) applies again")
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())
 	erases("the erasure works after the copies are back")
