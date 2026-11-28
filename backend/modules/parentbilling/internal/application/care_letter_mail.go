@@ -378,8 +378,7 @@ func careMailing(current careLetterRun, letter careSendable, states map[int64]pa
 		InvoiceID: invoice.ID, Kind: letter.kind, Number: invoice.Number, InvoiceNumber: invoice.Number,
 		ChildFirstName: invoice.ChildFirstName, ChildLastName: invoice.ChildLastName, SchoolName: invoice.SchoolName,
 		RecipientFirstName: invoice.Recipient.FirstName, RecipientLastName: invoice.Recipient.LastName,
-		RecipientEmail: invoice.Recipient.Email, ContractEmail: invoice.Recipient.ContractEmail,
-		TotalCents: invoice.TotalCents, Status: parentbilling.LetterMailNotSent,
+		RecipientEmail: invoice.Recipient.Email, TotalCents: invoice.TotalCents, Status: parentbilling.LetterMailNotSent,
 		InInbox: invoice.StudentID != nil,
 	}
 	if invoice.IssuedOn != nil {

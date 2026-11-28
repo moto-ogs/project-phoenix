@@ -20,7 +20,30 @@ type careAccountLetterBody struct {
 	InvoiceID      wireID `json:"invoice_id"`
 	Kind           string `json:"kind"`
 	RecipientEmail string `json:"recipient_email"`
-	ContractEmail  string `json:"contract_email"`
+}
+
+// careAccountRunBody is the run with the addresses of its invoices.
+type careAccountRunBody struct {
+	Invoices []struct {
+		ID         wireID `json:"id"`
+		ContractID wireID `json:"contract_id"`
+		Recipient  struct {
+			Email         string `json:"email"`
+			ContractEmail string `json:"contract_email"`
+		} `json:"recipient"`
+	} `json:"invoices"`
+}
+
+// careAccountRecipient is the recipient of the contract's invoice in body.
+func careAccountRecipient(t *testing.T, body []byte, contractID int64) (int64, string, string) {
+	t.Helper()
+	for _, invoice := range decodeSchoolPortalData[careAccountRunBody](t, body).Invoices {
+		if int64(invoice.ContractID) == contractID {
+			return int64(invoice.ID), invoice.Recipient.Email, invoice.Recipient.ContractEmail
+		}
+	}
+	require.FailNow(t, "no invoice for the contract")
+	return 0, "", ""
 }
 
 type careAccountContractBody struct {
@@ -104,13 +127,16 @@ func TestCareInvoiceGoesToTheParentsAccountAddressAndTheContractStaysAsSigned(t 
 	preview := f.run(t, int64(run.ID))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	invoice := invoiceOfContract(t, decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes()), mia)
+	invoiceID, email, contractEmail := careAccountRecipient(t, rec.Body.Bytes(), mia)
+	assert.Equal(t, moved, email, "the invoice goes to the account's address of today")
+	assert.Equal(t, signed, contractEmail, "the Abrechnung names the differing contract address")
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	_, email, contractEmail = careAccountRecipient(t, rec.Body.Bytes(), mia)
+	assert.Equal(t, []string{moved, signed}, []string{email, contractEmail}, "the issued invoice keeps both addresses")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters"), careLettersInput())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-
-	letter := careAccountLetter(t, f, int64(run.ID), int64(invoice.ID))
-	assert.Equal(t, moved, letter.RecipientEmail, "the invoice goes to the account's address of today")
-	assert.Equal(t, signed, letter.ContractEmail, "the Abrechnung names the differing contract address")
+	assert.Equal(t, moved, careAccountLetter(t, f, int64(run.ID), invoiceID).RecipientEmail)
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())

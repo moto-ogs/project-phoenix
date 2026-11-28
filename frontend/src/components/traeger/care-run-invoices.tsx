@@ -47,6 +47,7 @@ import { reductionExplanation } from "./care-reduction-format";
 import { MealPositionLine } from "./care-run-meals";
 import { InvoiceLine } from "./invoice-line";
 import { InvoicePaymentLine } from "./invoice-payment-line";
+import { InvoiceAccountEmail } from "./account-email-note";
 import { recipientKindLabel, recipientLine } from "./billing-payment-format";
 import { labelOf } from "~/lib/label-of";
 
@@ -274,6 +275,10 @@ function InvoiceFacts({ row }: Readonly<{ row: CareInvoiceRow }>) {
       <p className="mt-0.5 text-sm break-words text-gray-600">
         {recipientLine(invoice.recipient)}
       </p>
+      <InvoiceAccountEmail
+        email={invoice.recipient.email}
+        contractEmail={invoice.recipient.contractEmail}
+      />
       {kind ? (
         <p className="mt-1">
           <StatusBadge label={kind} tone="blue" />

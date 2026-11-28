@@ -42279,6 +42279,13 @@
             "nullable": true,
             "ref": "PostalAddress"
           }
+        },
+        {
+          "name": "contract_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -84156,6 +84163,13 @@
           "name": "has_account",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "account_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

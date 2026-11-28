@@ -127,15 +127,12 @@ type CareLetterMailing struct {
 	RecipientFirstName string        `json:"recipient_first_name"`
 	RecipientLastName  string        `json:"recipient_last_name"`
 	RecipientEmail     string        `json:"recipient_email"`
-	// ContractEmail is the contract's address when the letter goes to the
-	// differing address of the parents account (#8215).
-	ContractEmail      string `json:"contract_email,omitempty"`
-	TotalCents         int64  `json:"total_cents" contract:"number"`
-	Reason             string `json:"reason,omitempty"`
-	Cancelled          bool   `json:"cancelled"`
-	CancellationNumber string `json:"cancellation_number,omitempty"`
-	HasLetter          bool   `json:"has_letter"`
-	Printed            bool   `json:"printed"`
+	TotalCents         int64         `json:"total_cents" contract:"number"`
+	Reason             string        `json:"reason,omitempty"`
+	Cancelled          bool          `json:"cancelled"`
+	CancellationNumber string        `json:"cancellation_number,omitempty"`
+	HasLetter          bool          `json:"has_letter"`
+	Printed            bool          `json:"printed"`
 	// InInbox tells whether a sent letter lands in the parents inbox too: only
 	// when the invoice names the child's record (ADR 0165). Without one the
 	// family gets the letter by mail or on paper only.
