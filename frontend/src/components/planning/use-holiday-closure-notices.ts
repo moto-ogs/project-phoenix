@@ -1,140 +1,27 @@
 "use client";
 
 /**
- * Elternhinweise zu Schul-Schließtagen in gebuchten Ferienwochen (ADR 0196),
- * an beiden Stellen gleich: im Kalender der Schule und auf der Seite
- * „Schließtage“ des Träger-Büros. Jede Zeile nennt Grund, Tage, Stand und,
- * solange der Hinweis auf einen Klick wartet, die Zahl der Familien. Ein
- * Klick auf „Eltern informieren“ beauftragt den Versand ohne zweite Frage;
- * die Zeile zeigt sofort „Wird gesendet“. Erledigte Hinweise liegen in einer
- * zugeklappten Karte darunter. Gescheiterte und unklare Sendungen bleiben
- * oben sichtbar.
+ * Der Klick auf „Eltern informieren“ zu einem Schul-Schließtag in einer
+ * gebuchten Ferienwoche (ADR 0196), an beiden Stellen derselbe: im Kalender
+ * der Schule und auf der Seite „Schließtage“ des Träger-Büros. Der Klick
+ * beauftragt den Versand ohne zweite Frage; bis der Server antwortet, gilt
+ * der Hinweis als „Wird gesendet“. Was die Zeilen zeigen, steht in
+ * `holiday-closure-notice-cards.tsx`.
  */
 
-import {
-  type ComponentProps,
-  type ReactNode,
-  useCallback,
-  useId,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
 
-import {
-  CalendarClock,
-  type LucideIcon,
-  Mail,
-  MailCheck,
-  MailMinus,
-  MailQuestionMark,
-  MailX,
-  Send,
-} from "lucide-react";
-import type { IconTile } from "~/components/ui/icon-tile";
-import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError, isReadStateRefusal } from "~/lib/api-error";
-import {
-  type HolidayClosureNotice,
-  isNoticeDone,
-} from "~/lib/holiday-closure-notices";
+import type { HolidayClosureNotice } from "~/lib/holiday-closure-notices";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "HolidayClosureNotices" });
 
-/** Offene Zeilen vor „N weitere anzeigen“. */
-const INITIAL_OPEN_COUNT = 5;
-
-/** Was „Eltern informieren“ an einem Hinweis tut (#6757), in beiden Portalen. */
-export const NOTIFY_PARENTS_TOOLTIP =
-  "Sendet den Eltern der betroffenen Kinder sofort eine E-Mail.";
-
-/** Warum „N weitere anzeigen“ ohne Erklärung auskommt (#6757). */
-export const SHOW_MORE_NO_TOOLTIP =
-  "Zeigt nur mehr oder weniger Zeilen, an den Hinweisen ändert sich nichts.";
-
-/** „1 Familie hat …“ oder „12 Familien haben …“. */
-export function familiesBookedSentence(families: number): string {
-  return families === 1
-    ? "1 Familie hat an diesen Tagen Ferienbetreuung gebucht."
-    : `${families} Familien haben an diesen Tagen Ferienbetreuung gebucht.`;
-}
-
-interface NoticeStatusView {
-  /** Kein Etikett beim Vorschlag: Der Satz sagt es schon. */
-  readonly badge: {
-    readonly label: string;
-    readonly tone: StatusBadgeTone;
-  } | null;
-  readonly hint: string | null;
-  /**
-   * Symbol und Ton der Kachel vor der Zeile, damit der Stand in einer
-   * langen Liste auf einen Blick auffällt. Etikett und Satz tragen ihn
-   * weiter in Worten; die Kachel allein entscheidet nichts.
-   */
-  readonly tile: {
-    readonly icon: LucideIcon;
-    readonly tone: NonNullable<ComponentProps<typeof IconTile>["tone"]>;
-  };
-}
-
-/** Die Texte des Stands aus ADR 0196, Abschnitt 5. */
-export function noticeStatusView(
-  notice: Pick<HolidayClosureNotice, "status" | "changed">,
-): NoticeStatusView {
-  switch (notice.status) {
-    case "suggested":
-      return notice.changed
-        ? {
-            badge: { label: "Geändert", tone: "warning" },
-            hint: "Der Schließtag wurde geändert. Bitte prüfe den Hinweis.",
-            tile: { icon: CalendarClock, tone: "orange" },
-          }
-        : {
-            badge: null,
-            hint: "Die Eltern wurden noch nicht informiert.",
-            tile: { icon: Mail, tone: "orange" },
-          };
-    case "sending":
-      return {
-        badge: { label: "Wird gesendet", tone: "blue" },
-        hint: "Bitte warte.",
-        tile: { icon: Send, tone: "blue" },
-      };
-    case "no_mail":
-      return {
-        badge: { label: "Keine E-Mail nötig", tone: "gray" },
-        hint: null,
-        tile: { icon: MailMinus, tone: "neutral" },
-      };
-    case "sent":
-      return {
-        badge: { label: "Gesendet", tone: "green" },
-        hint: null,
-        tile: { icon: MailCheck, tone: "green" },
-      };
-    case "failed":
-      return {
-        badge: { label: "Nicht angekommen", tone: "red" },
-        hint: "Bitte versuche es erneut.",
-        tile: { icon: MailX, tone: "red" },
-      };
-    case "unknown":
-      return {
-        badge: { label: "Ergebnis unbekannt", tone: "warning" },
-        hint: "Bitte lass den Versand vom moto-Team prüfen.",
-        tile: { icon: MailQuestionMark, tone: "orange" },
-      };
-  }
-}
-
-/** Ein Hinweis, wie die Liste ihn zeigt: während des Klicks „Wird gesendet“. */
-export function shownNotice<T extends HolidayClosureNotice>(
-  notice: T,
-  sending: boolean,
-): T {
-  return sending
-    ? { ...notice, status: "sending", canNotify: false, changed: false }
-    : notice;
+/** Was die Karten vom Versand wissen müssen: Läuft er, und wie startet er. */
+export interface NoticeNotifier {
+  readonly isSending: (id: string) => boolean;
+  readonly notify: (notice: HolidayClosureNotice) => Promise<void>;
 }
 
 function sendingToast(families: number): string {
@@ -229,39 +116,8 @@ export function useNoticeNotify(
     [notify, reload, showError, showMessage, success, info],
   );
 
-  return { isSending: (id: string) => sending.has(id), notify: run };
-}
-
-export interface HolidayClosureNoticeRowContent<T> {
-  readonly notice: T;
-  /** Überschrift der Zeile: der Grund, etwa „Pädagogischer Tag“. */
-  readonly title: string;
-  /** Wo der Schließtag gilt, etwa die Schule im Träger-Büro. */
-  readonly context?: string;
-  /** Weitere Angaben unter dem Stand, etwa die Wochen im Träger-Büro. */
-  readonly details?: ReactNode;
-  /** Kurze Zahlen neben dem Stand, etwa „5 Kinder“. */
-  readonly badges?: ReactNode;
-}
-
-export function useNoticeList<T extends HolidayClosureNotice>(
-  rows: readonly HolidayClosureNoticeRowContent<T>[],
-  isSending: (id: string) => boolean,
-) {
-  const [expanded, setExpanded] = useState(false);
-  const openListId = useId();
-  const open = rows.filter(
-    (row) => !isNoticeDone(shownNotice(row.notice, isSending(row.notice.id))),
-  );
-  const done = rows.filter((row) => !open.includes(row));
   return {
-    open,
-    done,
-    expanded,
-    openListId,
-    hiddenCount: Math.max(0, open.length - INITIAL_OPEN_COUNT),
-    visible: expanded ? open : open.slice(0, INITIAL_OPEN_COUNT),
-    waiting: open.filter((row) => row.notice.canNotify).length,
-    toggleExpanded: () => setExpanded((current) => !current),
-  };
+    isSending: (id: string) => sending.has(id),
+    notify: run,
+  } satisfies NoticeNotifier;
 }

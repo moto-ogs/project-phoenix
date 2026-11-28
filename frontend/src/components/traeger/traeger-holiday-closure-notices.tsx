@@ -13,13 +13,13 @@
 import { useCallback, useState } from "react";
 
 import { Mail } from "lucide-react";
-import { HolidayClosureNoticeCards } from "~/components/planning/holiday-closure-notice-cards";
+import {
+  HolidayClosureNoticeCards,
+  type HolidayClosureNoticeRowContent,
+} from "~/components/planning/holiday-closure-notice-cards";
 import { Button } from "~/components/ui/button";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useNoticeNotify,
-  type HolidayClosureNoticeRowContent,
-} from "~/components/planning/use-holiday-closure-notices";
+import { useNoticeNotify } from "~/components/planning/use-holiday-closure-notices";
 import {
   childrenLabel,
   familiesLabel,
@@ -50,10 +50,7 @@ export function TraegerHolidayClosureNotices({
   schoolName: (id: string) => string;
   reload: () => Promise<unknown>;
 }>) {
-  const { isSending, notify } = useNoticeNotify(
-    notifyTraegerHolidayClosureNotice,
-    reload,
-  );
+  const notifier = useNoticeNotify(notifyTraegerHolidayClosureNotice, reload);
   const [notifyingAll, setNotifyingAll] = useState(false);
   const { show: showError } = useApiErrorDisplay();
   const { success } = useToast();
@@ -62,7 +59,7 @@ export function TraegerHolidayClosureNotices({
   const unknownMails = pending?.unknownMails ?? 0;
   const notices = pending?.notices ?? [];
   const suggested = notices.filter(
-    (notice) => notice.status === "suggested" && !isSending(notice.id),
+    (notice) => notice.status === "suggested" && !notifier.isSending(notice.id),
   );
 
   const notifyAll = useCallback(async () => {
@@ -104,11 +101,10 @@ export function TraegerHolidayClosureNotices({
 
   const rows: HolidayClosureNoticeRowContent<TraegerHolidayClosureNotice>[] =
     notices.map((notice) => {
-      const waiting = notice.status === "suggested" && !isSending(notice.id);
+      const waiting = suggested.includes(notice);
       return {
         notice,
-        title: `„${notice.reason}“`,
-        context: schoolName(notice.schoolId),
+        subtitle: schoolName(notice.schoolId),
         badges:
           waiting && notice.children > 0 ? (
             <StatusBadge
@@ -159,6 +155,7 @@ export function TraegerHolidayClosureNotices({
         type="button"
         variant="primary"
         size="md"
+        className="gap-2"
         onClick={() => void notifyAll()}
         isLoading={notifyingAll}
         tooltip={
@@ -177,8 +174,7 @@ export function TraegerHolidayClosureNotices({
       title="Eltern noch nicht informiert"
       description="Schulhinweise brauchen einen Klick von dir oder der Schule. Fehlgeschlagene E-Mails kannst du erneut senden."
       rows={rows}
-      isSending={isSending}
-      onNotify={(notice) => void notify(notice)}
+      notifier={notifier}
       loadError={loadError}
       intro={intro}
       action={action}

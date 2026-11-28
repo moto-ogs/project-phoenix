@@ -40,9 +40,8 @@ export function HolidayClosureNotices({
     "die Hinweise an Eltern",
     mutate,
   );
-  const { isSending, notify } = useNoticeNotify(
-    notifyHolidayClosureNotice,
-    () => revalidateOrThrow(response),
+  const notifier = useNoticeNotify(notifyHolidayClosureNotice, () =>
+    revalidateOrThrow(response),
   );
 
   const seen = useRef(version);
@@ -52,18 +51,14 @@ export function HolidayClosureNotices({
     void mutate();
   }, [version, mutate]);
 
-  const rows = (response.data ?? []).map((notice) => ({
-    notice,
-    title: `„${notice.reason}“`,
-  }));
+  const rows = (response.data ?? []).map((notice) => ({ notice }));
   if (!canNotify) return null;
   return (
     <HolidayClosureNoticeCards
       title="Eltern der Ferienbetreuung informieren"
       description="Diese Schließtage liegen in gebuchten Ferienwochen. Die Eltern bekommen erst eine E-Mail, wenn du oder das Träger-Büro „Eltern informieren“ wählt."
       rows={rows}
-      isSending={isSending}
-      onNotify={(notice) => void notify(notice)}
+      notifier={notifier}
       loadError={response.error && !response.data ? loadError : null}
     />
   );

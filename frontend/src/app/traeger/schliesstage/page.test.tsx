@@ -473,8 +473,10 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     const card = (
       await screen.findByText("Eltern noch nicht informiert")
     ).closest("section")!;
+    // #8271: Grund als Überschrift, die Schule in einer eigenen Zeile.
+    expect(within(card).getByText("„Pädagogischer Tag“")).toBeInTheDocument();
     expect(
-      within(card).getByText("OGS Pforzheim: „Pädagogischer Tag“"),
+      within(card).getByText("OGS Pforzheim", { selector: "p" }),
     ).toBeInTheDocument();
     expect(
       within(card).getByText(
@@ -623,9 +625,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     expect(
       screen.getByRole("button", { name: /Erledigte Hinweise \(1\)/ }),
     ).toBeInTheDocument();
-    expect(
-      within(card).queryByText("OGS Pforzheim: „Brückentag“"),
-    ).not.toBeInTheDocument();
+    expect(within(card).queryByText("„Brückentag“")).not.toBeInTheDocument();
   });
 
   it("tells the parents of every proposal with one click on the head button (#6434)", async () => {

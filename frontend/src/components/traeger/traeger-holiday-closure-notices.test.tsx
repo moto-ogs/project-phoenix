@@ -46,8 +46,9 @@ const pending: PendingHolidayClosures = {
 
 describe("TraegerHolidayClosureNotices", () => {
   // #8271: the shared row names the reason; the school stands on its own
-  // line and in the button's name, so two schools' rows stay apart.
-  it("shows the school beside the reason and names both on the button", () => {
+  // line. The button keeps its name with school and reason, so two
+  // schools' rows stay apart.
+  it("shows the school under the reason and names both on the button", () => {
     render(
       <ToastProvider>
         <TraegerHolidayClosureNotices
@@ -67,7 +68,7 @@ describe("TraegerHolidayClosureNotices", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Eltern informieren: „Pädagogischer Tag“, OGS Am Park",
+        name: "Eltern informieren: OGS Am Park: „Pädagogischer Tag“",
       }),
     ).toBeInTheDocument();
   });
