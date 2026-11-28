@@ -1497,6 +1497,14 @@
       "target_owner": "identity-access"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.SeriesBreakDays.FollowBreakDays",
+      "binding_digest": "2d80dd4e4b7430fa96e01a3e440d4531",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayPlans.FollowBreakDays",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.SeriesBreakDays.FollowBreakDays",
+      "target_owner": "workforce"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolclosingdaysview/internal/adapters/postgres.Reader.ListCareCalendarRanges",
       "binding_digest": "077ca096949c5d98ad6a2f6236a5536a",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayReads.ListCareCalendarRanges",

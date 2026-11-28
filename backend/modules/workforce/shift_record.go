@@ -39,6 +39,11 @@ type ShiftRecord struct {
 	// series. They are empty for standalone shifts and reads without a series.
 	SeriesStartTime *time.Time `json:"-"`
 	SeriesEndTime   *time.Time `json:"-"`
+	// SeriesIncludesBreaks and SeriesCalendarPeriodID describe the linked
+	// series on listings (#8205): its opt-in into Ferien and closing days
+	// and its calendar period. Both are zero for standalone shifts.
+	SeriesIncludesBreaks   bool  `json:"-"`
+	SeriesCalendarPeriodID int64 `json:"-"`
 	// Cancelled marks a shift that does not take place (#1841).
 	Cancelled bool `json:"cancelled"`
 	// ChangeReason carries the optional "why" of a flexible daily change.

@@ -12,11 +12,15 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
 import {
   ShiftResponseSchema,
   type ShiftResponse,
 } from "./shared.generated";
+
+export const SERIES_BREAK_DAY_KIND_VALUES = ["closing_day", "holiday_period"] as const;
+export type SeriesBreakDayKind = (typeof SERIES_BREAK_DAY_KIND_VALUES)[number];
 
 /** Go: staffshifts.SeriesResponse */
 export interface SeriesResponse {
@@ -44,6 +48,27 @@ export interface ShiftDeletedResponse {
 
 export const ShiftDeletedResponseSchema: z.ZodType<ShiftDeletedResponse, unknown> = object<ShiftDeletedResponse>({
   id: int64String,
+});
+
+/** Go: workforce.SeriesBreakDayShift */
+export interface SeriesBreakDayShift {
+  shift_id: string;
+  staff_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  break: OpenEnum<SeriesBreakDayKind>;
+  adjusted: boolean;
+}
+
+export const SeriesBreakDayShiftSchema: z.ZodType<SeriesBreakDayShift, unknown> = object<SeriesBreakDayShift>({
+  shift_id: int64String,
+  staff_id: int64String,
+  date: str,
+  start_time: str,
+  end_time: str,
+  break: str,
+  adjusted: bool,
 });
 
 /** Go: staffshifts.OverviewStaffResponse */
@@ -338,6 +363,12 @@ export const routes = {
       "to": { kind: "date" },
     },
     response: success(z.array(ShiftResponseSchema)),
+  },
+  "GET /api/staff-shifts/break-day-shifts": {
+    method: "GET",
+    pattern: "/api/staff-shifts/break-day-shifts",
+    portals: ["tenant"],
+    response: success(z.array(SeriesBreakDayShiftSchema)),
   },
   "GET /api/staff-shifts/overview": {
     method: "GET",

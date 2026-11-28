@@ -25,6 +25,10 @@ type Administration struct {
 	// ClosingDayNotices tells the school about a changed closing day
 	// (#7144); nil tells nobody, as the Records without administration do.
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
+	// ClosingDayPlans carries a changed closing day into the series shifts
+	// that leave closing days out (#8205); nil changes no plan, as the
+	// Records without administration do.
+	ClosingDayPlans schoolcalendar.ClosingDayPlans
 }
 
 // AddCalendarPeriod creates a period under the recurrence gate. The

@@ -77,13 +77,15 @@ type Runtime struct {
 
 // Resource bundles the dependencies for the staff-shift HTTP handlers.
 type Resource struct {
-	planning workforce.StaffShiftPlanning
-	runtime  Runtime
+	planning  workforce.StaffShiftPlanning
+	breakDays BreakDayShifts
+	runtime   Runtime
 }
 
-// NewResource wires the dependencies.
-func NewResource(planning workforce.StaffShiftPlanning, runtime Runtime) *Resource {
-	return &Resource{planning: planning, runtime: runtime}
+// NewResource wires the dependencies; a nil breakDays leaves out
+// GET /break-day-shifts.
+func NewResource(planning workforce.StaffShiftPlanning, breakDays BreakDayShifts, runtime Runtime) *Resource {
+	return &Resource{planning: planning, breakDays: breakDays, runtime: runtime}
 }
 
 // Router returns the chi sub-router for /api/staff-shifts.
@@ -94,6 +96,9 @@ func (rs *Resource) Router() chi.Router {
 	rs.runtime.Protected(r, func(r chi.Router, withTx Middleware) {
 		manage := rs.runtime.Permission(rs.runtime.TimeTrackingManage)
 		r.With(manage, withTx).Get("/", rs.list)
+		if rs.breakDays != nil {
+			r.With(manage, withTx).Get("/break-day-shifts", rs.listBreakDayShifts)
+		}
 		// The overview and the printable week read the same projection, so
 		// both need the permission triple; export.go additionally requires
 		// schedules:manage for the sensitive internal variant.

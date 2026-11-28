@@ -56,6 +56,7 @@ func (s *Store) ListStaffShifts(ctx context.Context, filter domain.StaffShiftFil
 		ModelTableExpr(tableStaffShifts+` AS "staff_shift"`).
 		ColumnExpr(`"staff_shift".*`).
 		ColumnExpr(`"staff_shift_series".start_time AS series_start_time, "staff_shift_series".end_time AS series_end_time`).
+		ColumnExpr(`"staff_shift_series".include_school_breaks AS series_include_school_breaks, "staff_shift_series".calendar_period_id AS series_calendar_period_id`).
 		Join(`LEFT JOIN `+tableStaffShiftSeries+` AS "staff_shift_series" ON "staff_shift_series".id = "staff_shift".series_id AND "staff_shift_series".tenant_id = "staff_shift".tenant_id`), aliasStaffShift, scope), filter)
 	if empty {
 		return []domain.StaffShift{}, domain.OperationStats{}, nil

@@ -17,6 +17,10 @@ import { PlanExportModal } from "~/components/planning/plan-export-modal";
 import { CalendarPeriodModal } from "~/components/timetable/calendar-period-modal";
 import { PeriodSwitcherDropdown } from "~/components/timetable/period-switcher-dropdown";
 import { AbsencePlanGaps } from "~/components/staff/absence-plan-gaps";
+import {
+  BreakDayShifts,
+  useBreakDayShifts,
+} from "~/components/staff/break-day-shifts";
 import { DienstplanHalbjahrGrid } from "~/components/staff/dienstplan-halbjahr-grid";
 import { DienstplanHoursCard } from "~/components/staff/dienstplan-hours-card";
 import { DienstplanPersonWeekGrid } from "~/components/staff/dienstplan-person-week-grid";
@@ -237,6 +241,11 @@ function DienstplanContent() {
   const staffById = useMemo(
     () => new Map(sortedStaff.map((member) => [member.id, member])),
     [sortedStaff],
+  );
+  // Serienschichten an Schließtagen (#8205): Karte über dem Raster und
+  // Warnung an der Schicht.
+  const breakDays = useBreakDayShifts(
+    sessionStatus === "authenticated" && canPlanShifts,
   );
 
   // Ladefehler stehen dort, wo die Daten fehlen (#2514): der Wochenplan als
@@ -571,6 +580,7 @@ function DienstplanContent() {
           holidayCare={holidayCare}
           holidayCareHref={holidayCareHref}
           typesById={typesById}
+          breakDayShifts={breakDays.byShiftId}
           shiftTypes={shiftTypes ?? []}
           reducedPath={reducedPath}
           currentStaffId={currentStaffId}
@@ -775,6 +785,12 @@ function DienstplanContent() {
         enabled={sessionStatus === "authenticated" && canWriteAbsences}
         staffById={staffById}
         onPlansChanged={refreshAfterPlanMutation}
+        onShowWeek={(day) => updateUrlParams({ d: day, view: null })}
+      />
+      <BreakDayShifts
+        shifts={breakDays.shifts}
+        loadError={breakDays.loadError}
+        staffById={staffById}
         onShowWeek={(day) => updateUrlParams({ d: day, view: null })}
       />
       {content}
