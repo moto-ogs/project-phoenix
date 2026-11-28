@@ -828,6 +828,8 @@ export const activeSupervisionTopic = function activeSupervisionTopic(
       "Fehlt `Nach Angebot`? Dann hat deine OGS kein aktives Betreuungsangebot, das als Betreuungstag zählt.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Aktuelle Aufsicht` in der Navigation? Öffne `Alle Kinder`. Wähle im Menü mit den drei Punkten `Zur Aufsicht`.",
+      // App-Oberfläche unter 40rem (#8070): Kind-Blatt statt Karte.
+      "Auf dem Handy öffnet ein Tipp auf ein Kind ein Blatt mit seinen Angaben und Aktionen, zum Beispiel `Raum verlassen`. Die wichtigste Aktion der Seite steht unten über der Leiste.",
     ],
     // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
     notes: [
@@ -2209,7 +2211,10 @@ export const dayPlanTopic = function dayPlanTopic(
     differences: [
       "`Läuft` heißt: der Block ist gerade aktiv. `Beendet` und `Nicht gestartet` kannst du nur ansehen.",
       "`Fällt aus` zeigt zusätzlich den Grund.",
-      "Laufen mehr als zwei Blöcke gleichzeitig? Dann wische auf dem Handy zur Seite, um alle zu sehen.",
+      "Laufen mehr als zwei Blöcke gleichzeitig? Dann wische am Tablet oder Computer zur Seite, um alle zu sehen. Auf dem Handy stehen sie untereinander unter `Gleichzeitig`.",
+      // App-Oberfläche unter 40rem (#8070): Blatt statt Kinderliste.
+      "Auf dem Handy öffnet ein Tipp auf einen Block seine Angaben. Dort stehen `Kinderliste öffnen` oder `Aufsicht starten`. Was schon vorbei ist, steht oben zusammengefasst, zum Beispiel `6 Blöcke vorbei`. Wähle `Anzeigen`, um diese Blöcke zu sehen.",
+      "Ist dein nächster eigener Block startbereit? Auf dem Handy steht dann unten ein Knopf mit seinem Namen, zum Beispiel `Lese-AG starten`.",
       "Ein `Dienst` ist eine Aufgabe ohne Kinder, etwa die Busaufsicht. Er hat keinen Knopf `Starten`.",
       "Blöcke, für die du eingeteilt bist, sind in ihrer Farbe hinterlegt. Das gilt auch für eine Vertretung.",
       "Welche Blöcke du siehst, legt deine OGS fest. Manche sehen den ganzen Tag der Schule, andere nur die eigene Einteilung.",
@@ -9826,7 +9831,7 @@ export const studentSearchTopic = function studentSearchTopic(
       {
         title: "Angaben ansehen",
         steps: [
-          "Wähle die Karte des Kindes.",
+          "Wähle die Karte des Kindes. Auf dem Handy tippst du auf die Zeile des Kindes. Ein Blatt zeigt dann Klasse, Gruppe und die Zeiten von heute. Wähle dort `Ganze Akte öffnen`, um alle Angaben zu sehen.",
           currentStatusStep,
           // #4761: die Zeilen stehen unter `Heutige Ankunft` und `Heutige
           // Abholung`, sobald das Kind an- oder abgemeldet ist.
@@ -11482,6 +11487,18 @@ export const trackWorkTimeTopic = function trackWorkTimeTopic(): HelpTopic {
       {
         title: "Arbeitszeit beenden",
         steps: ["Beende zuerst eine laufende Pause.", "Wähle `Ausstempeln`."],
+      },
+      {
+        // App-Oberfläche unter 40rem (#8070, ADR 0323): Die Knöpfe stehen
+        // in der Leiste über der unteren Leiste, der Arbeitsort im Blatt.
+        title: "Auf dem Handy",
+        steps: [
+          "Öffne `Zeiterfassung`. Steht sie nicht in der Leiste unten, findest du sie unter `Mehr`.",
+          "Wähle unten `Einstempeln`.",
+          "Wähle `In der OGS einstempeln` oder `Unterwegs einstempeln`.",
+          "Für eine Pause wähle unten `Pause`. Wähle die Pausenlänge und dann `Pause starten`.",
+          "`Pause beenden` und `Ausstempeln` stehen dann ebenfalls unten.",
+        ],
       },
     ],
     result:

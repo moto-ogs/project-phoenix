@@ -36,7 +36,10 @@ export function dayPlanTopic(presenceMode: HelpPresenceMode): HelpTopic {
     differences: [
       "`Läuft` heißt: der Block ist gerade aktiv. `Beendet` und `Nicht gestartet` kannst du nur ansehen.",
       "`Fällt aus` zeigt zusätzlich den Grund.",
-      "Laufen mehr als zwei Blöcke gleichzeitig? Dann wische auf dem Handy zur Seite, um alle zu sehen.",
+      "Laufen mehr als zwei Blöcke gleichzeitig? Dann wische am Tablet oder Computer zur Seite, um alle zu sehen. Auf dem Handy stehen sie untereinander unter `Gleichzeitig`.",
+      // App-Oberfläche unter 40rem (#8070): Blatt statt Kinderliste.
+      "Auf dem Handy öffnet ein Tipp auf einen Block seine Angaben. Dort stehen `Kinderliste öffnen` oder `Aufsicht starten`. Was schon vorbei ist, steht oben zusammengefasst, zum Beispiel `6 Blöcke vorbei`. Wähle `Anzeigen`, um diese Blöcke zu sehen.",
+      "Ist dein nächster eigener Block startbereit? Auf dem Handy steht dann unten ein Knopf mit seinem Namen, zum Beispiel `Lese-AG starten`.",
       "Ein `Dienst` ist eine Aufgabe ohne Kinder, etwa die Busaufsicht. Er hat keinen Knopf `Starten`.",
       "Blöcke, für die du eingeteilt bist, sind in ihrer Farbe hinterlegt. Das gilt auch für eine Vertretung.",
       "Welche Blöcke du siehst, legt deine OGS fest. Manche sehen den ganzen Tag der Schule, andere nur die eigene Einteilung.",

@@ -141,6 +141,8 @@ export function activeSupervisionTopic(
       "Fehlt `Nach Angebot`? Dann hat deine OGS kein aktives Betreuungsangebot, das als Betreuungstag zählt.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Aktuelle Aufsicht` in der Navigation? Öffne `Alle Kinder`. Wähle im Menü mit den drei Punkten `Zur Aufsicht`.",
+      // App-Oberfläche unter 40rem (#8070): Kind-Blatt statt Karte.
+      "Auf dem Handy öffnet ein Tipp auf ein Kind ein Blatt mit seinen Angaben und Aktionen, zum Beispiel `Raum verlassen`. Die wichtigste Aktion der Seite steht unten über der Leiste.",
     ],
     // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
     notes: [

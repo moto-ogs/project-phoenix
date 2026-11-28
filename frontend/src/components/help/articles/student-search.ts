@@ -64,7 +64,7 @@ export function studentSearchTopic(
       {
         title: "Angaben ansehen",
         steps: [
-          "Wähle die Karte des Kindes.",
+          "Wähle die Karte des Kindes. Auf dem Handy tippst du auf die Zeile des Kindes. Ein Blatt zeigt dann Klasse, Gruppe und die Zeiten von heute. Wähle dort `Ganze Akte öffnen`, um alle Angaben zu sehen.",
           currentStatusStep,
           // #4761: die Zeilen stehen unter `Heutige Ankunft` und `Heutige
           // Abholung`, sobald das Kind an- oder abgemeldet ist.

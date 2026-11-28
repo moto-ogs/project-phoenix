@@ -38,6 +38,18 @@ export function trackWorkTimeTopic(): HelpTopic {
         title: "Arbeitszeit beenden",
         steps: ["Beende zuerst eine laufende Pause.", "Wähle `Ausstempeln`."],
       },
+      {
+        // App-Oberfläche unter 40rem (#8070, ADR 0323): Die Knöpfe stehen
+        // in der Leiste über der unteren Leiste, der Arbeitsort im Blatt.
+        title: "Auf dem Handy",
+        steps: [
+          "Öffne `Zeiterfassung`. Steht sie nicht in der Leiste unten, findest du sie unter `Mehr`.",
+          "Wähle unten `Einstempeln`.",
+          "Wähle `In der OGS einstempeln` oder `Unterwegs einstempeln`.",
+          "Für eine Pause wähle unten `Pause`. Wähle die Pausenlänge und dann `Pause starten`.",
+          "`Pause beenden` und `Ausstempeln` stehen dann ebenfalls unten.",
+        ],
+      },
     ],
     result:
       "Deine Arbeitszeit erscheint in der Wochenübersicht und in der Tabelle `Zeiterfassung`.",
