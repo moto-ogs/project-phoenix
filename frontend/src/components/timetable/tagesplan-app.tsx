@@ -1062,28 +1062,15 @@ function chipLabels(state: BlockState, next: boolean, mine: boolean) {
   ];
 }
 
-/** „19 Kinder“ bzw. „13 von 16 da“; ein Dienst und ein Ausfall ohne Zahl. */
+/**
+ * Kinderzahl in der Angabenzeile wie am Desktop: „19 Kinder“, laufend
+ * „13 da · 4 nicht mehr im Raum“ (wer gegangen ist, sucht man gerade hier).
+ * Auch „0 Kinder“ steht da: Ein Angebot ohne Anmeldung sagt das am Desktop
+ * ebenso. Dienste und Ausfälle nennen keine Kinder.
+ */
 function childrenPart(entry: Entry): string | null {
   if (entry.state.cancelled || entry.state.isDuty) return null;
   return blockChildrenLabel(entry.instance);
-}
-
-/**
- * Kinderzahl rechts in der Zeile, kurz: „19 Kinder“, laufend „13 da“. Ohne
- * Kinder (Teamsitzung) steht nichts; die volle Angabe steht im Blatt.
- */
-function rowChildren(entry: Entry): string | null {
-  if (entry.state.cancelled || entry.state.isDuty) return null;
-  const { instance } = entry;
-  // Laufend die ganze Angabe wie am Desktop („12 da · 4 nicht mehr im
-  // Raum“): wer gegangen ist, sucht man gerade hier.
-  if (instance.status === "active") return blockChildrenLabel(instance);
-  const count =
-    instance.status === "completed"
-      ? instance.presentStudentsCount
-      : instance.expectedStudentsCount;
-  if (count <= 0) return null;
-  return count === 1 ? "1 Kind" : `${count} Kinder`;
 }
 
 /**
@@ -1135,7 +1122,6 @@ function BlockRow({
   // Sie bricht zwischen den Teilen um statt gekürzt zu werden: am Telefon
   // stand sonst „OGS-Ra…“ und „Anna Müll…“. Ein Ausfall nennt seinen Grund
   // rot wie am Desktop.
-  const count = rowChildren(entry);
   const parts: (BlockRowPart & { mine?: boolean })[] = [];
   const push = (
     key: string,
@@ -1170,7 +1156,7 @@ function BlockRow({
   // Wort-Stumpf wie „OGS-R…“ und keine Angabe entfällt still. Nur die
   // Liste neben dem Detail (iPad quer) bleibt einzeilig gekürzt.
   push("room", state.room, false, wide ? undefined : "room");
-  push("count", count, false, wide ? undefined : "count");
+  push("count", children, false, wide ? undefined : "count");
   // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
   // betreut, sucht man im Plan. Alle Namen stehen im Blatt.
   if (wide) {
