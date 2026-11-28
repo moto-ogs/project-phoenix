@@ -62,8 +62,8 @@ func (p GroupThreadPortal) PortalReadGroupThread(ctx context.Context, threadID, 
 }
 
 // PortalGroupReplyTarget returns the thread a guardian answers for a child:
-// it must have reached the guardian for that child. Closed threads accept
-// only an already stored send; AppendMessage still checks its exact payload.
+// it must have reached the guardian for that child. Closed threads, also
+// those whose group or AG was deleted, accept only an already stored send; AppendMessage still checks its exact payload.
 func (p GroupThreadPortal) PortalGroupReplyTarget(ctx context.Context, threadID, accountID, studentID int64, sendIDs ...string) (*communication.ParentGroupThread, error) {
 	// Keep an open thread locked until the caller either appends the guardian
 	// reply or rolls the transaction back. This makes the final authorization
@@ -82,7 +82,11 @@ func (p GroupThreadPortal) PortalGroupReplyTarget(ctx context.Context, threadID,
 	if !recipient {
 		return nil, communication.ErrParentGroupThreadNotFound
 	}
-	if thread.ClosedAt != nil {
+	// A thread whose group or AG was deleted takes no answer either (#8213).
+	if err := communication.LabelParentGroupThreads(ctx, p.Names, thread); err != nil {
+		return nil, err
+	}
+	if thread.Closed() {
 		if len(sendIDs) == 0 || sendIDs[0] == "" {
 			return nil, communication.ErrParentGroupThreadClosed
 		}

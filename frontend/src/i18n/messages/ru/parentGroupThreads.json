@@ -16,5 +16,7 @@
   "errorObjectThread": "групповое сообщение",
   "errorObjectAnswer": "ответ",
   "errorObjectList": "групповые сообщения",
-  "closedNoteWithoutChat": "Это групповое сообщение закрыто."
+  "closedNoteWithoutChat": "Это групповое сообщение закрыто.",
+  "groupDeleted": "Группа удалена",
+  "groupDeletedReason": "Группа была удалена."
 }

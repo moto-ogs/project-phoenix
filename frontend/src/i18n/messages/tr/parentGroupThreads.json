@@ -16,5 +16,7 @@
   "errorObjectThread": "grup mesajı",
   "errorObjectAnswer": "yanıt",
   "errorObjectList": "grup mesajları",
-  "closedNoteWithoutChat": "Bu grup mesajı kapatıldı."
+  "closedNoteWithoutChat": "Bu grup mesajı kapatıldı.",
+  "groupDeleted": "Grup silindi",
+  "groupDeletedReason": "Bu grup silindi."
 }

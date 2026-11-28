@@ -25,6 +25,10 @@ import {
 import { useTenant } from "~/lib/tenant-context";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { groupsConcept } from "~/lib/concepts/groups";
+import {
+  groupThreadClosedLabel,
+  isGroupThreadClosed,
+} from "~/lib/group-thread-closure";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const GROUP_MESSAGES_INFO =
@@ -67,7 +71,9 @@ function GroupMessagesContent() {
   const showSkeleton =
     (isLoading && !data) ||
     (Boolean(error) && formErrorMessage(loadError) === null);
-  const openCount = threads.filter((thread) => !thread.closed_at).length;
+  const openCount = threads.filter(
+    (thread) => !isGroupThreadClosed(thread),
+  ).length;
   const summary =
     data === undefined ? null : (
       <TenantPageStats
@@ -144,8 +150,12 @@ function GroupMessagesContent() {
                   <h3 className="truncate text-base font-semibold text-gray-900">
                     {thread.title}
                   </h3>
-                  {thread.closed_at && (
-                    <StatusBadge tone="gray" label="Geschlossen" compact />
+                  {groupThreadClosedLabel(thread) && (
+                    <StatusBadge
+                      tone="gray"
+                      label={groupThreadClosedLabel(thread) ?? ""}
+                      compact
+                    />
                   )}
                   {thread.last_message_at && (
                     <span className="ml-auto flex-shrink-0 pl-1 text-xs whitespace-nowrap text-gray-500">

@@ -55,12 +55,15 @@ type GroupMessageRequest struct {
 }
 
 type GroupThreadResponse struct {
-	ID            ident.ID   `json:"id"`
-	TargetType    string     `json:"target_type"`
-	TargetID      string     `json:"target_id" contract_text:"group or activity ID, or a school class as text"`
-	TargetLabel   string     `json:"target_label"`
-	Title         string     `json:"title"`
-	ClosedAt      *time.Time `json:"closed_at,omitempty"`
+	ID          ident.ID   `json:"id"`
+	TargetType  string     `json:"target_type"`
+	TargetID    string     `json:"target_id" contract_text:"group or activity ID, or a school class as text"`
+	TargetLabel string     `json:"target_label"`
+	Title       string     `json:"title"`
+	ClosedAt    *time.Time `json:"closed_at,omitempty"`
+	// ClosedReason is "group_deleted" when the group or AG of the thread was
+	// deleted (#8213): the thread stays readable and takes no new message.
+	ClosedReason  string     `json:"closed_reason,omitempty"`
 	LastMessageAt *time.Time `json:"last_message_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 }
@@ -304,7 +307,7 @@ func toGroupThreadResponse(thread communication.ParentGroupThread) GroupThreadRe
 	return GroupThreadResponse{
 		ID: ident.ID(thread.ID), TargetType: thread.Target.Type, TargetID: targetID,
 		TargetLabel: thread.Target.Label, Title: thread.Title, ClosedAt: thread.ClosedAt,
-		LastMessageAt: thread.LastMessageAt, CreatedAt: thread.CreatedAt,
+		ClosedReason: thread.ClosedReason, LastMessageAt: thread.LastMessageAt, CreatedAt: thread.CreatedAt,
 	}
 }
 

@@ -1749,6 +1749,7 @@ export interface GroupThreadSummaryResponse {
   school_name: string;
   counterpart_name: string;
   closed: boolean;
+  closed_reason?: string;
   last_message_at?: string;
   last_message_body: string;
   unread: number;
@@ -1763,6 +1764,7 @@ export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryRespo
   school_name: str,
   counterpart_name: str,
   closed: bool,
+  closed_reason: optional(str),
   last_message_at: optional(instant),
   last_message_body: str,
   unread: safeInt,
@@ -1793,6 +1795,7 @@ export interface GroupThreadViewResponse {
   school_name: string;
   counterpart_name: string;
   closed: boolean;
+  closed_reason?: string;
   last_message_at?: string;
   last_message_body: string;
   unread: number;
@@ -1808,6 +1811,7 @@ export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, u
   school_name: str,
   counterpart_name: str,
   closed: bool,
+  closed_reason: optional(str),
   last_message_at: optional(instant),
   last_message_body: str,
   unread: safeInt,

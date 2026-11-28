@@ -16,5 +16,7 @@
   "errorObjectThread": "mesazhi i grupit",
   "errorObjectAnswer": "përgjigjja",
   "errorObjectList": "mesazhet e grupit",
-  "closedNoteWithoutChat": "Ky mesazh grupi është mbyllur."
+  "closedNoteWithoutChat": "Ky mesazh grupi është mbyllur.",
+  "groupDeleted": "Grupi u fshi",
+  "groupDeletedReason": "Grupi është fshirë."
 }

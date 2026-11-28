@@ -16,5 +16,7 @@
   "errorObjectThread": "wiadomość grupowa",
   "errorObjectAnswer": "odpowiedź",
   "errorObjectList": "wiadomości grupowe",
-  "closedNoteWithoutChat": "Ta wiadomość grupowa jest zamknięta."
+  "closedNoteWithoutChat": "Ta wiadomość grupowa jest zamknięta.",
+  "groupDeleted": "Grupa usunięta",
+  "groupDeletedReason": "Grupa została usunięta."
 }

@@ -14,8 +14,39 @@ import (
 // gone, or that the caller's school does not hold, keeps the label the thread
 // was opened with. One name lookup for all threads; without names every
 // group and AG thread keeps its stored label.
+//
+// A group or AG the lookup no longer finds was deleted (both are deleted for
+// good, ids are not reused): its thread reads closed with the reason
+// ParentGroupThreadClosedGroupDeleted (#8213). The thread follows its target
+// at read time, so every deletion path closes it in its own transaction.
 func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, threads ...*ParentGroupThread) error {
-	var groupIDs, activityIDs []int64
+	groupIDs, activityIDs := groupTargetIDs(threads)
+	if names == nil || len(groupIDs)+len(activityIDs) == 0 {
+		for _, thread := range threads {
+			if thread != nil {
+				thread.Target.Label = currentGroupTargetLabel(thread.Target, nil, nil)
+			}
+		}
+		return nil
+	}
+	groups, activities, err := names.GroupTargetNames(ctx, groupIDs, activityIDs)
+	if err != nil {
+		return fmt.Errorf("messaging: group thread target names: %w", err)
+	}
+	for _, thread := range threads {
+		if thread == nil {
+			continue
+		}
+		thread.Target.Label = currentGroupTargetLabel(thread.Target, groups, activities)
+		if groupTargetGone(thread.Target, groups, activities) {
+			thread.ClosedReason = ParentGroupThreadClosedGroupDeleted
+		}
+	}
+	return nil
+}
+
+// groupTargetIDs collects the group and AG ids the threads write to.
+func groupTargetIDs(threads []*ParentGroupThread) (groupIDs, activityIDs []int64) {
 	for _, thread := range threads {
 		if thread == nil || thread.Target.RefID == nil {
 			continue
@@ -27,19 +58,24 @@ func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, 
 			activityIDs = append(activityIDs, *thread.Target.RefID)
 		}
 	}
-	var groups, activities map[int64]string
-	if names != nil && len(groupIDs)+len(activityIDs) > 0 {
-		var err error
-		if groups, activities, err = names.GroupTargetNames(ctx, groupIDs, activityIDs); err != nil {
-			return fmt.Errorf("messaging: group thread target names: %w", err)
-		}
+	return groupIDs, activityIDs
+}
+
+// groupTargetGone reports whether the lookup no longer found the group or AG
+// of a thread. A class thread has no row to lose.
+func groupTargetGone(target ParentGroupTarget, groups, activities map[int64]string) bool {
+	if target.RefID == nil {
+		return false
 	}
-	for _, thread := range threads {
-		if thread != nil {
-			thread.Target.Label = currentGroupTargetLabel(thread.Target, groups, activities)
-		}
+	switch target.Type {
+	case ParentGroupTargetGroup:
+		_, found := groups[*target.RefID]
+		return !found
+	case ParentGroupTargetActivityGroup:
+		_, found := activities[*target.RefID]
+		return !found
 	}
-	return nil
+	return false
 }
 
 func currentGroupTargetLabel(target ParentGroupTarget, groups, activities map[int64]string) string {

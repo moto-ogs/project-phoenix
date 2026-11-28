@@ -328,6 +328,30 @@ describe("ParentGroupThreadView (#4784)", () => {
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
   });
 
+  // #8213: eine gelöschte Gruppe schließt ihre Gruppennachricht.
+  it("nennt bei einer gelöschten Gruppe den Grund und bietet nur den Chat an", async () => {
+    mockedThread.mockResolvedValue({
+      ...sommerfest,
+      closed: true,
+      closed_reason: "group_deleted",
+    });
+
+    renderView();
+
+    expect(
+      await screen.findByText(
+        "Die Gruppe wurde gelöscht. Diese Gruppennachricht ist geschlossen. Du kannst der OGS weiter im Chat zu deinem Kind schreiben.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: sommerfest.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Zum Chat mit der OGS" }),
+    ).toHaveAttribute("href", "/parents/messages/42");
+    expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
+  });
+
   // #4803: ein Kind ohne OGS-Platz hat keinen Chat mit der OGS.
   it("führt nur zum Chat eines Kindes mit OGS-Platz", async () => {
     mockedChildren.mockResolvedValue([

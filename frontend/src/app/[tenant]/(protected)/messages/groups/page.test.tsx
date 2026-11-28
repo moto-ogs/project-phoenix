@@ -121,6 +121,23 @@ describe("Gruppennachrichten: Liste", () => {
     ).toBeInTheDocument();
   });
 
+  // #8213: eine gelöschte Gruppe schließt ihre Gruppennachricht.
+  it("marks the thread of a deleted group and no longer counts it as open", () => {
+    state.threads = state.threads.map((thread) =>
+      thread.id === "4"
+        ? { ...thread, closed_reason: "group_deleted" }
+        : thread,
+    );
+    render(<GroupMessagesPage />);
+    const tile = screen
+      .getByRole("heading", { name: "Sommerfest" })
+      .closest("li")!;
+    expect(within(tile).getByText("Gruppe gelöscht")).toBeInTheDocument();
+    expect(
+      screen.getByText(statusLine("2 Gruppennachrichten", "0 offen")),
+    ).toBeInTheDocument();
+  });
+
   it("reloads after a group-message activity event", () => {
     render(<GroupMessagesPage />);
     act(() => {

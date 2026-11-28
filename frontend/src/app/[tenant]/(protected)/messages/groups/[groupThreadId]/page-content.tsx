@@ -40,6 +40,11 @@ import {
 } from "~/components/messaging/message-mail-status";
 import { createLogger } from "~/lib/logger";
 import {
+  groupThreadClosedLabel,
+  isGroupThreadClosed,
+  isGroupThreadGroupDeleted,
+} from "~/lib/group-thread-closure";
+import {
   type GroupThreadDetail,
   closeGroupThread,
   familyReadLabel,
@@ -285,7 +290,9 @@ function GroupMessageContent() {
   }
 
   const thread = data?.thread;
-  const closed = Boolean(thread?.closed_at);
+  const closed = thread ? isGroupThreadClosed(thread) : false;
+  const closedLabel = thread ? groupThreadClosedLabel(thread) : null;
+  const groupDeleted = thread ? isGroupThreadGroupDeleted(thread) : false;
   const children = data?.children ?? [];
   const stats =
     data && thread ? (
@@ -293,7 +300,7 @@ function GroupMessageContent() {
         items={[
           { label: thread.target_label },
           { label: familyReadLabel(data.read_count, data.family_count) },
-          ...(closed ? [{ label: "Geschlossen" }] : []),
+          ...(closedLabel ? [{ label: closedLabel }] : []),
         ]}
       />
     ) : null;
@@ -366,7 +373,11 @@ function GroupMessageContent() {
           {closed ? (
             <Alert
               type="info"
-              message="Diese Gruppennachricht ist geschlossen. Eltern können nicht mehr antworten."
+              message={
+                groupDeleted
+                  ? "Die Gruppe wurde gelöscht. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten."
+                  : "Diese Gruppennachricht ist geschlossen. Eltern können nicht mehr antworten."
+              }
             />
           ) : messagingEnabled ? (
             <MessageComposer

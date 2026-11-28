@@ -20,12 +20,15 @@ type GroupThreadChildResponse struct {
 
 // GroupThreadSummaryResponse is one row of the guardian's group thread list.
 type GroupThreadSummaryResponse struct {
-	ID              ident.ID                   `json:"id"`
-	Title           string                     `json:"title"`
-	TargetLabel     string                     `json:"target_label"`
-	SchoolName      string                     `json:"school_name"`
-	CounterpartName string                     `json:"counterpart_name"`
-	Closed          bool                       `json:"closed"`
+	ID              ident.ID `json:"id"`
+	Title           string   `json:"title"`
+	TargetLabel     string   `json:"target_label"`
+	SchoolName      string   `json:"school_name"`
+	CounterpartName string   `json:"counterpart_name"`
+	Closed          bool     `json:"closed"`
+	// ClosedReason is "group_deleted" when the group or AG of the thread was
+	// deleted (#8213).
+	ClosedReason    string                     `json:"closed_reason,omitempty"`
 	LastMessageAt   *time.Time                 `json:"last_message_at,omitempty"`
 	LastMessageBody string                     `json:"last_message_body"`
 	Unread          int                        `json:"unread"`
@@ -102,9 +105,10 @@ func (rs *Resource) getGroupThread(w http.ResponseWriter, r *http.Request) {
 func toGroupThreadSummary(thread parentService.GroupThread, school string, children []*parentService.ChildSummary) GroupThreadSummaryResponse {
 	out := GroupThreadSummaryResponse{
 		ID: ident.ID(thread.ID), Title: thread.Title, TargetLabel: thread.TargetLabel,
-		SchoolName: school, CounterpartName: ogsLabel(school), Closed: thread.ClosedAt != nil,
-		Children: make([]GroupThreadChildResponse, 0, len(children)),
-		Readers:  ParentReadersResponse{School: schoolReaders(parentService.MessageAudienceTeam, nil)},
+		SchoolName: school, CounterpartName: ogsLabel(school), Closed: thread.ClosedAt != nil || thread.ClosedReason != "",
+		ClosedReason: thread.ClosedReason,
+		Children:     make([]GroupThreadChildResponse, 0, len(children)),
+		Readers:      ParentReadersResponse{School: schoolReaders(parentService.MessageAudienceTeam, nil)},
 	}
 	for _, child := range children {
 		out.Children = append(out.Children, GroupThreadChildResponse{

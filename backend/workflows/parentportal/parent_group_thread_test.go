@@ -207,3 +207,54 @@ func TestGroupThreadShowsTheGroupsCurrentNameToTheFamily(t *testing.T) {
 	_, err = portal.GetGroupThread(ctx, outsider.AccountID, threadID)
 	require.ErrorIs(t, err, parentService.ErrGroupThreadNotFound)
 }
+
+// A deleted group closes its group thread for the family too (#8213): the
+// thread stays in the list and readable, names the reason and takes no
+// answer. A family outside the group still sees nothing of it.
+func TestGroupThreadOfADeletedGroupIsClosedForTheFamily(t *testing.T) {
+	t.Parallel()
+	portal, _, db := buildGroupThreadPortal(t)
+	member := testpkg.CreateTestParentGuardianChain(t, db)
+	outsider := testpkg.CreateTestParentGuardianChain(t, db)
+	group := testpkg.CreateTestEducationGroup(t, db, "Füchse")
+	_, err := db.NewRaw(`UPDATE users.student_school_memberships SET group_id = ? WHERE student_profile_id = ?`, group.ID, member.StudentID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	_, staff := testpkg.CreateTestStaffWithAccount(t, db, "Olivia", "Berg")
+
+	staffCtx := context.WithValue(testpkg.Ctx(t), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(staff.ID)})
+	staffCtx = context.WithValue(staffCtx, sessiontoken.CtxPermissions, []string{"admin:*"})
+	var threadID int64
+	require.NoError(t, testpkg.WithinTenantContext(t, staffCtx, db, testpkg.Tenant(t), func(ctx context.Context) error {
+		var err error
+		threadID, err = api.CreateParentGroupGroupThreadForTest(ctx, testpkg.NewDatabase(t, db), staff.ID, group.ID, "Gruppe "+group.Name, "Ausflug", "Morgen geht es in den Zoo.")
+		return err
+	}))
+
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	_, err = portal.PostChildReply(ctx, member.AccountID, member.StudentID, "Wir kommen mit.", threadID)
+	require.NoError(t, err, "the open thread takes an answer")
+
+	_, err = db.NewRaw(`UPDATE users.student_school_memberships SET group_id = NULL WHERE student_profile_id = ?`, member.StudentID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	_, err = db.NewRaw(`DELETE FROM education.groups WHERE id = ?`, group.ID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+
+	threads, err := portal.ListGroupThreads(ctx, member.AccountID)
+	require.NoError(t, err)
+	require.Len(t, threads, 1, "the thread stays in the family's list")
+	assert.Equal(t, "group_deleted", threads[0].Thread.ClosedReason)
+	assert.Equal(t, "Gruppe "+group.Name, threads[0].Thread.TargetLabel, "the thread keeps the name it knew")
+	detail, err := portal.GetGroupThread(ctx, member.AccountID, threadID)
+	require.NoError(t, err)
+	assert.Equal(t, "group_deleted", detail.Thread.ClosedReason, "the opened thread names the reason")
+	require.Len(t, detail.Messages, 1, "the thread stays readable")
+
+	_, err = portal.PostChildReply(ctx, member.AccountID, member.StudentID, "Noch eine Frage", threadID)
+	require.ErrorIs(t, err, parentService.ErrGroupThreadClosed, "a deleted group takes no answer")
+
+	others, err := portal.ListGroupThreads(ctx, outsider.AccountID)
+	require.NoError(t, err)
+	assert.Empty(t, others, "a family outside the group sees no thread")
+	_, err = portal.GetGroupThread(ctx, outsider.AccountID, threadID)
+	require.ErrorIs(t, err, parentService.ErrGroupThreadNotFound)
+}
