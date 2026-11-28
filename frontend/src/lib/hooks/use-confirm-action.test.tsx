@@ -118,7 +118,7 @@ describe("useConfirmAction", () => {
   it("closes and stops pending also when the follow-up fails", async () => {
     const failed = new Error("refresh failed");
     const onClose = vi.fn();
-    let outcome: Promise<void> | undefined;
+    let outcome: Promise<unknown> | undefined;
     function Harness() {
       const action = useConfirmAction(() => Promise.resolve(1), {
         onDone: () => Promise.reject(failed),
@@ -127,7 +127,12 @@ describe("useConfirmAction", () => {
         logEvent: "confirm_failed",
       });
       return (
-        <button type="button" onClick={() => (outcome = action.confirm())}>
+        <button
+          type="button"
+          onClick={() => {
+            outcome = action.confirm().catch((error: unknown) => error);
+          }}
+        >
           {action.pending ? "Läuft" : "Bestätigen"}
         </button>
       );
@@ -137,7 +142,7 @@ describe("useConfirmAction", () => {
     fireEvent.click(confirmButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-    await expect(outcome).rejects.toBe(failed);
+    await expect(outcome).resolves.toBe(failed);
     expect(confirmButton()).toBeInTheDocument();
   });
 
