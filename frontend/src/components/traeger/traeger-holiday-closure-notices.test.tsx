@@ -45,6 +45,34 @@ const pending: PendingHolidayClosures = {
 };
 
 describe("TraegerHolidayClosureNotices", () => {
+  // #8271: the shared row names the reason; the school stands on its own
+  // line. The button keeps its name with school and reason, so two
+  // schools' rows stay apart.
+  it("shows the school under the reason and names both on the button", () => {
+    render(
+      <ToastProvider>
+        <TraegerHolidayClosureNotices
+          pending={pending}
+          loadError={null}
+          schoolName={() => "OGS Am Park"}
+          reload={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByText("„Pädagogischer Tag“")).toBeInTheDocument();
+    // One school line per row, never „Schule: Grund“ in the heading.
+    expect(screen.getAllByText("OGS Am Park")).toHaveLength(2);
+    expect(
+      screen.queryByText("OGS Am Park: „Pädagogischer Tag“"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Eltern informieren: OGS Am Park: „Pädagogischer Tag“",
+      }),
+    ).toBeInTheDocument();
+  });
+
   // ADR 0311 rule 6: a refused „Alle Eltern informieren“ waits for the list
   // read again. A failed read says so instead of claiming the new state.
   it("names a failed read after a refused notify-all and reads only once", async () => {

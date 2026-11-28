@@ -12,33 +12,14 @@
 
 import { useCallback, useState } from "react";
 
+import { Mail } from "lucide-react";
 import {
-  CalendarCheck,
-  CalendarX,
-  ChevronDown,
-  ChevronUp,
-  Mail,
-} from "lucide-react";
-import { formatClosingRange } from "~/components/traeger/closing-day-format";
-import { Button } from "~/components/ui/button";
-import {
-  ResponsiveActionList,
-  ResponsiveActionRow,
-  ResponsiveRowActions,
-} from "~/components/ui/responsive-action-list";
-import { SectionCard } from "~/components/ui/section-card";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
-import {
-  familiesBookedSentence,
-  NOTIFY_PARENTS_TOOLTIP,
-  noticeStatusView,
-  SHOW_MORE_NO_TOOLTIP,
-  shownNotice,
-  useNoticeList,
-  useNoticeNotify,
+  HolidayClosureNoticeCards,
   type HolidayClosureNoticeRowContent,
-} from "~/components/planning/use-holiday-closure-notices";
+} from "~/components/planning/holiday-closure-notice-cards";
+import { Button } from "~/components/ui/button";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { useNoticeNotify } from "~/components/planning/use-holiday-closure-notices";
 import {
   childrenLabel,
   familiesLabel,
@@ -46,7 +27,6 @@ import {
   HolidayClosureWeekList,
 } from "~/components/traeger/closing-day-holiday-impact";
 import type { FormErrorInput } from "~/components/ui/form-error";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -70,10 +50,7 @@ export function TraegerHolidayClosureNotices({
   schoolName: (id: string) => string;
   reload: () => Promise<unknown>;
 }>) {
-  const { isSending, notify } = useNoticeNotify(
-    notifyTraegerHolidayClosureNotice,
-    reload,
-  );
+  const notifier = useNoticeNotify(notifyTraegerHolidayClosureNotice, reload);
   const [notifyingAll, setNotifyingAll] = useState(false);
   const { show: showError } = useApiErrorDisplay();
   const { success } = useToast();
@@ -82,7 +59,7 @@ export function TraegerHolidayClosureNotices({
   const unknownMails = pending?.unknownMails ?? 0;
   const notices = pending?.notices ?? [];
   const suggested = notices.filter(
-    (notice) => notice.status === "suggested" && !isSending(notice.id),
+    (notice) => notice.status === "suggested" && !notifier.isSending(notice.id),
   );
 
   const notifyAll = useCallback(async () => {
@@ -124,10 +101,10 @@ export function TraegerHolidayClosureNotices({
 
   const rows: HolidayClosureNoticeRowContent<TraegerHolidayClosureNotice>[] =
     notices.map((notice) => {
-      const waiting = notice.status === "suggested" && !isSending(notice.id);
+      const waiting = suggested.includes(notice);
       return {
         notice,
-        title: `${schoolName(notice.schoolId)}: „${notice.reason}“`,
+        subtitle: schoolName(notice.schoolId),
         badges:
           waiting && notice.children > 0 ? (
             <StatusBadge
@@ -148,19 +125,6 @@ export function TraegerHolidayClosureNotices({
       };
     });
 
-  const {
-    open,
-    done,
-    visible,
-    hiddenCount,
-    waiting,
-    expanded,
-    openListId,
-    toggleExpanded,
-  } = useNoticeList(rows, isSending);
-  const title = "Eltern noch nicht informiert";
-  const description =
-    "Schulhinweise brauchen einen Klick von dir oder der Schule. Fehlgeschlagene E-Mails kannst du erneut senden.";
   const intro =
     suggested.length > 0 || retryableMails > 0 || unknownMails > 0 ? (
       <div className="space-y-2 text-sm">
@@ -191,6 +155,7 @@ export function TraegerHolidayClosureNotices({
         type="button"
         variant="primary"
         size="md"
+        className="gap-2"
         onClick={() => void notifyAll()}
         isLoading={notifyingAll}
         tooltip={
@@ -204,152 +169,15 @@ export function TraegerHolidayClosureNotices({
         {suggested.length > 0 ? "Alle Eltern informieren" : "Erneut senden"}
       </Button>
     ) : null;
-  const renderRow = (
-    row: HolidayClosureNoticeRowContent<TraegerHolidayClosureNotice>,
-  ) => {
-    const notice = shownNotice(row.notice, isSending(row.notice.id));
-    const status = noticeStatusView(notice);
-    const { current, previous } = notice;
-    const showFamilies = notice.status === "suggested" && notice.families > 0;
-    return (
-      <ResponsiveActionRow key={row.notice.id} align="start">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-sm font-semibold wrap-anywhere text-gray-900">
-              {row.title}
-            </p>
-            {status.badge ? (
-              <StatusBadge
-                label={status.badge.label}
-                tone={status.badge.tone}
-                size="xs"
-              />
-            ) : null}
-            {row.badges}
-          </div>
-          <ul className="mt-1 space-y-0.5 text-sm text-gray-700">
-            {current ? (
-              <li className="flex items-start gap-1.5">
-                <CalendarX
-                  className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 tabular-nums">
-                  {previous ? "Neu" : "Geschlossen"}:{" "}
-                  {formatClosingRange(current)}
-                </span>
-              </li>
-            ) : null}
-            {previous ? (
-              <li className="flex items-start gap-1.5">
-                <CalendarCheck
-                  className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 tabular-nums">
-                  {current
-                    ? `Vorher: ${formatClosingRange(previous)}`
-                    : `Schließtag gelöscht: ${formatClosingRange(previous)}.`}
-                </span>
-              </li>
-            ) : null}
-          </ul>
-          {showFamilies ? (
-            <p className="mt-1 flex items-start gap-1.5 text-sm text-gray-900">
-              <Mail
-                className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
-                aria-hidden="true"
-              />
-              <span>{familiesBookedSentence(notice.families)}</span>
-            </p>
-          ) : null}
-          {row.details}
-          {status.hint ? (
-            <p className="mt-1 text-sm text-gray-600">{status.hint}</p>
-          ) : null}
-        </div>
-        {notice.canNotify ? (
-          <ResponsiveRowActions>
-            <Button
-              type="button"
-              variant="surface"
-              size="compact"
-              aria-label={`Eltern informieren: ${row.title}`}
-              tooltip={NOTIFY_PARENTS_TOOLTIP}
-              onClick={() => void notify(row.notice)}
-            >
-              <Mail className="h-4 w-4" aria-hidden="true" />
-              Eltern informieren
-            </Button>
-          </ResponsiveRowActions>
-        ) : null}
-      </ResponsiveActionRow>
-    );
-  };
-  if (loadError)
-    return (
-      <SectionCard title={title} concept={holidayWeeksConcept}>
-        <LoadErrorAlert error={loadError} actionLayout="responsive" />
-      </SectionCard>
-    );
-  if (rows.length === 0 && !intro && !action) return null;
   return (
-    <div className="flex flex-col gap-3">
-      {open.length > 0 || intro || action ? (
-        <SectionCard
-          title={title}
-          concept={holidayWeeksConcept}
-          titleBadge={
-            waiting > 0 ? (
-              <StatusBadge tone="warning" label={`${waiting} offen`} />
-            ) : null
-          }
-          description={description}
-          action={action}
-        >
-          {intro ? <div className="mb-3">{intro}</div> : null}
-          {visible.length > 0 ? (
-            <ResponsiveActionList id={openListId}>
-              {visible.map(renderRow)}
-            </ResponsiveActionList>
-          ) : null}
-          {hiddenCount > 0 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="md"
-              className="mt-2 w-full"
-              aria-expanded={expanded}
-              aria-controls={openListId}
-              onClick={toggleExpanded}
-              noTooltip={SHOW_MORE_NO_TOOLTIP}
-            >
-              {expanded ? (
-                <>
-                  Weniger anzeigen
-                  <ChevronUp className="size-4" aria-hidden="true" />
-                </>
-              ) : (
-                <>
-                  {hiddenCount} weitere anzeigen
-                  <ChevronDown className="size-4" aria-hidden="true" />
-                </>
-              )}
-            </Button>
-          ) : null}
-        </SectionCard>
-      ) : null}
-      {done.length > 0 ? (
-        <SectionCard
-          title={`Erledigte Hinweise (${done.length})`}
-          description="Für diese Schließtage ist nichts mehr zu tun."
-          collapsible
-          defaultCollapsed
-          headingLevel={3}
-        >
-          <ResponsiveActionList>{done.map(renderRow)}</ResponsiveActionList>
-        </SectionCard>
-      ) : null}
-    </div>
+    <HolidayClosureNoticeCards
+      title="Eltern noch nicht informiert"
+      description="Schulhinweise brauchen einen Klick von dir oder der Schule. Fehlgeschlagene E-Mails kannst du erneut senden."
+      rows={rows}
+      notifier={notifier}
+      loadError={loadError}
+      intro={intro}
+      action={action}
+    />
   );
 }

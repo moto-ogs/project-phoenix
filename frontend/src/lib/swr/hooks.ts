@@ -458,11 +458,33 @@ function useScopedSWR<T, E>(
     shown.current.generation === generation &&
     shown.current.moved === moved;
 
+  const reader = readerConfig(options);
+  // An interval that depends on the data („poll while a mail is sending“)
+  // is asked on every render, and SWR gets the number. SWR alone asks a
+  // function only after its own poll and restarts polling only when the
+  // function itself changes: a reader that loaded idle with a stable
+  // function never polled after a write's reload brought a sending state,
+  // and an inline function restarted the timer on every render (#8271).
+  // A number or no interval passes through untouched, so a provider's
+  // interval still applies.
+  const interval = reader.refreshInterval ?? base.refreshInterval;
+  const dataInterval =
+    typeof interval === "function"
+      ? {
+          refreshInterval: interval(
+            fullKey === null
+              ? undefined
+              : (cache.get(fullKey)?.data as T | undefined),
+          ),
+        }
+      : {};
+
   // The public fetcher contract has no SWR key argument. In particular a
   // factory's optional params must not receive the full scoped cache key.
   const response = useSWR<T, E>(fullKey, () => fetcher(), {
     ...(base as SWRConfiguration<T, E>),
-    ...readerConfig(options),
+    ...reader,
+    ...dataInterval,
     keepPreviousData: keep,
     use: [generationLockMiddleware],
   });
