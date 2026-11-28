@@ -1,54 +1,6 @@
 import type { MotoConcept } from "~/lib/moto-concepts";
-import { absencesConcept } from "~/lib/concepts/absences";
-import { accountsConcept } from "~/lib/concepts/accounts";
-import { activitiesConcept } from "~/lib/concepts/activities";
-import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
-import { billingConcept } from "~/lib/concepts/billing";
-import { birthdaysConcept } from "~/lib/concepts/birthdays";
-import { bookingAccountsConcept } from "~/lib/concepts/bookingAccounts";
-import { calendarConcept } from "~/lib/concepts/calendar";
-import { careContractsConcept } from "~/lib/concepts/careContracts";
-import { carePlanConcept } from "~/lib/concepts/carePlan";
-import { careTimesConcept } from "~/lib/concepts/careTimes";
-import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
-import { childrenConcept } from "~/lib/concepts/children";
-import { classDayConcept } from "~/lib/concepts/classDay";
-import { confirmationsConcept } from "~/lib/concepts/confirmations";
-import { devicesConcept } from "~/lib/concepts/devices";
-import { directDebitConcept } from "~/lib/concepts/directDebit";
-import { documentsConcept } from "~/lib/concepts/documents";
-import { enrollmentsConcept } from "~/lib/concepts/enrollments";
-import { exportRecipientsConcept } from "~/lib/concepts/exportRecipients";
-import { exportsConcept } from "~/lib/concepts/exports";
-import { feedbackConcept } from "~/lib/concepts/feedback";
-import { filesConcept } from "~/lib/concepts/files";
-import { homeConcept } from "~/lib/concepts/home";
-import { inClassConcept } from "~/lib/concepts/inClass";
-import { infoDisplaysConcept } from "~/lib/concepts/infoDisplays";
-import { legalNoticeConcept } from "~/lib/concepts/legalNotice";
-import { letterheadConcept } from "~/lib/concepts/letterhead";
-import { listsConcept } from "~/lib/concepts/lists";
-import { mailsConcept } from "~/lib/concepts/mails";
-import { mealPlanConcept } from "~/lib/concepts/mealPlan";
-import { messagesConcept } from "~/lib/concepts/messages";
-import { notificationsConcept } from "~/lib/concepts/notifications";
-import { parentsConcept } from "~/lib/concepts/parents";
-import { payrollConcept } from "~/lib/concepts/payroll";
-import { permissionsConcept } from "~/lib/concepts/permissions";
-import { pickupConcept } from "~/lib/concepts/pickup";
-import { presentConcept } from "~/lib/concepts/present";
-import { privacyConcept } from "~/lib/concepts/privacy";
-import { publicHolidaysConcept } from "~/lib/concepts/publicHolidays";
-import { reportsConcept } from "~/lib/concepts/reports";
-import { requestsConcept } from "~/lib/concepts/requests";
-import { responsibilityConcept } from "~/lib/concepts/responsibility";
-import { settingsConcept } from "~/lib/concepts/settings";
-import { signInConcept } from "~/lib/concepts/signIn";
-import { staffPlanConcept } from "~/lib/concepts/staffPlan";
-import { supervisionConcept } from "~/lib/concepts/supervision";
-import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
-import { utilizationConcept } from "~/lib/concepts/utilization";
-import { settingsTabConcept } from "./settings-sections";
+
+type ConceptLoader = () => Promise<MotoConcept>;
 
 /**
  * Das Konzept-Symbol jeder Einstellungs-Kategorie (#8221, Spec #8220), Schlüssel
@@ -57,101 +9,185 @@ import { settingsTabConcept } from "./settings-sections";
  * (`.claude/rules/frontend-ui-kit.md`, Kartenkopf) mehrere Themenkarten hat;
  * das entscheidet der Aufrufer über `withIcon` an `SettingsCategory`.
  * Wer eine Kategorie-Bezeichnung anlegt, trägt hier ihr Konzept ein, sonst
- * schlägt `settings-category-concepts.test.ts` fehl. Die Karte lädt diese
- * Tabelle erst mit `withIcon`; so trägt eine Settings-Seite ohne
- * Themenkarten keine Glyphen für andere Kategorien.
+ * schlägt `settings-category-concepts.test.ts` fehl. Jeder Eintrag lädt nur
+ * sein eigenes Symbol, damit eine Themenkarte keine Glyphen anderer
+ * Kategorien mitbringt.
  */
-export const CATEGORY_CONCEPTS: Readonly<Record<string, MotoConcept>> = {
-  abholung: pickupConcept,
-  abwesenheit: absencesConcept,
-  aktivierung: enrollmentsConcept,
-  aktivitaeten: activitiesConcept,
-  allgemein: enrollmentsConcept,
-  anmeldung: enrollmentsConcept,
-  "anmeldung-essen": mealPlanConcept,
-  anwesenheit: activitiesConcept,
-  auffaelligkeiten: reportsConcept,
-  "anwesenheit-erfassen": presentConcept,
-  aufsicht: classDayConcept,
-  benachrichtigung: mailsConcept,
-  benachrichtigungen: notificationsConcept,
-  betreuungsangebote: carePlanConcept,
-  betreuungstage: calendarConcept,
-  betreuungszeiten: arrivalPickupConcept,
-  briefkopf: letterheadConcept,
-  "qr-code": billingConcept,
-  "bestellung-essen": mealPlanConcept,
-  bewegungsdaten: privacyConcept,
-  caterer: mealPlanConcept,
-  checkout: devicesConcept,
-  dateien: filesConcept,
-  datenbereinigung: privacyConcept,
-  datev_mandant: exportsConcept,
-  "datev-lohn": payrollConcept,
-  "datev-buchungen": bookingAccountsConcept,
-  "e-mail": mailsConcept,
-  einheiten: payrollConcept,
-  einladungen: accountsConcept,
-  elternmeldungen: requestsConcept,
-  elternportal: parentsConcept,
-  essensplan: mealPlanConcept,
-  feedback: feedbackConcept,
-  "ferien-anmeldung": enrollmentsConcept,
-  "planung-in-moto": staffPlanConcept,
-  arbeitszeitregeln: timeTrackingConcept,
-  "ferien-beitrag": billingConcept,
-  "ferien-bestaetigung": confirmationsConcept,
-  "ferien-schreiben": documentsConcept,
-  "monatsbeitrag-lauf": billingConcept,
-  "monatsbeitrag-pruefung": changeHistoryConcept,
-  "monatsbeitrag-lastschrift": directDebitConcept,
-  "vertraege-unterschrift": careContractsConcept,
-  formular: enrollmentsConcept,
-  "fristen-essen": mealPlanConcept,
-  "frueh-abgeholt": pickupConcept,
-  geburtstage: birthdaysConcept,
-  "gebuchte-module": listsConcept,
-  "info-displays": infoDisplaysConcept,
-  kalender: calendarConcept,
-  kapazität: utilizationConcept,
-  kinder: childrenConcept,
-  "kinder-ohne-ogs-platz": childrenConcept,
-  lockout: signInConcept,
-  lohnarten: payrollConcept,
-  lohndatei: payrollConcept,
-  mfa: signInConcept,
-  monitoring: devicesConcept,
-  "nach-hause": homeConcept,
-  nutzungsanalyse: privacyConcept,
-  oeffnungszeiten: careTimesConcept,
-  organisation: settingsConcept,
-  personaldokumente: documentsConcept,
-  pin: signInConcept,
-  rechtstexte: legalNoticeConcept,
-  "vertrag-bestaetigungen": confirmationsConcept,
-  vertragsabschluss: careContractsConcept,
-  "zustaendige-stellen": responsibilityConcept,
-  schulstunden: inClassConcept,
-  schülerdaten: childrenConcept,
-  "sehen-und-bearbeiten": permissionsConcept,
-  sicherheit: enrollmentsConcept,
-  sitzungsbereinigung: supervisionConcept,
-  sitzungsende: supervisionConcept,
-  standort: publicHolidaysConcept,
-  stundenplan: carePlanConcept,
-  team: messagesConcept,
-  termine: calendarConcept,
-  zeiterfassung: timeTrackingConcept,
-  "zeitkonten-export": exportRecipientsConcept,
+export const CATEGORY_CONCEPTS: Readonly<Record<string, ConceptLoader>> = {
+  abholung: () => import("~/lib/concepts/pickup").then((m) => m.pickupConcept),
+  abwesenheit: () =>
+    import("~/lib/concepts/absences").then((m) => m.absencesConcept),
+  aktivierung: () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  aktivitaeten: () =>
+    import("~/lib/concepts/activities").then((m) => m.activitiesConcept),
+  allgemein: () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  anmeldung: () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  "anmeldung-essen": () =>
+    import("~/lib/concepts/mealPlan").then((m) => m.mealPlanConcept),
+  anwesenheit: () =>
+    import("~/lib/concepts/activities").then((m) => m.activitiesConcept),
+  auffaelligkeiten: () =>
+    import("~/lib/concepts/reports").then((m) => m.reportsConcept),
+  "anwesenheit-erfassen": () =>
+    import("~/lib/concepts/present").then((m) => m.presentConcept),
+  aufsicht: () =>
+    import("~/lib/concepts/classDay").then((m) => m.classDayConcept),
+  benachrichtigung: () =>
+    import("~/lib/concepts/mails").then((m) => m.mailsConcept),
+  benachrichtigungen: () =>
+    import("~/lib/concepts/notifications").then((m) => m.notificationsConcept),
+  betreuungsangebote: () =>
+    import("~/lib/concepts/carePlan").then((m) => m.carePlanConcept),
+  betreuungstage: () =>
+    import("~/lib/concepts/calendar").then((m) => m.calendarConcept),
+  betreuungszeiten: () =>
+    import("~/lib/concepts/arrivalPickup").then((m) => m.arrivalPickupConcept),
+  briefkopf: () =>
+    import("~/lib/concepts/letterhead").then((m) => m.letterheadConcept),
+  "qr-code": () =>
+    import("~/lib/concepts/billing").then((m) => m.billingConcept),
+  "bestellung-essen": () =>
+    import("~/lib/concepts/mealPlan").then((m) => m.mealPlanConcept),
+  bewegungsdaten: () =>
+    import("~/lib/concepts/privacy").then((m) => m.privacyConcept),
+  caterer: () =>
+    import("~/lib/concepts/mealPlan").then((m) => m.mealPlanConcept),
+  checkout: () =>
+    import("~/lib/concepts/devices").then((m) => m.devicesConcept),
+  dateien: () => import("~/lib/concepts/files").then((m) => m.filesConcept),
+  datenbereinigung: () =>
+    import("~/lib/concepts/privacy").then((m) => m.privacyConcept),
+  datev_mandant: () =>
+    import("~/lib/concepts/exports").then((m) => m.exportsConcept),
+  "datev-lohn": () =>
+    import("~/lib/concepts/payroll").then((m) => m.payrollConcept),
+  "datev-buchungen": () =>
+    import("~/lib/concepts/bookingAccounts").then(
+      (m) => m.bookingAccountsConcept,
+    ),
+  "e-mail": () => import("~/lib/concepts/mails").then((m) => m.mailsConcept),
+  einheiten: () =>
+    import("~/lib/concepts/payroll").then((m) => m.payrollConcept),
+  einladungen: () =>
+    import("~/lib/concepts/accounts").then((m) => m.accountsConcept),
+  elternmeldungen: () =>
+    import("~/lib/concepts/requests").then((m) => m.requestsConcept),
+  elternportal: () =>
+    import("~/lib/concepts/parents").then((m) => m.parentsConcept),
+  essensplan: () =>
+    import("~/lib/concepts/mealPlan").then((m) => m.mealPlanConcept),
+  feedback: () =>
+    import("~/lib/concepts/feedback").then((m) => m.feedbackConcept),
+  "ferien-anmeldung": () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  "planung-in-moto": () =>
+    import("~/lib/concepts/staffPlan").then((m) => m.staffPlanConcept),
+  arbeitszeitregeln: () =>
+    import("~/lib/concepts/timeTracking").then((m) => m.timeTrackingConcept),
+  "ferien-beitrag": () =>
+    import("~/lib/concepts/billing").then((m) => m.billingConcept),
+  "ferien-bestaetigung": () =>
+    import("~/lib/concepts/confirmations").then((m) => m.confirmationsConcept),
+  "ferien-schreiben": () =>
+    import("~/lib/concepts/documents").then((m) => m.documentsConcept),
+  "monatsbeitrag-lauf": () =>
+    import("~/lib/concepts/billing").then((m) => m.billingConcept),
+  "monatsbeitrag-pruefung": () =>
+    import("~/lib/concepts/changeHistory").then((m) => m.changeHistoryConcept),
+  "monatsbeitrag-lastschrift": () =>
+    import("~/lib/concepts/directDebit").then((m) => m.directDebitConcept),
+  "vertraege-unterschrift": () =>
+    import("~/lib/concepts/careContracts").then((m) => m.careContractsConcept),
+  formular: () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  "fristen-essen": () =>
+    import("~/lib/concepts/mealPlan").then((m) => m.mealPlanConcept),
+  "frueh-abgeholt": () =>
+    import("~/lib/concepts/pickup").then((m) => m.pickupConcept),
+  geburtstage: () =>
+    import("~/lib/concepts/birthdays").then((m) => m.birthdaysConcept),
+  "gebuchte-module": () =>
+    import("~/lib/concepts/lists").then((m) => m.listsConcept),
+  "info-displays": () =>
+    import("~/lib/concepts/infoDisplays").then((m) => m.infoDisplaysConcept),
+  kalender: () =>
+    import("~/lib/concepts/calendar").then((m) => m.calendarConcept),
+  kapazität: () =>
+    import("~/lib/concepts/utilization").then((m) => m.utilizationConcept),
+  kinder: () =>
+    import("~/lib/concepts/children").then((m) => m.childrenConcept),
+  "kinder-ohne-ogs-platz": () =>
+    import("~/lib/concepts/children").then((m) => m.childrenConcept),
+  lockout: () => import("~/lib/concepts/signIn").then((m) => m.signInConcept),
+  lohnarten: () =>
+    import("~/lib/concepts/payroll").then((m) => m.payrollConcept),
+  lohndatei: () =>
+    import("~/lib/concepts/payroll").then((m) => m.payrollConcept),
+  mfa: () => import("~/lib/concepts/signIn").then((m) => m.signInConcept),
+  monitoring: () =>
+    import("~/lib/concepts/devices").then((m) => m.devicesConcept),
+  "nach-hause": () => import("~/lib/concepts/home").then((m) => m.homeConcept),
+  nutzungsanalyse: () =>
+    import("~/lib/concepts/privacy").then((m) => m.privacyConcept),
+  oeffnungszeiten: () =>
+    import("~/lib/concepts/careTimes").then((m) => m.careTimesConcept),
+  organisation: () =>
+    import("~/lib/concepts/settings").then((m) => m.settingsConcept),
+  personaldokumente: () =>
+    import("~/lib/concepts/documents").then((m) => m.documentsConcept),
+  pin: () => import("~/lib/concepts/signIn").then((m) => m.signInConcept),
+  rechtstexte: () =>
+    import("~/lib/concepts/legalNotice").then((m) => m.legalNoticeConcept),
+  "vertrag-bestaetigungen": () =>
+    import("~/lib/concepts/confirmations").then((m) => m.confirmationsConcept),
+  vertragsabschluss: () =>
+    import("~/lib/concepts/careContracts").then((m) => m.careContractsConcept),
+  "zustaendige-stellen": () =>
+    import("~/lib/concepts/responsibility").then(
+      (m) => m.responsibilityConcept,
+    ),
+  schulstunden: () =>
+    import("~/lib/concepts/inClass").then((m) => m.inClassConcept),
+  schülerdaten: () =>
+    import("~/lib/concepts/children").then((m) => m.childrenConcept),
+  "sehen-und-bearbeiten": () =>
+    import("~/lib/concepts/permissions").then((m) => m.permissionsConcept),
+  sicherheit: () =>
+    import("~/lib/concepts/enrollments").then((m) => m.enrollmentsConcept),
+  sitzungsbereinigung: () =>
+    import("~/lib/concepts/supervision").then((m) => m.supervisionConcept),
+  sitzungsende: () =>
+    import("~/lib/concepts/supervision").then((m) => m.supervisionConcept),
+  standort: () =>
+    import("~/lib/concepts/publicHolidays").then(
+      (m) => m.publicHolidaysConcept,
+    ),
+  stundenplan: () =>
+    import("~/lib/concepts/carePlan").then((m) => m.carePlanConcept),
+  team: () => import("~/lib/concepts/messages").then((m) => m.messagesConcept),
+  termine: () =>
+    import("~/lib/concepts/calendar").then((m) => m.calendarConcept),
+  zeiterfassung: () =>
+    import("~/lib/concepts/timeTracking").then((m) => m.timeTrackingConcept),
+  "zeitkonten-export": () =>
+    import("~/lib/concepts/exportRecipients").then(
+      (m) => m.exportRecipientsConcept,
+    ),
 };
 
 /**
  * Das Konzept einer Kategorie. Eine Kategorie ohne Eintrag (neu im Backend,
  * noch ohne Bezeichnung) trägt das Konzept ihres Reiters.
  */
-export function settingsCategoryConcept(
+export async function settingsCategoryConcept(
   categoryKey: string,
   tabKey: string,
-): MotoConcept {
-  return CATEGORY_CONCEPTS[categoryKey] ?? settingsTabConcept(tabKey);
+): Promise<MotoConcept> {
+  const loader = CATEGORY_CONCEPTS[categoryKey];
+  if (loader) return loader();
+  const { settingsTabConcept } = await import("./settings-sections");
+  return settingsTabConcept(tabKey);
 }

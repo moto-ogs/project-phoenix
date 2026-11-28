@@ -76,7 +76,7 @@ describe("SettingsCategory", () => {
   });
 
   it("loads its category concept only when icons are enabled", async () => {
-    mocks.settingsCategoryConcept.mockReturnValue(pickupConcept);
+    mocks.settingsCategoryConcept.mockResolvedValue(pickupConcept);
     const { container } = renderWithProviders(
       <SettingsCategory
         category={makeCategory({ key: "abholung", label: "Abholung" })}

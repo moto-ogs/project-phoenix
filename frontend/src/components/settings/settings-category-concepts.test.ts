@@ -12,11 +12,14 @@ const registered = new Set<object>(Object.values(MOTO_CONCEPTS));
 describe("settingsCategoryConcept", () => {
   it.each(Object.keys(categoryLabels))(
     "gives the category %s a registered concept of its own",
-    (key) => {
-      const concept = CATEGORY_CONCEPTS[key];
-      expect(concept).toBeDefined();
+    async (key) => {
+      const loader = CATEGORY_CONCEPTS[key];
+      expect(loader).toBeDefined();
+      const concept = await loader?.();
       expect(registered.has(concept as object)).toBe(true);
-      expect(settingsCategoryConcept(key, "operations")).toBe(concept);
+      await expect(settingsCategoryConcept(key, "operations")).resolves.toBe(
+        concept,
+      );
     },
   );
 
@@ -26,12 +29,12 @@ describe("settingsCategoryConcept", () => {
     );
   });
 
-  it("gives an unknown category the concept of its tab", () => {
-    expect(settingsCategoryConcept("neu-im-backend", "meals")).toBe(
-      settingsTabConcept("meals"),
-    );
-    expect(settingsCategoryConcept("neu-im-backend", "meals")).toBe(
-      MOTO_CONCEPTS.mealPlan,
-    );
+  it("gives an unknown category the concept of its tab", async () => {
+    await expect(
+      settingsCategoryConcept("neu-im-backend", "meals"),
+    ).resolves.toBe(settingsTabConcept("meals"));
+    await expect(
+      settingsCategoryConcept("neu-im-backend", "meals"),
+    ).resolves.toBe(MOTO_CONCEPTS.mealPlan);
   });
 });

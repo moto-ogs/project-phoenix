@@ -135,19 +135,23 @@ export function SettingsCategory({
     }
 
     let current = true;
-    void import("./settings-category-concepts").then(
-      ({ settingsCategoryConcept }) => {
-        if (current) setConcept(settingsCategoryConcept(category.key, tabKey));
-      },
-      (error: unknown) => {
-        if (!current) return;
-        logger.warn("category concept could not load", {
-          category_key: category.key,
-          tab_key: tabKey,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      },
-    );
+    void import("./settings-category-concepts")
+      .then(({ settingsCategoryConcept }) =>
+        settingsCategoryConcept(category.key, tabKey),
+      )
+      .then(
+        (loadedConcept) => {
+          if (current) setConcept(loadedConcept);
+        },
+        (error: unknown) => {
+          if (!current) return;
+          logger.warn("category concept could not load", {
+            category_key: category.key,
+            tab_key: tabKey,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
 
     return () => {
       current = false;
