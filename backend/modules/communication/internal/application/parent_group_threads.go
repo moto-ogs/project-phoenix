@@ -18,7 +18,12 @@ type (
 	ParentGroupAudienceChild    = communication.ParentGroupAudienceChild
 	ParentGroupAudienceReads    = communication.ParentGroupAudienceReads
 	ParentMessageMails          = communication.ParentMessageMails
+	ParentGroupTargetNames      = communication.ParentGroupTargetNames
 )
+
+// LabelParentGroupThreads gives each thread the current name of its target
+// (#8207).
+var LabelParentGroupThreads = communication.LabelParentGroupThreads
 
 const (
 	ParentGroupTargetClass         = communication.ParentGroupTargetClass

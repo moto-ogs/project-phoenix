@@ -37,8 +37,8 @@
     },
     {
       "build": "production",
-      "evidence": "func (p GroupThreadPortal) PortalListGroupThreads(ctx context.Context, accountID int64, studentIDs, tenantIDs []int64) ([]communication.PortalGuardianGroupThread, error) {\n\treturn p.Store.ListThreadsForGuardian(ctx, accountID, studentIDs, tenantIDs)\n}",
-      "form": "unchanged-forward-evidence",
+      "evidence": "func (p GroupThreadPortal) PortalListGroupThreads(ctx context.Context, accountID int64, studentIDs, tenantIDs []int64) ([]communication.PortalGuardianGroupThread, error) {\n\trows, err := p.Store.ListThreadsForGuardian(ctx, accountID, studentIDs, tenantIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tthreads := make([]*communication.ParentGroupThread, 0, len(rows))\n\tfor i := range rows {\n\t\tthreads = append(threads, \u0026rows[i].Thread)\n\t}\n\treturn rows, communication.LabelParentGroupThreads(ctx, p.Names, threads...)\n}",
+      "form": "unclassified-evidence",
       "id": "modules/communication/internal/adapters/parentpostgres/GroupThreadPortal.PortalListGroupThreads",
       "owner": "modules/communication"
     },
@@ -891,7 +891,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListParentGroupThreads(ctx context.Context) ([]deliveryPorts.ParentGroupThreadSummary, error) {\n\tif err := s.requireGroupAuthor(ctx); err != nil {\n\t\treturn nil, err\n\t}\n\trows, err := s.GroupThreads.ListThreads(ctx)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"messaging: list group threads: %w\", err)\n\t}\n\treturn rows, nil\n}",
+      "evidence": "func (s *Service) ListParentGroupThreads(ctx context.Context) ([]deliveryPorts.ParentGroupThreadSummary, error) {\n\tif err := s.requireGroupAuthor(ctx); err != nil {\n\t\treturn nil, err\n\t}\n\trows, err := s.GroupThreads.ListThreads(ctx)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"messaging: list group threads: %w\", err)\n\t}\n\tthreads := make([]*deliveryPorts.ParentGroupThread, 0, len(rows))\n\tfor i := range rows {\n\t\tthreads = append(threads, \u0026rows[i].Thread)\n\t}\n\treturn rows, deliveryPorts.LabelParentGroupThreads(ctx, s.GroupTargetNames, threads...)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/parentmessages/Service.ListParentGroupThreads",
       "owner": "modules/communication"

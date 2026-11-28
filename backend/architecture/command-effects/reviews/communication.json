@@ -582,6 +582,46 @@
       "target_owner": "parent-announcement-audience"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs; modules/schoolstructure/internal/adapters/postgres/groups/group.go:207. Names a group thread's group or AG at read time in the caller's school (#8207). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Capability.ListGroups. Names a group thread's group or AG at read time in the caller's school (#8207). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListGroups",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Owner.ListGroups. Names a group thread's group or AG at read time in the caller's school (#8207). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.ListGroups",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentGroupTargetNames.GroupTargetNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupTargetNames.GroupTargetNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable/ports.EducationGroupNames.EducationGroupNames, bound by roots/owners/timetable_owner_rows.go:29. Names a group thread's group or AG at read time in the caller's school (#8207). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.EducationGroupNames.EducationGroupNames",
+      "target_owner": "timetable-activities"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterAccessLog.RecordParentLetterAccess",
       "classification": "platform",

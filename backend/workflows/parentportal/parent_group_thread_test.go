@@ -167,3 +167,43 @@ func TestGroupThreadAnswerRetryAfterCloseReturnsStoredMessage(t *testing.T) {
 	_, err = portal.PostChildReply(ctx, other.AccountID, chain.StudentID, "Wir bringen Muffins.", threadID)
 	require.Error(t, err)
 }
+
+// A family reads a group thread under the group's current name (#8207):
+// renamed after the thread opened, the list and the thread show the new
+// name. A family outside the group still sees nothing of the thread.
+func TestGroupThreadShowsTheGroupsCurrentNameToTheFamily(t *testing.T) {
+	t.Parallel()
+	portal, _, db := buildGroupThreadPortal(t)
+	member := testpkg.CreateTestParentGuardianChain(t, db)
+	outsider := testpkg.CreateTestParentGuardianChain(t, db)
+	group := testpkg.CreateTestEducationGroup(t, db, "Füchse")
+	_, err := db.NewRaw(`UPDATE users.student_school_memberships SET group_id = ? WHERE student_profile_id = ?`, group.ID, member.StudentID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	_, staff := testpkg.CreateTestStaffWithAccount(t, db, "Olivia", "Berg")
+
+	staffCtx := context.WithValue(testpkg.Ctx(t), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(staff.ID)})
+	staffCtx = context.WithValue(staffCtx, sessiontoken.CtxPermissions, []string{"admin:*"})
+	var threadID int64
+	require.NoError(t, testpkg.WithinTenantContext(t, staffCtx, db, testpkg.Tenant(t), func(ctx context.Context) error {
+		var err error
+		threadID, err = api.CreateParentGroupGroupThreadForTest(ctx, testpkg.NewDatabase(t, db), staff.ID, group.ID, "Gruppe "+group.Name, "Ausflug", "Morgen geht es in den Zoo.")
+		return err
+	}))
+	_, err = db.NewRaw(`UPDATE education.groups SET name = 'Eulen' WHERE id = ?`, group.ID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	threads, err := portal.ListGroupThreads(ctx, member.AccountID)
+	require.NoError(t, err)
+	require.Len(t, threads, 1)
+	assert.Equal(t, "Gruppe Eulen", threads[0].Thread.TargetLabel, "the list shows the new name")
+	detail, err := portal.GetGroupThread(ctx, member.AccountID, threadID)
+	require.NoError(t, err)
+	assert.Equal(t, "Gruppe Eulen", detail.Thread.TargetLabel, "the thread shows the new name")
+
+	others, err := portal.ListGroupThreads(ctx, outsider.AccountID)
+	require.NoError(t, err)
+	assert.Empty(t, others, "a family outside the group sees no thread")
+	_, err = portal.GetGroupThread(ctx, outsider.AccountID, threadID)
+	require.ErrorIs(t, err, parentService.ErrGroupThreadNotFound)
+}

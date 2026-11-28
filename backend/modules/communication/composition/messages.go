@@ -37,7 +37,8 @@ type ParentMessagingConfig struct {
 	ParentsURL       string
 	Observe          func(Observation)
 	GroupAudience    communication.ParentGroupAudienceReads
-	Mails            communication.ParentMessageMails // what became of the e-mails of OGS messages (#7058)
+	GroupTargetNames communication.ParentGroupTargetNames // current names of groups and AGs (#8207)
+	Mails            communication.ParentMessageMails     // what became of the e-mails of OGS messages (#7058)
 }
 
 // NewParentMessaging also returns the OGS side of the group threads (#4784), the
@@ -50,7 +51,7 @@ func NewParentMessaging(cfg ParentMessagingConfig, runtime parentMessages.Runtim
 		Broadcaster: cfg.Broadcaster, Logger: cfg.Logger, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier), Preferences: cfg.Preferences, Outbox: cfg.Outbox,
 		GuardianProfiles: cfg.GuardianProfiles, Schools: cfg.Schools, LoginImages: cfg.LoginImages, ParentsURL: cfg.ParentsURL,
 		CountPreferences: newCountPreferences(cfg.DB), Groups: cfg.UserContext,
-		GroupThreads: parentpostgres.NewGroupThreadStore(parentDatabase(cfg.DB)), GroupAudience: cfg.GroupAudience, Leaders: cfg.Persons, Mails: cfg.Mails,
+		GroupThreads: parentpostgres.NewGroupThreadStore(parentDatabase(cfg.DB)), GroupAudience: cfg.GroupAudience, GroupTargetNames: cfg.GroupTargetNames, Leaders: cfg.Persons, Mails: cfg.Mails,
 	}, runtime, policy)
 	return deliveryPorts.NewParentMessagingFacade(service, parentMessages.NativeFacadeRows(), parentMessages.NativeFacadeErrors(), communicationPostgres.NewMessageObservation(cfg.Observe)), service, service, service, service
 }
@@ -61,8 +62,7 @@ func messageAttachmentStore(db *bun.DB) *attachmentpostgres.Store {
 	return attachmentpostgres.New(attachmentpostgres.Database(staffpostgres.NewAmbientDatabase(db)))
 }
 
-// NewPortalMessageAttachments is the guardian's side of the photos and files
-// of messages (#6685).
+// NewPortalMessageAttachments is the guardian's side of message files (#6685).
 func NewPortalMessageAttachments(db *bun.DB) communication.PortalMessageAttachments {
 	return deliveryPorts.PortalMessageAttachments{Store: messageAttachmentStore(db)}
 }

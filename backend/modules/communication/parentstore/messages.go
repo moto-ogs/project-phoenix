@@ -15,6 +15,7 @@ func NewParentMessageThreadRepository(db *bun.DB, guardians recordports.Guardian
 }
 
 // NewGroupThreadPortal is the guardian side of the group threads (#4784).
-func NewGroupThreadPortal(db *bun.DB) communication.PortalGroupThreads {
-	return parentpostgres.GroupThreadPortal{Store: parentpostgres.NewGroupThreadStore(postgresDatabase(db))}
+// names gives each thread the current name of its group or AG (#8207).
+func NewGroupThreadPortal(db *bun.DB, names communication.ParentGroupTargetNames) communication.PortalGroupThreads {
+	return parentpostgres.GroupThreadPortal{Store: parentpostgres.NewGroupThreadStore(postgresDatabase(db)), Names: names}
 }

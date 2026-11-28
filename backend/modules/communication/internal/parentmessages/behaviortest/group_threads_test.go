@@ -64,7 +64,7 @@ func newGroupFixture(t *testing.T) (*groupFixture, func(context.Context, func(co
 	run := func(ctx context.Context, fn func(context.Context) error) error {
 		return testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), fn)
 	}
-	return &groupFixture{svc: svc, portal: parentStore.NewGroupThreadPortal(db), broadcaster: broadcaster, staff: staff.ID, a: a, b: b}, run
+	return &groupFixture{svc: svc, portal: parentStore.NewGroupThreadPortal(db, owners.NewParentGroupTargetNamesForTests(t, testpkg.NewDatabase(t, db))), broadcaster: broadcaster, staff: staff.ID, a: a, b: b}, run
 }
 
 func classTarget(name string) communication.ParentGroupTarget {
