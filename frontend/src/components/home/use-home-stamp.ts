@@ -116,7 +116,11 @@ export function useHomeStamp(enabled: boolean) {
     if (disabled || (checkIn && checkInBlockedReason !== null)) return;
     if (checkIn && todayAbsence) {
       // Die Stempeluhr fragt vorher nach, ob trotz Abwesenheit gestempelt
-      // wird; die Frage steht dort.
+      // wird; die Frage steht dort. Ohne Hinweis sähe der Sprung in die
+      // Zeiterfassung aus, als sei nichts passiert.
+      toast.info(
+        "Für heute ist eine Abwesenheit eingetragen. Tippe in der Zeiterfassung noch einmal auf „Einstempeln“, wenn du trotzdem arbeitest.",
+      );
       toTimeTracking();
       return;
     }
@@ -127,7 +131,13 @@ export function useHomeStamp(enabled: boolean) {
       if (outcome.status === "failed") throw outcome.error;
     } catch (err) {
       if (readStampDeviation(err) !== null) {
-        // Der Grund wird in der Stempeluhr erfasst.
+        // Der Grund wird in der Stempeluhr erfasst. Der Hinweis sagt, warum
+        // die Zeiterfassung aufgeht und was dort zu tun ist.
+        toast.info(
+          checkIn
+            ? "Du weichst von deinem Dienstplan ab. Tippe in der Zeiterfassung noch einmal auf „Einstempeln“ und nenne kurz den Grund."
+            : "Du weichst von deinem Dienstplan ab. Tippe in der Zeiterfassung noch einmal auf „Ausstempeln“ und nenne kurz den Grund.",
+        );
         toTimeTracking();
         return;
       }
