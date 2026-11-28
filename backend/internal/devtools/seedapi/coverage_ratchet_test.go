@@ -112,11 +112,10 @@ var seedCoverageExemptions = map[string]string{
 	"platform.operator_passkey_credentials": "hardware/browser-bound WebAuthn credential; never forge in demo data",
 	"platform.operator_passkey_sessions":    "short-lived WebAuthn challenge state; fake challenges would be invalid",
 
-	"schedule.dateframes":                       "empty in prod too",
-	"schedule.grade_transition_roster_removals": "empty in prod too",
-	"schedule.recurrence_rules":                 "empty in prod too",
-	"schedule.staff_shift_series_exceptions":    "empty in prod too",
-	"schedule.timetable_conflict_acks":          "empty in prod too",
+	"schedule.dateframes":                    "empty in prod too",
+	"schedule.recurrence_rules":              "empty in prod too",
+	"schedule.staff_shift_series_exceptions": "empty in prod too",
+	"schedule.timetable_conflict_acks":       "empty in prod too",
 
 	"users.class_list_entries":          "not in prod yet (migration newer than the deployed image)",
 	"users.message_attachment_cleanup":  "holds the file removal of a deleted message attachment (#6685); the seed deletes no message",
