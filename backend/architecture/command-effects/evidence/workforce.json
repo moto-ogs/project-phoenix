@@ -7689,6 +7689,30 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "binding_digest": "f7b95dae7ebd325b278365c8f4c08d25",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "binding_digest": "0f8e9488cc8b4de2ba685fd5ab949ed7",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "binding_digest": "880c9015e43dbb75995a32acce065e66",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
       "binding_digest": "bfa11418ec7ca8493b66c7c61984f695",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRuntime.WithinSchool",
