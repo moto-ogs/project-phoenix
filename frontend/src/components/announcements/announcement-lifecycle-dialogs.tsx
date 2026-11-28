@@ -17,8 +17,15 @@ import {
 } from "~/lib/parent-announcements-api";
 import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import { isClassLetter, withApiBase } from "~/lib/parent-announcements-api";
-import { summarizeTargets } from "./announcement-meta";
+import {
+  isClassLetter,
+  isLetter,
+  withApiBase,
+} from "~/lib/parent-announcements-api";
+import {
+  describeAnnouncementEmail,
+  summarizeTargets,
+} from "./announcement-meta";
 import { reportsConcept } from "~/lib/concepts/reports";
 
 /**
@@ -75,8 +82,8 @@ export function PublishAnnouncementDialog({
       confirmText="Jetzt veröffentlichen"
       confirmVariant="success"
       confirmTooltip={
-        announcement.send_email
-          ? "Zeigt die Mitteilung sofort den gewählten Eltern und schickt ihnen eine E-Mail."
+        isLetter(announcement) || announcement.send_email
+          ? "Zeigt die Mitteilung sofort den gewählten Eltern und verschickt die E-Mails."
           : "Zeigt die Mitteilung sofort den gewählten Eltern."
       }
       cancelText="Abbrechen"
@@ -91,8 +98,8 @@ export function PublishAnnouncementDialog({
             <DataField inline label="Sichtbar für">
               {summarizeTargets(announcement.targets)}
             </DataField>
-            <DataField inline label="E-Mail an Eltern">
-              {announcement.send_email ? "Ja, zusätzlich" : "Nein"}
+            <DataField inline label="E-Mail an die Eltern">
+              {describeAnnouncementEmail(announcement)}
             </DataField>
           </DataGrid>
         </InsetPanel>

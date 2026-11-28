@@ -72,7 +72,7 @@ describe("lifecycle dialogs", () => {
     });
     expect(dialog).toHaveAccessibleDescription("„Sommerfest“");
     expect(screen.getByText("Ganze Schule")).toBeInTheDocument();
-    expect(screen.getByText("Ja, zusätzlich")).toBeInTheDocument();
+    expect(screen.getByText("Wird versendet")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
     );
@@ -97,7 +97,24 @@ describe("lifecycle dialogs", () => {
       />,
     );
 
-    expect(screen.getByText("Nein")).toBeInTheDocument();
+    expect(screen.getByText("Wird nicht versendet")).toBeInTheDocument();
+  });
+
+  it("names the e-mail audience of an Elternbrief apart from who sees it", () => {
+    render(
+      <PublishAnnouncementDialog
+        reload={vi.fn(() => Promise.resolve())}
+        announcement={{
+          ...announcement,
+          delivery_mode: "letter",
+          email_audience: "all_contacts",
+        }}
+        onClose={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("An alle Bezugspersonen")).toBeInTheDocument();
   });
 
   // #2517: the failure stays in the dialog, named after the step.

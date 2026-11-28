@@ -60,6 +60,7 @@ import type {
 } from "~/lib/parent-announcements-api";
 import {
   classLetterSenderLine,
+  describeAnnouncementEmail,
   describeReminder,
   reminderStateOf,
   RESPONSE_TYPE_LABEL,
@@ -655,13 +656,7 @@ export function AnnouncementDetail({
             </DataField>
           )}
           <DataField label="E-Mail an die Eltern">
-            {letter
-              ? announcement.email_audience === "all_contacts"
-                ? "An alle Bezugspersonen"
-                : "An Bezugspersonen mit Portalzugang"
-              : announcement.send_email
-                ? "Wird versendet"
-                : "Wird nicht versendet"}
+            {describeAnnouncementEmail(announcement)}
           </DataField>
           {poll && announcement.response_deadline && (
             <DataField label="Antwort bis">
