@@ -178,6 +178,20 @@ type TransitionPreviewResponse struct {
 	UnmappedClasses []TransitionUnmappedClassResponse  `json:"unmapped_classes"`
 	Warnings        []string                           `json:"warnings"`
 	Fingerprint     string                             `json:"fingerprint"`
+	// ParentTargets are the class threads to parents and the draft
+	// announcements the apply moves to the new class or closes (#8214).
+	ParentTargets []TransitionParentTargetResponse `json:"parent_targets"`
+}
+
+// TransitionParentTargetResponse is one parent channel of a mapped class.
+type TransitionParentTargetResponse struct {
+	Kind      string   `json:"kind"` // "group_thread" or "announcement_draft"
+	ID        ident.ID `json:"id"`
+	Title     string   `json:"title"`
+	FromClass string   `json:"from_class"`
+	// ToClass is the new class; null when the class leaves: the thread is
+	// closed and the draft loses this class target.
+	ToClass *string `json:"to_class"`
 }
 
 // TransitionMappingPreviewResponse shows the impact of a single mapping.
@@ -312,6 +326,12 @@ func toPreviewResponse(preview gradetransition.Preview) TransitionPreviewRespons
 		UnmappedClasses: make([]TransitionUnmappedClassResponse, 0, len(preview.UnmappedClasses)),
 		Warnings:        preview.Warnings,
 		Fingerprint:     preview.Fingerprint,
+		ParentTargets:   make([]TransitionParentTargetResponse, 0, len(preview.ParentTargets)),
+	}
+	for _, target := range preview.ParentTargets {
+		resp.ParentTargets = append(resp.ParentTargets, TransitionParentTargetResponse{
+			Kind: target.Kind, ID: ident.ID(target.ID), Title: target.Title, FromClass: target.Class, ToClass: target.ToClass,
+		})
 	}
 	if resp.Warnings == nil {
 		resp.Warnings = []string{}

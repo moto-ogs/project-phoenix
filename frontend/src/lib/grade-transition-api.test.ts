@@ -82,6 +82,29 @@ describe("mapTransition", () => {
 describe("mapPreview", () => {
   const backend: adminContract.TransitionPreviewResponse = {
     fingerprint: "",
+    parent_targets: [
+      {
+        kind: "group_thread",
+        id: "9",
+        title: "Elternabend",
+        from_class: "3a",
+        to_class: "4a",
+      },
+      {
+        kind: "announcement_draft",
+        id: "4",
+        title: "Ausflug",
+        from_class: "4a",
+        to_class: null,
+      },
+      {
+        kind: "later_kind",
+        id: "5",
+        title: "Neu",
+        from_class: "3a",
+        to_class: "4a",
+      },
+    ],
     transition_id: "7",
     academic_year: "2026-2027",
     total_students: 50,
@@ -115,6 +138,25 @@ describe("mapPreview", () => {
     expect(p.byMapping[1]?.toClass).toBeNull();
     expect(p.unmappedClasses).toEqual([{ className: "3c", studentCount: 15 }]);
     expect(p.warnings).toHaveLength(1);
+  });
+
+  it("maps the class messages to parents and drops an unknown kind", () => {
+    expect(mapPreview(backend).parentTargets).toEqual([
+      {
+        kind: "group_thread",
+        id: "9",
+        title: "Elternabend",
+        fromClass: "3a",
+        toClass: "4a",
+      },
+      {
+        kind: "announcement_draft",
+        id: "4",
+        title: "Ausflug",
+        fromClass: "4a",
+        toClass: null,
+      },
+    ]);
   });
 });
 
@@ -258,6 +300,7 @@ describe("int64 ids on the wire", () => {
         unmapped_classes: null,
         warnings: null,
         fingerprint: "",
+        parent_targets: null,
         transition_id: big,
         academic_year: "2026-2027",
         total_students: 0,

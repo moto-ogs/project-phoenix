@@ -3578,6 +3578,7 @@ export const gradeTransitionTopic = function gradeTransitionTopic(): HelpTopic {
     notes: [
       "moto schlägt jede Klasse automatisch vor, zum Beispiel `1a` in `2a`.",
       "Ein Entwurf bleibt liegen. Über `Zurück zum Entwurf` arbeitest du später weiter.",
+      "Unter `Nachrichten an Eltern` zeigt die Vorschau, welche Klassen-Nachrichten und Entwürfe von Mitteilungen mitgehen. Sie gehen mit den Kindern in die neue Klasse, zum Beispiel von `3a` in `4a`. Eine Klassen-Nachricht einer Klasse, die abgeht, wird geschlossen.",
     ],
     differences: [
       "Auf dem Handy erscheint nur ein Hinweis. Der Schuljahreswechsel läuft am Computer.",
@@ -7120,6 +7121,7 @@ export const parentGroupMessageTopic =
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
         "Benennst du eine Gruppe oder AG um, trägt ihre Gruppennachricht sofort den neuen Namen. Das sehen das Team und die Eltern.",
+        "Beim Schuljahreswechsel geht eine Klassen-Nachricht mit den Kindern in die neue Klasse. Dann steht dort zum Beispiel `Klasse wurde versetzt: jetzt 4a`. Geht eine Klasse ab, wird ihre Nachricht geschlossen.",
         "Unter `Gelesen` siehst du für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
         "Unter jeder Nachricht steht hinter `E-Mails`, was aus den Mails an die Familien wurde, zum Beispiel `10 zugestellt` und `1 nicht zustellbar`. Welche Adresse betroffen ist, siehst du beim Kind unter `Erziehungsberechtigte`.",
         "Über dem Schreibfeld steht bei `Ging an:`, an wen die Nachricht ging und wie viele Familien sie bekommen haben.",

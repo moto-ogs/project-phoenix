@@ -6,6 +6,7 @@ import (
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -27,6 +28,7 @@ func buildGradeTransition(
 	}
 	workflow, err := owners.NewGradeTransition(gradetransitioncompose.Dependencies{
 		DB: db.Pool(), Structure: structure, Presence: presence, Directory: persons, Membership: membership, Rosters: owner.RosterReconciler,
+		ParentTargets:         owners.GradeTransitionParentTargets(communicationCompose.NewParentClassTransitions(db.Pool())),
 		LockRecurrenceWrites:  owner.RecurrenceLock.LockRecurrenceWrites,
 		ResyncOfferingRosters: resyncOfferingRosters, FollowClassChanges: gradeTransitionClassChanges(owner.CohortRosters),
 		Logger: env.Logger.With("workflow", "grade_transition"), Audit: audit.Command, ClassListEntryRecord: GradeTransitionClassListRecord,

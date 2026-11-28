@@ -61955,6 +61955,25 @@
       ]
     },
     {
+      "name": "GroupThreadClassMoveResponse",
+      "go_type": "messaging.GroupThreadClassMoveResponse",
+      "fields": [
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupThreadDetailResponse",
       "go_type": "messaging.GroupThreadDetailResponse",
       "fields": [
@@ -62088,6 +62107,14 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "class_move",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupThreadClassMoveResponse"
+          }
         }
       ]
     },
@@ -62167,6 +62194,14 @@
             "kind": "ref",
             "ref": "ParentReadersResponse"
           }
+        },
+        {
+          "name": "class_move",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ParentGroupThreadClassMoveResponse"
+          }
         }
       ]
     },
@@ -62245,6 +62280,14 @@
           "schema": {
             "kind": "ref",
             "ref": "ParentReadersResponse"
+          }
+        },
+        {
+          "name": "class_move",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ParentGroupThreadClassMoveResponse"
           }
         },
         {
@@ -83590,6 +83633,25 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentGroupThreadClassMoveResponse",
+      "go_type": "parent.ParentGroupThreadClassMoveResponse",
+      "fields": [
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]
@@ -104989,6 +105051,14 @@
           }
         },
         {
+          "name": "class_move",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupThreadClassMoveResponse"
+          }
+        },
+        {
           "name": "last_message_body",
           "schema": {
             "kind": "string"
@@ -118633,6 +118703,43 @@
       ]
     },
     {
+      "name": "TransitionParentTargetResponse",
+      "go_type": "gradetransitionhttp.TransitionParentTargetResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "TransitionPreviewResponse",
       "go_type": "gradetransitionhttp.TransitionPreviewResponse",
       "fields": [
@@ -118702,6 +118809,17 @@
           "name": "fingerprint",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "parent_targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitionParentTargetResponse"
+            }
           }
         }
       ]

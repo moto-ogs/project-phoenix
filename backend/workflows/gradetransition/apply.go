@@ -137,6 +137,11 @@ func (w *Workflow) executeApply(ctx context.Context, actor Actor, transition sch
 	if err := w.remapClassListEntries(ctx, actor, transition.ID, transition.Mappings); err != nil {
 		return result, err
 	}
+	// The class threads to parents and the class targets of draft
+	// announcements follow the same renames (#8214).
+	if err := w.followParentClassTargets(ctx, actor, transition); err != nil {
+		return result, err
+	}
 
 	if err := w.finalizeAppliedTransition(ctx, actor, transition, promotions, graduates); err != nil {
 		return result, err

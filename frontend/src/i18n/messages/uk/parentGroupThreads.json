@@ -16,5 +16,7 @@
   "errorObjectThread": "групове повідомлення",
   "errorObjectAnswer": "відповідь",
   "errorObjectList": "групові повідомлення",
-  "closedNoteWithoutChat": "Це групове повідомлення закрито."
+  "closedNoteWithoutChat": "Це групове повідомлення закрито.",
+  "classMoved": "Клас переведено: тепер {className}",
+  "classLeft": "Класу {className} у новому навчальному році більше немає. Тому це групове повідомлення закрито."
 }

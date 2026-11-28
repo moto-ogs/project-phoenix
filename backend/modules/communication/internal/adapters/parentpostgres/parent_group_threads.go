@@ -40,6 +40,10 @@ type groupThreadRow struct {
 	LastMessageAt      *time.Time `bun:"last_message_at"`
 	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull"`
 	UpdatedAt          time.Time  `bun:"updated_at,nullzero,notnull"`
+
+	// ClassMoves is the stack of school-year changes that moved a class
+	// thread, newest last (#8214).
+	ClassMoves json.RawMessage `bun:"class_moves,type:jsonb,nullzero,default:'[]'"`
 }
 
 func (r *groupThreadRow) value() *communication.ParentGroupThread {
@@ -52,6 +56,7 @@ func (r *groupThreadRow) value() *communication.ParentGroupThread {
 			Type: r.TargetType, RefID: r.TargetRefID, RefText: r.TargetRefText, Label: r.TargetLabel,
 		},
 		ClosedAt: r.ClosedAt, LastMessageAt: r.LastMessageAt, CreatedAt: r.CreatedAt,
+		ClassMove: latestClassMove(r.ClassMoves),
 	}
 }
 

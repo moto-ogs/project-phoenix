@@ -18,6 +18,10 @@ type (
 	GroupThreadDetail   = messaging.GroupThreadDetail
 )
 
+// GroupThreadClassMove is the school-year change note of a class thread
+// (#8214).
+type GroupThreadClassMove = messaging.GroupThreadClassMove
+
 var (
 	ErrGroupThreadNotFound = messaging.ErrGroupThreadNotFound
 	ErrGroupThreadClosed   = messaging.ErrGroupThreadClosed

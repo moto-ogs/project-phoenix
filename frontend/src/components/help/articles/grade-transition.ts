@@ -31,6 +31,7 @@ export function gradeTransitionTopic(): HelpTopic {
     notes: [
       "moto schlägt jede Klasse automatisch vor, zum Beispiel `1a` in `2a`.",
       "Ein Entwurf bleibt liegen. Über `Zurück zum Entwurf` arbeitest du später weiter.",
+      "Unter `Nachrichten an Eltern` zeigt die Vorschau, welche Klassen-Nachrichten und Entwürfe von Mitteilungen mitgehen. Sie gehen mit den Kindern in die neue Klasse, zum Beispiel von `3a` in `4a`. Eine Klassen-Nachricht einer Klasse, die abgeht, wird geschlossen.",
     ],
     differences: [
       "Auf dem Handy erscheint nur ein Hinweis. Der Schuljahreswechsel läuft am Computer.",

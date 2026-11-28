@@ -25,6 +25,9 @@ type Dependencies struct {
 	Directory  gradetransition.Directory
 	Membership gradetransition.Membership
 	Rosters    gradetransition.Rosters
+	// ParentTargets moves the class threads and the draft class targets of
+	// the parent channels with the children (#8214).
+	ParentTargets gradetransition.ParentClassTargets
 	// LockRecurrenceWrites is the tenant-wide recurrence gate every timetable
 	// writer takes; apply and revert hold it after the class-writes gate.
 	LockRecurrenceWrites func(context.Context) error

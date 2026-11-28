@@ -17,6 +17,7 @@ import { useSWRAuth, useSWRSeedFrom } from "~/lib/swr";
 import { GROUP_THREAD_SEND_REFUSALS } from "~/lib/message-send-refusals";
 import { useOptimisticAction } from "~/lib/swr/optimistic";
 import { Alert } from "~/components/ui/alert";
+import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import {
@@ -286,6 +287,10 @@ function GroupMessageContent() {
 
   const thread = data?.thread;
   const closed = Boolean(thread?.closed_at);
+  // A school-year change moved the class thread, or closed it because the
+  // class left (#8214).
+  const classMove = thread?.class_move;
+  const classLeft = closed && classMove && !classMove.to_class;
   const children = data?.children ?? [];
   const stats =
     data && thread ? (
@@ -337,6 +342,15 @@ function GroupMessageContent() {
       }
     >
       <SectionCard title="Nachrichten">
+        {classMove?.to_class && (
+          <Alert
+            type="info"
+            announce="off"
+            className="mb-4"
+            title={`Klasse wurde versetzt: jetzt ${schoolClassName(classMove.to_class)}`}
+            message={`Beim Schuljahreswechsel wurde aus der ${schoolClassName(classMove.from_class)} die ${schoolClassName(classMove.to_class)}. Neue Nachrichten gehen weiter an dieselben Familien.`}
+          />
+        )}
         <div className="space-y-3" role="log" aria-label="Nachrichtenverlauf">
           {(data?.messages ?? []).map((message) => (
             <ChatBubble
@@ -363,7 +377,12 @@ function GroupMessageContent() {
         </p>
         <FormErrorAlert message={sendError.error} className="mt-3" />
         <div className="mt-4">
-          {closed ? (
+          {classLeft ? (
+            <Alert
+              type="info"
+              message={`${schoolClassLabel(classMove.from_class)} gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.`}
+            />
+          ) : closed ? (
             <Alert
               type="info"
               message="Diese Gruppennachricht ist geschlossen. Eltern können nicht mehr antworten."

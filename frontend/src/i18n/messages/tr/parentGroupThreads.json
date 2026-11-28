@@ -16,5 +16,7 @@
   "errorObjectThread": "grup mesajı",
   "errorObjectAnswer": "yanıt",
   "errorObjectList": "grup mesajları",
-  "closedNoteWithoutChat": "Bu grup mesajı kapatıldı."
+  "closedNoteWithoutChat": "Bu grup mesajı kapatıldı.",
+  "classMoved": "Sınıf geçti: artık {className}",
+  "classLeft": "{className} sınıfı yeni öğretim yılında yok. Bu yüzden bu grup mesajı kapatıldı."
 }

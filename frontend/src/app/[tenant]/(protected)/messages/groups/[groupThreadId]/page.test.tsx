@@ -175,6 +175,54 @@ describe("Gruppennachricht: Objektseite", () => {
     ).toBeInTheDocument();
   });
 
+  // #8214: Der Schuljahreswechsel nimmt die Klassen-Nachricht mit.
+  it("sagt an einer versetzten Klassen-Nachricht, in welcher Klasse sie jetzt ist", () => {
+    const moved = detail(false);
+    state.detail = {
+      ...moved,
+      thread: {
+        ...moved.thread,
+        target_type: "class",
+        target_id: "4a",
+        target_label: "Klasse 4a",
+        class_move: { from_class: "3a", to_class: "4a" },
+      },
+    };
+    render(<GroupMessagePage />);
+    expect(
+      screen.getByText("Klasse wurde versetzt: jetzt 4a"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Neue Nachrichten gehen weiter an dieselben Familien/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Nachricht" }),
+    ).toBeInTheDocument();
+  });
+
+  it("nennt den Grund, wenn der Schuljahreswechsel die Klassen-Nachricht geschlossen hat", () => {
+    const left = detail(true);
+    state.detail = {
+      ...left,
+      thread: {
+        ...left.thread,
+        target_type: "class",
+        target_id: "4a",
+        target_label: "Klasse 4a",
+        class_move: { from_class: "4a", to_class: null },
+      },
+    };
+    render(<GroupMessagePage />);
+    expect(
+      screen.getByText(
+        "Klasse 4a gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Nachricht" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("aktualisiert die offene Ansicht nach einer Nachricht aus einem anderen Tab", async () => {
     render(<GroupMessagePage />);
     expect(

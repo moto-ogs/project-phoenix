@@ -292,6 +292,7 @@ describe("previewGradeTransition", () => {
     unmapped_classes: null,
     warnings: null,
     fingerprint: FINGERPRINT,
+    parent_targets: null,
   };
 
   it("GETs the preview uncached and carries the fingerprint through", async () => {

@@ -154,6 +154,9 @@ type Preview struct {
 	UnmappedClasses []UnmappedClass
 	Warnings        []string
 	Fingerprint     string
+	// ParentTargets are the class threads to parents and the draft
+	// announcements the apply moves or closes (#8214).
+	ParentTargets []ParentTargetPreview
 }
 
 type MappingPreview struct {
@@ -284,6 +287,9 @@ type Dependencies struct {
 	Membership Membership
 	Presence   Presence
 	Rosters    Rosters
+	// ParentTargets moves the class threads and draft class targets of the
+	// parent channels (#8214).
+	ParentTargets ParentClassTargets
 
 	LockRecurrenceWrites      func(context.Context) error
 	ResyncOfferingRosters     func(ctx context.Context, effectiveFrom string) error
@@ -303,7 +309,7 @@ type Workflow struct{ deps Dependencies }
 
 func New(deps Dependencies) (*Workflow, error) {
 	if deps.UnitOfWork == nil || deps.Authorize == nil || deps.Today == nil || deps.Now == nil ||
-		deps.Structure == nil || deps.Directory == nil || deps.Membership == nil || deps.Presence == nil || deps.Rosters == nil ||
+		deps.Structure == nil || deps.Directory == nil || deps.Membership == nil || deps.Presence == nil || deps.Rosters == nil || !deps.ParentTargets.complete() ||
 		deps.LockRecurrenceWrites == nil || deps.ResyncOfferingRosters == nil || deps.FollowClassChanges == nil || deps.AppendClassListEntryAudit == nil || deps.Observe == nil {
 		return nil, errors.New("grade transition: all dependencies are required")
 	}

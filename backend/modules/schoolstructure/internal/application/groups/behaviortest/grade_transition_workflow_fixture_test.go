@@ -57,6 +57,7 @@ func newTransitionFixture(t *testing.T, db *bun.DB) *transitionFixture {
 	deps, err := rootowners.AssembleGradeTransition(gradetransitioncompose.Dependencies{
 		DB: db, Structure: structure, Presence: presence, Directory: f.people, Membership: f.membership,
 		Rosters:              owners.Rosters,
+		ParentTargets:        api.NewGradeTransitionParentTargets(testpkg.NewDatabase(t, db)),
 		LockRecurrenceWrites: owners.LockRecurrenceWrites,
 		ResyncOfferingRosters: func(_ context.Context, effectiveFrom calendar.Date) error {
 			f.resyncCalls = append(f.resyncCalls, effectiveFrom)

@@ -55,7 +55,7 @@ func AssembleGradeTransition(deps gradetransitioncompose.Dependencies) (gradetra
 	for name, missing := range map[string]bool{
 		"database": deps.DB == nil, "school structure": deps.Structure == nil, "student presence": deps.Presence == nil,
 		"people directory": deps.Directory == nil, "school membership": deps.Membership == nil,
-		"roster reconciliation": deps.Rosters == nil, "recurrence lock": deps.LockRecurrenceWrites == nil,
+		"roster reconciliation": deps.Rosters == nil, "parent class targets": deps.ParentTargets.List == nil || deps.ParentTargets.Follow == nil || deps.ParentTargets.Revert == nil, "recurrence lock": deps.LockRecurrenceWrites == nil,
 		"offering roster resync": deps.ResyncOfferingRosters == nil, "class change follow-up": deps.FollowClassChanges == nil, "audit": deps.Audit == nil,
 		"class list entry record": deps.ClassListEntryRecord == nil,
 	} {
@@ -89,6 +89,7 @@ func AssembleGradeTransition(deps gradetransitioncompose.Dependencies) (gradetra
 		Today:     func() string { return calendar.DateFromTime(clock()).String() },
 		Now:       clock,
 		Structure: deps.Structure, Directory: deps.Directory, Membership: deps.Membership, Presence: deps.Presence, Rosters: deps.Rosters,
+		ParentTargets:        deps.ParentTargets,
 		LockRecurrenceWrites: deps.LockRecurrenceWrites,
 		ResyncOfferingRosters: func(ctx context.Context, effectiveFrom string) error {
 			return onCalendarDay(effectiveFrom, func(day calendar.Date) error { return deps.ResyncOfferingRosters(ctx, day) })
