@@ -38,6 +38,9 @@ type PickupApproval struct {
 	// GuardianAccountID submitted the request; the day's pickup person it
 	// names keeps it (#8162).
 	GuardianAccountID int64
+	// RequestID is the approved request; the pickup time it sets keeps it
+	// as its source (#8209).
+	RequestID int64
 }
 
 // PickupApplied names the rows an approval wrote, so a later correction can

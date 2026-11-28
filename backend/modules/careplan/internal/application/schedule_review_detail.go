@@ -76,3 +76,49 @@ func storedCareRequestDetail(request *carerequests.Request) *carerequests.Histor
 	}
 	return item
 }
+
+// PickupOrigins reads the approved requests behind a child's pickup times
+// (#8209) in two statements, whatever the number of days: the requests by
+// ID, then their reviewers' names. It runs in the caller's tenant
+// transaction; the caller already may read the child's plan, and the
+// request only adds who decided it.
+func (s *scheduleReviewCommands) PickupOrigins(ctx context.Context, studentID int64, requestIDs []int64) (map[int64]careplan.PickupOrigin, error) {
+	ids := uniquePositive(requestIDs)
+	if studentID <= 0 || len(ids) == 0 {
+		return map[int64]careplan.PickupOrigin{}, nil
+	}
+	rows, err := s.commands.deps.Requests.ListCareScheduleRequests(ctx, careplan.CareScheduleRequestFilter{
+		IDs: ids, StudentID: studentID, RequestKinds: []string{carerequests.KindPickupChange}, Statuses: []string{carerequests.StatusApproved},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("schedule: load requests behind pickup times: %w", err)
+	}
+	reviewers, err := s.commands.deps.People.ReviewerNames(ctx, requestReviewerIDs(rows))
+	if err != nil {
+		return nil, fmt.Errorf("schedule: load reviewers behind pickup times: %w", err)
+	}
+	return pickupOrigins(rows, studentID, reviewers), nil
+}
+
+func requestReviewerIDs(rows []careplan.CareScheduleChangeRequest) []int64 {
+	ids := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row.ReviewedBy != nil && *row.ReviewedBy > 0 {
+			ids = append(ids, *row.ReviewedBy)
+		}
+	}
+	return ids
+}
+
+// pickupOrigins keys the approvals of one child by request; a request of
+// another child names no origin.
+func pickupOrigins(rows []careplan.CareScheduleChangeRequest, studentID int64, reviewers map[int64]careplan.PersonName) map[int64]careplan.PickupOrigin {
+	origins := make(map[int64]careplan.PickupOrigin, len(rows))
+	for _, row := range rows {
+		if row.StudentID != studentID {
+			continue
+		}
+		origins[row.ID] = careplan.PickupOrigin{RequestID: row.ID, ApprovedByName: reviewerDisplayName(reviewers, row.ReviewedBy), ApprovedAt: row.ReviewedAt}
+	}
+	return origins
+}

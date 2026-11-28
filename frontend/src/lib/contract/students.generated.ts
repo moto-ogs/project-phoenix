@@ -2524,6 +2524,19 @@ export const DatedPickupScheduleResponseSchema: z.ZodType<DatedPickupScheduleRes
   offering_schedule: nullable(PickupScheduleResponseSchema),
 });
 
+/** Go: careplanhttp.PickupExceptionOriginResponse */
+export interface PickupExceptionOriginResponse {
+  request_id: string;
+  approved_by_name: string;
+  approved_at?: string;
+}
+
+export const PickupExceptionOriginResponseSchema: z.ZodType<PickupExceptionOriginResponse, unknown> = object<PickupExceptionOriginResponse>({
+  request_id: int64String,
+  approved_by_name: str,
+  approved_at: optional(str),
+});
+
 /** Go: careplanhttp.PickupExceptionResponse */
 export interface PickupExceptionResponse {
   id: string;
@@ -2537,6 +2550,7 @@ export interface PickupExceptionResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  origin?: PickupExceptionOriginResponse;
 }
 
 export const PickupExceptionResponseSchema: z.ZodType<PickupExceptionResponse, unknown> = object<PickupExceptionResponse>({
@@ -2551,6 +2565,7 @@ export const PickupExceptionResponseSchema: z.ZodType<PickupExceptionResponse, u
   created_by: int64String,
   created_at: str,
   updated_at: str,
+  origin: optional(PickupExceptionOriginResponseSchema),
 });
 
 /** Go: careplanhttp.PickupNoteResponse */

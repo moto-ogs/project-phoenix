@@ -2,6 +2,10 @@ package careplanhttp
 
 import (
 	context "context"
+	"fmt"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 )
@@ -51,9 +55,49 @@ func (rs *Resource) pickupDataResponse(ctx context.Context, studentID int64) (Pi
 		return PickupDataResponse{}, err
 	}
 	response := buildPickupDataResponse(data)
+	if err := rs.addPickupOrigins(ctx, studentID, data.Exceptions, response.Exceptions); err != nil {
+		return PickupDataResponse{}, err
+	}
 	response.DepartureExceptions, response.PickupPersons, err = rs.listDayPickups(ctx, studentID, "", "", false)
 	if err != nil {
 		return PickupDataResponse{}, err
 	}
 	return response, nil
+}
+
+// addPickupOrigins names, at each pickup time approved from a parent
+// request, that request and who approved it (#8209). The approver is read
+// from the request, so the day follows a later change of the request; a time
+// whose request is gone or no longer approved shows no origin. responses
+// holds the mapped exceptions in the order of exceptions.
+func (rs *Resource) addPickupOrigins(ctx context.Context, studentID int64, exceptions []*careplan.PickupException, responses []PickupExceptionResponse) error {
+	requestIDs := make([]int64, 0, len(exceptions))
+	for _, exception := range exceptions {
+		if exception.SourceRequestID != nil {
+			requestIDs = append(requestIDs, *exception.SourceRequestID)
+		}
+	}
+	if len(requestIDs) == 0 {
+		return nil
+	}
+	origins, err := rs.CareRequestReviews.PickupOrigins(ctx, studentID, requestIDs)
+	if err != nil {
+		return fmt.Errorf("schedule: read origins of pickup times: %w", err)
+	}
+	for i, exception := range exceptions {
+		if exception.SourceRequestID == nil {
+			continue
+		}
+		origin, found := origins[*exception.SourceRequestID]
+		if !found {
+			continue
+		}
+		response := &PickupExceptionOriginResponse{RequestID: ident.ID(origin.RequestID), ApprovedByName: origin.ApprovedByName}
+		if origin.ApprovedAt != nil {
+			approvedAt := origin.ApprovedAt.Format(time.RFC3339)
+			response.ApprovedAt = &approvedAt
+		}
+		responses[i].Origin = response
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package careplan
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 )
@@ -17,6 +18,19 @@ type CareScheduleReviewQuery interface {
 	ListPending(context.Context, RequestQueueFilter) ([]*CareScheduleReviewItem, *RequestCursor, error)
 	ListHistory(context.Context, RequestQueueFilter) ([]*CareScheduleHistoryItem, *RequestCursor, error)
 	carerequests.WeeklyImpact
+	// PickupOrigins resolves the approved parent requests that the given
+	// pickup times of one child came from (#8209), keyed by request ID. A
+	// request of another child, an undecided one or one no longer approved
+	// is left out.
+	PickupOrigins(ctx context.Context, studentID int64, requestIDs []int64) (map[int64]PickupOrigin, error)
+}
+
+// PickupOrigin is the parent request a pickup time was approved from: who
+// approved it and when. It is read from the request each time.
+type PickupOrigin struct {
+	RequestID      int64
+	ApprovedByName string
+	ApprovedAt     *time.Time
 }
 
 type CareScheduleReviewItem = carerequests.ReviewItem

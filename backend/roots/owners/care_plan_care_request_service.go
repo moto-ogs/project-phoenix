@@ -320,7 +320,7 @@ func (s *CareScheduleRequestService) applyPickupChangeRequest(ctx context.Contex
 	return approvals.ApplyPickupApproval(ctx, carerequests.PickupApproval{
 		TenantID: req.TenantID, StudentID: req.StudentID, Payload: req.Payload,
 		ExpectedImpactToken: expectedImpactToken, RequireImpactToken: requireImpactToken,
-		GuardianAccountID: req.SubmittedBy,
+		GuardianAccountID: req.SubmittedBy, RequestID: req.ID,
 	})
 }
 

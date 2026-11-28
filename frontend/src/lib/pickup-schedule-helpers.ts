@@ -54,6 +54,15 @@ export interface PickupException {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /** Die genehmigte Elternanfrage, aus der die Zeit stammt (#8209). */
+  origin?: PickupExceptionOrigin;
+}
+
+/** Wer die Elternanfrage hinter einer Abholzeit genehmigt hat (#8209). */
+interface PickupExceptionOrigin {
+  requestId: string;
+  approvedByName: string;
+  approvedAt?: string;
 }
 
 // Frontend Pickup Note Type. A note is either dated (noteDate) or recurs on a
@@ -193,6 +202,17 @@ export function mapPickupExceptionResponse(
     createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    ...(data.origin
+      ? {
+          origin: {
+            requestId: data.origin.request_id,
+            approvedByName: data.origin.approved_by_name,
+            ...(data.origin.approved_at
+              ? { approvedAt: data.origin.approved_at }
+              : {}),
+          },
+        }
+      : {}),
   };
 }
 

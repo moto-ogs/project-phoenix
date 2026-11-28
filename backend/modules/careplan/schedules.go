@@ -164,6 +164,10 @@ type PickupException struct {
 	// (#7766); CreatedBy is then 0.
 	EnteredByTraeger  bool
 	CreatedByGuardian *int64
+	// SourceRequestID names the approved parent request this pickup time
+	// came from (#8209); nil for a time the school entered. The approver
+	// stays on the request.
+	SourceRequestID *int64
 }
 
 // PickupNote is either dated (NoteDate) or recurring on a weekday (Weekday

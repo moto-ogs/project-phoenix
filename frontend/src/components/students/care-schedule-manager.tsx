@@ -1505,11 +1505,11 @@ function CareDayCard({
     day.arrival.isException ||
     day.pickup.isException ||
     day.pickup.departureException !== undefined;
-  // A guardian-sourced exception means a parent changed this day's pickup or
-  // arrival time from the parents portal — flag it so staff don't mistake it
-  // for their own edit at the door.
+  // A parent changed this day's pickup or arrival time in the parents portal,
+  // or the school approved it from a parent request (#8209): flag it so staff
+  // don't mistake it for their own edit at the door.
   const parentChanged =
-    day.pickup.exception?.source === "guardian" ||
+    isParentPickupChange(day.pickup) ||
     day.arrival.exception?.source === "guardian";
   const boundaries = getCareBoundaries(day, {
     onEditArrival: () => onEditDay(day.date),
@@ -1937,9 +1937,23 @@ function getArrivalDescription(day: ArrivalDayData): string | undefined {
     : "Tagesänderung";
 }
 
+function isParentPickupChange(day: PickupDayData): boolean {
+  return (
+    day.exception?.source === "guardian" || day.exception?.origin !== undefined
+  );
+}
+
 function getPickupDescription(day: PickupDayData): string | undefined {
   if (!day.isException) return undefined;
-  return day.effectiveNotes ? `Grund: ${day.effectiveNotes}` : "Tagesänderung";
+  const reason = day.effectiveNotes ? `Grund: ${day.effectiveNotes}` : null;
+  const origin = day.exception?.origin;
+  if (origin) {
+    // Die Zeit kommt aus einer Elternanfrage (#8209): sagen, wer sie
+    // genehmigt hat, damit sie nicht wie ein Eintrag des Personals aussieht.
+    const approved = `Aus Elternanfrage, genehmigt von ${origin.approvedByName}.`;
+    return reason ? `${approved} ${reason}` : approved;
+  }
+  return reason ?? "Tagesänderung";
 }
 
 function getCareBoundaries(
