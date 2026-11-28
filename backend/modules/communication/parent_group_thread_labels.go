@@ -20,7 +20,33 @@ import (
 // ParentGroupThreadClosedGroupDeleted (#8213). The thread follows its target
 // at read time, so every deletion path closes it in its own transaction.
 func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, threads ...*ParentGroupThread) error {
-	var groupIDs, activityIDs []int64
+	groupIDs, activityIDs := groupTargetIDs(threads)
+	if names == nil || len(groupIDs)+len(activityIDs) == 0 {
+		for _, thread := range threads {
+			if thread != nil {
+				thread.Target.Label = currentGroupTargetLabel(thread.Target, nil, nil)
+			}
+		}
+		return nil
+	}
+	groups, activities, err := names.GroupTargetNames(ctx, groupIDs, activityIDs)
+	if err != nil {
+		return fmt.Errorf("messaging: group thread target names: %w", err)
+	}
+	for _, thread := range threads {
+		if thread == nil {
+			continue
+		}
+		thread.Target.Label = currentGroupTargetLabel(thread.Target, groups, activities)
+		if groupTargetGone(thread.Target, groups, activities) {
+			thread.ClosedReason = ParentGroupThreadClosedGroupDeleted
+		}
+	}
+	return nil
+}
+
+// groupTargetIDs collects the group and AG ids the threads write to.
+func groupTargetIDs(threads []*ParentGroupThread) (groupIDs, activityIDs []int64) {
 	for _, thread := range threads {
 		if thread == nil || thread.Target.RefID == nil {
 			continue
@@ -32,23 +58,7 @@ func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, 
 			activityIDs = append(activityIDs, *thread.Target.RefID)
 		}
 	}
-	var groups, activities map[int64]string
-	looked := names != nil && len(groupIDs)+len(activityIDs) > 0
-	if looked {
-		var err error
-		if groups, activities, err = names.GroupTargetNames(ctx, groupIDs, activityIDs); err != nil {
-			return fmt.Errorf("messaging: group thread target names: %w", err)
-		}
-	}
-	for _, thread := range threads {
-		if thread != nil {
-			thread.Target.Label = currentGroupTargetLabel(thread.Target, groups, activities)
-			if looked && groupTargetGone(thread.Target, groups, activities) {
-				thread.ClosedReason = ParentGroupThreadClosedGroupDeleted
-			}
-		}
-	}
-	return nil
+	return groupIDs, activityIDs
 }
 
 // groupTargetGone reports whether the lookup no longer found the group or AG

@@ -20,10 +20,7 @@ import (
 	parentStore "github.com/moto-ogs/project-phoenix/modules/communication/parentstore"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	schoolstructurehttp "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
-	activitiesAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
-	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -50,14 +47,12 @@ func TestDeletingTheGroupClosesItsGroupThreads(t *testing.T) {
 		GroupTargetNames: owners.NewParentGroupTargetNamesForTests(t, database),
 	}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 
-	structure, _, people, _, err := api.NewGroupsTestModule(database, testpkg.TenantRuntime(t, db))
-	require.NoError(t, err)
-	activityModule, activities, users, caller, err := api.NewActivitiesTestModule(database)
+	sources, err := api.NewGroupTargetDeletionRoutesForTests(database, testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Mount("/api/messages", messaging.NewResource(svc, groups, handling, mailStatus).Router(api.ProtectedTenantRoutes))
-	router.Mount("/api/groups", schoolstructurehttp.NewResource(structure.Education, people.People, transactionFailures.IsConstraintViolation).Router(api.ProtectedTenantRoutes))
-	router.Mount("/api/activities", activitiesAPI.NewResource(activities, activityModule.Timetable, api.NewTimetableSupervisorDirectory(users), caller, api.TimetableHTTPTransactions).Router(api.ProtectedTenantRoutes))
+	router.Mount("/api/groups", sources.Groups)
+	router.Mount("/api/activities", sources.Activities)
 
 	_, staff := testpkg.CreateTestStaffWithAccount(t, db, "Gruppe", "Geloescht")
 	testpkg.EnsureAccountTenant(t, db, staff.ID, testpkg.Tenant(t))
