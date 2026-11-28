@@ -1149,10 +1149,14 @@ function BlockRow({
   // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
   // nicht noch einmal daneben, wohl aber sein Grund.
   // Vorbei: die Zeile ist grau, steht über der Jetzt-Linie und beginnt mit
-  // „Beendet“ (lief) bzw. „Vorbei“. „Vorbei, nicht gestartet“ steht im
-  // Blatt. Die Angabenzeile bleibt einzeilig.
+  // „Beendet“ (lief), „Nicht gestartet“ (lief nie) bzw. „Vorbei“ (Dienst).
   if (state.over && !state.cancelled && instance.status === "completed") {
     push("state", state.label);
+  } else if (pastLabel(state) && !state.isDuty) {
+    // Wie die Desktop-Metazeile: Ein vergangener Block, der nie lief, heißt
+    // „Nicht gestartet“ – auch unter „N Blöcke vorbei“ und an anderen
+    // Tagen, nicht nur im Blatt.
+    push("state", "Nicht gestartet");
   } else if (pastLabel(state) && !inPast) {
     // Vorbei wie auf der Startseite („Mittagessen Vorbei“), als erstes
     // Wort der Angabenzeile: ein Abzeichen brach die Zeile am SE um.
