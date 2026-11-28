@@ -252,6 +252,11 @@ export const timetableKeys = {
   // Planänderungen (PLAN_CACHE_KEY_PREFIXES), damit jede Schicht- oder
   // Abwesenheitsänderung im Dienstplan die Liste neu lädt.
   absencePlanGaps: "absence-plan-gaps",
+  // Serienschichten an Schließtagen und in den Ferien (#8205). Das Präfix
+  // „timetable-“ lädt sie neu, sobald ein Schließtag gespeichert wird
+  // (staffing_deviation_changed); in PLAN_CACHE_KEY_PREFIXES auch nach
+  // jeder Schichtänderung im Dienstplan.
+  breakDayShifts: "timetable-break-day-shifts",
   offeringGaps: (periodId: string) =>
     `offering-gaps-${encodeURIComponent(periodId)}`,
   // Schulferien (#5345): der Hinweis und die Liste eines Fensters.

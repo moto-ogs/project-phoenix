@@ -37,7 +37,8 @@ func NewSchoolCalendarWithAdministration(db transactionruntime.Database, setting
 }
 
 // newSchoolCalendarWithAdministration composes the same calendar with the
-// clock and the closing-day notices of extra (#7144).
+// clock, the closing-day notices (#7144) and the closing-day plans (#8205)
+// of extra.
 func newSchoolCalendarWithAdministration(db transactionruntime.Database, settings federalStateResolver, lockRecurrence func(context.Context) error, careOfferings careplan.CareOfferingGuards, extra schoolCalendarCompose.AdministrationDependencies) (schoolcalendar.Calendar, error) {
 	observe := func(schoolCalendarCompose.Observation) {}
 	records, err := schoolCalendarCompose.NewRecords(schoolCalendarCompose.RecordsDependencies{ClosingDayReads: owners.NewSchoolClosingDayReads(),
@@ -65,7 +66,7 @@ func newSchoolCalendarWithAdministration(db transactionruntime.Database, setting
 	}
 	return schoolCalendarCompose.NewAdministration(records, schoolCalendarCompose.AdministrationDependencies{
 		DB: db.Pool(), Observe: observe, RecurrenceGate: lockRecurrence, CareOfferingGuard: guard,
-		Today: extra.Today, ClosingDayNotices: extra.ClosingDayNotices,
+		Today: extra.Today, ClosingDayNotices: extra.ClosingDayNotices, ClosingDayPlans: extra.ClosingDayPlans,
 	})
 }
 

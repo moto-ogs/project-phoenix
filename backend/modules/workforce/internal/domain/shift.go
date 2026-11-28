@@ -81,17 +81,22 @@ type StaffShift struct {
 	SeriesOccurrenceDate string
 	// SeriesStartTime and SeriesEndTime are the times planned by the linked
 	// series. They are empty for standalone shifts and reads without a series.
-	SeriesStartTime  string
-	SeriesEndTime    string
-	Cancelled        bool
-	ChangeReason     *string
-	OriginShiftID    *int64
-	SickAbsenceID    *int64
-	CreatedBy        int64
-	UpdatedBy        *int64
-	PlannedByTraeger bool
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	SeriesStartTime string
+	SeriesEndTime   string
+	// SeriesIncludesBreaks and SeriesCalendarPeriodID describe the linked
+	// series on listings (#8205): whether it plans in the Ferien and on
+	// closing days, and the calendar period it is bound to.
+	SeriesIncludesBreaks   bool
+	SeriesCalendarPeriodID int64
+	Cancelled              bool
+	ChangeReason           *string
+	OriginShiftID          *int64
+	SickAbsenceID          *int64
+	CreatedBy              int64
+	UpdatedBy              *int64
+	PlannedByTraeger       bool
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // StaffShiftOrderField names a column a shift listing may be ordered by.
@@ -423,4 +428,15 @@ func validateShiftDate(value, field string) error {
 	}
 	_, err := parseShiftDate(value, field, invalidShift)
 	return err
+}
+
+// StaffShiftBreakDayState is the state the break-day follow-up writes on one
+// shift (#8205): cancelled with its label, or planned again, and on a full
+// absence day the absence's stamp.
+type StaffShiftBreakDayState struct {
+	ShiftID       int64
+	Cancelled     bool
+	ChangeReason  *string
+	SickAbsenceID *int64
+	Detached      bool
 }

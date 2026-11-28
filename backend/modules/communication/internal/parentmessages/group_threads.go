@@ -55,7 +55,11 @@ func (s *Service) ListParentGroupThreads(ctx context.Context) ([]deliveryPorts.P
 	if err != nil {
 		return nil, fmt.Errorf("messaging: list group threads: %w", err)
 	}
-	return rows, nil
+	threads := make([]*deliveryPorts.ParentGroupThread, 0, len(rows))
+	for i := range rows {
+		threads = append(threads, &rows[i].Thread)
+	}
+	return rows, deliveryPorts.LabelParentGroupThreads(ctx, s.GroupTargetNames, threads...)
 }
 
 // PreviewParentGroupAudience lists the children a target reaches today and
@@ -249,8 +253,12 @@ func (s *Service) groupThreadDetail(ctx context.Context, thread *deliveryPorts.P
 	if err != nil {
 		return nil, err
 	}
+	labeled := *thread
+	if err := deliveryPorts.LabelParentGroupThreads(ctx, s.GroupTargetNames, &labeled); err != nil {
+		return nil, err
+	}
 	return &deliveryPorts.ParentGroupThreadDetail{
-		Thread: *thread, Messages: messages, Children: children,
+		Thread: labeled, Messages: messages, Children: children,
 		FamilyCount: readCounts.FamilyCount, ReadCount: readCounts.ReadCount,
 	}, nil
 }

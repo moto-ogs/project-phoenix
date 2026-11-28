@@ -3,7 +3,10 @@
 
 import { knownEnum } from "./contract/known-enum";
 import type { ShiftResponse } from "./contract/shared.generated";
-import type { OverviewResponse } from "./contract/staff-shifts.generated";
+import type {
+  OverviewResponse,
+  SeriesBreakDayShift,
+} from "./contract/staff-shifts.generated";
 import type { assignmentResponse } from "./contract/time-tracking.generated";
 
 export interface StaffShift {
@@ -362,3 +365,44 @@ export function groupShiftsByStaffAndDate(
   }
   return byStaff;
 }
+
+/**
+ * Eine Schicht aus einer Serie, die Ferien und Schließtage auslässt, die
+ * trotzdem an so einem Tag steht (#8205). `adjusted`: von Hand geändert,
+ * moto sagt sie deshalb nicht ab. Sonst ist der Tag später zum Schließtag
+ * geworden, ohne dass moto die Schicht absagen konnte (Schließtag des
+ * Trägers, Ferien).
+ */
+export interface BreakDayShift {
+  shiftId: string;
+  staffId: string;
+  /** "YYYY-MM-DD" */
+  date: string;
+  /** "HH:MM" */
+  startTime: string;
+  /** "HH:MM" */
+  endTime: string;
+  kind: "closing_day" | "holiday_period";
+  adjusted: boolean;
+}
+
+export function mapBreakDayShift(data: SeriesBreakDayShift): BreakDayShift {
+  return {
+    shiftId: data.shift_id,
+    staffId: data.staff_id,
+    date: data.date,
+    startTime: data.start_time,
+    endTime: data.end_time,
+    // Ein unbekannter neuer Grund liest sich wie ein Schließtag: die Warnung
+    // bleibt sichtbar.
+    kind: data.break === "holiday_period" ? "holiday_period" : "closing_day",
+    adjusted: data.adjusted,
+  };
+}
+
+/** „Schließtag“ oder „Ferien“, wie der Grund an der Schicht. */
+export const BREAK_DAY_LABEL: Readonly<Record<BreakDayShift["kind"], string>> =
+  {
+    closing_day: "Schließtag",
+    holiday_period: "Ferien",
+  };

@@ -61,6 +61,7 @@ type Records interface {
 	StaffPlanningProfilesReader
 	TargetOverrideDaysReader
 	SickReportReader
+	ApplyBreakDayShiftStates(ctx context.Context, states []workforce.BreakDayShiftState) error
 }
 
 // StaffShiftSource is the native shift listing consumed by the overview.

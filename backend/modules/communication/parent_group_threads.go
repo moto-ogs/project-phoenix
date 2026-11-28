@@ -22,7 +22,9 @@ var (
 )
 
 // ParentGroupTarget is the group, class or AG a group thread writes to.
-// Label is the name the OGS and the parents read ("Klasse 2a").
+// Label is the name the OGS and the parents read ("Klasse 2a"). The thread
+// stores it when it opens; reads replace it with the target's current name
+// and keep the stored one only when the group or AG is gone (#8207).
 type ParentGroupTarget struct {
 	Type    string
 	RefID   *int64
@@ -129,6 +131,14 @@ type ParentGroupThreadCapability interface {
 type ParentGroupAudienceReads interface {
 	GroupAudience(ctx context.Context, schoolID int64, target ParentGroupTarget) ([]ParentGroupAudienceChild, error)
 	GroupStudents(ctx context.Context, schoolID int64, studentIDs []int64) ([]ParentGroupChild, error)
+}
+
+// ParentGroupTargetNames names the groups and AGs of the caller's school, so
+// a group thread reads the current name of its target (#8207). A group or AG
+// that is gone is absent from its map. The root binds it to School
+// Structure's groups and the Timetable's AGs.
+type ParentGroupTargetNames interface {
+	GroupTargetNames(ctx context.Context, groupIDs, activityGroupIDs []int64) (groups, activityGroups map[int64]string, err error)
 }
 
 // ParentGroupAudienceChild is one reached child with the guardian accounts

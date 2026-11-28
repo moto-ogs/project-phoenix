@@ -85,8 +85,9 @@ function otherInvalidNames(state: TemplateRosterMaintenance): string[] {
   return state.invalidOfferingNames.filter((name) => !expired.has(name));
 }
 
+// New children join the planned occurrences too (#8204).
 const TARGETS_SENTENCE =
-  "Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen.";
+  "Kommt ein Kind neu dazu oder wechselt es Klasse oder Gruppe, passt moto die kommenden Termine an.";
 
 export function describeRosterMaintenance(
   state: TemplateRosterMaintenance,

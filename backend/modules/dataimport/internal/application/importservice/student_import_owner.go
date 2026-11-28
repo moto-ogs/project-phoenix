@@ -137,6 +137,8 @@ func (c *StudentImportConfig) createStudentFromRow(ctx context.Context, personID
 		}
 	}
 
+	noteCreatedCohort(ctx, created.ID, input.SchoolClass, patch.GroupID)
+
 	if leafs != nil {
 		// Collected with this row's own instant, taken here as on the row path.
 		leafs.transitions = append(leafs.transitions, ports.ConsentTransition{

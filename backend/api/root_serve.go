@@ -414,14 +414,14 @@ func composeServeRoot(
 		},
 		func() error {
 			chat = owners.BuildCommunicationMessaging(db, env, hub, settings.Service, messaging, services.Users, owners.StaffStudentReads{Caller: caller.Caller()},
-				notifications, delivery.Outbox, delivery.Runtime.EmailOutcomes, people, owners.SchoolNameDirectory{Schools: organizations}, CommunicationSession{}, identity)
+				notifications, delivery.Outbox, delivery.Runtime.EmailOutcomes, people, owners.SchoolNameDirectory{Schools: organizations}, CommunicationSession{}, identity, owners.NewParentGroupTargetNames(structure.Groups, timetableOwner))
 			calendarApp = owners.BuildCalendarApp(db, env, people, structure, portalReads, timetableRows, rooms, workTime, organizations,
 				identity, caller.Caller(), appointments, calendar, delivery, notifications, settings.Service, persons, hub)
 			return nil
 		},
 		func() (err error) {
 			parent, err = owners.BuildParentPortal(db, env, hub, settings.Service, people, portalReads, messaging, presence, carePlanRows,
-				carePlan, persons, mealPlan.Capability, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, settings.Service, env.BankData, env.Today, env.Now), mustBuildChildDayChanges(carePlan, schedules.PickupPersons, persons, calendar, classArrivals, lifecycle, mealPlan.Cancellations, env.Today, env.Logger))
+				carePlan, persons, mealPlan.Capability, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, settings.Service, env.BankData, env.Today, env.Now), mustBuildChildDayChanges(carePlan, schedules.PickupPersons, persons, calendar, classArrivals, lifecycle, mealPlan.Cancellations, env.Today, env.Logger), owners.NewParentGroupTargetNames(structure.Groups, timetableOwner))
 			return
 		},
 		func() (err error) {
@@ -481,7 +481,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings, notifications)
+			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings, notifications, shifts.BreakDays)
 			return
 		},
 		func() (err error) {

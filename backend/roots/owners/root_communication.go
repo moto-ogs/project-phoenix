@@ -91,7 +91,7 @@ func BuildCommunicationMessaging(
 	}, session interface {
 		AccountID(context.Context) int64
 		Permissions(context.Context) []string
-	}, admins effectiveAdmins,
+	}, admins effectiveAdmins, groupNames communication.ParentGroupTargetNames,
 ) CommunicationMessaging {
 	logger := env.Logger
 	messagingConfig := communicationCompose.ParentMessagingConfig{
@@ -103,7 +103,7 @@ func BuildCommunicationMessaging(
 		// der Rueckfall fuer alle, die Push nicht eingerichtet haben.
 		Outbox: OutboxEnqueuer{Outbox: outbox}, GuardianProfiles: BindParentMessageGuardianProfiles(people.GuardianProfiles), Schools: schools,
 		LoginImages: settings, ParentsURL: env.Links.ParentsURL, Observe: env.Observe.Communication,
-		GroupAudience: NewParentGroupAudience(db), Mails: ParentMessageMails{Outcomes: outcomes},
+		GroupAudience: NewParentGroupAudience(db), GroupTargetNames: groupNames, Mails: ParentMessageMails{Outcomes: outcomes},
 	}
 	messaging, groupThreads, parentAttachments, teamHandling, messageMails := communicationCompose.NewParentMessaging(messagingConfig, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	staffMessaging, staffAttachments := communicationCompose.NewStaffMessaging(communicationCompose.StaffMessagingConfig{

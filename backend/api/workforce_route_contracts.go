@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	absencetypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
 	shifttypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/shifttypes"
 	staffshiftsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/staffshifts"
@@ -103,12 +104,21 @@ func shiftTypeRemovalRoute(route common.RouteContract) common.RouteContract {
 	return route
 }
 
+// breakDayShiftsRoute names the two reasons a series leaves a day out (#8205).
+func breakDayShiftsRoute(route common.RouteContract) common.RouteContract {
+	route.Enums = []common.EnumContract{
+		{Name: "SeriesBreakDayKind", Fields: []string{"SeriesBreakDayShift.break"}, Values: []string{workforce.BreakDayClosingDay, workforce.BreakDayHolidayPeriod}},
+	}
+	return route
+}
+
 // staffShiftRouteContracts registers /api/staff-shifts.
 func staffShiftRouteContracts() []common.RouteContract {
 	week := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
 	return []common.RouteContract{
 		tenantRoute("GET", "/", nil, []staffshiftsHTTP.ShiftResponse{}, append(week, common.QueryParam{Name: "staff_id", Kind: common.QueryID})...),
 		tenantRoute("GET", "/overview", nil, staffshiftsHTTP.OverviewResponse{}, week...),
+		breakDayShiftsRoute(tenantRoute("GET", "/break-day-shifts", nil, []workforce.SeriesBreakDayShift{})),
 		tenantRoute("POST", "/", staffshiftsHTTP.ShiftRequest{}, staffshiftsHTTP.ShiftResponse{}),
 		tenantRoute("PUT", "/{id}", staffshiftsHTTP.ShiftRequest{}, staffshiftsHTTP.ShiftResponse{}),
 		tenantRoute("DELETE", "/{id}", nil, staffshiftsHTTP.ShiftDeletedResponse{}),
