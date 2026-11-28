@@ -59,7 +59,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
           "Trägt eine Schule selbst einen Schließtag in eine gebuchte Ferienwoche ein, bekommen die Eltern nicht von selbst eine E-Mail. Das gilt auch, wenn die Schule ihn ändert oder löscht. Du oder die Schule löst den Versand aus.",
         steps: [
           "Wähle in der Navigation `Schließtage`.",
-          "Oben steht dann die Karte `Eltern noch nicht informiert`. Pro Schließtag stehen dort Schule, Grund, Tage, Kinder und Familien.",
+          "Oben steht dann die Karte `Eltern noch nicht informiert`. Pro Schließtag stehen dort Grund, Schule, Tage, Kinder und Familien.",
           "Wähle in der Zeile `Eltern informieren`. Ein Klick genügt.",
           "Mehrere Schließtage auf einmal: Wähle oben `Alle Eltern informieren`.",
           "Die Zeile zeigt `Wird gesendet` und dann `Gesendet`.",

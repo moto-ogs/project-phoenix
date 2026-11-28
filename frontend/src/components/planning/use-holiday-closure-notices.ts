@@ -11,8 +11,25 @@
  * oben sichtbar.
  */
 
-import { type ReactNode, useCallback, useId, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useCallback,
+  useId,
+  useState,
+} from "react";
 
+import {
+  CalendarClock,
+  type LucideIcon,
+  Mail,
+  MailCheck,
+  MailMinus,
+  MailQuestionMark,
+  MailX,
+  Send,
+} from "lucide-react";
+import type { IconTile } from "~/components/ui/icon-tile";
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError, isReadStateRefusal } from "~/lib/api-error";
@@ -27,7 +44,6 @@ const logger = createLogger({ component: "HolidayClosureNotices" });
 /** Offene Zeilen vor „N weitere anzeigen“. */
 const INITIAL_OPEN_COUNT = 5;
 
-/** „1 Familie hat …“ oder „12 Familien haben …“. */
 /** Was „Eltern informieren“ an einem Hinweis tut (#6757), in beiden Portalen. */
 export const NOTIFY_PARENTS_TOOLTIP =
   "Sendet den Eltern der betroffenen Kinder sofort eine E-Mail.";
@@ -36,6 +52,7 @@ export const NOTIFY_PARENTS_TOOLTIP =
 export const SHOW_MORE_NO_TOOLTIP =
   "Zeigt nur mehr oder weniger Zeilen, an den Hinweisen ändert sich nichts.";
 
+/** „1 Familie hat …“ oder „12 Familien haben …“. */
 export function familiesBookedSentence(families: number): string {
   return families === 1
     ? "1 Familie hat an diesen Tagen Ferienbetreuung gebucht."
@@ -49,6 +66,15 @@ interface NoticeStatusView {
     readonly tone: StatusBadgeTone;
   } | null;
   readonly hint: string | null;
+  /**
+   * Symbol und Ton der Kachel vor der Zeile, damit der Stand in einer
+   * langen Liste auf einen Blick auffällt. Etikett und Satz tragen ihn
+   * weiter in Worten; die Kachel allein entscheidet nichts.
+   */
+  readonly tile: {
+    readonly icon: LucideIcon;
+    readonly tone: NonNullable<ComponentProps<typeof IconTile>["tone"]>;
+  };
 }
 
 /** Die Texte des Stands aus ADR 0196, Abschnitt 5. */
@@ -61,32 +87,42 @@ export function noticeStatusView(
         ? {
             badge: { label: "Geändert", tone: "warning" },
             hint: "Der Schließtag wurde geändert. Bitte prüfe den Hinweis.",
+            tile: { icon: CalendarClock, tone: "orange" },
           }
-        : { badge: null, hint: "Die Eltern wurden noch nicht informiert." };
+        : {
+            badge: null,
+            hint: "Die Eltern wurden noch nicht informiert.",
+            tile: { icon: Mail, tone: "orange" },
+          };
     case "sending":
       return {
         badge: { label: "Wird gesendet", tone: "blue" },
         hint: "Bitte warte.",
+        tile: { icon: Send, tone: "blue" },
       };
     case "no_mail":
       return {
         badge: { label: "Keine E-Mail nötig", tone: "gray" },
         hint: null,
+        tile: { icon: MailMinus, tone: "neutral" },
       };
     case "sent":
       return {
         badge: { label: "Gesendet", tone: "green" },
         hint: null,
+        tile: { icon: MailCheck, tone: "green" },
       };
     case "failed":
       return {
         badge: { label: "Nicht angekommen", tone: "red" },
         hint: "Bitte versuche es erneut.",
+        tile: { icon: MailX, tone: "red" },
       };
     case "unknown":
       return {
         badge: { label: "Ergebnis unbekannt", tone: "warning" },
         hint: "Bitte lass den Versand vom moto-Team prüfen.",
+        tile: { icon: MailQuestionMark, tone: "orange" },
       };
   }
 }
@@ -198,8 +234,10 @@ export function useNoticeNotify(
 
 export interface HolidayClosureNoticeRowContent<T> {
   readonly notice: T;
-  /** Überschrift der Zeile, etwa „Pädagogischer Tag“ oder Schule und Grund. */
+  /** Überschrift der Zeile: der Grund, etwa „Pädagogischer Tag“. */
   readonly title: string;
+  /** Wo der Schließtag gilt, etwa die Schule im Träger-Büro. */
+  readonly context?: string;
   /** Weitere Angaben unter dem Stand, etwa die Wochen im Träger-Büro. */
   readonly details?: ReactNode;
   /** Kurze Zahlen neben dem Stand, etwa „5 Kinder“. */
