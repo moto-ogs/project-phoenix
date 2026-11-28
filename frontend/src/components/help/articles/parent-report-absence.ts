@@ -28,6 +28,8 @@ export function parentReportAbsenceTopic(): HelpTopic {
       "`Krank melden` ist für Krankheitstage. Die OGS sieht die Meldung sofort.",
       "`Entschuldigen` ist für Termine und geplante Abwesenheiten.",
       "Für einen einzelnen Tag wählst du denselben Tag zweimal.",
+      // #8216: absence-meal-notice.tsx im Fenster nach dem Senden.
+      "Ist dein Kind an diesen Tagen noch zum Essen angemeldet? Dann steht nach dem Senden `Essen noch angemeldet`. Tippe auf `Auch abmelden`. Nach der Abmeldefrist kann nur die OGS das Essen abmelden.",
     ],
     differences: [
       "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und dein Kind gilt bis dahin als erwartet.",

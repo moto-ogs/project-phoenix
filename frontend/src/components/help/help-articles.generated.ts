@@ -2551,6 +2551,8 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
       // Feld an einem Betreuungstag (care-weekly-plan-editor.tsx).
       "Steht unter einem leeren Feld zum Beispiel `16:00 Uhr eintragen`? Ein Klick trägt die übliche Zeit deiner Schule ein.",
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
+      // #8216: care-day-meal-notice.tsx; das Essen geht nicht von selbst mit.
+      "Ist das Kind an einem Tag mit `Kommt nicht` oder `Keine Abholung` noch zum Essen angemeldet? Dann steht unter `Betreuungszeiten` `Essen noch angemeldet`. Wähle `Auch abmelden`, um das Essen für diesen Tag abzumelden.",
     ],
     related: [
       HELP_TOPICS.studentSearch,
@@ -8086,6 +8088,8 @@ export const parentReportAbsenceTopic =
         "`Krank melden` ist für Krankheitstage. Die OGS sieht die Meldung sofort.",
         "`Entschuldigen` ist für Termine und geplante Abwesenheiten.",
         "Für einen einzelnen Tag wählst du denselben Tag zweimal.",
+        // #8216: absence-meal-notice.tsx im Fenster nach dem Senden.
+        "Ist dein Kind an diesen Tagen noch zum Essen angemeldet? Dann steht nach dem Senden `Essen noch angemeldet`. Tippe auf `Auch abmelden`. Nach der Abmeldefrist kann nur die OGS das Essen abmelden.",
       ],
       differences: [
         "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und dein Kind gilt bis dahin als erwartet.",

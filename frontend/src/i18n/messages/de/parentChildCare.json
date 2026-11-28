@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft deine Meldung. Bis dahin gilt ihr Eintrag.",
     "requestSentPartlyBodyWithoutCarePlace": "Die freien Tage sind gemeldet. Für die anderen Tage prüft die Schule deine Meldung. Bis dahin gilt ihr Eintrag.",
     "submitBlockedWithoutCarePlace": "Die Schule nimmt hier zurzeit keine Abmeldung an.",
-    "schoolSickDayWithoutCarePlace": "{date}: von der Schule krank gemeldet"
+    "schoolSickDayWithoutCarePlace": "{date}: von der Schule krank gemeldet",
+    "appliedTitle": "Abwesenheit gemeldet",
+    "appliedBody": "Die Abwesenheit ist gespeichert.",
+    "mealTitle": "Essen noch angemeldet",
+    "mealIntro": "{count, plural, one {An diesem Tag ist} other {An diesen Tagen ist}} noch Essen angemeldet. Es wird nicht von selbst abgemeldet.",
+    "mealDayLocked": "{date}: Abmeldefrist vorbei",
+    "mealLockedHint": "Nach der Frist kann nur {careNom} das Essen abmelden. Bitte wende dich an {careAcc}.",
+    "mealLockedHintWithoutCarePlace": "Nach der Frist kann nur die Schule das Essen abmelden. Bitte wende dich an die Schule.",
+    "mealCancel": "Auch abmelden",
+    "mealCancelTooltip": "Meldet das Essen an diesen Tagen sofort ab.",
+    "mealCancelling": "Wird abgemeldet …",
+    "mealCancelled": "Das Essen ist für diese Tage abgemeldet.",
+    "mealErrorObject": "die Abmeldung vom Essen"
   },
   "summary": {
     "none": "Keine Abmeldung",

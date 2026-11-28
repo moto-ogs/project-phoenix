@@ -56,6 +56,11 @@ import { Textarea } from "~/components/ui/textarea";
 import { Input } from "~/components/ui/input";
 import { useDebounce } from "~/lib/use-debounce";
 import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  AbsenceMealNotice,
+  loadAbsenceMealDays,
+  type AbsenceMealDay,
+} from "~/components/parent/absence-meal-notice";
 import { createLogger } from "~/lib/logger";
 import {
   formatCalendarDate,
@@ -672,6 +677,7 @@ export function SickNoteModal({
   careExceptions = NO_CARE_EXCEPTIONS,
   sickDays = NO_STATUS_DAYS,
   withoutCarePlace = false,
+  mealRegistrationEnabled = false,
 }: Readonly<{
   studentId?: string;
   onClose: () => void;
@@ -702,6 +708,12 @@ export function SickNoteModal({
    * Schule, die Texte nennen darum keine OGS.
    */
   withoutCarePlace?: boolean;
+  /**
+   * Die Eltern melden das Essen des Kindes selbst an und ab
+   * (`meal_registration_enabled`): Nach der Meldung nennt der Dialog die
+   * Tage, an denen noch Essen angemeldet ist (#8216).
+   */
+  mealRegistrationEnabled?: boolean;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
@@ -718,9 +730,11 @@ export function SickNoteModal({
         : selectedStatus;
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState<
-    Exclude<AbsenceSubmissionOutcome, "applied"> | false
-  >(false);
+  const [submitted, setSubmitted] = useState<AbsenceSubmissionOutcome | false>(
+    false,
+  );
+  // Die Tage der Meldung, an denen das Kind noch zum Essen angemeldet ist.
+  const [mealDays, setMealDays] = useState<readonly AbsenceMealDay[]>([]);
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   // Fehler aus dem offenen Dialog stehen im Dialog: ein Toast läge
   // unsichtbar unter ihm.
@@ -809,8 +823,16 @@ export function SickNoteModal({
     form.clear();
     try {
       const outcome = await onSubmit(dates, reason, status, recipientIds);
+      // Die Meldung ist gespeichert. Kann die Essensanmeldung nicht gelesen
+      // werden, bleibt nur der Hinweis aus; die Meldung selbst gilt.
+      const meals =
+        mealRegistrationEnabled && studentId
+          ? await loadAbsenceMealDays(studentId, dates).catch(() => [])
+          : [];
+      setMealDays(meals);
       if (outcome === "pending" || outcome === "partly_pending")
         setSubmitted(outcome);
+      else if (meals.length > 0) setSubmitted("applied");
       else onClose();
     } catch (err) {
       const known = knownSickErrorKey(err);
@@ -852,9 +874,11 @@ export function SickNoteModal({
       title={
         submitted === "partly_pending"
           ? t("sick.requestSentPartlyTitle")
-          : submitted
-            ? t("sick.requestSentTitle")
-            : t("sick.title")
+          : submitted === "applied"
+            ? t("sick.appliedTitle")
+            : submitted
+              ? t("sick.requestSentTitle")
+              : t("sick.title")
       }
       closeLabel={t("close")}
       mobileSheet
@@ -913,23 +937,34 @@ export function SickNoteModal({
       }
     >
       {submitted ? (
-        <p role="status" className="text-sm leading-6 text-gray-700">
-          {submitted === "partly_pending"
-            ? t(
-                withoutCarePlace
-                  ? "sick.requestSentPartlyBodyWithoutCarePlace"
-                  : "sick.requestSentPartlyBody",
-              )
-            : requiresApproval === false
-              ? t(
-                  withoutCarePlace
-                    ? "sick.requestSentSchoolBodyWithoutCarePlace"
-                    : "sick.requestSentSchoolBody",
-                )
-              : withoutCarePlace
-                ? t("sick.requestSentBodyWithoutCarePlace")
-                : t("sick.requestSentBody")}
-        </p>
+        <div className="space-y-4">
+          <p role="status" className="text-sm leading-6 text-gray-700">
+            {submitted === "applied"
+              ? t("sick.appliedBody")
+              : submitted === "partly_pending"
+                ? t(
+                    withoutCarePlace
+                      ? "sick.requestSentPartlyBodyWithoutCarePlace"
+                      : "sick.requestSentPartlyBody",
+                  )
+                : requiresApproval === false
+                  ? t(
+                      withoutCarePlace
+                        ? "sick.requestSentSchoolBodyWithoutCarePlace"
+                        : "sick.requestSentSchoolBody",
+                    )
+                  : withoutCarePlace
+                    ? t("sick.requestSentBodyWithoutCarePlace")
+                    : t("sick.requestSentBody")}
+          </p>
+          {studentId && mealDays.length > 0 && (
+            <AbsenceMealNotice
+              studentId={studentId}
+              days={mealDays}
+              withoutCarePlace={withoutCarePlace}
+            />
+          )}
+        </div>
       ) : (
         <div className="space-y-4">
           <p className="text-sm leading-6 text-gray-700">

@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "Школа уже внесла записи на эти дни. Она проверит ваше сообщение. До тех пор действует её запись.",
     "requestSentPartlyBodyWithoutCarePlace": "Свободные дни сообщены. По остальным дням школа проверит ваше сообщение. До тех пор действует её запись.",
     "submitBlockedWithoutCarePlace": "Школа сейчас не принимает здесь сообщения об отсутствии.",
-    "schoolSickDayWithoutCarePlace": "{date}: школа отметила болезнь"
+    "schoolSickDayWithoutCarePlace": "{date}: школа отметила болезнь",
+    "appliedTitle": "Отсутствие сообщено",
+    "appliedBody": "Отсутствие сохранено.",
+    "mealTitle": "Обед всё ещё заказан",
+    "mealIntro": "{count, plural, one {В этот день обед всё ещё заказан.} other {В эти дни обед всё ещё заказан.}} Он не отменяется автоматически.",
+    "mealDayLocked": "{date}: срок отмены прошёл",
+    "mealLockedHint": "После срока отменить обед может только {careTerm}. Пожалуйста, обратитесь в {careTerm}.",
+    "mealLockedHintWithoutCarePlace": "После срока отменить обед может только школа. Пожалуйста, обратитесь в школу.",
+    "mealCancel": "Отменить и обед",
+    "mealCancelTooltip": "Сразу отменяет обед в эти дни.",
+    "mealCancelling": "Отмена …",
+    "mealCancelled": "Обед на эти дни отменён.",
+    "mealErrorObject": "отмена обеда"
   },
   "summary": {
     "none": "Нет сообщений об отсутствии",

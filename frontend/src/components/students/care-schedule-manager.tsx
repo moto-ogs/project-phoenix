@@ -105,6 +105,8 @@ import {
 import { createLogger } from "~/lib/logger";
 import { mapRosterImpact, type RosterImpact } from "~/lib/roster-impact";
 import { CarePlanImpact } from "~/components/students/care-plan-impact";
+import { CareDayMealNotice } from "~/components/students/care-day-meal-notice";
+import { isChildMealRegistered } from "~/lib/meal-plan-api";
 import type {
   StudentStatusDay,
   StudentStatusKind,
@@ -394,6 +396,9 @@ export function CareScheduleManager({
   const [isEditingWeekly, setIsEditingWeekly] = useState(false);
   // Was ein Angebotswechsel im Betreuungsplan bewirkt hat (#5102).
   const [rosterImpact, setRosterImpact] = useState<RosterImpact | null>(null);
+  // Ein mit „Kommt nicht“ abgesagter Tag, an dem noch Essen angemeldet ist
+  // (#8216).
+  const [mealNoticeDate, setMealNoticeDate] = useState<string | null>(null);
   const [statusDayToDelete, setStatusDayToDelete] =
     useState<StudentStatusDay | null>(null);
   const [deletingStatusDayId, setDeletingStatusDayId] = useState<string | null>(
@@ -1026,6 +1031,15 @@ export function CareScheduleManager({
 
       await refreshCareData();
       invalidatePickupCaches();
+
+      // Eine Absage ohne Uhrzeit meldet das Essen nicht ab. Ohne
+      // Essensanmeldung oder ohne Recht dafür bleibt der Hinweis aus.
+      const cancelsDay = arrival?.kind === "none" || pickup?.kind === "none";
+      const stillEats =
+        cancelsDay && dayISO >= berlinTodayISO()
+          ? await isChildMealRegistered(studentId, dayISO).catch(() => false)
+          : false;
+      setMealNoticeDate(stillEats ? dayISO : null);
     },
     [arrivalData.exceptions, pickupData.exceptions, studentId, refreshCareData],
   );
@@ -1251,6 +1265,16 @@ export function CareScheduleManager({
         {rosterImpact && !isEditingWeeklyView ? (
           <div className="mb-3">
             <CarePlanImpact impact={rosterImpact} studentId={studentId} />
+          </div>
+        ) : null}
+        {mealNoticeDate && !isEditingWeeklyView ? (
+          <div className="mb-3">
+            <CareDayMealNotice
+              key={mealNoticeDate}
+              studentId={studentId}
+              date={mealNoticeDate}
+              onDismiss={() => setMealNoticeDate(null)}
+            />
           </div>
         ) : null}
         {isEditingWeeklyView && careDaysSource ? (

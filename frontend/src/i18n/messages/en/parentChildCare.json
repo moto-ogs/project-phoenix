@@ -57,7 +57,19 @@
     "requestSentSchoolBodyWithoutCarePlace": "The school has already entered something for these days. It will check your report. Until then, its entry applies.",
     "requestSentPartlyBodyWithoutCarePlace": "The free days are reported. For the other days, the school will check your report. Until then, its entry applies.",
     "submitBlockedWithoutCarePlace": "The school does not accept absences here at the moment.",
-    "schoolSickDayWithoutCarePlace": "{date}: reported sick by the school"
+    "schoolSickDayWithoutCarePlace": "{date}: reported sick by the school",
+    "appliedTitle": "Absence reported",
+    "appliedBody": "The absence has been saved.",
+    "mealTitle": "Lunch still booked",
+    "mealIntro": "{count, plural, one {Lunch is still booked on this day.} other {Lunch is still booked on these days.}} It is not cancelled automatically.",
+    "mealDayLocked": "{date}: cancellation deadline passed",
+    "mealLockedHint": "After the deadline, only {careTerm} can cancel lunch. Please contact {careTerm}.",
+    "mealLockedHintWithoutCarePlace": "After the deadline, only the school can cancel lunch. Please contact the school.",
+    "mealCancel": "Cancel lunch too",
+    "mealCancelTooltip": "Cancels lunch on these days right away.",
+    "mealCancelling": "Cancelling …",
+    "mealCancelled": "Lunch is cancelled for these days.",
+    "mealErrorObject": "the lunch cancellation"
   },
   "summary": {
     "none": "No absence",

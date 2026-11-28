@@ -205,6 +205,28 @@ export async function getChildMealSchedule(
   };
 }
 
+/**
+ * Whether the child still eats on a day, as the school reads it (#8216).
+ * The school may cancel any day from today on, deadlines included.
+ */
+export async function isChildMealRegistered(
+  studentId: string,
+  date: string,
+): Promise<boolean> {
+  const plan = await bffJson(
+    "tenant",
+    "GET /api/meal-plan/participation/{studentId}",
+    {
+      params: { studentId },
+      query: { from: date, to: date },
+      errorMessage: "meal participation load failed",
+    },
+  );
+  return (plan.days ?? []).some(
+    (day) => day.date === date && day.participating,
+  );
+}
+
 /** The school registers (true) or cancels (false) a child's day. */
 export async function setChildMealDay(
   studentId: string,
