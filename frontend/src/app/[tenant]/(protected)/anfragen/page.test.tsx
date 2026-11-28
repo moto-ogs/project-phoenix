@@ -11,14 +11,16 @@ import { useTimetableEnabled } from "~/lib/tenant-context";
 import type { CourseWaitlist } from "~/lib/course-waitlist-helpers";
 import { catalogText } from "~/test/error-catalog-text";
 
-const { mockUseSession, mockRedirect } = vi.hoisted(() => ({
+const { mockUseSession, mockRedirect, searchState } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
   mockRedirect: vi.fn(),
+  searchState: { params: new URLSearchParams() },
 }));
 
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
   redirect: (path: string) => mockRedirect(path),
+  useSearchParams: () => searchState.params,
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -165,6 +167,9 @@ function umschalten(label: "Offen" | "Historie") {
 describe("AnfragenPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchState.params = new URLSearchParams();
+    // Ein Reiterwechsel schreibt die Adresse; kein Test erbt sie.
+    window.history.replaceState(null, "", "/");
     waitlistState.waitlists = undefined;
     mockUseTimetableEnabled.mockReturnValue(true);
     mockUseSession.mockReturnValue(sessionWith(["users:update"]));
@@ -175,6 +180,7 @@ describe("AnfragenPage", () => {
             mockUseSession().data ?? null,
             "group_leader",
           ),
+          settled: true,
           isLoading: false,
           error: undefined,
           refresh: vi.fn(),
@@ -518,6 +524,51 @@ describe("AnfragenPage", () => {
 
     expect(absenceProbe().view).toBe("open");
     expect(screen.queryByTestId("aggregated-list")).toBeNull();
+  });
+
+  // Die Startkarte verlinkt die Anträge des Teams direkt (#8268).
+  it("öffnet per ?reiter=mitarbeitende direkt die Anträge des Teams", () => {
+    mockUseSession.mockReturnValue(
+      sessionWith(["users:update", "vacation:approve"]),
+    );
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+
+    render(<AnfragenPage />);
+
+    expect(absenceProbe().view).toBe("open");
+    expect(screen.queryByTestId("aggregated-list")).toBeNull();
+  });
+
+  // Next stellt die Seite beim nächsten Besuch mit ihrem alten Zustand wieder
+  // her: der Link der Startkarte muss trotzdem den Team-Reiter öffnen.
+  it("folgt beim erneuten Besuch dem Reiter in der Adresse", () => {
+    mockUseSession.mockReturnValue(
+      sessionWith(["users:update", "vacation:approve"]),
+    );
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+    const { rerender } = render(<AnfragenPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Eltern" }));
+    expect(screen.getByTestId("aggregated-list")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    // Next gleicht useSearchParams mit der History ab.
+    searchState.params = new URLSearchParams(window.location.search);
+    rerender(<AnfragenPage />);
+
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+    rerender(<AnfragenPage />);
+
+    expect(absenceProbe().view).toBe("open");
+    expect(screen.queryByTestId("aggregated-list")).toBeNull();
+  });
+
+  it("bleibt ohne vacation:approve trotz ?reiter=mitarbeitende bei den Eltern", () => {
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+
+    render(<AnfragenPage />);
+
+    expect(screen.getByTestId("aggregated-list")).toBeInTheDocument();
+    expect(screen.queryByTestId("absence-list")).toBeNull();
   });
 
   it("sucht im Mitarbeitende-Reiter nach Teammitgliedern und filtert nach Art", () => {

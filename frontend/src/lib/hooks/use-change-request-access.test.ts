@@ -17,8 +17,11 @@ vi.mock("~/lib/shell-auth-context", () => ({
 
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (...args: unknown[]) => mockUseSWRAuth(...args),
+  useSWRCacheKey: () => (key: string) => `scope|${key}`,
 }));
 
+import { ApiError } from "~/lib/api-error";
+import { liftAllRefusals, markRefused } from "~/lib/access-refusal";
 import { useChangeRequestAccess } from "./use-change-request-access";
 
 describe("useChangeRequestAccess", () => {
@@ -102,6 +105,58 @@ describe("useChangeRequestAccess", () => {
 
     expect(result.current.canReviewParentRequests).toBe(true);
     expect(result.current.canOpenRequestsPage).toBe(true);
+  });
+
+  // Die Startkarte unterscheidet „noch offen“ von „beantwortet“ (#8268).
+  describe("settled", () => {
+    const down = new ApiError("down", 503);
+
+    it("ist offen, solange keine Antwort vorliegt", () => {
+      mockUseSWRAuth.mockReturnValue({
+        data: undefined,
+        error: down,
+        isLoading: false,
+        mutate: vi.fn(),
+      });
+
+      expect(
+        renderHook(() => useChangeRequestAccess()).result.current.settled,
+      ).toBe(false);
+    });
+
+    it("gilt als beantwortet, wenn eine spätere Prüfung nach einer Antwort scheitert", () => {
+      mockUseSWRAuth.mockReturnValue({
+        data: "none",
+        error: down,
+        isLoading: false,
+        mutate: vi.fn(),
+      });
+
+      expect(
+        renderHook(() => useChangeRequestAccess()).result.current.settled,
+      ).toBe(true);
+    });
+
+    it("gilt als beantwortet, solange eine Ablehnung gilt, auch nach einem späteren 503", () => {
+      markRefused(
+        "scope|change-request-access:7",
+        new ApiError("no", 403, { code: "general.permission" }),
+      );
+      mockUseSWRAuth.mockReturnValue({
+        data: undefined,
+        error: down,
+        isLoading: false,
+        mutate: vi.fn(),
+      });
+
+      try {
+        const { result } = renderHook(() => useChangeRequestAccess());
+        expect(result.current.settled).toBe(true);
+        expect(result.current.canReviewParentRequests).toBe(false);
+      } finally {
+        liftAllRefusals();
+      }
+    });
   });
 
   it("bleibt bei einem Fehler in der effektiven Zugriffsauswertung geschlossen", () => {

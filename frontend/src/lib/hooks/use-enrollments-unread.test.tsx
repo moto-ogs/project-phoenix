@@ -48,8 +48,12 @@ function unreadRequests(): number {
 }
 
 function Badge({ name }: Readonly<{ name: string }>) {
-  const { unreadCount } = useEnrollmentsUnread();
-  return <span data-testid={name}>{unreadCount}</span>;
+  const { unreadCount, state } = useEnrollmentsUnread();
+  return (
+    <span data-testid={name} data-state={state}>
+      {unreadCount}
+    </span>
+  );
 }
 
 /** Die drei Stellen, die den Zähler auf der Startseite gleichzeitig zeigen. */
@@ -136,5 +140,36 @@ describe("useEnrollmentsUnread", () => {
     await expectAllShow("0");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(unreadRequests()).toBe(0);
+  });
+
+  // Ein Abruffehler ist keine bestätigte 0 (#8268).
+  it("reports a failed read as failed, not as a confirmed 0", async () => {
+    fetchMock.mockImplementation(async () =>
+      Response.json(
+        { status: "error", code: "general.unavailable" },
+        { status: 503 },
+      ),
+    );
+    renderShell();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("home-block")).toHaveAttribute(
+        "data-state",
+        "failed",
+      ),
+    );
+    expect(screen.getByTestId("home-block")).toHaveTextContent("0");
+  });
+
+  it("confirms an answered 0 as known", async () => {
+    answer(0);
+    renderShell();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("home-block")).toHaveAttribute(
+        "data-state",
+        "known",
+      ),
+    );
   });
 });

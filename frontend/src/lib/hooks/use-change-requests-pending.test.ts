@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { ApiError } from "~/lib/api-error";
 import type { UseUnreadCountOptions } from "./use-unread-count";
 
 /** The key and options the hook handed useUnreadCount. */
@@ -119,5 +120,56 @@ describe("useChangeRequestsPending", () => {
       canReviewParentRequests: true,
     });
     expect(capturedOptions().key).toBe("badge-change-requests-pending:7");
+  });
+
+  // Für Gruppenleitungen entscheidet erst der Server, ob die Quelle gilt
+  // (#8268): bis dahin ist sie offen, nicht „nichts offen“.
+  describe("state while the server settles the review area", () => {
+    const inactive = { unreadCount: 0, isLoading: false, state: "inactive" };
+
+    function stateWith(access: Record<string, unknown>) {
+      mockUseUnreadCount.mockReturnValue(inactive);
+      mockUseChangeRequestAccess.mockReturnValue({
+        canReviewParentRequests: false,
+        settled: false,
+        isLoading: false,
+        error: undefined,
+        refresh: vi.fn(),
+        ...access,
+      });
+      return renderHook(() => useChangeRequestsPending()).result.current;
+    }
+
+    it("is loading while the access check runs", () => {
+      expect(stateWith({ isLoading: true }).state).toBe("loading");
+    });
+
+    it("is failed with the failure when the access check fails", () => {
+      const error = new ApiError("down", 503);
+      const result = stateWith({ error });
+      expect(result.state).toBe("failed");
+      expect(result.error).toBe(error);
+    });
+
+    // useChangeRequestAccess reports a refusal as settled.
+    it("stays inactive when the server refuses the access check", () => {
+      const error = new ApiError("no", 403, { code: "general.permission" });
+      expect(stateWith({ settled: true, error }).state).toBe("inactive");
+    });
+
+    it("stays inactive once the server granted no review area", () => {
+      expect(stateWith({ settled: true }).state).toBe("inactive");
+    });
+
+    // The answer held outranks a later failed check (focus revalidation).
+    it("stays inactive when a later check fails after an answer", () => {
+      const error = new ApiError("down", 503);
+      expect(stateWith({ settled: true, error }).state).toBe("inactive");
+    });
+
+    it("stays inactive outside the teacher shell", () => {
+      mockUseShellAuth.mockReturnValue({ mode: "operator" });
+      expect(stateWith({ isLoading: true }).state).toBe("inactive");
+    });
   });
 });

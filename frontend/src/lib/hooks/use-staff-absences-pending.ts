@@ -9,13 +9,10 @@ import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { useUnreadCount, type UseUnreadCountResult } from "./use-unread-count";
 
+// A failure stays a failure (#8268): a 0 would read as „nothing pending“.
 async function fetchPendingAbsenceCount(): Promise<number> {
-  try {
-    const rows = await staffAbsenceService.listPending();
-    return rows.length;
-  } catch {
-    return 0;
-  }
+  const rows = await staffAbsenceService.listPending();
+  return rows.length;
 }
 
 /**

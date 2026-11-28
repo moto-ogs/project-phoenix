@@ -393,11 +393,13 @@ describe("Sidebar", () => {
     vi.mocked(useMessagesUnread).mockReturnValue({
       unreadCount: 0,
       isLoading: false,
+      state: "known",
       refresh: vi.fn(),
     });
     vi.mocked(useStaffMessagesUnread).mockReturnValue({
       unreadCount: 0,
       isLoading: false,
+      state: "known",
       refresh: vi.fn(),
     });
     mockUsePresenceMode.mockReturnValue("detailed");
@@ -416,11 +418,13 @@ describe("Sidebar", () => {
     mockUseStaffAbsencesPending.mockReturnValue({
       unreadCount: 0,
       isLoading: false,
+      state: "known",
       refresh: vi.fn(),
     });
     mockUseChangeRequestsPending.mockReturnValue({
       unreadCount: 0,
       isLoading: false,
+      state: "known",
       refresh: vi.fn(),
     });
     mockUseChangeRequestAccess.mockReturnValue({
@@ -429,6 +433,7 @@ describe("Sidebar", () => {
     mockUseCareWithdrawalsPending.mockReturnValue({
       unreadCount: 0,
       isLoading: false,
+      state: "known",
       refresh: vi.fn(),
     });
   });
@@ -692,16 +697,19 @@ describe("Sidebar", () => {
       mockUseChangeRequestsPending.mockReturnValue({
         unreadCount: 2,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
       mockUseStaffAbsencesPending.mockReturnValue({
         unreadCount: 3,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
       mockUseCareWithdrawalsPending.mockReturnValue({
         unreadCount: 4,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
       mockUseChangeRequestAccess.mockReturnValue({
@@ -724,6 +732,7 @@ describe("Sidebar", () => {
       mockUseChangeRequestsPending.mockReturnValue({
         unreadCount: 2,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -753,6 +762,7 @@ describe("Sidebar", () => {
       vi.mocked(useStaffMessagesUnread).mockReturnValue({
         unreadCount: 3,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -3189,6 +3199,7 @@ describe("Sidebar", () => {
       vi.mocked(useMessagesUnread).mockReturnValue({
         unreadCount: 2,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -4375,6 +4386,7 @@ describe("Sidebar", () => {
       mockUseChangeRequestsPending.mockReturnValue({
         unreadCount: 9,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
       mockUseChangeRequestAccess.mockReturnValue({
@@ -4428,6 +4440,7 @@ describe("Sidebar", () => {
       vi.mocked(useMessagesUnread).mockReturnValue({
         unreadCount: 4,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -4480,6 +4493,7 @@ describe("Sidebar", () => {
       mockUseEnrollmentsUnread.mockReturnValue({
         unreadCount: 3,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
     });
@@ -4488,6 +4502,7 @@ describe("Sidebar", () => {
       mockUseEnrollmentsUnread.mockReturnValue({
         unreadCount: 0,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
     });
@@ -4506,6 +4521,7 @@ describe("Sidebar", () => {
       mockUseEnrollmentsUnread.mockReturnValue({
         unreadCount: 1,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -4520,6 +4536,7 @@ describe("Sidebar", () => {
       mockUseEnrollmentsUnread.mockReturnValue({
         unreadCount: 1,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -4553,6 +4570,7 @@ describe("Sidebar", () => {
       vi.mocked(useMessagesUnread).mockReturnValue({
         unreadCount: 2,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 
@@ -4576,11 +4594,13 @@ describe("Sidebar", () => {
       vi.mocked(useMessagesUnread).mockReturnValue({
         unreadCount: 1,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
       mockUseEnrollmentsUnread.mockReturnValue({
         unreadCount: 1,
         isLoading: false,
+        state: "known",
         refresh: vi.fn(),
       });
 

@@ -25,6 +25,7 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 vi.mock("~/lib/session-cache", () => ({ announceSessionChange: vi.fn() }));
 
+import { ApiError } from "~/lib/api-error";
 import { scopedSWRKey, tenantSWRScope, writeSWRSeeds } from "~/lib/swr";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
@@ -182,6 +183,89 @@ describe("useUnreadCount — basic fetch", () => {
     );
 
     await waitFor(() => expect(result.current.unreadCount).toBe(3));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// State: a 0 the server confirmed is not a 0 nobody knows (#8268)
+// ---------------------------------------------------------------------------
+
+describe("useUnreadCount — state", () => {
+  it("is inactive while the gate is closed", async () => {
+    const { result } = render({ enabled: false });
+
+    await settle();
+
+    expect(result.current.state).toBe("inactive");
+  });
+
+  it("is loading until the first answer, then known", async () => {
+    const answer = deferred<number>();
+    const { result } = render({ fetcher: () => answer.promise });
+
+    expect(result.current.state).toBe("loading");
+    expect(result.current.unreadCount).toBe(0);
+
+    await act(async () => answer.resolve(0));
+
+    await waitFor(() => expect(result.current.state).toBe("known"));
+    expect(result.current.unreadCount).toBe(0);
+  });
+
+  it("is failed, not a confirmed 0, when the first load fails", async () => {
+    const { result } = render({
+      fetcher: vi.fn().mockRejectedValue(new ApiError("down", 503)),
+      onError: vi.fn(),
+    });
+
+    await waitFor(() => expect(result.current.state).toBe("failed"));
+    expect(result.current.unreadCount).toBe(0);
+  });
+
+  it("keeps the confirmed count when a later refresh fails", async () => {
+    const fetcher = vi.fn().mockResolvedValue(3);
+    const { result } = render({ fetcher, onError: vi.fn() });
+    await waitFor(() => expect(result.current.unreadCount).toBe(3));
+
+    fetcher.mockRejectedValue(new ApiError("down", 503));
+    await act(() => result.current.refresh());
+
+    expect(result.current.unreadCount).toBe(3);
+    expect(result.current.state).toBe("known");
+  });
+
+  // A source the server refuses to this account is not a failure the
+  // screen may name: it does not apply.
+  it("is inactive when the server refuses the read", async () => {
+    const { result } = render({
+      fetcher: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError("forbidden", 403, { code: "general.permission" }),
+        ),
+      onError: vi.fn(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.state).toBe("inactive");
+  });
+
+  // The refusal holds for the key until a read succeeds: a later failure of
+  // another kind must not surface the refused source as a failure.
+  it("stays inactive when a refused key later fails otherwise", async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("forbidden", 403, { code: "general.permission" }),
+      )
+      .mockRejectedValue(new ApiError("down", 503));
+    const { result } = render({ fetcher, onError: vi.fn() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(() => result.current.refresh());
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe("inactive");
   });
 });
 

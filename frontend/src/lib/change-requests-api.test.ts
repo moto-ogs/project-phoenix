@@ -62,19 +62,28 @@ describe("fetchPendingChangeRequestCount", () => {
     expect(await fetchPendingChangeRequestCount()).toBe(0);
   });
 
-  it("returns 0 when the envelope has no data key", async () => {
+  // An answer without envelope is broken, not „nothing pending“ (#8268).
+  it("rejects when the envelope has no data key", async () => {
     mockFetch(async () => jsonResponse({}));
-    expect(await fetchPendingChangeRequestCount()).toBe(0);
+    await expect(fetchPendingChangeRequestCount()).rejects.toMatchObject({
+      status: 502,
+    });
   });
 
-  it("returns 0 (never throws) on a non-OK response, so the badge can't break the sidebar", async () => {
+  // A failure is no confirmed 0 (#8268): the start page would report that
+  // nothing waits. The shared reader keeps the badge neutral instead.
+  it("rejects on a non-OK response instead of reporting 0", async () => {
     mockFetch(async () => jsonResponse({ error: "verboten" }, 403));
-    expect(await fetchPendingChangeRequestCount()).toBe(0);
+    await expect(fetchPendingChangeRequestCount()).rejects.toMatchObject({
+      status: 403,
+    });
   });
 
-  it("returns 0 on a 500 with a non-JSON body", async () => {
+  it("rejects on a 500 with a non-JSON body", async () => {
     mockFetch(async () => new Response("boom", { status: 500 }));
-    expect(await fetchPendingChangeRequestCount()).toBe(0);
+    await expect(fetchPendingChangeRequestCount()).rejects.toMatchObject({
+      status: 500,
+    });
   });
 });
 
