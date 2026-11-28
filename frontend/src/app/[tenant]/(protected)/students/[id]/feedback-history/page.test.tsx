@@ -501,8 +501,9 @@ describe.each(["Europe/Berlin", "UTC", "America/New_York"])(
       vi.stubEnv("TZ", zone);
       // Friday 27.11., 12:00 in Berlin.
       setTestClock("2026-11-27T11:00:00Z");
-      // 23:30 Berlin is the next day in UTC and the same day in New York:
-      // the zone change took effect, or the cases below prove nothing.
+      // The zone change took effect, or the cases below prove nothing. The
+      // old code read the offset-less "23:30" in this zone and then formatted
+      // it for Berlin: 00:30 on the 27th in UTC, 05:30 in New York.
       const late = new Date("2026-11-26T22:30:23Z");
       expect(late.getHours()).toBe(
         { "Europe/Berlin": 23, UTC: 22, "America/New_York": 17 }[zone],
