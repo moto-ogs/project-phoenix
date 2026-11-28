@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { pickupConcept } from "~/lib/concepts/pickup";
 import { SettingsCategory } from "./settings-category";
 import type { SchemaCategory } from "~/lib/settings-api";
+
+const mocks = vi.hoisted(() => ({
+  settingsCategoryConcept: vi.fn(),
+}));
+
+vi.mock("./settings-category-concepts", () => ({
+  settingsCategoryConcept: mocks.settingsCategoryConcept,
+}));
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<ToastProvider>{ui}</ToastProvider>);
@@ -67,6 +76,7 @@ describe("SettingsCategory", () => {
   });
 
   it("loads its category concept only when icons are enabled", async () => {
+    mocks.settingsCategoryConcept.mockReturnValue(pickupConcept);
     const { container } = renderWithProviders(
       <SettingsCategory
         category={makeCategory({ key: "abholung", label: "Abholung" })}
@@ -81,6 +91,7 @@ describe("SettingsCategory", () => {
         container.querySelector("[data-moto-duotone-tone='gold']"),
       ).toBeTruthy();
     });
+    expect(mocks.settingsCategoryConcept).toHaveBeenCalledWith("abholung", "");
   });
 
   it("overrides the 'aktivitaeten' key to the umlaut label", () => {
