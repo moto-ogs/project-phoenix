@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SettingsCategory } from "./settings-category";
 import type { SchemaCategory } from "~/lib/settings-api";
@@ -64,6 +64,23 @@ describe("SettingsCategory", () => {
       />,
     );
     expect(getByText("Test Category")).toBeDefined();
+  });
+
+  it("loads its category concept only when icons are enabled", async () => {
+    const { container } = renderWithProviders(
+      <SettingsCategory
+        category={makeCategory({ key: "abholung", label: "Abholung" })}
+        onSave={vi.fn().mockResolvedValue(null)}
+        onReset={vi.fn().mockResolvedValue(null)}
+        withIcon
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("[data-moto-duotone-tone='gold']"),
+      ).toBeTruthy();
+    });
   });
 
   it("overrides the 'aktivitaeten' key to the umlaut label", () => {

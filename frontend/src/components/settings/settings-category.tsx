@@ -1,9 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { ResolvedSetting, SchemaCategory } from "~/lib/settings-api";
+import type { MotoConcept } from "~/lib/moto-concepts";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { createLogger } from "~/lib/logger";
 import { SettingsField } from "./settings-field";
 import type { SettingsAudience } from "./settings-origin";
 import {
@@ -13,7 +16,8 @@ import {
   hasCategoryLabel,
   filterCategoryItems,
 } from "./settings-filter";
-import { settingsCategoryConcept } from "./settings-category-concepts";
+
+const logger = createLogger({ component: "SettingsCategory" });
 
 interface SettingsCategoryProps {
   readonly category: SchemaCategory;
@@ -122,6 +126,34 @@ export function SettingsCategory({
   withIcon = false,
   tabKey = "",
 }: SettingsCategoryProps) {
+  const [concept, setConcept] = useState<MotoConcept>();
+
+  useEffect(() => {
+    if (!withIcon) {
+      setConcept(undefined);
+      return;
+    }
+
+    let current = true;
+    void import("./settings-category-concepts").then(
+      ({ settingsCategoryConcept }) => {
+        if (current) setConcept(settingsCategoryConcept(category.key, tabKey));
+      },
+      (error: unknown) => {
+        if (!current) return;
+        logger.warn("category concept could not load", {
+          category_key: category.key,
+          tab_key: tabKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    );
+
+    return () => {
+      current = false;
+    };
+  }, [category.key, tabKey, withIcon]);
+
   const visibleItems = filterCategoryItems(category, filterQuery);
 
   if (visibleItems.length === 0) {
@@ -143,9 +175,7 @@ export function SettingsCategory({
   return (
     <SectionCard
       headingLevel={headingLevel}
-      concept={
-        withIcon ? settingsCategoryConcept(category.key, tabKey) : undefined
-      }
+      concept={concept}
       title={title ?? displayCategoryLabel(category)}
       titleClassName={
         title !== undefined || hasCategoryLabel(category)

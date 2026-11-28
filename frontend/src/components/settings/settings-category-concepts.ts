@@ -57,9 +57,9 @@ import { settingsTabConcept } from "./settings-sections";
  * (`.claude/rules/frontend-ui-kit.md`, Kartenkopf) mehrere Themenkarten hat;
  * das entscheidet der Aufrufer über `withIcon` an `SettingsCategory`.
  * Wer eine Kategorie-Bezeichnung anlegt, trägt hier ihr Konzept ein, sonst
- * schlägt `settings-category-concepts.test.ts` fehl. Eigene Datei, damit die
- * immer geladene Navigation (`settings-sections.ts`) diese Glyphen nicht
- * mitzieht.
+ * schlägt `settings-category-concepts.test.ts` fehl. Die Karte lädt diese
+ * Tabelle erst mit `withIcon`; so trägt eine Settings-Seite ohne
+ * Themenkarten keine Glyphen für andere Kategorien.
  */
 export const CATEGORY_CONCEPTS: Readonly<Record<string, MotoConcept>> = {
   abholung: pickupConcept,
