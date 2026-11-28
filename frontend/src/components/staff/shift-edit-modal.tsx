@@ -32,7 +32,12 @@ import {
   weekPatternForDate,
   type CalendarPeriod,
 } from "~/lib/calendar-period-helpers";
-import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import {
+  berlinTodayISO,
+  formatDate,
+  parseISODate,
+  toISODate,
+} from "~/lib/date-helpers";
 import {
   readStateWaitReason,
   useReadDraftForm,
@@ -52,7 +57,13 @@ import {
   type SeriesResult,
   type SeriesRule,
 } from "~/lib/shift-api";
-import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
+import {
+  parseBreakMinutes,
+  shiftBreakMaxMinutes,
+  shiftDurationMinutes,
+  type StaffScheduleStaff,
+  type StaffShift,
+} from "~/lib/shift-helpers";
 import {
   isShiftTypeOffered,
   shiftTypeOptionLabel,
@@ -81,7 +92,6 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
 
 const logger = createLogger({ component: "ShiftEditModal" });
-const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 // Stable empty default so the optional staffOptions prop does not create a new
 // array reference each render (oxlint react/no-object-type-as-default-prop).
 const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
@@ -460,14 +470,8 @@ export function ShiftEditModal({
     ? `Für die gewählten Wochentage und den Wochenrhythmus bleibt ab ${formatShortDate(seriesAppliesFrom)} kein Termin mehr. Setze „Gültig bis" auf ein späteres Datum oder ändere die Wiederholung.`
     : `Diese Serie endet am ${formatShortDate(seriesValidUntil)}, Änderungen wirken aber erst ab ${formatShortDate(seriesAppliesFrom)}. Setze „Gültig bis" auf ein späteres Datum, um die Serie fortzuführen.`;
 
-  const timesValid = startTime !== "" && endTime !== "" && startTime < endTime;
-  const breakMaxMinutes = timesValid
-    ? Math.min(
-        STAFF_SHIFT_MAX_BREAK_MINUTES,
-        shiftDurationMinutes(startTime, endTime) ??
-          STAFF_SHIFT_MAX_BREAK_MINUTES,
-      )
-    : STAFF_SHIFT_MAX_BREAK_MINUTES;
+  const timesValid = shiftDurationMinutes(startTime, endTime) !== null;
+  const breakMaxMinutes = shiftBreakMaxMinutes(startTime, endTime);
   const breakMinutes = parseBreakMinutes(breakMinutesStr, breakMaxMinutes);
   const breakValid = breakMinutes !== null;
   const seriesValid =
@@ -1834,56 +1838,14 @@ function isoWeekdayOf(isoDate: string): number {
   return day === 0 ? 7 : day;
 }
 
+// A shift date is a calendar day: it renders as that day in every browser
+// zone (#8269), never as Berlin's view of the browser's local midnight.
 function formatShortDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDate(isoDate);
 }
 
 function formatLongDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function shiftDurationMinutes(
-  startTime: string,
-  endTime: string,
-): number | null {
-  const start = parseClockMinutes(startTime);
-  const end = parseClockMinutes(endTime);
-  if (start === null || end === null || end <= start) return null;
-  return end - start;
-}
-
-function parseClockMinutes(value: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(value);
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-}
-
-function parseBreakMinutes(raw: string, maxMinutes: number): number | null {
-  const trimmed = raw.trim();
-  if (trimmed === "") return null;
-  const n = Number(trimmed);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > maxMinutes) {
-    return null;
-  }
-  return n;
+  return formatDate(isoDate, true);
 }
 
 /** Ferien und Schließtage je Serie (#3820). Ohne Haken bleiben sie frei;

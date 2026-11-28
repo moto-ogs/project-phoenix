@@ -1,6 +1,7 @@
 // Types and mapping helpers for planned staff shifts (Dienstplan, #1376).
 // Wire shapes: lib/contract/{shared,staff-shifts,time-tracking}.generated.ts.
 
+import { CLOCK_TIME_RE } from "./date-helpers";
 import { knownEnum } from "./contract/known-enum";
 import type { ShiftResponse } from "./contract/shared.generated";
 import type {
@@ -295,6 +296,60 @@ export function formatDeltaHours(minutes: number): string {
 /** "08:00–16:00" */
 export function formatShiftLabel(shift: StaffShift): string {
   return `${shift.startTime}–${shift.endTime}`;
+}
+
+/** Longest break a single shift may carry, in minutes. */
+export const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
+
+/**
+ * Minutes between two wall-clock times "HH:MM", or null unless both are
+ * complete clock times and the end lies after the start. The shift dialogs
+ * treat null as "Beginn und Ende prüfen".
+ */
+export function shiftDurationMinutes(
+  startTime: string,
+  endTime: string,
+): number | null {
+  const start = clockMinutes(startTime);
+  const end = clockMinutes(endTime);
+  if (start === null || end === null || end <= start) return null;
+  return end - start;
+}
+
+/**
+ * Upper bound for a shift's break: never above
+ * `STAFF_SHIFT_MAX_BREAK_MINUTES`, never longer than the shift itself. With
+ * invalid times the general bound applies, so the field keeps a usable max.
+ */
+export function shiftBreakMaxMinutes(
+  startTime: string,
+  endTime: string,
+): number {
+  return Math.min(
+    STAFF_SHIFT_MAX_BREAK_MINUTES,
+    shiftDurationMinutes(startTime, endTime) ?? STAFF_SHIFT_MAX_BREAK_MINUTES,
+  );
+}
+
+/**
+ * The typed break as whole minutes from 0 to `maxMinutes`, or null for an
+ * empty, fractional, negative or too long value.
+ */
+export function parseBreakMinutes(
+  raw: string,
+  maxMinutes: number,
+): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 0 || n > maxMinutes) return null;
+  return n;
+}
+
+function clockMinutes(value: string): number | null {
+  const match = CLOCK_TIME_RE.exec(value);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 /** "2026-07-13" → "13.07." — the day/month sublabel of a grid column. */

@@ -31,12 +31,18 @@ import {
   findClosingDayReason,
   type ClosingDayRange,
 } from "~/lib/closing-day-helpers";
-import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { createLogger } from "~/lib/logger";
 import { staffShiftService } from "~/lib/shift-api";
 import { useWorkingTimeConfirmation } from "./working-time-confirmation";
-import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
+import {
+  parseBreakMinutes,
+  shiftBreakMaxMinutes,
+  shiftDurationMinutes,
+  type StaffScheduleStaff,
+  type StaffShift,
+} from "~/lib/shift-helpers";
 import {
   isShiftTypeOffered,
   shiftTypeOptionLabel,
@@ -44,7 +50,6 @@ import {
 } from "~/lib/shift-type-helpers";
 
 const logger = createLogger({ component: "ShiftMoveDialog" });
-const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 const INACTIVE_TYPE_MOVE_MESSAGE =
   "Diese Dienstart ist inaktiv. Bitte wähle für die andere Person eine aktive Dienstart oder „Keine Dienstart“.";
 // #6845: eine entfernte Dienstart behalten nur die schon geplanten Dienste.
@@ -163,14 +168,8 @@ export function ShiftMoveDialog({
     return opts;
   }, [shiftTypes, shift.shiftTypeId]);
 
-  const timesValid = startTime !== "" && endTime !== "" && startTime < endTime;
-  const breakMax = timesValid
-    ? Math.min(
-        STAFF_SHIFT_MAX_BREAK_MINUTES,
-        shiftDurationMinutes(startTime, endTime) ??
-          STAFF_SHIFT_MAX_BREAK_MINUTES,
-      )
-    : STAFF_SHIFT_MAX_BREAK_MINUTES;
+  const timesValid = shiftDurationMinutes(startTime, endTime) !== null;
+  const breakMax = shiftBreakMaxMinutes(startTime, endTime);
   const breakMinutes = parseBreakMinutes(breakMinutesStr, breakMax);
   const breakValid = breakMinutes !== null;
   const movingToOtherPerson = targetStaffId !== base.staffId;
@@ -535,42 +534,8 @@ function FieldGroup({
   );
 }
 
+// A shift date is a calendar day: it renders as that day in every browser
+// zone (#8269), never as Berlin's view of the browser's local midnight.
 function formatLongDate(isoDate: string): string {
-  if (isoDate === "") return "";
-  return parseISODate(isoDate).toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function shiftDurationMinutes(
-  startTime: string,
-  endTime: string,
-): number | null {
-  const start = parseClockMinutes(startTime);
-  const end = parseClockMinutes(endTime);
-  if (start === null || end === null || end <= start) return null;
-  return end - start;
-}
-
-function parseClockMinutes(value: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(value);
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-}
-
-function parseBreakMinutes(raw: string, maxMinutes: number): number | null {
-  const trimmed = raw.trim();
-  if (trimmed === "") return null;
-  const n = Number(trimmed);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > maxMinutes) {
-    return null;
-  }
-  return n;
+  return isoDate === "" ? "" : formatDate(isoDate, true);
 }

@@ -9,6 +9,10 @@ import {
   mapOwnAssignment,
   mapStaffScheduleOverview,
   mapStaffShift,
+  parseBreakMinutes,
+  shiftBreakMaxMinutes,
+  shiftDurationMinutes,
+  STAFF_SHIFT_MAX_BREAK_MINUTES,
   summaryLabel,
   summaryTone,
   type SummaryDelta,
@@ -540,5 +544,43 @@ describe("groupShiftsByStaffAndDate", () => {
     expect(grouped.get("7")?.get("2026-07-07")).toHaveLength(1);
     expect(grouped.get("8")?.get("2026-07-06")).toHaveLength(1);
     expect(grouped.get("9")).toBeUndefined();
+  });
+});
+
+// One rule set for „Schicht bearbeiten“ and „Schicht verschieben“ (#8269).
+describe("shift time and break rules", () => {
+  it("measures a shift only between complete HH:MM times with the end after the start", () => {
+    expect(shiftDurationMinutes("08:00", "12:30")).toBe(270);
+    expect(shiftDurationMinutes("00:00", "23:59")).toBe(1439);
+    for (const [start, end] of [
+      ["12:00", "12:00"],
+      ["12:00", "08:00"],
+      ["8:00", "12:00"],
+      ["08:00", "24:00"],
+      ["08:60", "12:00"],
+      ["08:00:00", "12:00"],
+      ["", "12:00"],
+    ] as const) {
+      expect(shiftDurationMinutes(start, end)).toBeNull();
+    }
+  });
+
+  it("caps the break at the shift length and at the general maximum", () => {
+    expect(shiftBreakMaxMinutes("08:00", "09:00")).toBe(60);
+    expect(shiftBreakMaxMinutes("06:00", "18:00")).toBe(
+      STAFF_SHIFT_MAX_BREAK_MINUTES,
+    );
+    expect(shiftBreakMaxMinutes("12:00", "08:00")).toBe(
+      STAFF_SHIFT_MAX_BREAK_MINUTES,
+    );
+  });
+
+  it("accepts a break only as whole minutes from 0 to the maximum", () => {
+    expect(parseBreakMinutes("0", 60)).toBe(0);
+    expect(parseBreakMinutes(" 45 ", 60)).toBe(45);
+    expect(parseBreakMinutes("60", 60)).toBe(60);
+    for (const raw of ["", "  ", "61", "-1", "7.5", "abc", "Infinity"]) {
+      expect(parseBreakMinutes(raw, 60)).toBeNull();
+    }
   });
 });
