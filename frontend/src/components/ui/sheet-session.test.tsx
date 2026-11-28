@@ -40,6 +40,10 @@ afterEach(() => {
 
 describe("useSheetSession", () => {
   it("keeps one sheet open and lets Back close it", async () => {
+    // Am Ende des Verlaufs beginnen: Endete ein früherer Test im selben
+    // Worker mit `history.back()`, kürzte das nächste `pushState` die
+    // Einträge davor, und die Länge wüchse nicht.
+    window.history.pushState(null, "");
     const start = window.history.length;
     const { getByTestId } = render(
       <>
