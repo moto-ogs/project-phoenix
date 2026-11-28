@@ -158,11 +158,11 @@ func NormalizeCreateSchool(input *CreateSchool) error {
 // ValidateSchoolContactEmail checks the contact address of a school. Mail is
 // sent from a central noreply address, so replies from parents reach the
 // school only through this address, and moto must not receive them (#2872).
-// The address is optional: not every school has one when it is set up. A
-// given address must be a bare mailbox address.
+// Every school has one (#7434): the column is NOT NULL and not blank. The
+// address must be a bare mailbox address.
 func ValidateSchoolContactEmail(email string) error {
-	if email == "" {
-		return nil
+	if strings.TrimSpace(email) == "" {
+		return invalidSchool("email is required")
 	}
 	if len(email) > MaxEmailLength {
 		return invalidSchool("email must not exceed 255 characters")

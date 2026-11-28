@@ -17,8 +17,8 @@ func TestDemoVisitorErasureBackfillsAbandonedReplacementSchools(t *testing.T) {
 	const slug = "ogs-legacy-abc123"
 
 	var abandonedID int64
-	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, deleted_at)
-		SELECT organization_id, 'Aufgegebene Demo', 'aufgegeben', 'aufgegeben', NOW()
+	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, email, deleted_at)
+		SELECT organization_id, 'Aufgegebene Demo', 'aufgegeben', 'aufgegeben', email, NOW()
 		FROM platform.schools WHERE id = ? RETURNING id`, currentID).Scan(ctx, &abandonedID))
 	retiredSubdomain := fmt.Sprintf("x%d-%s", abandonedID, slug)
 	_, err := db.NewRaw(`UPDATE platform.schools SET slug = ?, subdomain = ? WHERE id = ?`,
@@ -45,8 +45,8 @@ func TestDemoVisitorErasureBackfillsTheSchoolsOfALegacyFailedOrder(t *testing.T)
 	_, err := db.NewRaw(`UPDATE platform.schools SET slug = ?, subdomain = ?, deleted_at = NOW() WHERE id = ?`, slug, slug, currentID).Exec(ctx)
 	require.NoError(t, err)
 	var abandonedID int64
-	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, deleted_at)
-		SELECT organization_id, 'Aufgegebene Demo', 'aufgegeben', 'aufgegeben', NOW()
+	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, email, deleted_at)
+		SELECT organization_id, 'Aufgegebene Demo', 'aufgegeben', 'aufgegeben', email, NOW()
 		FROM platform.schools WHERE id = ? RETURNING id`, currentID).Scan(ctx, &abandonedID))
 	retiredSubdomain := fmt.Sprintf("x%d-%s", abandonedID, slug)
 	_, err = db.NewRaw(`UPDATE platform.schools SET slug = ?, subdomain = ? WHERE id = ?`, retiredSubdomain, retiredSubdomain, abandonedID).Exec(ctx)

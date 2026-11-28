@@ -167,8 +167,8 @@ func (e *accountIsolationEnv) createSchoolInOwnOrganization(t *testing.T) (int64
 	schoolID := testpkg.UniqueTestTenantID(t)
 	token := fmt.Sprintf("account-scope-org-%d", schoolID)
 	_, err := e.tc.db.ExecContext(context.Background(), `
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (?, ?, ?, ?, ?, true)`, schoolID, organizationID, token, token, token)
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (?, ?, ?, ?, ?, true, ?)`, schoolID, organizationID, token, token, token, testpkg.TestSchoolEmail(token))
 	require.NoError(t, err)
 	return organizationID, schoolID
 }

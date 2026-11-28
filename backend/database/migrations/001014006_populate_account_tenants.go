@@ -53,8 +53,8 @@ func populateAccountTenants(ctx context.Context, db *bun.DB) error {
 
 	// Ensure default school exists
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (1, 1, 'Default School', 'default', 'default', true)
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (1, 1, 'Default School', 'default', 'default', true, 'kontakt@default.example.test')
 		ON CONFLICT (id) DO NOTHING;
 	`)
 	if err != nil {

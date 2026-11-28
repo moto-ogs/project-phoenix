@@ -28,8 +28,8 @@ func TestOnboardingAcrossSchoolsMergesEachPersonsRows(t *testing.T) {
 	school := func(label string) int64 {
 		slug := "merge-" + label + "-" + suffix
 		var id int64
-		_, err := db.NewRaw(`INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, created_at, updated_at)
-			VALUES (?, ?, ?, ?, true, NOW(), NOW()) RETURNING id`, slug, slug, slug, organizationID).Exec(ctx, &id)
+		_, err := db.NewRaw(`INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, email, created_at, updated_at)
+			VALUES (?, ?, ?, ?, true, ?, NOW(), NOW()) RETURNING id`, slug, slug, slug, organizationID, testpkg.TestSchoolEmail(slug)).Exec(ctx, &id)
 		require.NoError(t, err)
 		return id
 	}

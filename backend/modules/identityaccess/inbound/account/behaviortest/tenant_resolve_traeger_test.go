@@ -50,9 +50,9 @@ func newTraegerWithSchools(t *testing.T, db *bun.DB, count int) (*testpkg.Organi
 			name:      fmt.Sprintf("Schule %d", id),
 			subdomain: fmt.Sprintf("traeger-schule-%d", id),
 		}
-		_, err := db.NewRaw(`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-			VALUES (?, ?, ?, ?, ?, true)`,
-			school.id, organization.ID, school.name, school.subdomain, school.subdomain).
+		_, err := db.NewRaw(`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+			VALUES (?, ?, ?, ?, ?, true, ?)`,
+			school.id, organization.ID, school.name, school.subdomain, school.subdomain, testpkg.TestSchoolEmail(school.subdomain)).
 			Exec(context.Background())
 		require.NoError(t, err)
 		schools = append(schools, school)

@@ -48,8 +48,8 @@ func TestListPublicPhasesHandler_DoesNotLeakOtherTenantPhases(t *testing.T) {
 		publicPhaseSchool
 		name string
 	}{{targetSchool, "Target Public Phase School"}, {otherSchool, "Other Public Phase School"}} {
-		_, err := db.NewRaw(`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active) VALUES (?, ?, ?, ?, ?, true)`,
-			school.ID, org.ID, school.name, school.Slug, school.Slug).Exec(ctx)
+		_, err := db.NewRaw(`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email) VALUES (?, ?, ?, ?, ?, true, ?)`,
+			school.ID, org.ID, school.name, school.Slug, school.Slug, testpkg.TestSchoolEmail(school.Slug)).Exec(ctx)
 		require.NoError(t, err)
 	}
 

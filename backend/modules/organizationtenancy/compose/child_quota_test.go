@@ -44,7 +44,7 @@ func TestSchoolChildQuotaIsStoredAndReadPerSchool(t *testing.T) {
 	require.NoError(t, err)
 	school, err := module.CreateSchool(ctx, organizationtenancy.CreateSchool{
 		OrganizationID: organization.ID.Int64(), Name: "Quota School", Slug: fmt.Sprintf("quota-%d", suffix),
-		Subdomain: fmt.Sprintf("quota-%d", suffix), Active: true,
+		Subdomain: fmt.Sprintf("quota-%d", suffix), Active: true, Email: "quota@example.test",
 	})
 	require.NoError(t, err)
 	assert.Nil(t, school.ChildQuota(), "a new school has no Kinderkontingent")
@@ -59,7 +59,7 @@ func TestSchoolChildQuotaIsStoredAndReadPerSchool(t *testing.T) {
 
 	updated, err := module.UpdateSchool(ctx, organizationtenancy.UpdateSchool{
 		ID: school.ID.Int64(), OrganizationID: organization.ID.Int64(), Name: "Renamed Quota School",
-		Slug: school.Slug, Subdomain: school.Subdomain, Active: true,
+		Slug: school.Slug, Subdomain: school.Subdomain, Active: true, Email: school.Email,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, updated.ChildQuota(), "a school update keeps the contract value")

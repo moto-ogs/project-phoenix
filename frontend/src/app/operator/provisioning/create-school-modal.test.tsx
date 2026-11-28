@@ -82,21 +82,27 @@ describe("CreateSchoolModal", () => {
     );
   });
 
-  it("creates a school without a contact email", async () => {
-    mockCreateSchool.mockResolvedValue({ id: "42" });
-    const { onCreated } = renderModal();
+  // Every school has a contact address (#7434).
+  it.each(["", "   "])(
+    "does not create a school without a contact email (%j)",
+    (email) => {
+      renderModal();
+      fireEvent.change(screen.getByLabelText(/^E-Mail/), {
+        target: { value: email },
+      });
+      fireEvent.click(screen.getByLabelText(/^Bundesland/));
+      fireEvent.click(
+        screen.getByRole("option", { name: "Baden-Württemberg" }),
+      );
 
-    fireEvent.change(screen.getByLabelText(/^E-Mail/), {
-      target: { value: "" },
-    });
-    expect(screen.getByLabelText(/^E-Mail/)).not.toBeRequired();
-    fireEvent.click(screen.getByLabelText(/^Bundesland/));
-    fireEvent.click(screen.getByRole("option", { name: "Baden-Württemberg" }));
-    fireEvent.click(screen.getByRole("button", { name: "Erstellen" }));
+      expect(screen.getByLabelText(/^E-Mail/)).toBeRequired();
+      expect(screen.getByRole("button", { name: "Erstellen" })).toBeDisabled();
+      fireEvent.submit(document.getElementById("create-school-form")!);
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalled());
-    expect(mockCreateSchool).toHaveBeenCalledWith(
-      expect.not.objectContaining({ email: expect.anything() }),
-    );
-  });
+      expect(mockCreateSchool).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Bitte gib die E-Mail-Adresse der Schule ein."),
+      ).toBeInTheDocument();
+    },
+  );
 });

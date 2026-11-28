@@ -134,8 +134,8 @@ func addTenantIDToAllTables(ctx context.Context, db *bun.DB) error {
 		VALUES (1, 'Default Organization', 'default', true)
 		ON CONFLICT (id) DO NOTHING;
 
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (1, 1, 'Default School', 'default', 'default', true)
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (1, 1, 'Default School', 'default', 'default', true, 'kontakt@default.example.test')
 		ON CONFLICT (id) DO NOTHING;
 
 		-- Advance sequences past the explicitly inserted id=1 so that future

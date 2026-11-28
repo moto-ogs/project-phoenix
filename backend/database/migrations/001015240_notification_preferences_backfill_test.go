@@ -355,9 +355,9 @@ func setupBackfillTenants(t *testing.T, db *testpkg.DB) *backfillTenantEnv {
 		var id int64
 		slug := "backfill-" + label + "-" + suffix
 		_, serr := db.NewRaw(`
-			INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, created_at, updated_at)
-			VALUES (?, ?, ?, ?, true, NOW(), NOW())
-			RETURNING id`, "Backfill School "+label+" "+suffix, slug, slug, orgID).Exec(ctx, &id)
+			INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, email, created_at, updated_at)
+			VALUES (?, ?, ?, ?, true, ?, NOW(), NOW())
+			RETURNING id`, "Backfill School "+label+" "+suffix, slug, slug, orgID, testpkg.TestSchoolEmail(slug)).Exec(ctx, &id)
 		require.NoError(t, serr)
 		return id
 	}

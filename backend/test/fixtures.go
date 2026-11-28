@@ -1564,13 +1564,13 @@ func ensureTestTenant(ctx context.Context, db *bun.DB, tenantID int64) error {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (?, ?, ?, ?, ?, true)
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (?, ?, ?, ?, ?, true, ?)
 		ON CONFLICT DO NOTHING`,
 		tenantID, tenantID,
 		fmt.Sprintf("Test School %d", tenantID),
 		fmt.Sprintf("test-school-%d", tenantID),
-		fmt.Sprintf("t%d", tenantID)); err != nil {
+		fmt.Sprintf("t%d", tenantID), TestSchoolEmail(fmt.Sprintf("t%d", tenantID))); err != nil {
 		return fmt.Errorf("ensure test school: %w", err)
 	}
 
@@ -1610,9 +1610,9 @@ func CreateTestTenant(tb testing.TB, db *bun.DB) (tenantID int64, subdomain stri
 	require.NoError(tb, err, "Failed to create test organization")
 
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (?, ?, ?, ?, ?, true)`,
-		tenantID, tenantID, "Test School "+token, "test-school-"+token, subdomain)
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (?, ?, ?, ?, ?, true, ?)`,
+		tenantID, tenantID, "Test School "+token, "test-school-"+token, subdomain, TestSchoolEmail(subdomain))
 	require.NoError(tb, err, "Failed to create test school")
 	require.NoError(tb, setTestSchoolFederalState(ctx, db, tenantID))
 	return tenantID, subdomain

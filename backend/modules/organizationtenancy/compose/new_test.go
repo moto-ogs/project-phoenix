@@ -151,6 +151,7 @@ func TestSchoolLifecycleRejectsMissingOrDeletedOrganization(t *testing.T) {
 	_, err := module.CreateSchool(ctx, organizationtenancy.CreateSchool{
 		OrganizationID: 9_000_000_000 + suffix%100_000,
 		Name:           "Orphan", Slug: fmt.Sprintf("orphan-%d", suffix), Subdomain: fmt.Sprintf("orphan-%d", suffix), Active: true,
+		Email: "orphan@example.test",
 	})
 	require.ErrorIs(t, err, organizationtenancy.ErrOrganizationNotFound)
 
@@ -164,6 +165,7 @@ func TestSchoolLifecycleRejectsMissingOrDeletedOrganization(t *testing.T) {
 	_, err = module.CreateSchool(ctx, organizationtenancy.CreateSchool{
 		OrganizationID: organization.ID.Int64(),
 		Name:           "Deleted Parent School", Slug: fmt.Sprintf("deleted-school-%d", suffix), Subdomain: fmt.Sprintf("deleted-school-%d", suffix), Active: true,
+		Email: "deleted@example.test",
 	})
 	assert.ErrorIs(t, err, organizationtenancy.ErrOrganizationDeleted)
 }
@@ -281,7 +283,7 @@ func TestSchoolTablePreservesTwoTenantRolePermissions(t *testing.T) {
 	require.NoError(t, err)
 	school, err := module.CreateSchool(ctx, organizationtenancy.CreateSchool{
 		OrganizationID: organization.ID.Int64(), Name: "School RLS", Slug: fmt.Sprintf("school-rls-%d", suffix),
-		Subdomain: fmt.Sprintf("school-rls-%d", suffix), Active: true,
+		Subdomain: fmt.Sprintf("school-rls-%d", suffix), Active: true, Email: "rls@example.test",
 	})
 	require.NoError(t, err)
 

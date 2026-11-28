@@ -9,6 +9,7 @@ import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { generateSlug, isValidSlug } from "~/lib/operator/provisioning-helpers";
 import {
   FEDERAL_STATES,
+  SCHOOL_EMAIL_REQUIRED,
   type Organization,
 } from "~/lib/operator/provisioning-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -89,7 +90,10 @@ export function CreateSchoolModal({
       // CustomSelect's `required` is ARIA-only — it does not join native form
       // constraint validation, so an Enter-submit with no organization lands
       // here and must produce a visible error instead of a silent return.
-      if (!schoolOrgId || !schoolFederalState) {
+      // A blank address passes the native `required`; every school needs
+      // one, replies from parents go there (#7434).
+      const emailMissing = !schoolEmail.trim();
+      if (!schoolOrgId || !schoolFederalState || emailMissing) {
         invalid("Bitte prüfe die markierten Felder.", {
           ...(!schoolOrgId && {
             organization_id: "Bitte wähle einen Träger aus.",
@@ -97,6 +101,7 @@ export function CreateSchoolModal({
           ...(!schoolFederalState && {
             federal_state: "Bitte wähle das Bundesland aus.",
           }),
+          ...(emailMissing && { email: SCHOOL_EMAIL_REQUIRED }),
         });
         return;
       }
@@ -126,7 +131,7 @@ export function CreateSchoolModal({
           ...(schoolCity && { city: schoolCity.trim() }),
           ...(schoolZip && { zip: schoolZip.trim() }),
           ...(schoolPhone && { phone: schoolPhone.trim() }),
-          ...(schoolEmail.trim() && { email: schoolEmail.trim() }),
+          email: schoolEmail.trim(),
           federal_state: schoolFederalState,
           ...(schoolHidden && { hidden: true }),
         });
@@ -185,6 +190,7 @@ export function CreateSchoolModal({
               schoolSaving ||
               !schoolOrgId ||
               !schoolFederalState ||
+              !schoolEmail.trim() ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
               !schoolSubdomain.trim()
@@ -354,6 +360,7 @@ export function CreateSchoolModal({
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
                   maxLength={255}
+                  required
                   label="E-Mail"
                   error={formErrors.fieldError("email")}
                   controlSize="compact"

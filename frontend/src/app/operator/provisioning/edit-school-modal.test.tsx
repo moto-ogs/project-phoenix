@@ -219,34 +219,36 @@ describe("EditSchoolModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("clears an existing contact email", async () => {
-    mockUpdateSchool.mockResolvedValue(mockSchool);
-    render(
-      <EditSchoolModal
-        reload={vi.fn()}
-        isOpen={true}
-        onClose={onClose}
-        school={mockSchool}
-        organizations={[mockOrg]}
-        onUpdated={onUpdated}
-      />,
-    );
-
-    const emailInput = screen.getByLabelText(/E-Mail/);
-    expect(emailInput).not.toBeRequired();
-    fireEvent.change(emailInput, { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-
-    await waitFor(() => {
-      expect(mockUpdateSchool).toHaveBeenCalledWith(
-        "10",
-        expect.objectContaining({ email: "" }),
+  // The contact address cannot be cleared: every school has one (#7434).
+  it.each(["", "   "])(
+    "does not save a cleared contact email (%j)",
+    (email) => {
+      render(
+        <EditSchoolModal
+          reload={vi.fn()}
+          isOpen={true}
+          onClose={onClose}
+          school={mockSchool}
+          organizations={[mockOrg]}
+          onUpdated={onUpdated}
+        />,
       );
-    });
-  });
+
+      const emailInput = screen.getByLabelText(/E-Mail/);
+      expect(emailInput).toBeRequired();
+      fireEvent.change(emailInput, { target: { value: email } });
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+      fireEvent.submit(emailInput.closest("form")!);
+
+      expect(mockUpdateSchool).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Bitte gib die E-Mail-Adresse der Schule ein."),
+      ).toBeInTheDocument();
+    },
+  );
 
   it.each(["button", "form"])(
-    "saves other edits for a school without an email via %s",
+    "a school without an email saves once one is entered, via %s",
     async (submitVia) => {
       mockUpdateSchool.mockResolvedValue(mockSchool);
 
@@ -263,11 +265,14 @@ describe("EditSchoolModal", () => {
 
       const emailInput = screen.getByLabelText(/E-Mail/);
       expect(emailInput).toHaveValue("");
-      expect(emailInput).not.toBeRequired();
       fireEvent.change(screen.getByLabelText(/Name/), {
         target: { value: "Updated School" },
       });
       const saveButton = screen.getByRole("button", { name: "Speichern" });
+      expect(saveButton).toBeDisabled();
+      fireEvent.change(emailInput, {
+        target: { value: " info@schule.example " },
+      });
       expect(saveButton).toBeEnabled();
 
       if (submitVia === "button") {
@@ -279,7 +284,10 @@ describe("EditSchoolModal", () => {
       await waitFor(() => {
         expect(mockUpdateSchool).toHaveBeenCalledWith(
           "10",
-          expect.objectContaining({ name: "Updated School", email: "" }),
+          expect.objectContaining({
+            name: "Updated School",
+            email: "info@schule.example",
+          }),
         );
       });
       await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
