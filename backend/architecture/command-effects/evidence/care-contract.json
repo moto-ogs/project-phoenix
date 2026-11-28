@@ -1,6 +1,14 @@
 {
   "entries": [
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountEmails.TraegerAccountEmails",
+      "binding_digest": "32a02aef6dce19b1ccb16f29dd894c18",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.AccountEmails.TraegerAccountEmails",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountEmails.TraegerAccountEmails",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractModes.ConclusionMode",
       "binding_digest": "278ca0d58b6dcf6e843708e34fe783da",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.ConclusionModes.ConclusionMode",

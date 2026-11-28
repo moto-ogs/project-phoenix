@@ -146,7 +146,7 @@ func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling
 func NewCareBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings,
 	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time,
 ) (*parentBillingHTTP.CareBillingResource, *parentBillingHTTP.CareReductionResource, *parentBillingHTTP.CareMealTariffResource, *parentBillingHTTP.FamilyChildrenResource) {
-	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
+	contracts := careBillingContracts()
 	billing, reductions := parentBillingCompose.NewCareBilling(contracts,
 		parentBillingCareSchools{organizations: organizations}, parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks),
 		newParentBillingLetterheads(settings, schoolSettings), today, now)
@@ -166,7 +166,7 @@ func NewCareBillingHTTP(organizations HolidayOrganizations, settings TraegerBran
 func NewCareNoticeHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings,
 	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, today func() calendar.Date, now func() time.Time,
 ) *parentBillingHTTP.CareNoticeResource {
-	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
+	contracts := careBillingContracts()
 	notices := parentBillingCompose.NewCareFeeNotices(contracts, parentBillingCareSchools{organizations: organizations},
 		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings, schoolSettings), today, now)
 	post := parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}
@@ -252,7 +252,7 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
-			ContractDraft: party.ContractDraft, FamilyContractID: party.FamilyContractID,
+			AccountEmail: party.AccountEmail, ContractDraft: party.ContractDraft, FamilyContractID: party.FamilyContractID,
 			SchoolID: party.ContractSchoolID}
 	}
 	return recipients, nil

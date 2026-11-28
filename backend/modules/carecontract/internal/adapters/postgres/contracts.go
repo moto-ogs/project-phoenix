@@ -154,6 +154,7 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 	for _, party := range parties {
 		record.Parties = append(record.Parties, carecontract.Party{
 			FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, HasAccount: party.AccountID != nil,
+			AccountID: accountOf(party.AccountID),
 		})
 	}
 	if err := readDocuments(ctx, db, organizationID, &record); err != nil {

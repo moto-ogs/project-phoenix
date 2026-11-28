@@ -243,6 +243,7 @@ export interface Party {
   last_name: string;
   email: string;
   has_account: boolean;
+  account_email?: string;
 }
 
 export const PartySchema: z.ZodType<Party, unknown> = object<Party>({
@@ -250,6 +251,7 @@ export const PartySchema: z.ZodType<Party, unknown> = object<Party>({
   last_name: str,
   email: str,
   has_account: bool,
+  account_email: optional(str),
 });
 
 /** Go: carecontract.Mailing */

@@ -22,7 +22,7 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 		FirstName  string `bun:"first_name"`
 		LastName   string `bun:"last_name"`
 		Email      string `bun:"email"`
-		HasAccount bool   `bun:"has_account"`
+		AccountID  *int64 `bun:"account_id"`
 		Draft      bool   `bun:"draft"`
 		// Family is the leading contract the office joined the contract
 		// to (#7161, ADR 0319).
@@ -30,7 +30,7 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 		SchoolID int64  `bun:"school_id"`
 	}
 	if err := db.NewRaw(`SELECT c.id AS contract_id, p.id AS party_id, COALESCE(p.first_name, '') AS first_name,
-			COALESCE(p.last_name, '') AS last_name, COALESCE(p.email, '') AS email, p.account_id IS NOT NULL AS has_account,
+			COALESCE(p.last_name, '') AS last_name, COALESCE(p.email, '') AS email, p.account_id,
 			c.status = ? AS draft, c.family_contract_id, c.school_id
 		FROM care_contract.contracts AS c
 		LEFT JOIN care_contract.contract_parties AS p ON p.organization_id = c.organization_id AND p.contract_id = c.id
@@ -48,8 +48,8 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 			continue
 		}
 		parties[row.ContractID] = append(parties[row.ContractID], carecontract.Party{
-			FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, HasAccount: row.HasAccount,
-			ContractDraft: row.Draft, FamilyContractID: family(row.Family), ContractSchoolID: row.SchoolID,
+			FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, HasAccount: row.AccountID != nil,
+			AccountID: accountOf(row.AccountID), ContractDraft: row.Draft, FamilyContractID: family(row.Family), ContractSchoolID: row.SchoolID,
 		})
 	}
 	return parties, nil
@@ -101,6 +101,14 @@ func (Store) ContractFamilyEmails(ctx context.Context, organizationID int64, ema
 
 // family is the stored leading contract, zero without one.
 func family(id *int64) int64 {
+	if id == nil {
+		return 0
+	}
+	return *id
+}
+
+// accountOf is the stored parents account of a party, zero without one.
+func accountOf(id *int64) int64 {
 	if id == nil {
 		return 0
 	}

@@ -361,6 +361,8 @@ export interface CareContractDetail extends CareContractSummary {
     readonly lastName: string;
     readonly email: string;
     readonly hasAccount: boolean;
+    /** Where the invoices go today: the parents account's address (#8215). */
+    readonly accountEmail?: string;
   }[];
   readonly mailings: readonly {
     readonly recipient: string;
@@ -638,6 +640,7 @@ function detailFromBackend(
       lastName: party.last_name,
       email: party.email,
       hasAccount: party.has_account,
+      accountEmail: party.account_email ?? "",
     })),
     mailings: (row.mailings ?? []).map((mailing) => ({
       recipient: mailing.recipient,

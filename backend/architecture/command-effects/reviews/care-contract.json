@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountEmails.TraegerAccountEmails",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.AccountEmails.TraegerAccountEmails",
+      "reason": "Reviewed read method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess/internal/adapters/postgres.TraegerAccountEmails: reads the addresses of the active, not erased parents accounts of the contract parties in the caller's Träger transaction, so invoices go to the account's address of today (#8215).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountEmails.TraegerAccountEmails",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractModes.ConclusionMode",
       "classification": "query",
       "effect": "query",

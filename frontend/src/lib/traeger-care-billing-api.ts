@@ -336,6 +336,11 @@ export interface CareInvoice {
     readonly firstName: string;
     readonly lastName: string;
     readonly email: string;
+    /**
+     * The address in the contract when `email` is the differing address of
+     * the parents account (#8215); "" when the invoice goes to the contract's.
+     */
+    readonly contractEmail?: string;
     /** Who gets it (#4689); "" on an invoice issued before. */
     readonly kind?: RecipientKind | "";
     /** The second parent when both parents get it. */
@@ -789,6 +794,7 @@ function invoiceFromBackend(
       firstName: invoice.recipient.first_name,
       lastName: invoice.recipient.last_name,
       email: invoice.recipient.email,
+      contractEmail: invoice.recipient.contract_email ?? "",
       kind:
         invoice.recipient.kind === ""
           ? ""

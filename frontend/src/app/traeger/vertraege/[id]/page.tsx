@@ -70,6 +70,10 @@ import {
   useFreshTraegerResource,
   useTraegerResource,
 } from "~/components/traeger/use-traeger-resource";
+import {
+  PartyInvoiceEmail,
+  PartyInvoiceEmailField,
+} from "~/components/traeger/account-email-note";
 import { EmailText } from "~/components/traeger/email-text";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -951,6 +955,10 @@ function TraegerVertragView() {
                         ? "Konto verknüpft"
                         : "Kein Konto verknüpft"}
                     </DataField>
+                    <PartyInvoiceEmailField
+                      email={party.email}
+                      accountEmail={party.accountEmail}
+                    />
                   </DataGrid>
                 ) : (
                   <p className="text-sm text-gray-600">
@@ -1433,6 +1441,10 @@ function ContractPartyList({
             </span>
             {` · ${entry.hasAccount ? "Konto verknüpft" : "Kein Konto verknüpft"}`}
           </span>
+          <PartyInvoiceEmail
+            email={entry.email}
+            accountEmail={entry.accountEmail}
+          />
         </li>
       ))}
     </ul>

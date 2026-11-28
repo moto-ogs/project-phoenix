@@ -4353,6 +4353,7 @@ export interface CareRecipient {
   kind: string;
   second_name: string;
   address: PostalAddress | null;
+  contract_email?: string;
 }
 
 export const CareRecipientSchema: z.ZodType<CareRecipient, unknown> = object<CareRecipient>({
@@ -4362,6 +4363,7 @@ export const CareRecipientSchema: z.ZodType<CareRecipient, unknown> = object<Car
   kind: str,
   second_name: str,
   address: nullable(PostalAddressSchema),
+  contract_email: optional(str),
 });
 
 /** Go: parentbilling.CareUnpriced */

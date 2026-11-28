@@ -39,8 +39,7 @@ type ReminderPorts struct {
 	Links         carecontract.SigningLinks
 }
 
-// NewReminders builds the reminder run of the Worker; it opens its own
-// units.
+// NewReminders builds the reminder run of the Worker; it opens its own units.
 func NewReminders(ports ReminderPorts, now func() time.Time) carecontract.Reminders {
 	return application.NewReminders(storeOn(now), application.ReminderPorts(ports), application.Clock{Now: now})
 }

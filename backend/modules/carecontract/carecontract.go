@@ -426,6 +426,13 @@ type Party struct {
 	LastName   string `json:"last_name"`
 	Email      string `json:"email"`
 	HasAccount bool   `json:"has_account"`
+	// AccountEmail is the address of the party's parents account today,
+	// empty without an account or where no AccountEmails port is bound.
+	// Email stays the address the contract was signed with; invoices go to
+	// AccountEmail when it is set (#8215).
+	AccountEmail string `json:"account_email,omitempty"`
+	// AccountID is the party's parents account, zero without one.
+	AccountID int64 `json:"-"`
 	// ContractDraft says the party's contract is still a draft. Only the
 	// billing reads (ContractBilling) fill it: a draft can be discarded, so
 	// nothing of the billing may hang on it (#7770).
