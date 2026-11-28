@@ -4628,8 +4628,8 @@ export const leadRosterDeviationTopic =
         "Soll die Kinderliste so bleiben? Wähle `Liste so lassen`. Dann verschwindet der Hinweis für diesen Regeltermin.",
         "Die Karte des Regeltermins zeigt dann `Die Kinderliste bleibt bewusst so.` Den Hinweis holst du zurück: Wähle dort oder in einem Termin des Regeltermins `Hinweis wieder zeigen`.",
         "Kommen Kinder über `Klasse` oder `Jahrgang` in den Regeltermin? Beim Bearbeiten steht unter der Kinderliste, wer so außerdem kommt.",
-        // #6841: Klassen- und Gruppenwechsel erreichen auch geplante Termine.
-        "Wechselt ein Kind die Klasse oder Gruppe, passt moto auch die schon geplanten Termine an. Vergangene Tage bleiben, wie sie waren.",
+        // #6841, #8204: Klassen- und Gruppenwechsel und neue Kinder erreichen auch geplante Termine.
+        "Kommt ein Kind neu dazu oder wechselt es die Klasse oder Gruppe, passt moto auch die schon geplanten Termine an. Vergangene Tage bleiben, wie sie waren.",
         "`Manuell` heißt: An- und Abmeldungen werden nicht übernommen. Die Kinder pflegst du selbst.",
         "Die Startseite zeigt die Aufgabe `Regeltermine prüfen`, solange ein Regeltermin abweicht.",
         "Wechselst du beim Bearbeiten die `Zielgruppe` auf `Angebot`, zeigt moto dieselbe Vorschau pro Wochentag.",

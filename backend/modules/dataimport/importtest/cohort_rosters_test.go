@@ -83,3 +83,91 @@ func TestImportBatches_UpdateFollowsTargetedTemplates(t *testing.T) {
 	assert.Equal(t, []int64{childID}, roster(next2b), "the child joins the future 2b occurrence")
 	assert.Equal(t, []int64{childID}, roster(nextFoxes), "the child joins the future Gruppe occurrence")
 }
+
+// TestImportBatches_CreateJoinsTargetedTemplates pins #8204: a child an
+// import creates with a Klasse or Gruppe stands in the already planned
+// occurrences from today on of the Regeltermine whose target it is in, in
+// „Nur neue anlegen“ (row path and chunk path) and in „Beides“, as a child
+// created in the student form does. Past occurrences stay as they were.
+func TestImportBatches_CreateJoinsTargetedTemplates(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.OwnTenant(t)
+	module, err := api.NewImportTestModuleWithOptions(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), api.ImportTestOptions{
+		FollowCohorts: true, Today: func() timezone.Date { return timezone.NewDate(2026, time.August, 24) },
+	})
+	require.NoError(t, err)
+	actor := newImporter(t, db)
+	ctx := testpkg.Ctx(t)
+
+	periodID := testpkg.CreateTestCalendarPeriod(t, db, "Schuljahr Neu", testpkg.Date(2026, time.August, 1), testpkg.Date(2027, time.July, 31)).ID
+	roomID := testpkg.CreateTestRoom(t, db, "Neu").ID
+	owls := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Eulen-%d", time.Now().UnixNano()))
+	template := func(column, targetType string, value any) int64 {
+		t.Helper()
+		group := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("AG %v-%d", value, time.Now().UnixNano()))
+		_, err := db.NewUpdate().TableExpr("activities.groups").Set("is_template = true").Set("calendar_period_id = ?", periodID).
+			Where("id = ?", group.ID).Exec(ctx)
+		require.NoError(t, err)
+		_, err = db.NewRaw(fmt.Sprintf(`INSERT INTO activities.group_targets (tenant_id, activity_group_id, target_group_type, %s)
+			VALUES (?, ?, ?, ?)`, column), tenantID, group.ID, targetType, value).Exec(ctx)
+		require.NoError(t, err)
+		return group.ID
+	}
+	occurrence := func(templateID int64, day int) int64 {
+		t.Helper()
+		return testpkg.CreateTestActivityInstance(t, db, testpkg.Date(2026, time.August, day), roomID, testpkg.ActivityInstanceOpts{
+			ActivityGroupID: &templateID, CalendarPeriodID: &periodID,
+		}).ID
+	}
+	roster := func(instanceID int64) []int64 {
+		t.Helper()
+		var ids []int64
+		require.NoError(t, db.NewRaw(`SELECT student_id FROM schedule.instance_students WHERE instance_id = ? ORDER BY student_id`, instanceID).Scan(ctx, &ids))
+		return ids
+	}
+	childrenNamed := func(lastName string) []int64 {
+		t.Helper()
+		var ids []int64
+		require.NoError(t, db.NewSelect().TableExpr("users.student_profiles AS s").Column("s.id").
+			Join("JOIN users.persons p ON p.id = s.person_id").Where("s.tenant_id = ? AND p.last_name = ?", tenantID, lastName).
+			Order("s.id").Scan(ctx, &ids))
+		return ids
+	}
+	run := func(mode importModels.ImportMode, rows []importModels.StudentImportRow) {
+		t.Helper()
+		result, err := module.Import.ImportBatches(ctx, importModels.ImportRequest[importModels.StudentImportRow]{
+			Rows: rows, Mode: mode, UserID: actor.staffID, SkipInvalidRows: true,
+		}, importModels.BatchAudit{EntityType: "student", Filename: "neue-kinder.csv", AccountID: actor.accountID})
+		require.NoError(t, err)
+		requireNoRowErrors(t, result)
+		require.Equal(t, len(rows), result.CreatedCount)
+	}
+	row := func(first, last, group string) importModels.StudentImportRow {
+		return importModels.StudentImportRow{FirstName: first, LastName: last, Birthday: "2018-03-04", SchoolClass: "3a", GroupName: group, DataRetentionDays: 30}
+	}
+
+	class3a := template("target_school_class", "klasse", "3a")
+	past3a := occurrence(class3a, 21)
+	next3a := occurrence(class3a, 25)
+	nextOwls := occurrence(template("education_group_id", "gruppe", owls.ID), 25)
+
+	run(importModels.ImportModeCreate, []importModels.StudentImportRow{row("Zeile", "Einzeln", owls.Name)})
+	single := childrenNamed("Einzeln")
+	require.Len(t, single, 1)
+	chunk := make([]importModels.StudentImportRow, 6)
+	for i := range chunk {
+		chunk[i] = row(fmt.Sprintf("Kind%d", i), "Stapel", "")
+	}
+	run(importModels.ImportModeCreate, chunk)
+	stack := childrenNamed("Stapel")
+	require.Len(t, stack, 6)
+	run(importModels.ImportModeUpsert, []importModels.StudentImportRow{row("Zeile", "Beides", "")})
+	both := childrenNamed("Beides")
+	require.Len(t, both, 1)
+
+	all := append(append(append([]int64{}, single...), stack...), both...)
+	assert.Empty(t, roster(past3a), "a past occurrence stays as it was")
+	assert.ElementsMatch(t, all, roster(next3a), "every new 3a child joins the future 3a occurrence")
+	assert.Equal(t, single, roster(nextOwls), "only the child imported into the Gruppe joins its occurrence")
+}
