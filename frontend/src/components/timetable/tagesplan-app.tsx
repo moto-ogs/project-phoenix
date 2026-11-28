@@ -82,14 +82,22 @@ export function tagesplanCompactDate(day: string): string {
   return `${getGermanWeekdayShort(parseISODate(day))}, ${date}.${month}.`;
 }
 
-/** Montag bis Freitag der Woche von `day`; ein Wochenendtag kommt dazu. */
+const MAX_STRIP_DAYS = 5;
+
+/**
+ * Montag bis Freitag der Woche von `day`; an einem Wochenendtag Dienstag
+ * bis Freitag und dieser Tag.
+ */
 function weekDays(day: string): string[] {
   const d = parseISODate(day);
   const weekday = d.getDay(); // 0 = So
   const monday = shiftISO(day, weekday === 0 ? -6 : 1 - weekday);
   const days = [0, 1, 2, 3, 4].map((offset) => shiftISO(monday, offset));
   if (weekday === 6 || weekday === 0) days.push(day);
-  return days;
+  // Höchstens fünf Tage: Mit einem sechsten Chip am Wochenende wurde jeder
+  // am iPhone SE schmaler als die 44-px-Trefferfläche. Am Wochenende endet
+  // die Leiste beim gewählten Tag; den Montag erreicht der Pfeil.
+  return days.slice(-MAX_STRIP_DAYS);
 }
 
 /**
