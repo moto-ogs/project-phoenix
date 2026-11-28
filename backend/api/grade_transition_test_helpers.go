@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
-	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
+	parentStore "github.com/moto-ogs/project-phoenix/modules/communication/parentstore"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
@@ -67,7 +67,7 @@ func NewGradeTransitionTestModule(db transactionruntime.Database, resync Offerin
 		return GradeTransitionTestModule{}, err
 	}
 	workflow, err := owners.NewGradeTransition(gradetransitioncompose.Dependencies{
-		DB: db.Pool(), Structure: structure, Presence: presence, Directory: people, Membership: membership,
+		Structure: structure, Presence: presence, Directory: people, Membership: membership,
 		Rosters:               tt.RosterMaintenance(slog.Default(), clock),
 		ParentTargets:         NewGradeTransitionParentTargets(db),
 		LockRecurrenceWrites:  recurrenceLock.LockRecurrenceWrites,
@@ -84,7 +84,7 @@ func NewGradeTransitionTestModule(db transactionruntime.Database, resync Offerin
 // NewGradeTransitionParentTargets binds the workflow's parent-channel port to
 // Communication's class transitions, as the production root does (#8214).
 func NewGradeTransitionParentTargets(db transactionruntime.Database) gradetransition.ParentClassTargets {
-	return owners.GradeTransitionParentTargets(communicationCompose.NewParentClassTransitions(db.Pool()))
+	return owners.GradeTransitionParentTargets(parentStore.NewParentClassTransitions(db.Pool()))
 }
 
 // Router mounts the grade transition routes over the composed workflow.

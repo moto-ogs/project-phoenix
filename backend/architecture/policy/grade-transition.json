@@ -68,16 +68,6 @@
       "target_role": "public"
     },
     {
-      "id": "grade-transition.compose.database-binding",
-      "description": "Bind owner adapters to the shared database and ambient UnitOfWork; no workflow SQL (#2711).",
-      "scopes": [
-        "production"
-      ],
-      "source_owner": "grade-transition",
-      "source_role": "compose",
-      "target_class": "orm-sql"
-    },
-    {
       "id": "grade-transition.http.public",
       "description": "The grade transition routes run the school-year rollover through the owner workflow (#2711, #2742).",
       "scopes": [

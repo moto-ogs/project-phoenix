@@ -128,18 +128,7 @@ func (w *Workflow) executeApply(ctx context.Context, actor Actor, transition sch
 	if err := w.applyCohortChanges(ctx, transition, promotions, graduates, &result); err != nil {
 		return result, err
 	}
-	// The Klassenlehrer assignments and the class-list entries follow the
-	// same renames as the student rows; every rewrite lands in the
-	// transition's ledgers so the revert can replay it exactly.
-	if err := w.remapClassTeacherAssignments(ctx, transition.ID, transition.Mappings); err != nil {
-		return result, err
-	}
-	if err := w.remapClassListEntries(ctx, actor, transition.ID, transition.Mappings); err != nil {
-		return result, err
-	}
-	// The class threads to parents and the class targets of draft
-	// announcements follow the same renames (#8214).
-	if err := w.followParentClassTargets(ctx, actor, transition); err != nil {
+	if err := w.followClassRenames(ctx, actor, transition); err != nil {
 		return result, err
 	}
 
@@ -148,6 +137,20 @@ func (w *Workflow) executeApply(ctx context.Context, actor Actor, transition sch
 	}
 	result = appliedTransitionResult(result)
 	return result, nil
+}
+
+// followClassRenames moves what is attached to a class with the same renames
+// as the student rows: the Klassenlehrer assignments, the class-list entries,
+// and the class threads to parents and draft class targets (#8214). Every
+// rewrite is recorded so the revert can replay it exactly.
+func (w *Workflow) followClassRenames(ctx context.Context, actor Actor, transition schoolstructure.Transition) error {
+	if err := w.remapClassTeacherAssignments(ctx, transition.ID, transition.Mappings); err != nil {
+		return err
+	}
+	if err := w.remapClassListEntries(ctx, actor, transition.ID, transition.Mappings); err != nil {
+		return err
+	}
+	return w.followParentClassTargets(ctx, actor, transition)
 }
 
 func categorizeMappings(mappings []schoolstructure.TransitionMapping) (promote, graduate []string) {
