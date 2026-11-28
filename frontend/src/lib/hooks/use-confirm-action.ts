@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { useApiFormError } from "~/contexts/ToastContext";
-import { useLatest } from "~/lib/hooks/use-latest";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { sendUnread, type ReadAction } from "~/lib/swr/read-draft";
@@ -42,6 +41,7 @@ export function useConfirmAction<T>(
   // Synchronous for a second call before the render: it sends nothing and
   // leaves the running attempt's lock on the dialog alone.
   const running = useRef(false);
+  const latestConfirm = useRef<() => void>(() => undefined);
 
   const release = () => {
     running.current = false;
@@ -74,10 +74,13 @@ export function useConfirmAction<T>(
       result.error,
       result.refused && result.reload
         ? { object, reload: result.reload }
-        : { object, retry: () => void latestConfirm.current() },
+        : { object, retry: () => latestConfirm.current() },
     );
   };
-  const latestConfirm = useLatest(confirm);
+  // „Wiederholen“ runs the attempt of the render then on screen.
+  useLayoutEffect(() => {
+    latestConfirm.current = () => void confirm();
+  });
 
   return {
     pending,
