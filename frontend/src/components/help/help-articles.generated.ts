@@ -7113,6 +7113,7 @@ export const parentGroupMessageTopic =
         "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du an eine weitere Nachricht bis zu 5 Dateien an. Pro Datei sind höchstens 10 MB erlaubt. Alle Eltern der Gruppennachricht sehen die Datei.",
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
+        "Benennst du eine Gruppe oder AG um, trägt ihre Gruppennachricht sofort den neuen Namen. Das sehen das Team und die Eltern.",
         "Unter `Gelesen` siehst du für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
         "Unter jeder Nachricht steht hinter `E-Mails`, was aus den Mails an die Familien wurde, zum Beispiel `10 zugestellt` und `1 nicht zustellbar`. Welche Adresse betroffen ist, siehst du beim Kind unter `Erziehungsberechtigte`.",
         "Über dem Schreibfeld steht bei `Ging an:`, an wen die Nachricht ging und wie viele Familien sie bekommen haben.",
