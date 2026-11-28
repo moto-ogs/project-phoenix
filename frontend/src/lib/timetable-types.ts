@@ -453,6 +453,13 @@ export interface TimetableTemplate {
 
 export type RosterMaintenanceMode = "automatic" | "partial" | "manual";
 
+/** A source offering of an ended phase and its suggested successor. */
+export interface ExpiredRosterSource {
+  id: string;
+  name: string;
+  successor?: { id: string; name: string };
+}
+
 /** How children reach a Regeltermin after it exists (#3140). */
 export interface TemplateRosterMaintenance {
   mode: RosterMaintenanceMode;
@@ -464,6 +471,12 @@ export interface TemplateRosterMaintenance {
   inactiveOfferingNames: string[];
   /** Active source offerings whose phase does not fit this planning period. */
   invalidOfferingNames: string[];
+  /**
+   * Source offerings whose enrollment phase ended before this planning
+   * period starts (#8203), each with the offering of a current phase
+   * suggested in its place. They are also named in invalidOfferingNames; absent means none.
+   */
+  expiredOfferings?: ExpiredRosterSource[];
   /** A Klasse, Jahrgang or Gruppe target that only reaches new occurrences. */
   dynamicTargets: boolean;
   /** Offerings are configured, but the school switched them off. */

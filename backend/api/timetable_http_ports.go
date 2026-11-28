@@ -318,6 +318,7 @@ func (s timetableOfferingSources) TemplateRosterMaintenance(ctx context.Context,
 			SchoolClasses:         derived.SchoolClasses,
 			InactiveOfferings:     timetableOfferingRefs(derived.InactiveOfferings),
 			InvalidOfferings:      timetableOfferingRefs(derived.InvalidOfferings),
+			ExpiredOfferings:      timetableExpiredOfferingRefs(derived.ExpiredOfferings),
 			DynamicTargetsManual:  derived.DynamicTargetsManual,
 			CareOfferingsDisabled: derived.CareOfferingsDisabled,
 		}
@@ -375,6 +376,18 @@ func timetableOfferingRefs(offerings []careplan.RosterMaintenanceOffering) []tim
 	result := make([]timetable.OfferingRef, 0, len(offerings))
 	for _, offering := range offerings {
 		result = append(result, timetable.OfferingRef{ID: offering.ID, Name: offering.Name})
+	}
+	return result
+}
+
+func timetableExpiredOfferingRefs(offerings []careplan.RosterMaintenanceExpiredOffering) []timetable.ExpiredOfferingRef {
+	result := make([]timetable.ExpiredOfferingRef, 0, len(offerings))
+	for _, offering := range offerings {
+		ref := timetable.ExpiredOfferingRef{ID: offering.ID, Name: offering.Name}
+		if offering.Successor != nil {
+			ref.Successor = &timetable.OfferingRef{ID: offering.Successor.ID, Name: offering.Successor.Name}
+		}
+		result = append(result, ref)
 	}
 	return result
 }

@@ -178,12 +178,25 @@ type TemplateRosterMaintenance struct {
 	SchoolClasses     []string
 	InactiveOfferings []OfferingRef
 	InvalidOfferings  []OfferingRef
+	// ExpiredOfferings are the invalid sources whose enrollment phase ended
+	// before the planning period starts, each with the offering suggested
+	// in its place (#8203).
+	ExpiredOfferings []ExpiredOfferingRef
 	// DynamicTargetsManual is true when children joining a Klasse, Jahrgang
 	// or Gruppe target later are not added to existing occurrences.
 	DynamicTargetsManual bool
 	// CareOfferingsDisabled is true when offerings are configured but the
 	// school switched Betreuungsangebote off.
 	CareOfferingsDisabled bool
+}
+
+// ExpiredOfferingRef names a source offering of an ended phase and the
+// offering of a current phase suggested in its place; Successor is nil when
+// none fits.
+type ExpiredOfferingRef struct {
+	ID        int64
+	Name      string
+	Successor *OfferingRef
 }
 
 // OfferingRef names one care offering.

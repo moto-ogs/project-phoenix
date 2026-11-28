@@ -25,6 +25,10 @@ type templateRosterMaintenanceResponse struct {
 	// InvalidOfferings are active sources that resync cannot use for this
 	// Regeltermin.
 	InvalidOfferings []templateRosterMaintenanceOfferingResponse `json:"invalid_offerings,omitempty"`
+	// ExpiredOfferings are the invalid sources whose enrollment phase ended
+	// before the planning period starts, each with the offering of a current
+	// phase suggested in its place (#8203).
+	ExpiredOfferings []templateRosterMaintenanceExpiredOfferingResponse `json:"expired_offerings,omitempty"`
 	// DynamicTargets: a Klasse, Jahrgang or Gruppe target exists. A child who
 	// changes Klasse or Gruppe follows on the existing occurrences (#6841); a
 	// new child reaches only occurrences created afterwards.
@@ -37,6 +41,14 @@ type templateRosterMaintenanceResponse struct {
 type templateRosterMaintenanceOfferingResponse struct {
 	ID   ident.ID `json:"id"`
 	Name string   `json:"name"`
+}
+
+// templateRosterMaintenanceExpiredOfferingResponse is a source of an ended
+// phase; Successor is absent when no offering of a current phase fits.
+type templateRosterMaintenanceExpiredOfferingResponse struct {
+	ID        ident.ID                                   `json:"id"`
+	Name      string                                     `json:"name"`
+	Successor *templateRosterMaintenanceOfferingResponse `json:"successor,omitempty"`
 }
 
 // attachRosterMaintenance fills RosterMaintenance on every template with a
@@ -125,6 +137,7 @@ func rosterMaintenanceResponse(derived timetable.TemplateRosterMaintenance) *tem
 		SchoolClasses:         derived.SchoolClasses,
 		InactiveOfferings:     rosterMaintenanceOfferings(derived.InactiveOfferings),
 		InvalidOfferings:      rosterMaintenanceOfferings(derived.InvalidOfferings),
+		ExpiredOfferings:      rosterMaintenanceExpiredOfferings(derived.ExpiredOfferings),
 		DynamicTargets:        derived.DynamicTargetsManual,
 		CareOfferingsDisabled: derived.CareOfferingsDisabled,
 	}
@@ -134,6 +147,18 @@ func rosterMaintenanceOfferings(offerings []timetable.OfferingRef) []templateRos
 	result := make([]templateRosterMaintenanceOfferingResponse, 0, len(offerings))
 	for _, offering := range offerings {
 		result = append(result, templateRosterMaintenanceOfferingResponse{ID: ident.ID(offering.ID), Name: offering.Name})
+	}
+	return result
+}
+
+func rosterMaintenanceExpiredOfferings(offerings []timetable.ExpiredOfferingRef) []templateRosterMaintenanceExpiredOfferingResponse {
+	result := make([]templateRosterMaintenanceExpiredOfferingResponse, 0, len(offerings))
+	for _, offering := range offerings {
+		entry := templateRosterMaintenanceExpiredOfferingResponse{ID: ident.ID(offering.ID), Name: offering.Name}
+		if offering.Successor != nil {
+			entry.Successor = &templateRosterMaintenanceOfferingResponse{ID: ident.ID(offering.Successor.ID), Name: offering.Successor.Name}
+		}
+		result = append(result, entry)
 	}
 	return result
 }

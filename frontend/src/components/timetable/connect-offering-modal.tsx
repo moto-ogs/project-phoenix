@@ -91,6 +91,7 @@ export function ConnectOfferingModal({
   templateName,
   periodId,
   deviation,
+  from,
   onClose,
   onConnected,
 }: Readonly<{
@@ -99,6 +100,11 @@ export function ConnectOfferingModal({
   /** The planning period whose offerings the school may add. */
   periodId?: string;
   deviation: RosterDeviation;
+  /**
+   * First day of the connection (#8203); absent: the next planned
+   * occurrence. The preview and the connection both start there.
+   */
+  from?: string;
   onClose: () => void;
   /** After a successful save; the caller refreshes plan and lists. */
   /** Reloads the plan; never rejects (#6652). */
@@ -150,14 +156,16 @@ export function ConnectOfferingModal({
   >({
     key:
       isOpen && offeringIds.length > 0
-        ? tenantDailyKeys.offeringPreview(
-            deviation.templateId,
-            selection,
-            undefined,
-          )
+        ? tenantDailyKeys.offeringPreview(deviation.templateId, selection, from)
         : null,
     fetcher: () =>
-      timetableService.getOfferingPreview(deviation.templateId, selection),
+      from === undefined
+        ? timetableService.getOfferingPreview(deviation.templateId, selection)
+        : timetableService.getOfferingPreview(
+            deviation.templateId,
+            selection,
+            from,
+          ),
     token: (shown) => shown.fingerprint,
     follow: false,
     // The dialog closes after connecting: no read of the old preview.

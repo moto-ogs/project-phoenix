@@ -86,6 +86,7 @@ import { MonthPlannerGrid } from "~/components/timetable/month-planner-grid";
 import { PeriodSwitcherDropdown } from "~/components/timetable/period-switcher-dropdown";
 import { TemplateList } from "~/components/timetable/template-list";
 import { ConnectOfferingModal } from "~/components/timetable/connect-offering-modal";
+import { expiredSourceConnection } from "~/lib/roster-maintenance";
 import { useRosterDeviations } from "~/components/timetable/use-roster-deviations";
 import { OfferingGapHints } from "~/components/timetable/offering-gap-hints";
 import { BookingLeftoverHints } from "~/components/timetable/booking-leftover-hints";
@@ -440,6 +441,8 @@ function TimetablesContent() {
   const [connecting, setConnecting] = useState<{
     template: TimetableTemplate;
     deviation: RosterDeviation;
+    /** Erster Tag der Umstellung; fehlt: ab dem nächsten Termin. */
+    from?: string;
   } | null>(null);
   const [manualRosterBusy, setManualRosterBusy] = useState(false);
   const [convertingInstance, setConvertingInstance] =
@@ -1006,6 +1009,16 @@ function TimetablesContent() {
     return pinned ?? findPeriodForDate(calendarPeriods, dayISO);
   }, [calendarPeriods, dayISO, pinnedPeriodID]);
   const templatePeriodID = visiblePeriod?.id ?? assignedPeriods[0]?.id;
+  // Ein Quellangebot einer abgelaufenen Phase (#8203) wechselt erst mit dem
+  // angezeigten Zeitraum: Liegt er in der Zukunft, läuft die alte Phase bis
+  // dahin weiter und behält ihre Kinder.
+  const expiredConnectionFrom = (template: TimetableTemplate) =>
+    (template.rosterMaintenance?.expiredOfferings?.length ?? 0) > 0 &&
+    !rosterDeviations.has(template.id) &&
+    visiblePeriod &&
+    visiblePeriod.startDate > todayISO
+      ? visiblePeriod.startDate
+      : undefined;
   const focusedPeriodID = templatePeriodID ?? null;
   // A series edit starts from the series' editing read: it answers the
   // version the save sends back (ADR 0311), which the list does not carry.
@@ -2226,6 +2239,11 @@ function TimetablesContent() {
           canManage={canManageSchedules}
           fetchParticipantNames={!canReadTenantRosters}
           seriesRosterMaintenance={selectedSeriesTemplate?.rosterMaintenance}
+          seriesExpiredConnection={
+            selectedSeriesTemplate
+              ? expiredSourceConnection(selectedSeriesTemplate)
+              : null
+          }
           seriesRosterDeviation={
             selectedSeriesTemplate
               ? rosterDeviations.get(selectedSeriesTemplate.id)
@@ -2238,7 +2256,11 @@ function TimetablesContent() {
           onConnectOffering={
             canManageSchedules && selectedSeriesTemplate
               ? (deviation) =>
-                  setConnecting({ template: selectedSeriesTemplate, deviation })
+                  setConnecting({
+                    template: selectedSeriesTemplate,
+                    deviation,
+                    from: expiredConnectionFrom(selectedSeriesTemplate),
+                  })
               : undefined
           }
           onSetManualRoster={
@@ -2323,6 +2345,7 @@ function TimetablesContent() {
           templateName={connecting.template.name}
           periodId={templatePeriodID}
           deviation={connecting.deviation}
+          from={connecting.from}
           onClose={() => setConnecting(null)}
           onConnected={connectRefresh.refresh}
         />
@@ -2781,7 +2804,11 @@ function TimetablesContent() {
           onArchive={openArchiveConfirm}
           deviations={rosterDeviations}
           onConnect={(template, deviation) =>
-            setConnecting({ template, deviation })
+            setConnecting({
+              template,
+              deviation,
+              from: expiredConnectionFrom(template),
+            })
           }
           onSetManualRoster={(template, confirmed) =>
             void handleManualRoster(template, confirmed)

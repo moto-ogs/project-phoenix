@@ -1203,6 +1203,18 @@ function mapRosterMaintenance(
     invalidOfferingNames: (raw.invalid_offerings ?? []).map(
       (offering) => offering.name,
     ),
+    expiredOfferings: (raw.expired_offerings ?? []).map((offering) => ({
+      id: offering.id,
+      name: offering.name,
+      ...(offering.successor
+        ? {
+            successor: {
+              id: offering.successor.id,
+              name: offering.successor.name,
+            },
+          }
+        : {}),
+    })),
     dynamicTargets: raw.dynamic_targets,
     careOfferingsDisabled: raw.care_offerings_disabled,
   };
