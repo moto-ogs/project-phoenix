@@ -18,5 +18,5 @@
   "errorObjectList": "wiadomości grupowe",
   "closedNoteWithoutChat": "Ta wiadomość grupowa jest zamknięta.",
   "classMoved": "Klasa przeszła wyżej: teraz {className}",
-  "classLeft": "Dzieci z tej klasy {className} opuściły {careAcc} wraz z nowym rokiem szkolnym. Dlatego ta wiadomość grupowa jest zamknięta."
+  "classLeft": "Dzieci z tej klasy {className} opuściły {careTerm} wraz z nowym rokiem szkolnym. Dlatego ta wiadomość grupowa jest zamknięta."
 }
