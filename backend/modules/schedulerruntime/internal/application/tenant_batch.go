@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 const (
@@ -61,7 +62,25 @@ const (
 	TenantOutcomeCommandFailure TenantOutcomeClassification = "command_failure"
 	TenantOutcomeMissingTenant  TenantOutcomeClassification = "missing_tenant"
 	TenantOutcomeCancelled      TenantOutcomeClassification = "cancelled"
+	// TenantOutcomeNotConfigured is a school that lacks configuration the
+	// command needs, such as its federal state. It is the school's to fix,
+	// not a defect: the run skips it without failing (see schoolNotConfigured).
+	TenantOutcomeNotConfigured TenantOutcomeClassification = "not_configured"
 )
+
+// codeFederalStateMissing is the registered wire code of School Calendar's
+// ErrFederalStateMissing (#7174). The scheduler recognizes the rejection by
+// its code, which the registry never renames, instead of importing School
+// Calendar.
+const codeFederalStateMissing = "calendar.federal_state_missing"
+
+// schoolNotConfigured reports whether err is a school's missing
+// configuration rather than a failure: a school without a federal state has
+// no known holidays until it sets one.
+func schoolNotConfigured(err error) bool {
+	var coded interface{ ErrorCode() string }
+	return errors.As(err, &coded) && coded.ErrorCode() == codeFederalStateMissing
+}
 
 // TenantBatchResult reports every attempted tenant. Outcomes retain full
 // failure detail; Err contains a bounded representative sample for job telemetry.
@@ -82,14 +101,10 @@ func (result TenantBatchResult) CompletedTenantIDs() []int64 {
 	return completed
 }
 
+// Failed counts the tenants whose command failed. A school that is not
+// configured is skipped, not failed.
 func (result TenantBatchResult) Failed() int {
-	failed := 0
-	for _, outcome := range result.Outcomes {
-		if outcome.Err != nil {
-			failed++
-		}
-	}
-	return failed
+	return failedTenantOutcomes(result.Outcomes)
 }
 
 type batchRuntimeEvidenceKey struct{}
@@ -124,6 +139,16 @@ func (failures *representativeTenantErrors) add(err error) {
 		return
 	}
 	failures.errors = append(failures.errors, err)
+}
+
+// addOutcomes adds the failed tenants; a school that is not configured
+// was skipped and fails nothing.
+func (failures *representativeTenantErrors) addOutcomes(jobID string, outcomes []TenantOutcome) {
+	for _, outcome := range outcomes {
+		if outcome.Err != nil && outcome.Classification != TenantOutcomeNotConfigured {
+			failures.add(fmt.Errorf("%s tenant %d: %w", jobID, outcome.TenantID, outcome.Err))
+		}
+	}
 }
 
 func (failures representativeTenantErrors) result() error {
@@ -222,11 +247,7 @@ func (s *Scheduler) runTenantBatches(
 			recordStandingJobFailure(ctx, 0, "tenant batch stopped", batch.err, nil)
 		}
 		failures.add(batch.err)
-		for _, outcome := range batch.outcomes {
-			if outcome.Err != nil {
-				failures.add(fmt.Errorf("%s tenant %d: %w", jobID, outcome.TenantID, outcome.Err))
-			}
-		}
+		failures.addOutcomes(jobID, batch.outcomes)
 		result.Batches++
 		batch.evidence.Backlog = len(tenantIDs) - len(result.Outcomes)
 		s.observeTenantBatch(batch.evidence)
@@ -280,7 +301,7 @@ func (s *Scheduler) runTenantBatch(
 func failedTenantOutcomes(outcomes []TenantOutcome) int {
 	failed := 0
 	for _, outcome := range outcomes {
-		if outcome.Err != nil {
+		if outcome.Err != nil && outcome.Classification != TenantOutcomeNotConfigured {
 			failed++
 		}
 	}
@@ -329,7 +350,10 @@ func (s *Scheduler) runTenantCommand(
 	if outcome.Err == nil {
 		s.tenantBatchCursors.Store(jobID, tenantID)
 	}
-	if outcome.Err != nil {
+	switch {
+	case outcome.Classification == TenantOutcomeNotConfigured:
+		s.reportTenantNotConfigured(jobID, outcome)
+	case outcome.Err != nil:
 		s.reportTenantCommandFailure(ctx, jobID, outcome)
 	}
 	return outcome
@@ -364,6 +388,8 @@ func classifyTenantOutcome(err error, retries int) TenantOutcomeClassification {
 		return TenantOutcomeSuccess
 	case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
 		return TenantOutcomeCancelled
+	case schoolNotConfigured(err):
+		return TenantOutcomeNotConfigured
 	case retries > 0:
 		return TenantOutcomeRetryExhausted
 	default:
@@ -387,6 +413,29 @@ func (s *Scheduler) reportTenantCommandFailure(ctx context.Context, jobID ports.
 		slog.Int("retries", outcome.Retries),
 		slog.String("error", outcome.Err.Error()),
 	)
+}
+
+// reportTenantNotConfigured skips a school that is not configured. It
+// leaves no Sentry breadcrumb and no error log; one warning per job, school
+// and day keeps the state visible without repeating it on every tick.
+func (s *Scheduler) reportTenantNotConfigured(jobID ports.JobID, outcome TenantOutcome) {
+	s.observeTenantRuntime(string(TenantOutcomeNotConfigured))
+	key := notConfiguredWarningKey{jobID: jobID, tenantID: outcome.TenantID}
+	today := calendar.DateFromTime(s.clock())
+	if previous, loaded := s.notConfiguredWarnings.Swap(key, today); loaded && previous == today {
+		return
+	}
+	s.getLogger().Warn("school not configured, skipped",
+		slog.String("job_id", string(jobID)),
+		slog.Int64("tenant_id", outcome.TenantID),
+		slog.String("classification", string(outcome.Classification)),
+		slog.String("error", outcome.Err.Error()),
+	)
+}
+
+type notConfiguredWarningKey struct {
+	jobID    ports.JobID
+	tenantID int64
 }
 
 func (s *Scheduler) observeTenantBatch(evidence ports.TenantBatchEvidence) {

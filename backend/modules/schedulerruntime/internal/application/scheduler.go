@@ -67,6 +67,7 @@ type Scheduler struct {
 	unitOfWorkObserver          func(entryPoint, kind, result string, duration time.Duration, retries int)
 	workerTracer                ports.WorkerTracer
 	tenantBatchCursors          sync.Map // job ID → last successful tenant ID
+	notConfiguredWarnings       sync.Map // notConfiguredWarningKey → calendar.Date of the last warning
 	minuteSnapshotMu            sync.Mutex
 	minuteSnapshotLoad          *schedulerMinuteSnapshotLoad
 	cleanupJobs                 []CleanupJob
