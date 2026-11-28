@@ -11,7 +11,6 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useSession } from "next-auth/react";
 import {
   getStartDateForTimeRange,
-  toISODate,
   berlinTodayISO,
   berlinDateTimeISO,
   parseISODate,
@@ -36,6 +35,13 @@ import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { feedbackConcept } from "~/lib/concepts/feedback";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
+import { ColorBar } from "~/components/ui/color-bar";
+import {
+  feedbackChartData,
+  feedbackClock,
+  feedbackSince,
+  groupFeedbackByDay,
+} from "./feedback-history-view";
 
 const FEEDBACK_INFO =
   "Hier siehst du, wie dieses Kind seine Tage bewertet hat. Das Feedback gibt das Kind freiwillig nach dem Abmelden am Tablet. Wähle oben den Zeitraum.";
@@ -73,14 +79,8 @@ const timeRangeOptions = [
   { value: "month", label: "Diesen Monat" },
 ] as const;
 
-const DAY_NAMES = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-
-function formatDateShort(date: Date): string {
-  return date.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    day: "2-digit",
-    month: "2-digit",
-  });
+function entryCountLabel(count: number): string {
+  return count === 1 ? "1 Eintrag" : `${count} Einträge`;
 }
 
 export default function StudentFeedbackHistoryPage() {
@@ -156,11 +156,8 @@ function StudentFeedbackHistoryPageContent() {
     const startDay = berlinTodayISO(
       getStartDateForTimeRange(timeRange, reference),
     );
-    // The API combines a Berlin DATE and wall-clock TIME without an offset.
-    // Compare calendar days, not browser-interpreted instants.
-    return feedbackHistory.filter(
-      (entry) => entry.timestamp.slice(0, 10) >= startDay,
-    );
+    // Schultage vergleichen, keine vom Browser gedeuteten Zeitpunkte.
+    return feedbackSince(feedbackHistory, startDay);
   }, [feedbackHistory, timeRange, today]);
 
   // Counts
@@ -176,72 +173,16 @@ function StudentFeedbackHistoryPageContent() {
   const totalFeedback =
     positiveFeedbackCount + neutralFeedbackCount + negativeFeedbackCount;
 
-  // Chart data: aggregate per day
-  const chartData = useMemo(() => {
-    const dayMap = new Map<
-      string,
-      { date: Date; positive: number; neutral: number; negative: number }
-    >();
-
-    for (const entry of filteredFeedbackHistory) {
-      const d = new Date(entry.timestamp);
-      const key = toISODate(d);
-      const existing = dayMap.get(key) ?? {
-        date: d,
-        positive: 0,
-        neutral: 0,
-        negative: 0,
-      };
-      existing[entry.feedbackType]++;
-      dayMap.set(key, existing);
-    }
-
-    return Array.from(dayMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, v]) => {
-        const dayIndex = (v.date.getDay() + 6) % 7;
-        return {
-          day: DAY_NAMES[dayIndex] ?? "",
-          label: `${DAY_NAMES[dayIndex] ?? ""} ${formatDateShort(v.date)}`,
-          positive: v.positive,
-          neutral: v.neutral,
-          negative: v.negative,
-        };
-      });
-  }, [filteredFeedbackHistory]);
-
-  // Group for detail list
-  const groupedFeedbackHistory = useMemo(() => {
-    const groups: Record<string, FeedbackEntry[]> = {};
-    for (const entry of filteredFeedbackHistory) {
-      const date = new Date(entry.timestamp).toLocaleDateString("de-DE", {
-        timeZone: "Europe/Berlin",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-      groups[date] ??= [];
-      groups[date].push(entry);
-    }
-    return groups;
-  }, [filteredFeedbackHistory]);
-
-  const sortedDates = useMemo(
-    () =>
-      Object.keys(groupedFeedbackHistory).sort(
-        (a, b) => new Date(b).getTime() - new Date(a).getTime(),
-      ),
-    [groupedFeedbackHistory],
+  // Diagramm und Einzelliste lesen denselben Schultag und dieselbe
+  // Wanduhrzeit, in jeder Gerätezeitzone (#8270).
+  const chartData = useMemo(
+    () => feedbackChartData(filteredFeedbackHistory),
+    [filteredFeedbackHistory],
   );
-
-  const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("de-DE", {
-      timeZone: "Europe/Berlin",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const dayGroups = useMemo(
+    () => groupFeedbackByDay(filteredFeedbackHistory),
+    [filteredFeedbackHistory],
+  );
 
   // Statuszeile: Klasse, Gruppe und die Zahl der Einträge im gewählten
   // Zeitraum, alles aus den Daten, die die Seite ohnehin geladen hat.
@@ -360,51 +301,47 @@ function StudentFeedbackHistoryPageContent() {
 
                 {showDetails && (
                   <div className="border-t border-gray-100">
-                    {sortedDates.map((dateString) => {
-                      const feedbackForDate =
-                        groupedFeedbackHistory[dateString] ?? [];
-                      const dateObj = new Date(
-                        feedbackForDate[0]?.timestamp ?? dateString,
-                      );
-
-                      return (
-                        <div key={dateString}>
-                          <ListGroupHeader
-                            className="border-b border-gray-50 sm:px-6"
-                            title={dateObj.toLocaleDateString("de-DE", {
-                              timeZone: "Europe/Berlin",
-                              weekday: "long",
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })}
-                          />
-                          <div className="divide-y divide-gray-50 px-4 sm:px-6">
-                            {feedbackForDate.map((feedback) => (
-                              <div
-                                key={feedback.id}
-                                className="flex items-center gap-3 py-2.5"
-                                data-testid={`feedback-indicator-${feedback.feedbackType}`}
+                    {dayGroups.map((group) => (
+                      <section key={group.day}>
+                        <ListGroupHeader
+                          className="border-b border-gray-50 sm:px-6"
+                          title={group.label}
+                          meta={entryCountLabel(group.entries.length)}
+                        />
+                        <ul className="divide-y divide-gray-50 px-4 sm:px-6">
+                          {group.entries.map((feedback) => (
+                            <li
+                              key={feedback.id}
+                              className="flex items-center gap-3 py-2.5"
+                              data-testid={`feedback-indicator-${feedback.feedbackType}`}
+                            >
+                              <time
+                                dateTime={`${feedback.day}T${feedback.time}`}
+                                className="w-11 shrink-0 text-sm font-semibold text-gray-900 tabular-nums"
                               >
-                                <span className="text-sm text-gray-900">
-                                  {feedbackTypeLabels[feedback.feedbackType]}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {formatTime(feedback.timestamp)}
-                                </span>
-                                {feedback.isMensaFeedback && (
-                                  <StatusBadge
-                                    label="Mensa"
-                                    tone="gray"
-                                    compact
-                                  />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                {feedbackClock(feedback.time)}
+                              </time>
+                              <ColorBar
+                                color={
+                                  feedbackToneColors[feedback.feedbackType]
+                                }
+                                size="md"
+                              />
+                              <span className="min-w-0 flex-1 truncate text-sm text-gray-900">
+                                {feedbackTypeLabels[feedback.feedbackType]}
+                              </span>
+                              {feedback.isMensaFeedback && (
+                                <StatusBadge
+                                  label="Mensa"
+                                  tone="gray"
+                                  compact
+                                />
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
                   </div>
                 )}
               </>

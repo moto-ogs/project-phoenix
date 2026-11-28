@@ -10,20 +10,13 @@ import {
   ChartTooltipContent,
 } from "~/components/ui/chart";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import type { FeedbackChartPoint } from "./feedback-history-view";
 
 const feedbackChartConfig = {
   positive: { label: "Positiv", color: MOTO_COLOR_PALETTE.green.base },
   neutral: { label: "Neutral", color: MOTO_COLOR_PALETTE.amber.base },
   negative: { label: "Negativ", color: MOTO_COLOR_PALETTE.red.base },
 } satisfies ChartConfig;
-
-interface FeedbackChartPoint {
-  readonly day: string;
-  readonly label: string;
-  readonly positive: number;
-  readonly neutral: number;
-  readonly negative: number;
-}
 
 function FeedbackAxes({ interval }: { readonly interval: number }) {
   return (

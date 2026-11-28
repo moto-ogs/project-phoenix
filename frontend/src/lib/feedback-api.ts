@@ -8,7 +8,10 @@ const logger = createLogger({ component: "FeedbackAPI" });
 
 export interface FeedbackEntry {
   id: string;
-  timestamp: string;
+  /** Berliner Schultag, "YYYY-MM-DD". */
+  day: string;
+  /** Wanduhrzeit der Schule, "HH:MM:SS"; kein Zeitpunkt (#8270). */
+  time: string;
   feedbackType: "positive" | "neutral" | "negative";
   isMensaFeedback: boolean;
 }
@@ -20,13 +23,12 @@ const FEEDBACK_VALUES: readonly FeedbackEntry["feedbackType"][] = [
 ];
 
 export function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
-  // Combine day + time into a timestamp
-  // day is "2026-04-06", time is "15:30:23"
-  const timestamp = `${entry.day}T${entry.time}`;
-
+  // Go liefert Schultag und Wanduhrzeit getrennt. Zusammengesetzt ohne
+  // Offset würde der Browser sie in seiner Zeitzone lesen (#8270).
   return {
     id: entry.id,
-    timestamp,
+    day: entry.day,
+    time: entry.time,
     feedbackType: knownEnum(FEEDBACK_VALUES, entry.value) ?? "neutral",
     isMensaFeedback: entry.is_mensa_feedback,
   };
