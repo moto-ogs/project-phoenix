@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
 import { CollectionGrid } from "~/components/ui/collection-grid";
@@ -79,7 +79,6 @@ function ActivitiesPageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [myActivitiesFilter, setMyActivitiesFilter] = useState(false);
-  const [filteredActivities, setFilteredActivities] = useState<Activity[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null,
   );
@@ -168,43 +167,27 @@ function ActivitiesPageContent() {
     mutatePageData(),
   );
 
-  // Apply filters
-  useEffect(() => {
-    // Ensure activities is an array before filtering
-    const activityList = Array.isArray(activities) ? activities : [];
-    let filtered = [...activityList];
-
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = foldForSearch(searchTerm);
-      filtered = filtered.filter(
+  // Die angezeigte Liste entsteht im selben Render wie die Kopfzahl, aus
+  // denselben Daten und Filtern. Ein eigener State liefe einen Render
+  // hinterher: Zahl schon da, Raster noch leer (#8272). `filter` gibt eine
+  // neue Liste zurück, das Sortieren lässt die Liste im Cache unberührt.
+  const filteredActivities = useMemo(() => {
+    const searchFolded = foldForSearch(searchTerm);
+    const staffId = myActivitiesFilter ? currentStaff?.id : undefined;
+    return activities
+      .filter(
         (activity) =>
-          foldForSearch(activity.name).includes(searchLower) ||
-          foldForSearch(formatSupervisorList(activity.supervisors)).includes(
-            searchLower,
-          ) ||
-          foldForSearch(activity.category_name).includes(searchLower),
-      );
-    }
-
-    // Apply category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter(
-        (activity) => activity.ag_category_id === categoryFilter,
-      );
-    }
-
-    // Apply "My Activities" filter
-    if (myActivitiesFilter && currentStaff?.id) {
-      filtered = filtered.filter((activity) =>
-        isActivityCreator(activity, currentStaff.id),
-      );
-    }
-
-    // Sort activities alphabetically by name
-    filtered.sort((a, b) => a.name.localeCompare(b.name, "de"));
-
-    setFilteredActivities(filtered);
+          (searchFolded === "" ||
+            foldForSearch(activity.name).includes(searchFolded) ||
+            foldForSearch(formatSupervisorList(activity.supervisors)).includes(
+              searchFolded,
+            ) ||
+            foldForSearch(activity.category_name).includes(searchFolded)) &&
+          (categoryFilter === "all" ||
+            activity.ag_category_id === categoryFilter) &&
+          (!staffId || isActivityCreator(activity, staffId)),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "de"));
   }, [
     searchTerm,
     categoryFilter,
