@@ -1650,6 +1650,9 @@ export const careTimesTopic = function careTimesTopic(): HelpTopic {
       "Die üblichen Zeiten stehen unter `Einstellungen` bei `Betreuungszeiten`. Jede Schule pflegt ihre eigenen Zeiten.",
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
       // #5102: Angebotswechsel aus dem Wochenplan.
+      // #8209: getPickupDescription in care-schedule-manager.tsx liest die
+      // Herkunft aus der genehmigten Elternanfrage.
+      "Hast du eine Abholzeit aus einer Elternanfrage genehmigt? Dann steht am Tag `Von Eltern` und `Aus Elternanfrage, genehmigt von` mit deinem Namen. Änderst du die Zeit danach selbst, ist es dein Eintrag. Der Hinweis verschwindet dann.",
       "Wechselt das Kind mit dem Wochenplan das Angebot, zeigt moto danach `Auswirkung auf den Betreuungsplan`. Dort siehst du, welche Regeltermine angepasst sind und wo das Kind weiter eingeplant ist.",
     ],
     differences: [

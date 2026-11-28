@@ -1347,6 +1347,47 @@ describe("CareScheduleManager", () => {
     );
   });
 
+  it("names the parent request behind an approved pickup time", async () => {
+    mockFetchStudentPickupData.mockResolvedValue({
+      ...pickupData,
+      exceptions: [
+        {
+          ...pickupData.exceptions[0]!,
+          source: "staff",
+          origin: {
+            requestId: "77",
+            approvedByName: "Paula Planerin",
+            approvedAt: "2026-05-22T09:00:00Z",
+          },
+        },
+      ],
+    });
+
+    render(<CareScheduleManager studentId="42" />);
+    await screen.findByText("Betreuungszeiten");
+
+    // The approved time is the school's decision, but the day still says
+    // where it came from and who approved it (#8209).
+    expect(
+      screen.getAllByText(
+        "Aus Elternanfrage, genehmigt von Paula Planerin. Grund: arzt",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("Von Eltern").length).toBeGreaterThan(0);
+    // The day stays editable like any other exception.
+    expect(
+      screen.getAllByRole("button", { name: "Ausnahme" }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows a staff pickup time without a parent origin", async () => {
+    render(<CareScheduleManager studentId="42" />);
+    expect((await screen.findAllByText("Grund: arzt")).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText(/Aus Elternanfrage/)).not.toBeInTheDocument();
+  });
+
   it("passes booking care days to the weekly editor", async () => {
     mockFetchArrivalSettings.mockResolvedValueOnce({
       careDaysSource: "bookings",

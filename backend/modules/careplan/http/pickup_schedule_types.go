@@ -45,6 +45,17 @@ type PickupExceptionResponse struct {
 	CreatedBy   ident.ID `json:"created_by"`
 	CreatedAt   string   `json:"created_at"`
 	UpdatedAt   string   `json:"updated_at"`
+	// Origin names the parent request the time was approved from (#8209);
+	// absent for a time the school entered itself.
+	Origin *PickupExceptionOriginResponse `json:"origin,omitempty"`
+}
+
+// PickupExceptionOriginResponse is the approved parent request behind a
+// pickup time: who approved it and when, read from the request.
+type PickupExceptionOriginResponse struct {
+	RequestID      ident.ID `json:"request_id"`
+	ApprovedByName string   `json:"approved_by_name"`
+	ApprovedAt     *string  `json:"approved_at,omitempty"`
 }
 
 // PickupNoteResponse represents a pickup note in API responses

@@ -141,6 +141,23 @@ describe("mapPickupExceptionResponse", () => {
     });
   });
 
+  it("keeps the approved parent request of the time (#8209)", () => {
+    const result = mapPickupExceptionResponse({
+      ...sampleBackendException,
+      origin: {
+        request_id: "77",
+        approved_by_name: "Paula Planerin",
+        approved_at: "2024-01-14T09:00:00Z",
+      },
+    });
+
+    expect(result.origin).toEqual({
+      requestId: "77",
+      approvedByName: "Paula Planerin",
+      approvedAt: "2024-01-14T09:00:00Z",
+    });
+  });
+
   it("handles undefined pickup_time (absent)", () => {
     const absentException = {
       ...sampleBackendException,

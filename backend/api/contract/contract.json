@@ -86968,6 +86968,31 @@
       ]
     },
     {
+      "name": "PickupExceptionOriginResponse",
+      "go_type": "careplanhttp.PickupExceptionOriginResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "approved_by_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "approved_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupExceptionRequest",
       "go_type": "careplanhttp.PickupExceptionRequest",
       "request": true,
@@ -87075,6 +87100,14 @@
           "name": "updated_at",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "origin",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PickupExceptionOriginResponse"
           }
         }
       ]

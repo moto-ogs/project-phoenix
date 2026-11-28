@@ -141,7 +141,7 @@ func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.Pick
 }
 
 func (s *PickupApprovals) applyPickupTime(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
-	id, err := s.SaveApprovedException(ctx, input.TenantID, input.StudentID, change.Date, *change.PickupTime, change.Reason, staffID)
+	id, err := s.saveException(ctx, input.TenantID, input.StudentID, change.Date, *change.PickupTime, change.Reason, staffID, optionalRequest(input.RequestID))
 	if err != nil {
 		return 0, "", err
 	}
@@ -280,9 +280,27 @@ func (s *PickupApprovals) ensureNotCompleted(ctx context.Context, studentID int6
 	return nil
 }
 
-// SaveApprovedException is shared by approvals and staff conflict resolutions.
-// Both callers hold the owner care-day lock in the ambient tenant transaction.
+// SaveApprovedException writes the value a staff member chose when resolving
+// a request conflict. The value is the school's own, so it names no source
+// request. The caller holds the owner care-day lock in the ambient tenant
+// transaction.
 func (s *PickupApprovals) SaveApprovedException(ctx context.Context, tenantID, studentID int64, date calendar.Date, pickup time.Time, reason string, staffID int64) (int64, error) {
+	return s.saveException(ctx, tenantID, studentID, date, pickup, reason, staffID, nil)
+}
+
+// optionalRequest is nil for a zero request ID.
+func optionalRequest(id int64) *int64 {
+	if id <= 0 {
+		return nil
+	}
+	return &id
+}
+
+// saveException writes the approved pickup time in the name of the deciding
+// staff member. An approval keeps its parent request as the source (#8209):
+// the time stays the school's decision, and the day still names where it
+// came from.
+func (s *PickupApprovals) saveException(ctx context.Context, tenantID, studentID int64, date calendar.Date, pickup time.Time, reason string, staffID int64, sourceRequestID *int64) (int64, error) {
 	existing, err := s.Exceptions.FindForDate(ctx, studentID, date)
 	if err != nil {
 		return 0, fmt.Errorf("schedule: load pickup exception for request: %w", err)
@@ -297,6 +315,7 @@ func (s *PickupApprovals) SaveApprovedException(ctx context.Context, tenantID, s
 		existing.Source = careplan.ExceptionSourceStaff
 		existing.CreatedBy, existing.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 		existing.CreatedByGuardian = nil
+		existing.SourceRequestID = sourceRequestID
 		if existing.ExcusedFrom != nil {
 			excused := calendar.NormalizeWallClock(*existing.ExcusedFrom)
 			existing.ExcusedFrom = &excused
@@ -309,7 +328,7 @@ func (s *PickupApprovals) SaveApprovedException(ctx context.Context, tenantID, s
 	id, err := s.Exceptions.Create(ctx, careplan.PickupException{
 		TenantID: tenantID, StudentID: studentID, ExceptionDate: careplan.Date(date),
 		PickupTime: &pickup, Reason: &reason, Source: careplan.ExceptionSourceStaff, CreatedBy: staffID,
-		EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
+		EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID), SourceRequestID: sourceRequestID,
 	})
 	if err != nil {
 		if s.Exceptions.IsUniqueViolation(err) {

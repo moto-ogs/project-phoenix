@@ -89,6 +89,7 @@ type pickupExceptionRow struct {
 	CreatedBy             int64        `bun:"created_by,nullzero"`
 	EnteredByTraeger      bool         `bun:"entered_by_traeger,notnull,default:false"`
 	CreatedByGuardian     *int64       `bun:"created_by_guardian,nullzero"`
+	SourceRequestID       *int64       `bun:"source_request_id,nullzero"`
 }
 
 func applyStudentScheduleOptions(query *bun.SelectQuery, options *careplan.StudentScheduleQueryOptions, alias string) *bun.SelectQuery {
