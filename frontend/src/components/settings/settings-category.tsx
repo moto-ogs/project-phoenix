@@ -1,9 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { ResolvedSetting, SchemaCategory } from "~/lib/settings-api";
+import type { MotoConcept } from "~/lib/moto-concepts";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { createLogger } from "~/lib/logger";
 import { SettingsField } from "./settings-field";
 import type { SettingsAudience } from "./settings-origin";
 import {
@@ -13,6 +16,8 @@ import {
   hasCategoryLabel,
   filterCategoryItems,
 } from "./settings-filter";
+
+const logger = createLogger({ component: "SettingsCategory" });
 
 interface SettingsCategoryProps {
   readonly category: SchemaCategory;
@@ -82,6 +87,18 @@ interface SettingsCategoryProps {
   readonly renderAddon?: (setting: ResolvedSetting) => ReactNode;
   /** See `SettingsField` `renderConfirmDetail`. */
   readonly renderConfirmDetail?: (setting: ResolvedSetting) => ReactNode;
+  /**
+   * Shows the concept symbol of the category in the card head (#8221). The
+   * page sets it when its view holds several topic cards (Themenkarten-Regel,
+   * `.claude/rules/frontend-ui-kit.md`). Off by default: the card looks as
+   * before.
+   */
+  readonly withIcon?: boolean;
+  /**
+   * Backend key of the tab the category belongs to. A category without its
+   * own concept takes the concept of this tab (`settingsTabConcept`).
+   */
+  readonly tabKey?: string;
 }
 
 export function SettingsCategory({
@@ -106,7 +123,41 @@ export function SettingsCategory({
   title,
   renderAddon,
   renderConfirmDetail,
+  withIcon = false,
+  tabKey = "",
 }: SettingsCategoryProps) {
+  const [concept, setConcept] = useState<MotoConcept>();
+
+  useEffect(() => {
+    if (!withIcon) {
+      setConcept(undefined);
+      return;
+    }
+
+    let current = true;
+    void import("./settings-category-concepts")
+      .then(({ settingsCategoryConcept }) =>
+        settingsCategoryConcept(category.key, tabKey),
+      )
+      .then(
+        (loadedConcept) => {
+          if (current) setConcept(loadedConcept);
+        },
+        (error: unknown) => {
+          if (!current) return;
+          logger.warn("category concept could not load", {
+            category_key: category.key,
+            tab_key: tabKey,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
+
+    return () => {
+      current = false;
+    };
+  }, [category.key, tabKey, withIcon]);
+
   const visibleItems = filterCategoryItems(category, filterQuery);
 
   if (visibleItems.length === 0) {
@@ -128,6 +179,7 @@ export function SettingsCategory({
   return (
     <SectionCard
       headingLevel={headingLevel}
+      concept={concept}
       title={title ?? displayCategoryLabel(category)}
       titleClassName={
         title !== undefined || hasCategoryLabel(category)

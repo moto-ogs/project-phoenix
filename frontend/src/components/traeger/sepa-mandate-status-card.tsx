@@ -9,6 +9,7 @@ import { ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ApiError } from "~/lib/api-error";
+import { directDebitConcept } from "~/lib/concepts/directDebit";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
@@ -55,11 +56,17 @@ export function useSepaMandateStatus(contractId: string) {
 
 export function SepaMandateStatusCard({
   contractId,
-}: Readonly<{ contractId: string }>) {
+  withIcon = false,
+}: Readonly<{
+  contractId: string;
+  /** See `SepaMandateStatusView` `withIcon`. */
+  withIcon?: boolean;
+}>) {
   return (
     <SepaMandateStatusView
       contractId={contractId}
       read={useSepaMandateStatus(contractId)}
+      withIcon={withIcon}
     />
   );
 }
@@ -68,6 +75,7 @@ export function SepaMandateStatusView({
   contractId,
   read: { mandates, failure, inForce, collectable },
   plainFallback = false,
+  withIcon = false,
 }: Readonly<{
   contractId: string;
   read: SepaMandateStatusRead;
@@ -77,6 +85,11 @@ export function SepaMandateStatusView({
    * invoice: a Träger can block the run instead (#7770).
    */
   plainFallback?: boolean;
+  /**
+   * Shows the direct-debit symbol in the card head (#8221), where the page
+   * holds several topic cards. Off by default: the card looks as before.
+   */
+  withIcon?: boolean;
 }>) {
   if (failure instanceof ApiError && failure.status === 403) return null;
   const failed = mandates === null && Boolean(failure);
@@ -86,6 +99,7 @@ export function SepaMandateStatusView({
 
   return (
     <SectionCard
+      concept={withIcon ? directDebitConcept : undefined}
       title="SEPA-Lastschriftmandat"
       titleBadge={
         mandates ? (

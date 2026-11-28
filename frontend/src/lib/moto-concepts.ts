@@ -100,6 +100,18 @@ import { languageConcept } from "~/lib/concepts/language";
 import { logoutConcept } from "~/lib/concepts/logout";
 import { backConcept } from "~/lib/concepts/back";
 import { moreConcept } from "~/lib/concepts/more";
+import { absencesConcept } from "~/lib/concepts/absences";
+import { notesConcept } from "~/lib/concepts/notes";
+import { publicHolidaysConcept } from "~/lib/concepts/publicHolidays";
+import { schoolVacationsConcept } from "~/lib/concepts/schoolVacations";
+import { parentConferenceConcept } from "~/lib/concepts/parentConference";
+import { legalNoticeConcept } from "~/lib/concepts/legalNotice";
+import { directDebitConcept } from "~/lib/concepts/directDebit";
+import { costBearersConcept } from "~/lib/concepts/costBearers";
+import { bankAccountsConcept } from "~/lib/concepts/bankAccounts";
+import { bookingAccountsConcept } from "~/lib/concepts/bookingAccounts";
+import { exportRecipientsConcept } from "~/lib/concepts/exportRecipients";
+import { letterheadConcept } from "~/lib/concepts/letterhead";
 import type { MotoConceptDefinition } from "~/lib/concepts/define";
 
 export type { MotoConceptDefinition } from "~/lib/concepts/define";
@@ -197,6 +209,20 @@ const registry = {
   logout: logoutConcept,
   back: backConcept,
   more: moreConcept,
+  // Themenkarten (#8221, Spec #8220): Themen, die bisher kein eigenes
+  // Symbol hatten.
+  absences: absencesConcept,
+  notes: notesConcept,
+  publicHolidays: publicHolidaysConcept,
+  schoolVacations: schoolVacationsConcept,
+  parentConference: parentConferenceConcept,
+  legalNotice: legalNoticeConcept,
+  directDebit: directDebitConcept,
+  costBearers: costBearersConcept,
+  bankAccounts: bankAccountsConcept,
+  bookingAccounts: bookingAccountsConcept,
+  exportRecipients: exportRecipientsConcept,
+  letterhead: letterheadConcept,
 } as const;
 
 /** Every concept under its own key; a mismatched key fails to compile. */
