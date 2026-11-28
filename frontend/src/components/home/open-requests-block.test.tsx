@@ -104,6 +104,22 @@ describe("OpenRequestsBlock (#2180)", () => {
     ).toHaveAttribute("href", "/test-tenant/anfragen");
   });
 
+  // In der festen Zellenhöhe stand die vierte Art nur halb da: die Karte
+  // wächst mit ihren höchstens fünf Zeilen (#8268).
+  it("lässt die Karte mit allen offenen Arten wachsen", () => {
+    set("changeRequests", { unreadCount: 1 });
+    set("enrollment", { unreadCount: 1 });
+    set("withdrawals", { unreadCount: 1 });
+    set("staffAbsences", { unreadCount: 1 });
+    set("unreadEnrollments", { unreadCount: 1 });
+
+    render(<OpenRequestsBlock />);
+
+    const list = screen.getAllByRole("listitem");
+    expect(list).toHaveLength(5);
+    expect(list[0]!.closest("[data-home-card-fit]")).not.toBeNull();
+  });
+
   // Ungelesene Anmeldungen (#3778): eigene Zeile, führt zu den Anmeldungen.
   it("zeigt ungelesene Anmeldungen als eigene Zeile", () => {
     set("unreadEnrollments", { unreadCount: 2 });

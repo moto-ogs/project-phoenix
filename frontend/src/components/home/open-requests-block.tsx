@@ -45,6 +45,10 @@ interface RequestSource {
  * bestätigt leer ist. Bekannte Aufgaben bleiben auch bei einem Teilausfall
  * stehen; der Ausfall nennt keine Quelle, damit eine Fehlermeldung nichts
  * über einen Bereich verrät, den die Person nicht öffnen darf.
+ *
+ * Die Karte wächst mit ihrem Inhalt (`data-home-card-fit`): es gibt höchstens
+ * fünf Arten, und jede ist eine Aufgabe. In der festen Zellenhöhe stand die
+ * vierte nur halb da, die fünfte gar nicht.
  */
 export function OpenRequestsBlock() {
   const tenantPath = useTenantAwarePath();
@@ -109,9 +113,7 @@ export function OpenRequestsBlock() {
   );
   // Bis der Katalogtext des Ladefehlers da ist, steht das Skelett.
   const failureAlert = loadError ? (
-    <div data-home-card-fit="">
-      <LoadErrorAlert error={loadError} actionLayout="responsive" />
-    </div>
+    <LoadErrorAlert error={loadError} actionLayout="responsive" />
   ) : null;
 
   return (
@@ -132,7 +134,7 @@ export function OpenRequestsBlock() {
       {(() => {
         if (open.length > 0) {
           return (
-            <div className="space-y-3">
+            <div className="space-y-3" data-home-card-fit="">
               <ul className="space-y-2">
                 {open.map((source) => (
                   <li key={source.key}>
@@ -161,7 +163,9 @@ export function OpenRequestsBlock() {
             </div>
           );
         }
-        if (failure !== undefined && failureAlert) return failureAlert;
+        if (failure !== undefined && failureAlert) {
+          return <div data-home-card-fit="">{failureAlert}</div>;
+        }
         if (failure !== undefined || loading) {
           return (
             <SkeletonRegion label="Offene Anfragen werden geladen">
