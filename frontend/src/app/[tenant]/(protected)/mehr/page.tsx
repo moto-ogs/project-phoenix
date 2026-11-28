@@ -237,52 +237,12 @@ function MenuRows({
 interface MoreSection {
   readonly key: string;
   readonly title: string;
-  /** Zahl der Zeilen, für die Verteilung auf Spalten. */
-  readonly size: number;
   /**
    * Was in den Zeilen neu oder offen ist. Zugeklappt nennt der Kopf die
    * Summe, wie eine zugeklappte Gruppe der Seitenleiste.
    */
   readonly pending?: number;
   readonly rows: ReactNode;
-}
-
-/**
- * Teilt die Abschnitte in ihrer festen Reihenfolge auf `columns` Spalten
- * auf: die erste Spalte von oben nach unten, dann die nächste. So liest man
- * auf jedem Gerät in derselben Folge wie am Telefon, und die Spalten stehen
- * trotzdem etwa gleich hoch.
- */
-function splitColumns(
-  sections: readonly MoreSection[],
-  columns: number,
-): MoreSection[][] {
-  // Der Gruppenkopf zählt wie eine knappe Zeile.
-  const weight = (section: MoreSection) => section.size + 0.7;
-  const total = sections.reduce((sum, section) => sum + weight(section), 0);
-  const result: MoreSection[][] = [];
-  let current: MoreSection[] = [];
-  let filled = 0;
-  sections.forEach((section, index) => {
-    const remainingColumns = columns - result.length;
-    const remainingSections = sections.length - index;
-    const target = (total * (result.length + 1)) / columns;
-    const half = weight(section) / 2;
-    // Neue Spalte, wenn der Abschnitt mehr als zur Hälfte über das Ziel der
-    // laufenden Spalte ragt — oder sonst eine Spalte leer bliebe.
-    if (
-      current.length > 0 &&
-      remainingColumns > 1 &&
-      (filled + half > target || remainingSections < remainingColumns)
-    ) {
-      result.push(current);
-      current = [];
-    }
-    current.push(section);
-    filled += weight(section);
-  });
-  if (current.length > 0) result.push(current);
-  return result;
 }
 
 /** Summe der Zähler in den Zeilen eines Abschnitts. */
@@ -314,7 +274,7 @@ function MorePageContent({
   const openNotificationsSheet = useOpenNotificationsSheet();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [staffPreviewOpen, setStaffPreviewOpen] = useState(false);
-  const { resolved, isApp, layout, isSplit } = useDeviceContext();
+  const { resolved, isApp } = useDeviceContext();
   const router = useTenantRouter();
   const counters = useRowCounters();
   // „Daten aktualisieren“ steht am Desktop in der Kopfzeile, die das Telefon
@@ -390,7 +350,6 @@ function MorePageContent({
     sections.push({
       key: "neu",
       title: STAFF_NEWS_TITLE,
-      size: news.length * 1.3,
       pending: news.length,
       rows: <StaffNewsList items={news} rows />,
     });
@@ -420,7 +379,6 @@ function MorePageContent({
     sections.push({
       key: "tag",
       title: "Mein Tag",
-      size: flows.length + (notificationsRow ? 1 : 0),
       pending:
         pendingIn(flows, model, counters) +
         (isTeacher ? model.feedUnreadCount : 0),
@@ -446,7 +404,6 @@ function MorePageContent({
     sections.push({
       key: group.key,
       title: group.group?.label ?? "Weiteres",
-      size: group.items.length,
       pending: pendingIn(group.items, model, counters),
       rows: <MenuRows items={group.items} model={model} counters={counters} />,
     });
@@ -475,12 +432,6 @@ function MorePageContent({
     sections.push({
       key: "konto",
       title: "Konto",
-      size:
-        4 +
-        looseItems.length +
-        (model.traegerReturnHref ? 1 : 0) +
-        (isTeacher && model.canStartStaffPreview ? 1 : 0) +
-        (isTeacher && model.simpleNav.available ? 1 : 0),
       pending: pendingIn(looseItems, model, counters),
       rows: (
         <>
@@ -593,14 +544,13 @@ function MorePageContent({
     </Collection>
   );
 
-  const group = (section: MoreSection, sticky = false) => {
+  const group = (section: MoreSection) => {
     const open = !canCollapse || isSectionOpen(section.key);
     const pending = section.pending ?? 0;
     return (
       <CollectionGroup
         key={section.key}
         title={section.title}
-        sticky={sticky}
         collapsible={
           canCollapse
             ? {
@@ -630,11 +580,6 @@ function MorePageContent({
       </CollectionGroup>
     );
   };
-
-  // Telefon: EINE Liste, die Abschnitte als Gruppenköpfe darin. iPad: die
-  // Abschnitte als Karten in zwei (hoch) oder drei (quer) Spalten, damit
-  // keine Zeile 750–1100 px breit wird und der Pfeil nah am Text steht.
-  const columns = layout === "tablet" ? (isSplit ? 3 : 2) : 1;
 
   return (
     <TenantPage
@@ -683,32 +628,14 @@ function MorePageContent({
         </>
       }
     >
-      {columns === 1 ? (
-        // 16 px zwischen den Karten wie auf jeder Seite der App.
-        <div className="flex flex-col gap-4">
-          <Collection label="Mehr">
-            {sections.map((section) => group(section))}
-          </Collection>
-          {logout}
-        </div>
-      ) : (
-        <div
-          className={`grid items-start gap-4 ${columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}
-        >
-          {splitColumns(sections, columns).map((column, index, all) => (
-            <div key={column[0]?.key} className="flex flex-col gap-4">
-              {column.map((section) => (
-                <Collection key={section.key} label={section.title}>
-                  {group(section, false)}
-                </Collection>
-              ))}
-              {index === all.length - 1 ? (
-                <div className="mt-2">{logout}</div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Telefon: EINE Liste, die Abschnitte als Gruppenköpfe darin; 16 px
+          zwischen den Karten wie auf jeder Seite der App. */}
+      <div className="flex flex-col gap-4">
+        <Collection label="Mehr">
+          {sections.map((section) => group(section))}
+        </Collection>
+        {logout}
+      </div>
     </TenantPage>
   );
 }
