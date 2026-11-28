@@ -7,16 +7,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const pickupExceptionSourceRequestVersion = "1.15.964"
+const pickupExceptionSourceRequestVersion = "20261128122835"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     pickupExceptionSourceRequestVersion,
 		Description: "Genehmigte Abholzeit behält den Verweis auf ihre Elternanfrage (#8209)",
-		DependsOn: []string{
-			traegerExportRecipientsVersion,    // the newest migration on development (1.15.963)
-			careScheduleChangeRequestsVersion, // the requests the column points at
-		},
+		DependsOn:   []string{careScheduleChangeRequestsVersion}, // the requests the column points at
 	})
 	Migrations.MustRegister(pickupExceptionSourceRequestUp, pickupExceptionSourceRequestDown)
 }
