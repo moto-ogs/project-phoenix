@@ -56,6 +56,12 @@ let sessions: readonly SheetSession[] = [];
 const listeners = new Set<() => void>();
 /** Eigene `history.back()`, deren `popstate` niemand anderem gehört. */
 let expectedPops = 0;
+/**
+ * Adresse beim eigenen Abbau. Der Eintrag darunter trägt die Adresse von
+ * vor dem Öffnen; was die Seite seitdem umgeschrieben hat (Filter im Blatt),
+ * schreibt die Sitzung nach dem Rücksprung wieder hinein.
+ */
+let hrefAfterPop: string | null = null;
 let listening = false;
 
 function emit() {
@@ -96,6 +102,16 @@ function onPopState(event: PopStateEvent) {
   if (expectedPops > 0) {
     expectedPops -= 1;
     markSheetHistoryEvent(event);
+    // Der Rücksprung baut nur den Eintrag des Blatts ab und bleibt auf der
+    // Seite. Niemand sonst soll ihn als Verlaufsschritt verarbeiten: Der
+    // Next-Router würde die Adresse des Eintrags darunter (von vor dem
+    // Öffnen) wiederherstellen, die Seite ihre Filter danach ausrichten.
+    event.stopImmediatePropagation();
+    const href = hrefAfterPop;
+    hrefAfterPop = null;
+    if (href !== null && window.location.href !== href) {
+      window.history.replaceState(window.history.state, "", href);
+    }
     return;
   }
   if (sessions.length === 0) return;
@@ -115,9 +131,13 @@ function onPopState(event: PopStateEvent) {
 function ensureListening() {
   if (listening) return;
   listening = true;
-  // Capture: läuft vor den Zuhörern ohne Capture am selben Ziel (Wächter).
+  // Am `window` laufen Zuhörer in der Reihenfolge ihrer Anmeldung, auch mit
+  // Capture. Die Sitzung muss vor dem Next-Router, dem Wächter und den
+  // Seiten hören; deshalb meldet sie sich schon beim Laden des Moduls an.
   window.addEventListener("popstate", onPopState, { capture: true });
 }
+
+if (typeof window !== "undefined") ensureListening();
 
 function open(session: SheetSession) {
   ensureListening();
@@ -166,6 +186,7 @@ function release(session: SheetSession) {
     // Gleich wieder geöffnet (Strict Mode, neu eingehängt): Eintrag bleibt.
     if (sessions.some((s) => s.id === currentSheetId())) return;
     expectedPops += 1;
+    hrefAfterPop = href;
     window.history.go(-ownCount);
   }, 0);
 }
@@ -229,5 +250,6 @@ export function useParentSheetId(): string | null {
 export function resetSheetSessionsForTest() {
   sessions = [];
   expectedPops = 0;
+  hrefAfterPop = null;
   emit();
 }

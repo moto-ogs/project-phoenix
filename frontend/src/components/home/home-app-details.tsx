@@ -49,6 +49,23 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 // ─── Heute anders als Liste ────────────────────────────────────────────────
 
 /**
+ * So viele Zeilen zeigt ein Eintrag in der Liste: eine Sammelzeile für Kinder
+ * einer Gruppe steht dort Kind für Kind. Zähler nennen deshalb Zeilen, damit
+ * „3 weitere“ und die Liste im Blatt dieselbe Zahl haben.
+ */
+function rowsOf(entries: readonly DayChange[], day: DayChangesDay): number {
+  let rows = 0;
+  for (const entry of entries) {
+    rows += entry.childSummary
+      ? entry.childSummary.items.filter(
+          (item) => childChangeText(item.kind, item.child, day) !== null,
+        ).length
+      : 1;
+  }
+  return rows;
+}
+
+/**
  * Die Einträge von „Heute anders“ als Zeilen: was dich betrifft, die übrige
  * Schule, was schon vorbei ist. `include` wählt den Ausschnitt (Kinder oder
  * Team und Schule).
@@ -104,17 +121,17 @@ function DayChangesList({
       ) : (
         <Collection label={label}>
           {mine.length > 0 ? (
-            <CollectionGroup title={mineTitle} count={mine.length}>
+            <CollectionGroup title={mineTitle} count={rowsOf(mine, day)}>
               <DayChangeRows entries={mine} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
           {school.length > 0 ? (
-            <CollectionGroup title="Schule" count={school.length}>
+            <CollectionGroup title="Schule" count={rowsOf(school, day)}>
               <DayChangeRows entries={school} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
           {done.length > 0 ? (
-            <CollectionGroup title="Schon vorbei" count={done.length}>
+            <CollectionGroup title="Schon vorbei" count={rowsOf(done, day)}>
               <DayChangeRows entries={done} day={day} date={overview.date} />
             </CollectionGroup>
           ) : null}
@@ -174,7 +191,10 @@ export function DayChangesDaySheet({
       ) : tomorrowOverview ? (
         <DayChangesList
           overview={tomorrowOverview}
-          include={include}
+          // Offene Hinweise zur Kenntnisnahme stehen heute oben auf der
+          // Karte und fehlen deshalb im Blatt; morgen stehen sie wie am
+          // Desktop unter „Betrifft dich“.
+          include={() => true}
           label="Morgen anders"
           day="tomorrow"
         />
@@ -222,9 +242,9 @@ export function DayChangesPreview({
   // Der Zähler im Kopf nennt, was offen ist: die Zeilen im Bild plus
   // „N weitere“ ergeben genau ihn. Was heute schon vorbei ist, zählt wie
   // am Desktop („3 erledigt“) für sich und steht ebenfalls im Blatt.
-  const rest = open.length - shown.length;
-  const done = entries.length - open.length;
-  const openCount = leadCount + open.length;
+  const rest = rowsOf(open, "today") - rowsOf(shown, "today");
+  const done = rowsOf(entries, "today") - rowsOf(open, "today");
+  const openCount = leadCount + rowsOf(open, "today");
   const restLabel = [
     rest > 0 ? `${rest} weitere` : null,
     done > 0 ? `${done} erledigt` : null,
@@ -336,7 +356,7 @@ function DayChangeRows({
       // die Gruppe steht darunter.
       const where = childSummaryTitle(entry);
       for (const item of entry.childSummary.items) {
-        const childText = childChangeText(item.kind, item.child);
+        const childText = childChangeText(item.kind, item.child, day);
         if (!childText) continue;
         const href =
           day === "tomorrow" && item.link?.target === "student"
@@ -358,7 +378,7 @@ function DayChangeRows({
       <CollectionRow
         key={key}
         wrap
-        {...text(dayChangeText(entry) ?? "", dayChangeSpan(entry), entry)}
+        {...text(dayChangeText(entry, day) ?? "", dayChangeSpan(entry), entry)}
         {...(href ? { href } : {})}
       />,
     );
