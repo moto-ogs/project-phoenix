@@ -1026,8 +1026,15 @@ function dayRows(
       ? d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")
       : null;
   const plannedText = plan ? `Geplant ${plan}` : null;
+  // Das Blatt nennt wie die Desktop-Spalte „Plan (Schicht)“ auch entfallene
+  // Schichten („08:00–16:30 entfällt“), statt „–“ zu zeigen.
+  const factsPlan =
+    [
+      ...(plan ? [plan] : []),
+      ...d.cancelled.map((s) => `${s.startTime}–${s.endTime} entfällt`),
+    ].join(", ") || null;
   const facts = (session: OwnBlock | null): AppDayFacts => ({
-    plan,
+    plan: factsPlan,
     projection: d.projection,
     showBalance: hasBalance,
     source: sourceLabel(session),
