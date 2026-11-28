@@ -28,7 +28,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { useDraftOn, sendUnread } from "~/lib/swr/read-draft";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
@@ -308,19 +308,12 @@ export function TransitionEditor({
               mappings,
             }),
           )
-        : await createGradeTransition({
-            academicYear,
-            notes: notes || undefined,
-            mappings,
-          }).then(
-            (transition) => ({ ok: true, saved: transition }) as const,
-            (error: unknown) =>
-              ({
-                ok: false,
-                error,
-                refused: false,
-                reload: undefined,
-              }) as const,
+        : await sendUnread(() =>
+            createGradeTransition({
+              academicYear,
+              notes: notes || undefined,
+              mappings,
+            }),
           );
       if (result.ok) {
         // A late answer must not switch a closed editor to the preview.

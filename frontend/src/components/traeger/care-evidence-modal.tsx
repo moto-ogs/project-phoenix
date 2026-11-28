@@ -16,7 +16,7 @@ import { berlinTodayISO } from "~/lib/date-helpers";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { useDraftOn, sendUnread } from "~/lib/swr/read-draft";
 import {
   type CareEvidence,
   type CareEvidenceContract,
@@ -166,10 +166,7 @@ export function CareEvidenceModal({
         ? await stored.submit((version) =>
             saveCareEvidence(changedId, input, version),
           )
-        : await saveCareEvidence(null, input).then(
-            (saved) => ({ ok: true, saved }) as const,
-            (error: unknown) => ({ ok: false, error, refused: false }) as const,
-          );
+        : await sendUnread(() => saveCareEvidence(null, input));
       if (result.ok) {
         if (op.isCurrent()) onSaved(result.saved);
         success(`Der Nachweis für ${child} ist gespeichert.`);
@@ -186,7 +183,7 @@ export function CareEvidenceModal({
       // instead of the draft, without a retry (ADR 0311).
       void formErrors.show(result.error, {
         object: "die Angabe zum Nachweis",
-        reload: "reload" in result ? result.reload : undefined,
+        reload: result.reload,
       });
     });
   };

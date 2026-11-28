@@ -273,6 +273,29 @@ describe("ConfirmDeleteModal scope slot", () => {
     return { onChange, onConfirm };
   }
 
+  it("says why an outside gate blocks the deletion", () => {
+    render(
+      <ConfirmDeleteModal
+        isOpen
+        title="Eintrag löschen"
+        description="Diese Aktion kann nicht rückgängig gemacht werden."
+        gate={{ mode: "twoStep" }}
+        confirmDisabled
+        confirmDisabledReason="Die gespeicherten Angaben werden noch geladen."
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+        loading={false}
+        error=""
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Ja, löschen" });
+
+    fireEvent.pointerDown(button, { pointerType: "touch" });
+    expect(document.querySelector("[data-action-hint]")).toHaveTextContent(
+      "Die gespeicherten Angaben werden noch geladen.",
+    );
+  });
+
   it("keeps the deletion blocked until a scope is chosen", () => {
     const { onChange } = renderScoped();
 

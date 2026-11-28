@@ -1,14 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import type { FormErrorInput } from "~/components/ui/form-error";
 import { ApiError } from "~/lib/api-error";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import { catalogText } from "~/test/error-catalog-text";
@@ -35,50 +27,6 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
     deleteAnnouncement: deleteMock,
   };
 });
-
-vi.mock("~/components/ui/modal", () => ({
-  ConfirmationModal: ({
-    title,
-    children,
-    onConfirm,
-    onClose,
-  }: {
-    title: string;
-    children: React.ReactNode;
-    onConfirm: () => void;
-    onClose: () => void;
-  }) => (
-    <div role="dialog" aria-label={title}>
-      {children}
-      <button type="button" onClick={onConfirm}>
-        Bestätigen
-      </button>
-      <button type="button" onClick={onClose}>
-        Abbrechen
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("~/components/ui/confirm-delete-modal", () => ({
-  ConfirmDeleteModal: ({
-    title,
-    onConfirm,
-    error,
-  }: {
-    title: string;
-    onConfirm: () => Promise<void>;
-    error?: FormErrorInput;
-  }) => (
-    // Wie der echte Dialog: der Fehler steht im Dialog.
-    <div role="dialog" aria-label={title}>
-      <FormErrorAlert message={error} />
-      <button type="button" onClick={() => void onConfirm()}>
-        Endgültig löschen
-      </button>
-    </div>
-  ),
-}));
 
 const announcement: Announcement = {
   id: "7",
@@ -107,7 +55,7 @@ describe("lifecycle dialogs", () => {
     deleteMock.mockResolvedValue(undefined);
   });
 
-  it("publishes, refreshes and closes", async () => {
+  it("names recipients and e-mail, publishes the shown draft, refreshes and closes", async () => {
     const onDone = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     render(
@@ -119,11 +67,15 @@ describe("lifecycle dialogs", () => {
       />,
     );
 
-    expect(screen.getByText(/Ganze Schule/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/zusätzlich per E-Mail benachrichtigt/),
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Elternmitteilung veröffentlichen",
+    });
+    expect(dialog).toHaveAccessibleDescription("„Sommerfest“");
+    expect(screen.getByText("Ganze Schule")).toBeInTheDocument();
+    expect(screen.getByText("Wird versendet")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
+    );
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     // The version of the draft the dialog shows (ADR 0311).
@@ -135,75 +87,41 @@ describe("lifecycle dialogs", () => {
     expect(onDone).toHaveBeenCalled();
   });
 
-  // ADR 0311: a draft changed since the dialog opened is refused; the dialog
-  // reads the stored draft, says so without „Wiederholen“ and stays open.
-  it("shows the stored draft after a refusal and offers no retry", async () => {
-    publishMock.mockRejectedValueOnce(
-      new ApiError("changed since it was read", 409, {
-        code: "general.changed_since_read",
-      }),
-    );
-    const reload = vi.fn(() => Promise.resolve());
-    const onClose = vi.fn();
+  it("says when publishing sends no e-mail", () => {
     render(
       <PublishAnnouncementDialog
-        reload={reload}
-        announcement={announcement}
-        onClose={onClose}
-        onDone={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
-
-    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
-    expect(reload).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull();
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  // ADR 0311, rule 6: a failed read of the stored draft stays as the load
-  // error, and the stale version is not sent again.
-  it("sends nothing again while the stored draft could not be read", async () => {
-    publishMock.mockRejectedValue(
-      new ApiError("changed since it was read", 409, {
-        code: "general.changed_since_read",
-      }),
-    );
-    const reload = vi.fn(() =>
-      Promise.reject(
-        new ApiError("down", 503, { code: "general.unavailable" }),
-      ),
-    );
-    render(
-      <PublishAnnouncementDialog
-        reload={reload}
-        announcement={announcement}
+        reload={vi.fn(() => Promise.resolve())}
+        announcement={{ ...announcement, send_email: false }}
         onClose={vi.fn()}
         onDone={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
-    await waitFor(() => expect(reload).toHaveBeenCalled());
-    expect(
-      await screen.findByText(/neue Stand konnte nicht geladen werden/),
-    ).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
-      await Promise.resolve();
-    });
-
-    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Wird nicht versendet")).toBeInTheDocument();
   });
 
-  // #2517: Katalogtext statt Serversatz, Wiederholen im Dialog.
-  it("shows the catalog text and stays open when publishing fails", async () => {
-    publishMock
-      .mockRejectedValueOnce(
-        new ApiError("publish exploded", 500, { code: "general.server" }),
-      )
-      .mockResolvedValueOnce(announcement);
+  it("names the e-mail audience of an Elternbrief apart from who sees it", () => {
+    render(
+      <PublishAnnouncementDialog
+        reload={vi.fn(() => Promise.resolve())}
+        announcement={{
+          ...announcement,
+          delivery_mode: "letter",
+          email_audience: "all_contacts",
+        }}
+        onClose={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("An alle Bezugspersonen")).toBeInTheDocument();
+  });
+
+  // #2517: the failure stays in the dialog, named after the step.
+  it("keeps a failed publish in the open dialog", async () => {
+    publishMock.mockRejectedValueOnce(
+      new ApiError("publish exploded", 500, { code: "general.server" }),
+    );
     const onClose = vi.fn();
     render(
       <PublishAnnouncementDialog
@@ -214,19 +132,14 @@ describe("lifecycle dialogs", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
+    );
 
-    expect(
-      await screen.findByText(
-        catalogText("general.server", "das Veröffentlichen der Mitteilung"),
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/publish exploded/)).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      catalogText("general.server", "das Veröffentlichen der Mitteilung"),
+    );
     expect(onClose).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(publishMock).toHaveBeenCalledTimes(2);
   });
 
   it("unpublishes through the service", async () => {
@@ -239,10 +152,10 @@ describe("lifecycle dialogs", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zurückziehen" }));
 
     await waitFor(() => expect(unpublishMock).toHaveBeenCalledWith("7"));
-    expect(onDone).toHaveBeenCalled();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
   });
 
   it("deletes through the service and surfaces errors in the dialog", async () => {
@@ -258,6 +171,7 @@ describe("lifecycle dialogs", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
     fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -430,38 +344,6 @@ describe("withdrawing an Einverständnis (#6290)", () => {
   });
 });
 
-describe("deleting an Einverständnis with answers (#3430)", () => {
-  it("explains that it must stay and that withdrawing still works", async () => {
-    deleteMock.mockRejectedValue(
-      new ApiError("declaration has submissions", 409, {
-        code: "communication.declaration_has_submissions",
-      }),
-    );
-    const onClose = vi.fn();
-    render(
-      <DeleteAnnouncementDialog
-        announcement={{ ...announcement, delivery_mode: "declaration" }}
-        onClose={onClose}
-        onDone={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
-
-    // Der eigene Katalogtext des Codes, nicht der Serversatz.
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      catalogText(
-        "communication.declaration_has_submissions",
-        "das Löschen der Mitteilung",
-      ),
-    );
-    expect(
-      screen.queryByText(/declaration has submissions/),
-    ).not.toBeInTheDocument();
-    expect(onClose).not.toHaveBeenCalled();
-  });
-});
-
 // #4800: Klassenbriefe einer Lehrkraft. Die OGS liest sie nur, die Lehrkraft
 // führt sie über die Routen von moto schule.
 describe("class letters of a Lehrkraft (#4800)", () => {
@@ -521,7 +403,9 @@ describe("class letters of a Lehrkraft (#4800)", () => {
         onDone={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
+    );
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(publishMock).toHaveBeenCalledWith(

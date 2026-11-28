@@ -208,6 +208,20 @@ export function classLetterReadOnlyNote(
   return sender ? `Von ${sender} · nur zum Lesen` : undefined;
 }
 
+/**
+ * Who gets the e-mail, a separate axis from who sees the entry in the
+ * portal: an Elternbrief names its audience, every other entry only whether
+ * a mail goes out.
+ */
+export function describeAnnouncementEmail(announcement: Announcement): string {
+  if (isLetter(announcement)) {
+    return announcement.email_audience === "all_contacts"
+      ? "An alle Bezugspersonen"
+      : "An Bezugspersonen mit Portalzugang";
+  }
+  return announcement.send_email ? "Wird versendet" : "Wird nicht versendet";
+}
+
 /** Kurze, namenlose Zusammenfassung für die Liste (z. B. „2 Gruppen, 1 Klasse"). */
 export function summarizeTargets(targets: AnnouncementTarget[]): string {
   if (targets.length === 0) return "–";

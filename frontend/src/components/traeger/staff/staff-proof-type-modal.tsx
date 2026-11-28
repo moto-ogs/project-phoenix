@@ -15,7 +15,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { useDraftOn, sendUnread } from "~/lib/swr/read-draft";
 import {
   saveStaffProofType,
   type StaffProofType,
@@ -155,10 +155,7 @@ export function StaffProofTypeModal({
         ? await change.submit((version) =>
             saveStaffProofType({ id: existing.id, version }, input),
           )
-        : await saveStaffProofType(null, input).then(
-            (saved) => ({ ok: true, saved }) as const,
-            (error: unknown) => ({ ok: false, error, refused: false }) as const,
-          );
+        : await sendUnread(() => saveStaffProofType(null, input));
       if (result.ok) {
         if (op.isCurrent()) onSaved(result.saved);
         success(`Die Nachweisart „${result.saved.name}“ ist gespeichert.`);
@@ -175,7 +172,7 @@ export function StaffProofTypeModal({
       // the form, without a retry (ADR 0311).
       void formErrors.show(result.error, {
         object: "die Nachweisart",
-        reload: "reload" in result ? result.reload : undefined,
+        reload: result.reload,
       });
     });
   };

@@ -44,7 +44,11 @@ import {
 } from "~/lib/hooks/use-refresh-after-write";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { type ReadDraftResult, useDraftOn } from "~/lib/swr/read-draft";
+import {
+  type ReadDraftResult,
+  useDraftOn,
+  sendUnread,
+} from "~/lib/swr/read-draft";
 import {
   type CostBearer,
   type CostBearerInput,
@@ -105,10 +109,7 @@ function useCostBearerSave(
       const outcome: ReadDraftResult<CostBearer> =
         id && change
           ? await change((version) => saveCostBearer(id, draft, version))
-          : await saveCostBearer(id, draft).then(
-              (saved) => ({ ok: true, saved }) as const,
-              (error: unknown) => ({ ok: false, error, refused: false }),
-            );
+          : await sendUnread(() => saveCostBearer(id, draft));
       if (outcome.ok) {
         success("Der Kostenträger ist gespeichert.");
         return op.isCurrent() ? "saved" : "late";

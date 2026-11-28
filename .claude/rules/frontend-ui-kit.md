@@ -112,7 +112,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Row leading elsewhere: icon, title, subtitle, badge, arrow | `ListRowLink`: `selected`, `accent`, `overline`/`meta`/`unread`; alone `framed` | `~/components/ui/list-row-link` |
 | Rows with their own actions in a desktop column | `ResponsiveActionList`, rows `ResponsiveActionRow`, actions `ResponsiveRowActions`. Lint `no-hand-rolled-action-row`, `row-actions-slot` | `~/components/ui/responsive-action-list` |
 | Transient feedback | `Toast` — presentational surface only; queue, lifetime, and placement stay in `ToastProvider` | `~/components/ui/toast` |
-| Modal dialog | `Modal`, `ConfirmationModal` (header `icon`, `description`; loading locks closing, opt-out `dismissibleWhileLoading="<Grund>"`) | `~/components/ui/modal` |
+| Modal dialog | `Modal`, `ConfirmationModal` (header `icon`, `description`, `error` above the content; loading locks closing, opt-out `dismissibleWhileLoading="<Grund>"`) | `~/components/ui/modal` |
 | Form in a modal | `FormModal`; save: `useFormModalPending` | `~/components/ui/form-modal` |
 | Delete confirmation (every deletion; `bauart/one-delete-confirm` fails a `ConfirmationModal`, hand-built `Modal` or `window.confirm` for Löschen) | `ConfirmDeleteModal` — gate `twoStep`, or `textConfirm` for irreversible data loss; a series/child scope choice goes in its `scope` slot, not in a `ChoiceModal` in front | `~/components/ui/confirm-delete-modal` |
 | Multi-step wizard | `WizardStepper` | `~/components/ui/wizard-stepper` |

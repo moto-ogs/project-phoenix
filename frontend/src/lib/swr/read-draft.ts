@@ -121,6 +121,21 @@ export type ReadDraftResult<A> =
       readonly reload?: () => Promise<unknown>;
     };
 
+/**
+ * A send that rests on no read (a create, an action without a token), in
+ * the result shape of `submit`: a surface that sends with or without a read
+ * handles one result. Never throws.
+ */
+export async function sendUnread<A>(
+  send: () => Promise<A>,
+): Promise<ReadDraftResult<A>> {
+  try {
+    return { ok: true, saved: await send() };
+  } catch (error) {
+    return { ok: false, error, refused: false };
+  }
+}
+
 export interface ReadDraft<T, D, K, A> {
   /** The read the draft rests on; its token goes with the save. */
   readonly base: T | undefined;

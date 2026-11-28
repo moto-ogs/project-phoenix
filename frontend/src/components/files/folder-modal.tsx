@@ -26,7 +26,7 @@ import {
   useReadDraftForm,
   useSwrLoadError,
 } from "~/lib/hooks/use-swr-load-error";
-import { useDraftOn } from "~/lib/swr/read-draft";
+import { sendUnread, useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
 import { fileKeys } from "~/lib/swr/portal-keys";
@@ -188,20 +188,13 @@ export function FolderModal({
         ? await edit.submit((version) =>
             filesService.updateFolder(initial.id, input, version),
           )
-        : await filesService.createFolder(input).then(
-            (saved) => ({ ok: true as const, saved }),
-            (error: unknown) => ({
-              ok: false as const,
-              error,
-              refused: false,
-            }),
-          );
+        : await sendUnread(() => filesService.createFolder(input));
       if (result.ok) {
         onSaved();
         if (op.isCurrent()) onClose();
         return;
       }
-      if ("skipped" in result && result.skipped) return;
+      if (result.skipped) return;
       logger.error("folder_save_failed", {
         folder_id: initial?.id,
         error:
@@ -213,7 +206,7 @@ export function FolderModal({
       // Changed meanwhile: `reload` shows the stored folder, no retry.
       await formErrors.show(
         result.error,
-        result.refused && "reload" in result
+        result.refused && result.reload
           ? { object: "das Speichern des Ordners", reload: result.reload }
           : {
               object: "das Speichern des Ordners",

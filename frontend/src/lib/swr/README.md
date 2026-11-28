@@ -143,6 +143,11 @@ A surface reads stored state in one of three ways:
    while `canSubmit` is false without clearing the shown error, its
    `loadError` shows the failed read, and its `waitReason` says why saving
    waits (`readStateWaitReason` for a surface without a form).
+   A surface that sends with or without a read (a create beside an edit)
+   wraps the unread send in `sendUnread`, so both give one result. A dialog
+   that asks before a step takes `useConfirmAction`
+   (`~/lib/hooks/use-confirm-action`): attempt, error in the dialog, retry
+   and closing in one place.
    A write of the surface that changes the stored state but not what the
    draft edits, and whose server check took the draft's token (an
    announcement's attachment), hands its answer to `adopt`: the draft keeps

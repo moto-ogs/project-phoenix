@@ -1609,7 +1609,7 @@ function AnnouncementFormModal({
             updateAnnouncement(persistedId, input, version),
           );
           if (!result.ok) {
-            if ("skipped" in result && result.skipped) return "refused";
+            if (result.skipped) return "refused";
             if (!result.refused) throw result.error;
             logger.error("announcement_save_failed", {
               mode: "update",

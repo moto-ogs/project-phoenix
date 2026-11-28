@@ -1,19 +1,15 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
 import { BellRing, Pencil, Send, Trash2, Undo2 } from "lucide-react";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { IconTile } from "~/components/ui/icon-tile";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
-import { useApiFormError } from "~/contexts/ToastContext";
-import {
-  readStateWaitReason,
-  useReadDraftForm,
-} from "~/lib/hooks/use-swr-load-error";
-import { useActionOn, type ReadAction } from "~/lib/swr/read-draft";
-import { createLogger } from "~/lib/logger";
+import { useConfirmAction } from "~/lib/hooks/use-confirm-action";
+import { useActionOn } from "~/lib/swr/read-draft";
 import {
   deleteAnnouncement,
   publishAnnouncement,
@@ -21,11 +17,16 @@ import {
 } from "~/lib/parent-announcements-api";
 import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import { isClassLetter, withApiBase } from "~/lib/parent-announcements-api";
-import { summarizeTargets } from "./announcement-meta";
+import {
+  isClassLetter,
+  isLetter,
+  withApiBase,
+} from "~/lib/parent-announcements-api";
+import {
+  describeAnnouncementEmail,
+  summarizeTargets,
+} from "./announcement-meta";
 import { reportsConcept } from "~/lib/concepts/reports";
-
-const logger = createLogger({ component: "AnnouncementLifecycle" });
 
 /**
  * Die Lebenszyklus-Aktionen einer Mitteilung, geteilt zwischen der Liste
@@ -41,81 +42,6 @@ interface LifecycleDialogProps {
   readonly apiBase?: AnnouncementApiBase;
 }
 
-/**
- * Ein Lebenszyklus-Schritt mit Rückfrage (#2517): der Fehler bleibt im
- * offenen Dialog (Katalogtext, Wiederholen). Den Erfolg zeigt die Liste
- * selbst, die danach neu lädt. Mit `read` schickt der Schritt den Stand, den
- * der Dialog zeigt (ADR 0311): eine Ablehnung zeigt den neu gelesenen Stand
- * ohne „Wiederholen“, und bis er gelesen ist, geht nichts raus.
- */
-function useLifecycleAction(
-  run: () => Promise<unknown>,
-  {
-    onDone,
-    onClose,
-    object,
-    logEvent,
-    read,
-  }: {
-    onDone: LifecycleDialogProps["onDone"];
-    onClose: () => void;
-    object: string;
-    logEvent: string;
-    read?: ReadAction;
-  },
-) {
-  const [pending, setPending] = useState(false);
-  const errors = useApiFormError();
-  const form = useReadDraftForm(read ?? null, errors, object);
-  const latestConfirmRef = useRef<() => void>(() => undefined);
-
-  const confirm = async () => {
-    if (!form.begin()) return;
-    setPending(true);
-    const result = read
-      ? await read.submit(run)
-      : await run().then(
-          (saved) => ({ ok: true as const, saved }),
-          (error: unknown) => ({ ok: false as const, error, refused: false }),
-        );
-    if (!result.ok) {
-      setPending(false);
-      if ("skipped" in result && result.skipped) return;
-      logger.error(logEvent, {
-        error:
-          result.error instanceof Error
-            ? result.error.message
-            : String(result.error),
-      });
-      await errors.show(
-        result.error,
-        result.refused && "reload" in result
-          ? { object, reload: result.reload }
-          : { object, retry: () => latestConfirmRef.current() },
-      );
-      return;
-    }
-    try {
-      await onDone();
-    } finally {
-      setPending(false);
-      onClose();
-    }
-  };
-  // „Wiederholen“ ruft die Aktion mit dem dann aktuellen Stand auf.
-  useLayoutEffect(() => {
-    latestConfirmRef.current = () => void confirm();
-  });
-
-  return {
-    pending,
-    error: errors.error ?? form.loadError,
-    confirm,
-    blocked: read !== undefined && !read.canSubmit,
-    blockedReason: read ? readStateWaitReason(read.status) : undefined,
-  };
-}
-
 export function PublishAnnouncementDialog({
   announcement,
   onClose,
@@ -129,72 +55,18 @@ export function PublishAnnouncementDialog({
    */
   readonly reload: () => Promise<unknown>;
 }) {
-  // Veröffentlicht wird der Entwurf, den der Dialog zeigt.
   const read = useActionOn(
     { opening: announcement.id, data: announcement, reload },
     { token: (shown) => shown.version },
   );
-  const { pending, error, confirm, blocked, blockedReason } =
-    useLifecycleAction(
-      () => publishAnnouncement(announcement.id, announcement.version, apiBase),
-      {
-        onDone,
-        onClose,
-        object: "das Veröffentlichen der Mitteilung",
-        logEvent: "announcement_publish_failed",
-        read,
-      },
-    );
-
-  return (
-    <ConfirmationModal
-      isOpen
-      onClose={onClose}
-      onConfirm={() => void confirm()}
-      title="Elternmitteilung veröffentlichen"
-      confirmText="Jetzt veröffentlichen"
-      cancelText="Abbrechen"
-      isConfirmDisabled={blocked}
-      confirmDisabledReason={blockedReason}
-      isConfirmLoading={pending}
-      loadingText="Wird veröffentlicht …"
-    >
-      <div className="space-y-2 text-sm text-gray-700">
-        <FormErrorAlert message={error} />
-        <p>
-          „{announcement.title}“ wird für{" "}
-          <span className="font-medium">
-            {summarizeTargets(announcement.targets)}
-          </span>{" "}
-          sichtbar.
-        </p>
-        {announcement.send_email && (
-          <p>
-            Die erreichten Eltern werden zusätzlich per E-Mail benachrichtigt.
-          </p>
-        )}
-        <p className="text-xs text-gray-500">
-          Nach dem Veröffentlichen kann die Mitteilung nicht mehr bearbeitet
-          werden.
-        </p>
-      </div>
-    </ConfirmationModal>
-  );
-}
-
-export function UnpublishAnnouncementDialog({
-  announcement,
-  onClose,
-  onDone,
-  apiBase,
-}: LifecycleDialogProps) {
-  const { pending, error, confirm } = useLifecycleAction(
-    () => withApiBase(unpublishAnnouncement, announcement.id, apiBase),
+  const { pending, error, confirm, blocked, blockedReason } = useConfirmAction(
+    () => publishAnnouncement(announcement.id, announcement.version, apiBase),
     {
       onDone,
       onClose,
-      object: "das Zurückziehen der Mitteilung",
-      logEvent: "announcement_unpublish_failed",
+      object: "das Veröffentlichen der Mitteilung",
+      logEvent: "announcement_publish_failed",
+      read,
     },
   );
 
@@ -203,36 +75,120 @@ export function UnpublishAnnouncementDialog({
       isOpen
       onClose={onClose}
       onConfirm={() => void confirm()}
-      title="Elternmitteilung zurückziehen"
+      title="Elternmitteilung veröffentlichen"
+      description={`„${announcement.title}“`}
+      icon={<IconTile tone="green" icon={<Send aria-hidden />} />}
+      error={error}
+      confirmText="Jetzt veröffentlichen"
+      confirmVariant="success"
+      confirmTooltip={
+        isLetter(announcement) || announcement.send_email
+          ? "Zeigt die Mitteilung sofort den gewählten Eltern und verschickt die E-Mails."
+          : "Zeigt die Mitteilung sofort den gewählten Eltern."
+      }
+      cancelText="Abbrechen"
+      isConfirmDisabled={blocked}
+      confirmDisabledReason={blockedReason}
+      isConfirmLoading={pending}
+      loadingText="Wird veröffentlicht …"
+    >
+      <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Sichtbar für">
+              {summarizeTargets(announcement.targets)}
+            </DataField>
+            <DataField inline label="E-Mail an die Eltern">
+              {describeAnnouncementEmail(announcement)}
+            </DataField>
+          </DataGrid>
+        </InsetPanel>
+        <p>
+          Nach dem Veröffentlichen kannst du die Mitteilung nicht mehr
+          bearbeiten.
+        </p>
+      </div>
+    </ConfirmationModal>
+  );
+}
+
+const UNSENT_MAILS_STOP =
+  "Noch nicht versendete E-Mail-Benachrichtigungen werden abgebrochen.";
+
+export function UnpublishAnnouncementDialog({
+  announcement,
+  onClose,
+  onDone,
+  apiBase,
+}: LifecycleDialogProps) {
+  const { pending, error, confirm } = useConfirmAction(
+    () => withApiBase(unpublishAnnouncement, announcement.id, apiBase),
+    {
+      onDone,
+      onClose,
+      object: "das Zurückziehen der Mitteilung",
+      logEvent: "announcement_unpublish_failed",
+    },
+  );
+  const declaration = announcement.delivery_mode === "declaration";
+
+  return (
+    <ConfirmationModal
+      isOpen
+      onClose={onClose}
+      onConfirm={() => void confirm()}
+      title={
+        declaration
+          ? "Einverständnis zurückziehen"
+          : "Elternmitteilung zurückziehen"
+      }
+      description={`„${announcement.title}“`}
+      icon={<IconTile tone="orange" icon={<Undo2 aria-hidden />} />}
+      error={error}
       confirmText="Zurückziehen"
+      confirmVariant="warning"
+      confirmTooltip="Macht den Eintrag sofort wieder zum Entwurf."
       cancelText="Abbrechen"
       isConfirmLoading={pending}
       loadingText="Wird zurückgezogen …"
     >
-      <div className="space-y-2 text-sm text-gray-700">
-        <FormErrorAlert message={error} />
-        {announcement.delivery_mode === "declaration" ? (
+      <div className="space-y-3 text-sm text-gray-700">
+        <InsetPanel padding="sm">
+          <DataGrid columns={1}>
+            <DataField inline label="Bisher sichtbar für">
+              {summarizeTargets(announcement.targets)}
+            </DataField>
+          </DataGrid>
+        </InsetPanel>
+        {declaration ? (
           // Wer schon geantwortet hat, behält das Einverständnis, damit eine
           // Zustimmung widerrufbar bleibt (#6290).
-          <p>
-            „{announcement.title}“ kehrt in den Entwurfsstatus zurück. Eltern
-            können nicht mehr neu antworten.
-          </p>
+          <>
+            <p>
+              Das Einverständnis wird wieder ein Entwurf. Eltern können nicht
+              mehr neu antworten.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-gray-600">
+              <li>{UNSENT_MAILS_STOP}</li>
+              <li>Bisherige Antworten bleiben gespeichert.</li>
+              <li>
+                Wer schon geantwortet hat, sieht das Einverständnis weiter und
+                kann eine Zustimmung widerrufen.
+              </li>
+              <li>
+                Änderst du danach den Text, müssen die Eltern noch einmal
+                antworten.
+              </li>
+            </ul>
+          </>
         ) : (
-          <p>
-            „{announcement.title}“ wird für die Eltern nicht mehr sichtbar und
-            kehrt in den Entwurfsstatus zurück.
-          </p>
-        )}
-        <p className="text-xs text-gray-500">
-          Noch nicht versendete E-Mail-Benachrichtigungen werden abgebrochen.
-        </p>
-        {announcement.delivery_mode === "declaration" && (
-          <p className="text-xs text-gray-500">
-            Bisherige Antworten bleiben gespeichert. Wer schon geantwortet hat,
-            sieht das Einverständnis weiter und kann eine Zustimmung widerrufen.
-            Änderst du danach den Text, müssen die Eltern noch einmal antworten.
-          </p>
+          <>
+            <p>
+              Die Mitteilung wird für die Eltern nicht mehr sichtbar und wird
+              wieder ein Entwurf.
+            </p>
+            <p className="text-gray-600">{UNSENT_MAILS_STOP}</p>
+          </>
         )}
       </div>
     </ConfirmationModal>
@@ -245,10 +201,7 @@ export function DeleteAnnouncementDialog({
   onDone,
   apiBase,
 }: LifecycleDialogProps) {
-  // Ein Einverständnis mit Antworten (#3430) bleibt als Nachweis stehen:
-  // communication.declaration_has_submissions bringt dafür einen eigenen
-  // Katalogtext mit.
-  const { pending, error, confirm } = useLifecycleAction(
+  const { pending, error, confirm } = useConfirmAction(
     () => withApiBase(deleteAnnouncement, announcement.id, apiBase),
     {
       onDone,

@@ -93,6 +93,10 @@ interface ConfirmDeleteModalProps {
   // Used to hold deletion until a prerequisite (e.g. a blast-radius preview)
   // has loaded successfully.
   readonly confirmDisabled?: boolean;
+  /**
+   * Why `confirmDisabled` blocks the flow; see `Button`'s `disabledReason`.
+   */
+  readonly confirmDisabledReason?: string;
   readonly onConfirm: () => Promise<void> | void;
   readonly onClose: () => void;
   readonly loading: boolean;
@@ -130,6 +134,7 @@ export function ConfirmDeleteModal({
   gate,
   scope,
   confirmDisabled: externalConfirmDisabled = false,
+  confirmDisabledReason,
   onConfirm,
   onClose,
   loading,
@@ -204,6 +209,8 @@ export function ConfirmDeleteModal({
   const kitDefault = useKitDefault();
   const firstStepHint = kitDefault(FIRST_STEP_TOOLTIP);
   const confirmHint = confirmTooltip ?? kitDefault(CONFIRM_TOOLTIP);
+  const blockedReason =
+    externalConfirmDisabled && !loading ? confirmDisabledReason : undefined;
 
   const footer = (
     <>
@@ -221,6 +228,7 @@ export function ConfirmDeleteModal({
           size="md"
           onClick={() => setConfirmed(true)}
           disabled={gateBlocked}
+          disabledReason={blockedReason}
           className="disabled:cursor-not-allowed"
           tooltip={firstStepHint}
         >
@@ -235,6 +243,7 @@ export function ConfirmDeleteModal({
           size="md"
           onClick={() => void onConfirm()}
           disabled={confirmDisabled}
+          disabledReason={blockedReason}
           className="disabled:cursor-not-allowed"
           tooltip={confirmHint}
         >

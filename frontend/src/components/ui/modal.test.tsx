@@ -698,6 +698,38 @@ describe("ConfirmationModal", () => {
     vi.useRealTimers();
   });
 
+  it("names the object in its description and shows the step's failure above the content", async () => {
+    render(
+      <TestWrapper>
+        <ConfirmationModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Umfrage beenden"
+          description="„Sommerfest“"
+          error="Das Beenden hat nicht geklappt."
+        >
+          <p>Danach kann niemand mehr teilnehmen.</p>
+        </ConfirmationModal>
+      </TestWrapper>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Umfrage beenden" }),
+    ).toHaveAccessibleDescription("„Sommerfest“");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Das Beenden hat nicht geklappt.");
+    expect(
+      alert.compareDocumentPosition(
+        screen.getByText("Danach kann niemand mehr teilnehmen."),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("should render with default button texts", async () => {
     render(
       <TestWrapper>
