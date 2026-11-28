@@ -108,3 +108,33 @@ type StaffPersonChange struct {
 	Kind   string
 	Before string
 }
+
+// PersonDifferences names the fields in which a school's person differs
+// from the record (#8208), in the order of StaffRecordFields. Names compare
+// in NFC. A birthday counts only where the record keeps one: a school that
+// knows a birthday the Träger lacks holds nothing the Träger could hand on.
+func (r TraegerStaffRecord) PersonDifferences(school StaffPerson) []string {
+	var fields []string
+	if textnorm.Name(r.FirstName) != textnorm.Name(school.FirstName) {
+		fields = append(fields, StaffFieldFirstName)
+	}
+	if textnorm.Name(r.LastName) != textnorm.Name(school.LastName) {
+		fields = append(fields, StaffFieldLastName)
+	}
+	if r.Birthday != "" && r.Birthday != school.Birthday {
+		fields = append(fields, StaffFieldBirthday)
+	}
+	return fields
+}
+
+// PersonForSchool is the person „Für diese Schule übernehmen“ writes into
+// a school (#8208): the record's names and its birthday, or the school's
+// birthday where the record keeps none, so that the take-over never empties
+// a value the school knows.
+func (r TraegerStaffRecord) PersonForSchool(school StaffPerson) StaffPerson {
+	adopted := StaffPerson{FirstName: textnorm.Name(r.FirstName), LastName: textnorm.Name(r.LastName), Birthday: r.Birthday}
+	if adopted.Birthday == "" {
+		adopted.Birthday = school.Birthday
+	}
+	return adopted
+}

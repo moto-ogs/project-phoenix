@@ -46,6 +46,7 @@ func RecordRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/{id}/personnel-number", Portals: traegerPortal, Request: PersonnelNumberRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "PUT", Pattern: "/{id}/employer-numbers/{schoolId}", Portals: traegerPortal, Request: EmployerNumberRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "PUT", Pattern: "/{id}/person", Portals: traegerPortal, Request: PersonRequest{}, NoData: true},
+		{Method: "PUT", Pattern: "/{id}/school-persons/{schoolId}", Portals: traegerPortal, Request: SchoolPersonRequest{}, NoData: true},
 		{Method: "GET", Pattern: "/{id}/financial", Portals: traegerPortal, Response: workforce.TraegerStaffFinancial{}},
 		{Method: "POST", Pattern: "/{id}/financial/reveal", Portals: traegerPortal, Response: workforce.TraegerStaffFinancial{}},
 		{Method: "PUT", Pattern: "/{id}/financial", Portals: traegerPortal, Request: StaffFinancialRequest{}, Response: IDResponse{}},

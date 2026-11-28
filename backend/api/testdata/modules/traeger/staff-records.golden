@@ -22,3 +22,4 @@ PUT /traeger/staff-records/{id}/employer-numbers/{schoolId} -> basis
 PUT /traeger/staff-records/{id}/financial -> basis
 PUT /traeger/staff-records/{id}/person -> basis
 PUT /traeger/staff-records/{id}/personnel-number -> basis
+PUT /traeger/staff-records/{id}/school-persons/{schoolId} -> basis

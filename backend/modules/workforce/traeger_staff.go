@@ -179,6 +179,22 @@ type TraegerStaffEmployment struct {
 	// a change sends back (ADR 0311).
 	EmployerPersonnelNumber *string `json:"employer_personnel_number"`
 	EmployerNumberVersion   string  `json:"employer_number_version"`
+	// SchoolPerson is the person as the school keeps it where name or
+	// birthday differ from the record (#8208): the schools keep their own
+	// person rows (ADR 0089 section 3), and the record names where they
+	// differ. nil where they agree or the employment has ended. Only the
+	// view of one record carries it.
+	SchoolPerson *TraegerStaffSchoolPerson `json:"school_person"`
+}
+
+// TraegerStaffSchoolPerson is the person of one Einsatzort that differs
+// from the record. Birthday is a calendar day (YYYY-MM-DD) or empty; Fields
+// names the differing fields (first_name, last_name, birthday).
+type TraegerStaffSchoolPerson struct {
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Birthday  string   `json:"birthday"`
+	Fields    []string `json:"fields"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.
@@ -361,6 +377,13 @@ type TraegerStaffRecords interface {
 	// schools keep their own person rows. It answers no record: a reader
 	// loads it again, which writes the read into the access log.
 	UpdatePerson(ctx context.Context, actor TraegerStaffActor, recordID int64, person TraegerStaffPerson) error
+	// AdoptPersonAtSchool writes the record's name and birthday into the
+	// person of its Einsatzort schoolID (#8208), „Für diese Schule
+	// übernehmen“; every other school keeps its own. A birthday the record
+	// lacks keeps the school's. expectedVersion is the PersonVersion the
+	// view read (readstate.ErrChanged otherwise); a school that is no live
+	// Einsatzort of the record is ErrTraegerStaffRecordNotFound.
+	AdoptPersonAtSchool(ctx context.Context, actor TraegerStaffActor, recordID, schoolID int64, expectedVersion string) error
 	Financial(ctx context.Context, actor TraegerStaffActor, recordID int64, reveal bool) (TraegerStaffFinancial, error)
 	UpdateFinancial(ctx context.Context, actor TraegerStaffActor, recordID int64, input StammdatenFinancialInput) error
 	Dissolve(ctx context.Context, actor TraegerStaffActor, recordID int64) error

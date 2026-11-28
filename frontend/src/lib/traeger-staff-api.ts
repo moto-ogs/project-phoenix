@@ -116,6 +116,44 @@ export interface StaffEmployment {
   readonly employerPersonnelNumber: string | null;
   /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
   readonly employerNumberVersion: string;
+  /**
+   * Die Person, wie die Schule sie führt, wo Name oder Geburtstag von der
+   * Akte abweichen (#8208); `null`, wenn alles gleich ist oder die
+   * Beschäftigung beendet ist. Nur die Ansicht einer Akte trägt sie.
+   */
+  readonly schoolPerson?: StaffSchoolPerson | null;
+}
+
+/** Name und Geburtstag einer Schule, die von der Akte abweichen. */
+export interface StaffSchoolPerson {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Kalendertag `YYYY-MM-DD` oder leer. */
+  readonly birthday: string;
+  /** Die abweichenden Felder, in der Reihenfolge der Akte. */
+  readonly fields: readonly StaffPersonField[];
+}
+
+/** Die Felder der Person einer Akte. */
+export type StaffPersonField = "first_name" | "last_name" | "birthday";
+
+const STAFF_PERSON_FIELDS: readonly StaffPersonField[] = [
+  "first_name",
+  "last_name",
+  "birthday",
+];
+
+function mapSchoolPerson(
+  person: traegerStaffRecordsContract.TraegerStaffSchoolPerson | null,
+): StaffSchoolPerson | null {
+  if (!person) return null;
+  const fields = person.fields ?? [];
+  return {
+    firstName: person.first_name,
+    lastName: person.last_name,
+    birthday: person.birthday,
+    fields: STAFF_PERSON_FIELDS.filter((field) => fields.includes(field)),
+  };
 }
 
 export interface StaffRecordSummary {
@@ -326,6 +364,7 @@ function mapSummary(
       employerBody: employment.employer_body,
       employerPersonnelNumber: employment.employer_personnel_number,
       employerNumberVersion: employment.employer_number_version,
+      schoolPerson: mapSchoolPerson(employment.school_person),
     })),
   };
 }
@@ -597,6 +636,30 @@ export async function updateStaffPerson(
     params: { id },
     body,
   });
+}
+
+/**
+ * „Für diese Schule übernehmen“ (#8208): schreibt Name und Geburtstag der
+ * Akte in die Person an genau dieser Schule; die anderen Schulen behalten
+ * ihre Angaben. Fehlt der Akte ein Geburtstag, bleibt der der Schule. Die
+ * Antwort trägt keine Akte: Wer sie zeigt, lädt sie neu. `expectedVersion`
+ * ist der `personVersion` der gezeigten Akte (ADR 0311).
+ */
+export async function adoptStaffPersonAtSchool(
+  id: string,
+  schoolId: string,
+  expectedVersion: string,
+): Promise<void> {
+  await bffJson(
+    "org",
+    "PUT /traeger/staff-records/{id}/school-persons/{schoolId}",
+    {
+      params: { id, schoolId },
+      body: {
+        expected_version: expectedVersion,
+      } satisfies traegerStaffRecordsContract.SchoolPersonRequest,
+    },
+  );
 }
 
 export async function revealStaffFinancial(

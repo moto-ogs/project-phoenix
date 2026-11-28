@@ -90,3 +90,19 @@ func TestNameMatchComparesNamesInNFC(t *testing.T) {
 	hire := StaffHire{FirstName: "Jonas", LastName: "Müller", Birthday: "1990-04-12"}
 	assert.Equal(t, HireMatchNameBirthday, hire.NameMatch("jonas", "Mu\u0308ller", "1990-04-12"))
 }
+
+// #8208: a school differs where its names differ in NFC or where it lacks
+// the record's birthday; the take-over keeps a birthday only the school has.
+func TestPersonDifferencesAndTheTakeOverForOneSchool(t *testing.T) {
+	t.Parallel()
+	record := TraegerStaffRecord{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}
+	assert.Empty(t, record.PersonDifferences(StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}))
+	assert.Equal(t, []string{StaffFieldFirstName, StaffFieldBirthday},
+		record.PersonDifferences(StaffPerson{FirstName: "Mira", LastName: "Müller", Birthday: ""}))
+	assert.Equal(t, StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}, record.PersonForSchool(StaffPerson{FirstName: "Mira"}))
+
+	record.Birthday = ""
+	school := StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1985-01-02"}
+	assert.Empty(t, record.PersonDifferences(school), "a birthday the record lacks is no difference")
+	assert.Equal(t, "1985-01-02", record.PersonForSchool(school).Birthday, "the take-over keeps the school's birthday")
+}

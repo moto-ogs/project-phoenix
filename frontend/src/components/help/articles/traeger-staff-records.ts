@@ -128,7 +128,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigst du unter `Vorschläge`.",
       "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
       "Ein Wert, den du beim Verknüpfen nicht wählst, bleibt mit seiner Schule im `Verlauf` der Akte.",
-      "Korrigierst du Name oder Geburtstag, steht der alte Wert im `Verlauf` der Akte. Deine Listen, Exporte, die `Vorschläge` und die Prüfung beim Einstellen nutzen danach die neuen Werte. Die Schulen pflegen ihre eigenen Angaben weiter selbst.",
+      "Korrigierst du Name oder Geburtstag, steht der alte Wert im `Verlauf` der Akte. Deine Listen, Exporte, die `Vorschläge` und die Prüfung beim Einstellen nutzen danach die neuen Werte. Die Schulen pflegen ihre eigenen Angaben weiter selbst. Führt eine Schule die Person anders, steht sie in der Karte `Person` unter `Andere Angaben an Schulen`. Mit `Für diese Schule übernehmen` schreibst du Name und Geburtstag der Akte in genau diese Schule. Die anderen Schulen bleiben gleich.",
       "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
       "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
       "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",

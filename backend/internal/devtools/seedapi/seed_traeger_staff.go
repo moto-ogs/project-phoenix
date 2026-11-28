@@ -65,6 +65,9 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 		if err := seedTraegerStaffFinancial(rt.Client, auth, first); err != nil {
 			return err
 		}
+		if err := seedTraegerStaffPerson(rt.Client, auth, first); err != nil {
+			return err
+		}
 	}
 	imported, hired, err := seedTraegerStaffIntake(rt.Client, auth, rt.Bootstrap.SchoolID)
 	if err != nil {

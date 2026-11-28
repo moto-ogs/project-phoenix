@@ -56,3 +56,83 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 	})
 	return publicTraegerStaffError(err)
 }
+
+// noteAdoptedFromTraeger marks the school's audit entries of a take-over.
+const noteAdoptedFromTraeger = "Aus der Personalakte des Trägers übernommen"
+
+// AdoptPersonAtSchool writes the record's person into the person of one
+// Einsatzort (#8208). The record is read in the Träger transaction, the
+// school's person is locked and written in that school's tenant transaction
+// with an audit entry per changed field (ADR 0105): no other school and no
+// field the record leaves empty is touched. Nothing is pushed by itself; the
+// Personalverwaltung decides per school.
+func (t *TraegerStaff) AdoptPersonAtSchool(ctx context.Context, actor workforce.TraegerStaffActor, recordID, schoolID int64, expectedVersion string) error {
+	var record domain.TraegerStaffRecord
+	var link domain.TraegerStaffLink
+	err := t.released(ctx, actor, func(ctx context.Context) error {
+		found, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false)
+		if err != nil {
+			return err
+		}
+		if err := readstate.Check(expectedVersion, personVersion(found)); err != nil {
+			return err
+		}
+		var ok bool
+		if link, ok = recordLink(found, schoolID); !ok {
+			return domain.ErrTraegerStaffRecordMissing
+		}
+		record = found
+		return nil
+	})
+	if err != nil {
+		return publicTraegerStaffError(err)
+	}
+	err = t.ports.Runtime.WithinSchool(ctx, schoolID, func(ctx context.Context) error {
+		return t.adoptAtSchool(ctx, actor, record, link.StaffID)
+	})
+	return publicTraegerStaffError(err)
+}
+
+// adoptAtSchool writes the record's person into the live employment's
+// person, in the caller's tenant transaction.
+func (t *TraegerStaff) adoptAtSchool(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, staffID int64) error {
+	live, err := t.schoolStaff(ctx, []int64{staffID})
+	if err != nil {
+		return err
+	}
+	if len(live) == 0 {
+		return domain.ErrTraegerStaffRecordMissing
+	}
+	subject, err := t.subjects.LockStaff(ctx, staffID, true)
+	if err != nil {
+		return err
+	}
+	school := domain.StaffPerson{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: subject.Birthday}
+	adopted := record.PersonForSchool(school)
+	changes := []domain.FieldChange{
+		{Field: domain.StaffFieldFirstName, OldValue: school.FirstName, NewValue: adopted.FirstName},
+		{Field: domain.StaffFieldLastName, OldValue: school.LastName, NewValue: adopted.LastName},
+		{Field: domain.StaffFieldBirthday, OldValue: school.Birthday, NewValue: adopted.Birthday},
+	}
+	written := false
+	for _, change := range changes {
+		if change.OldValue == change.NewValue {
+			continue
+		}
+		written = true
+		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
+			StaffID: staffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionPerson,
+			Field: change.Field, OldValue: change.OldValue, NewValue: change.NewValue, Note: noteAdoptedFromTraeger,
+		}); err != nil {
+			return err
+		}
+	}
+	if !written {
+		return nil
+	}
+	var birthday *string
+	if adopted.Birthday != "" {
+		birthday = &adopted.Birthday
+	}
+	return t.subjects.UpdatePerson(ctx, subject.PersonID, adopted.FirstName, adopted.LastName, birthday)
+}
