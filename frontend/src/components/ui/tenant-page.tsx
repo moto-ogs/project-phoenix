@@ -129,18 +129,14 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
    */
   readonly appCompactActions?: true | ReactNode;
   /**
-   * App (#8070, Runde 19): Suche und Reiter rollen mit der Kopfkarte weg,
-   * statt unter dem schmalen Kopf zu kleben. Für Seiten, deren Suche selten
-   * gebraucht wird (Mehr); eine Lupe über `appCompactActions` führt zurück.
-   */
-  readonly appToolbarScrollsAway?: boolean;
-  /**
    * App (#8070, Runde 19): Reiter, Suche und Filter rollen mit der
-   * Kopfkarte weg, statt unter der schmalen Kopfkarte zu kleben; beim
-   * Rollen bleibt nur die schmale Titelzeile. Mit Suche zeigt sie eine
-   * Lupe, die nach oben ins Suchfeld springt.
+   * Kopfkarte weg, statt unter dem schmalen Kopf zu kleben; beim Rollen
+   * bleibt nur die schmale Titelzeile. `"with-tools"`: Sie zeigt dann die
+   * Werkzeuge der Leiste als Symbole, eine Lupe, die nach oben ins Suchfeld
+   * springt, und den Filter. Ohne sie (`true`) führt höchstens eine eigene
+   * Lupe über `appCompactActions` zurück (Mehr).
    */
-  readonly appShrinkToTitle?: boolean;
+  readonly appToolbarScrollsAway?: boolean | "with-tools";
   /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
@@ -676,7 +672,6 @@ function TenantPageView({
   appCompactStats,
   appCompactActions,
   appToolbarScrollsAway = false,
-  appShrinkToTitle,
   info,
   actions,
   leading,
@@ -940,7 +935,6 @@ function TenantPageView({
             compactStats={appCompactStats}
             compactActions={appCompactActions}
             toolbarScrollsAway={appToolbarScrollsAway}
-            shrinkToTitle={appShrinkToTitle}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={

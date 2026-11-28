@@ -2664,7 +2664,7 @@ function SearchPageContent() {
         appStatsInline
         // Beim Rollen schrumpft der Kopf wie auf den anderen Seiten auf eine
         // Zeile; die Lupe darin führt zurück ins Suchfeld (Runde 19).
-        appShrinkToTitle
+        appToolbarScrollsAway="with-tools"
         info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
         stats={studentSummary?.summary}

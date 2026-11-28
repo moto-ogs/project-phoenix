@@ -84,15 +84,13 @@ export interface AppHeadProps {
    * die Symbol-Aktionen aus `actions`, ein Element steht an ihrer Stelle.
    */
   readonly compactActions?: true | ReactNode;
-  /** Suche und Reiter rollen mit weg (`appToolbarScrollsAway`). */
-  readonly toolbarScrollsAway?: boolean;
   /**
    * Reiter, Suche und Filter rollen mit der Kopfkarte weg, statt zu kleben
-   * (`appShrinkToTitle`): Beim Rollen bleibt nur die schmale Kopfkarte.
-   * Trägt die Leiste eine Suche, zeigt sie eine Lupe, die zurück nach oben
-   * ins Suchfeld springt.
+   * (`appToolbarScrollsAway`): Beim Rollen bleibt nur die schmale
+   * Kopfkarte. `"with-tools"`: Sie zeigt dann eine Lupe, die zurück nach
+   * oben ins Suchfeld springt, und den Filter der Leiste.
    */
-  readonly shrinkToTitle?: boolean;
+  readonly toolbarScrollsAway?: boolean | "with-tools";
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -125,7 +123,6 @@ export function AppTenantHead({
   compactStats,
   compactActions,
   toolbarScrollsAway = false,
-  shrinkToTitle = false,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -134,6 +131,7 @@ export function AppTenantHead({
   const compactHeadStats =
     compactStats ?? (statsInline && statusLine != null ? statusLine : null);
   const scrolledAway = useScrolledAway(headRef);
+  const compactTools = toolbarScrollsAway === "with-tools";
   const toolbarRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const statsScroll = useScrollsSideways(statsRef);
@@ -142,16 +140,16 @@ export function AppTenantHead({
   // 21): er öffnet dieselben Filter wie der Knopf in der Leiste.
   const compactFilter = useToolbarFilter(
     toolbarRef,
-    scrolledAway && shrinkToTitle,
+    scrolledAway && compactTools,
   );
   const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
   // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
   const hasMenu = hasMenuEntries || info != null || actions != null;
   const hasToolbar = tabs != null || toolbar != null;
   // Klebt die Leiste, hängt sie unter der schmalen Kopfkarte. Rollt sie mit
-  // weg (`toolbarScrollsAway` oder `shrinkToTitle`), ist die schmale
-  // Kopfkarte allein eine ganze Karte.
-  const toolbarSticks = hasToolbar && !(toolbarScrollsAway || shrinkToTitle);
+  // weg (`toolbarScrollsAway`), ist die schmale Kopfkarte allein eine ganze
+  // Karte.
+  const toolbarSticks = hasToolbar && toolbarScrollsAway === false;
   useStickyOffset(toolbarRef, scrolledAway, toolbarSticks);
   // Die Leiste hängt beim Scrollen ohne Fuge an der schmalen Kopfkarte:
   // eine Karte wie oben auf der Seite, kein Spalt, durch den Inhalt blitzt.
@@ -347,7 +345,7 @@ export function AppTenantHead({
         {/* Symbol-Aktionen wie die Lupe bleiben auf Wunsch der Seite auch
             beim Rollen erreichbar. `mr-2` ergänzt `gap-1` auf die 12 px, die
             zwei 44-px-Trefferflächen nebeneinander brauchen. */}
-        {shrinkToTitle && toolbar != null ? (
+        {compactTools && toolbar != null ? (
           <Button
             type="button"
             variant="ghost"
@@ -370,7 +368,7 @@ export function AppTenantHead({
             <Search className="size-5" aria-hidden="true" />
           </Button>
         ) : null}
-        {shrinkToTitle && compactFilter ? (
+        {compactTools && compactFilter ? (
           <Button
             type="button"
             variant="ghost"

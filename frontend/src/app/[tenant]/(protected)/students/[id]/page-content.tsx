@@ -1662,7 +1662,7 @@ function StudentDetailPageContent() {
       // die Reiter rollen mit der Kopfkarte weg. Klebten sie darunter,
       // lag die Kante einer Karte darunter wie ein Rest des Kopfes
       // (Runde 19).
-      appShrinkToTitle
+      appToolbarScrollsAway="with-tools"
       appCompactStats={
         appHead ? (
           <AppStudentCompactStatus
