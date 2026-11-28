@@ -632,8 +632,10 @@ export function AppRangeBar({
             >
               <ChevronLeft className="size-5" aria-hidden="true" />
             </Button>
+            {/* Kein Abschneiden („Nov. 2…“ am SE): Reicht die Breite neben
+                dem Umschalter nicht, bricht der Monat vor dem Jahr um. */}
             <p
-              className="min-w-0 truncate text-center text-sm font-medium whitespace-nowrap text-gray-900 tabular-nums"
+              className="min-w-0 text-center text-sm leading-tight font-medium text-gray-900 tabular-nums"
               aria-live="polite"
             >
               {label}
