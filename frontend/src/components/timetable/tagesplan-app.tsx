@@ -89,14 +89,19 @@ export function tagesplanCompactDate(day: string): string {
   return `${getGermanWeekdayShort(parseISODate(day))}, ${date}.${month}.`;
 }
 
-/** Montag bis Freitag der Woche von `day`; ein Wochenendtag kommt dazu. */
+/**
+ * Fünf Tage: Montag bis Freitag der Woche von `day`. Ein Wochenendtag
+ * ersetzt den Montag (Dienstag bis Freitag und er): Sechs Chips und zwei
+ * Pfeile passten am iPhone SE nicht mehr mit 44-px-Trefferflächen in die
+ * Leiste. Der Montag bleibt über ‹ erreichbar.
+ */
 function weekDays(day: string): string[] {
   const d = parseISODate(day);
   const weekday = d.getDay(); // 0 = So
   const monday = shiftISO(day, weekday === 0 ? -6 : 1 - weekday);
-  const days = [0, 1, 2, 3, 4].map((offset) => shiftISO(monday, offset));
-  if (weekday === 6 || weekday === 0) days.push(day);
-  return days;
+  if (weekday === 6 || weekday === 0)
+    return [...[1, 2, 3, 4].map((offset) => shiftISO(monday, offset)), day];
+  return [0, 1, 2, 3, 4].map((offset) => shiftISO(monday, offset));
 }
 
 /**
