@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
@@ -113,6 +113,9 @@ function AppSheet({
   const fit = size === "fit";
   const startSnap = size === "full" ? SNAP_FULL : SNAP_HALF;
   const [snap, setSnap] = useState<number | string | null>(startSnap);
+  // Radix gibt den Fokus beim Schließen nur an einen `DialogTrigger` zurück;
+  // das Blatt wird ohne ihn gesteuert. Deshalb merkt es sich den Auslöser.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   // Jedes Öffnen beginnt in der gewählten Höhe.
   useEffect(() => {
     if (open) setSnap(startSnap);
@@ -133,12 +136,31 @@ function AppSheet({
       open={open}
       onOpenChange={onOpenChange}
       shouldScaleBackground={false}
+      // Vaul hält den Fokus sonst beim Auslöser hinter dem Blatt, und Tab
+      // läuft durch die abgedeckte Seite. So landet er im Blatt (zuerst auf
+      // „Schließen“ im Kopf, kein Eingabefeld, also keine Tastatur) und
+      // kehrt beim Schließen zum Auslöser zurück.
+      autoFocus
       {...snapProps}
     >
       <DrawerContent
         {...SHEET_SCOPE_PROPS}
         data-overlay-sheet=""
         aria-describedby={undefined}
+        onOpenAutoFocus={() => {
+          const active = document.activeElement;
+          returnFocusRef.current =
+            active instanceof HTMLElement && active !== document.body
+              ? active
+              : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          const target = returnFocusRef.current;
+          returnFocusRef.current = null;
+          if (!target?.isConnected) return;
+          event.preventDefault();
+          target.focus({ preventScroll: true });
+        }}
         className={cn(
           "pb-[env(safe-area-inset-bottom)]",
           // Am Telefon trägt das Blatt die volle Höhe; Vaul schiebt es auf
