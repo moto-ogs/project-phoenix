@@ -60,6 +60,22 @@ type TemplateRosterFeedOffering struct {
 	// phase does not fit the selected planning period or the source rule mixes
 	// enrollment phases.
 	IsInvalid bool
+	// ExpiredPhase is true for a source whose enrollment phase ended before
+	// the planning period starts (#8203): the phase no longer touches the
+	// period, so the source feeds nothing there. Such a source is invalid as
+	// well.
+	ExpiredPhase bool
+	// Successor is the offering of the same name in a phase that overlaps the
+	// planning period, suggested for an expired source; nil when none fits.
+	Successor *RosterMaintenanceOffering
+}
+
+// RosterMaintenanceExpiredOffering is a source of an ended phase with the
+// offering suggested in its place (#8203).
+type RosterMaintenanceExpiredOffering struct {
+	ID        int64
+	Name      string
+	Successor *RosterMaintenanceOffering
 }
 
 // TemplateRosterFeedQuery identifies one template and its stored source ids.
@@ -89,6 +105,11 @@ type TemplateRosterMaintenance struct {
 	// InvalidOfferings are active configured sources or linked offerings that
 	// resync cannot use.
 	InvalidOfferings []RosterMaintenanceOffering
+	// ExpiredOfferings are the invalid sources whose phase ended before the
+	// planning period starts, with the suggested offering of a current
+	// phase (#8203). They stay in InvalidOfferings, which says resync cannot
+	// use them; this list says why and what replaces them.
+	ExpiredOfferings []RosterMaintenanceExpiredOffering
 	// DynamicTargetsManual is true when a Klasse/Jahrgang/Gruppe target
 	// exists; new children reach only occurrences created afterwards, while a
 	// Klasse or Gruppe change follows on existing ones (#6841).
@@ -149,6 +170,11 @@ func (m rosterFeedMarks) classifySources(result *TemplateRosterMaintenance, sour
 			intact = false
 			result.InvalidOfferings = append(result.InvalidOfferings, offering)
 			m.invalid[source.ID] = true
+		}
+		if source.ExpiredPhase {
+			result.ExpiredOfferings = append(result.ExpiredOfferings, RosterMaintenanceExpiredOffering{
+				ID: source.ID, Name: source.Name, Successor: source.Successor,
+			})
 		}
 	}
 	return intact

@@ -243,6 +243,11 @@ interface InstanceDetailModalProps {
   seriesPeriodId?: string;
   /** Abweichung der Kinderliste von den Anmeldungen (#5103). */
   seriesRosterDeviation?: RosterDeviation;
+  /**
+   * Verbindung mit dem neuen Angebot, wenn ein Quellangebot zu einer
+   * abgelaufenen Phase gehört (#8203).
+   */
+  seriesExpiredConnection?: RosterDeviation | null;
   /** Die Kinderliste der Serie bleibt bewusst so (#5103). */
   seriesManualRosterConfirmed?: boolean;
   /** Eine Entscheidung zur Kinderliste wird gespeichert. */
@@ -636,6 +641,7 @@ export function InstanceDetailModal({
   fetchParticipantNames = false,
   seriesRosterMaintenance,
   seriesRosterDeviation,
+  seriesExpiredConnection,
   seriesManualRosterConfirmed = false,
   rosterDecisionBusy = false,
   onConnectOffering,
@@ -1140,6 +1146,8 @@ export function InstanceDetailModal({
                   busy={rosterDecisionBusy}
                   onConnect={onConnectOffering}
                   onSetManualRoster={onSetManualRoster}
+                  expiredSources={seriesRosterMaintenance?.expiredOfferings}
+                  expiredConnection={seriesExpiredConnection}
                 />
               )}
             </div>

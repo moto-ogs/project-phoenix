@@ -4646,6 +4646,8 @@ export const leadRosterDeviationTopic =
         "Die Liste nennt nur Kinder, die an diesen Tagen auf keinem passenden Regeltermin stehen. Kommt die Klasse laut ihrer Ankunftszeit erst zur Abholzeit des Angebots, fehlt das Kind auch. Fehlt der Knopf, sind einige dieser Kinder schon ganz oder teilweise eingeplant oder haben noch Unterricht. Prüfe dann ihre Regeltermine und ergänze, was fehlt.",
         // #5137: Weg aus der Rückmeldung nach einer Buchungsänderung.
         "Nach einer Abmeldung führt `Mit Angebot verbinden` in der Rückmeldung direkt zu diesem Schritt. Das gilt auch für einen Regeltermin mit `Liste so lassen`. Verbindest du ihn, folgt seine Kinderliste wieder den Anmeldungen.",
+        // #8203: Quellangebot einer abgelaufenen Anmeldephase.
+        "Steht am Regeltermin `Angebot aus abgelaufener Phase`? Dann gehört sein Angebot zu einer Anmeldephase, die vorbei ist. Neue Anmeldungen kommen dort nicht mehr an. moto hängt den Regeltermin beim Phasenwechsel nicht selbst um, weil alte und neue Phase eine Zeit lang parallel laufen. Wähle `Mit neuem Angebot verbinden`. moto schlägt das gleichnamige Angebot der aktuellen Phase vor. Prüfe die Vorschau und wähle `Verbinden`.",
         "Findet moto kein passendes Angebot, sagt moto das. Öffne dann den Regeltermin mit `Bearbeiten`. Wechsle im Schritt `Personal und Kinder` die `Zielgruppe` auf `Angebot`.",
       ],
       differences: [

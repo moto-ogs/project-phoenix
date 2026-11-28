@@ -14290,7 +14290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.timetableOfferingSources.TemplateRosterMaintenance",
-      "binding_digest": "fe8ed94ca02963be8ec1c0693ae53abe",
+      "binding_digest": "9e750e84bd7772b9d6073f4dd7fa765f",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OfferingSourceSupport.TemplateRosterMaintenance",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.TemplateRosterMaintenanceFeeds",
@@ -14298,7 +14298,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.timetableOfferingSources.TemplateRosterMaintenance",
-      "binding_digest": "3fad31b818e6f88e954bac3df7a2cf3d",
+      "binding_digest": "cc07c6148f9931909a9c066862cca6d4",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OfferingSourceSupport.TemplateRosterMaintenance",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.TemplateRosterMaintenanceFeeds",
@@ -14306,7 +14306,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.timetableOfferingSources.TemplateRosterMaintenance",
-      "binding_digest": "83160f01ccd96430d34b5ff775becd78",
+      "binding_digest": "8d8869c56628a0ede3bce26d4a6c8105",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OfferingSourceSupport.TemplateRosterMaintenance",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.DeriveTemplateRosterMaintenance",
@@ -14314,7 +14314,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.timetableOfferingSources.TemplateRosterMaintenance",
-      "binding_digest": "30e65393f4b03a868e36ede19097fbf0",
+      "binding_digest": "231929576f63bab676be252594074975",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OfferingSourceSupport.TemplateRosterMaintenance",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.TemplateRosterMaintenanceFeeds",

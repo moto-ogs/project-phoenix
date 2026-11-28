@@ -1,7 +1,9 @@
+import type { RosterDeviation } from "~/lib/roster-deviation";
 import { schoolClassesLabel } from "~/lib/school-class-label";
 import type {
   RosterMaintenanceMode,
   TemplateRosterMaintenance,
+  TimetableTemplate,
 } from "~/lib/timetable-types";
 
 /**
@@ -59,6 +61,30 @@ function invalidSourceSentence(names: readonly string[]): string | null {
     : `Die Betreuungsangebote ${joinNames(names.map((name) => `„${name}“`))} passen nicht zu diesem Regeltermin.`;
 }
 
+function quotedNames(names: readonly string[]): string {
+  return joinNames(names.map((name) => `„${name}“`));
+}
+
+/**
+ * Sources of an ended phase (#8203). They are invalid as well; the sentence
+ * says why instead of the general „passt nicht“.
+ */
+function expiredSentence(state: TemplateRosterMaintenance): string | null {
+  const names = (state.expiredOfferings ?? []).map((offering) => offering.name);
+  if (names.length === 0) return null;
+  return names.length === 1
+    ? `${quotedNames(names)} ist ein Angebot aus abgelaufener Phase. Neue Anmeldungen kommen hier nicht mehr an.`
+    : `${quotedNames(names)} sind Angebote aus abgelaufener Phase. Neue Anmeldungen kommen hier nicht mehr an.`;
+}
+
+/** Invalid sources other than the expired ones, which have their own sentence. */
+function otherInvalidNames(state: TemplateRosterMaintenance): string[] {
+  const expired = new Set(
+    (state.expiredOfferings ?? []).map((offering) => offering.name),
+  );
+  return state.invalidOfferingNames.filter((name) => !expired.has(name));
+}
+
 const TARGETS_SENTENCE =
   "Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen.";
 
@@ -79,7 +105,9 @@ export function describeRosterMaintenance(
     if (filter) sentences.push(filter);
     const inactive = inactiveSentence(state.inactiveOfferingNames);
     if (inactive) sentences.push(inactive);
-    const invalid = invalidSourceSentence(state.invalidOfferingNames);
+    const expired = expiredSentence(state);
+    if (expired) sentences.push(expired);
+    const invalid = invalidSourceSentence(otherInvalidNames(state));
     if (invalid) sentences.push(invalid);
     if (state.dynamicTargets) sentences.push(TARGETS_SENTENCE);
     sentences.push("Weitere Kinder musst du selbst ergänzen.");
@@ -92,7 +120,9 @@ export function describeRosterMaintenance(
     } else {
       const inactive = inactiveSentence(state.inactiveOfferingNames);
       if (inactive) sentences.push(inactive);
-      const invalid = invalidSourceSentence(state.invalidOfferingNames);
+      const expired = expiredSentence(state);
+      if (expired) sentences.push(expired);
+      const invalid = invalidSourceSentence(otherInvalidNames(state));
       if (invalid) sentences.push(invalid);
     }
     if (state.dynamicTargets) sentences.push(TARGETS_SENTENCE);
@@ -101,5 +131,43 @@ export function describeRosterMaintenance(
     mode: state.mode,
     label: LABELS[state.mode],
     explanation: sentences.join(" "),
+  };
+}
+
+/**
+ * „Mit neuem Angebot verbinden“ (#8203): the connection a Regeltermin with a
+ * source of an ended phase is offered. The suggested successors are
+ * preselected, the Klassen- or Jahrgangsfilter stays. A source of an ended
+ * phase leaves the others invalid too (one phase per source), so the dialog
+ * starts from the successors and the school may add more. Shaped as a
+ * roster deviation, so the existing connect dialog shows the preview and
+ * confirms it. Null when no source expired; without any successor nothing
+ * is preselected and the school picks the offering in the dialog.
+ */
+export function expiredSourceConnection(
+  template: Pick<
+    TimetableTemplate,
+    "id" | "rosterMaintenance" | "sourceGradeLevels" | "sourceSchoolClasses"
+  >,
+): RosterDeviation | null {
+  const expired = template.rosterMaintenance?.expiredOfferings ?? [];
+  if (expired.length === 0) return null;
+  const offerings: Array<{ id: string; name: string }> = [];
+  for (const { successor } of expired) {
+    if (successor && !offerings.some((known) => known.id === successor.id)) {
+      offerings.push(successor);
+    }
+  }
+  return {
+    templateId: template.id,
+    offerings,
+    gradeLevels: template.sourceGradeLevels ?? [],
+    schoolClasses: template.sourceSchoolClasses ?? [],
+    unbookedCount: 0,
+    missingCount: 0,
+    candidates: [],
+    combinations: [],
+    // Without a successor nothing is preselected; the dialog asks for one.
+    ambiguous: false,
   };
 }

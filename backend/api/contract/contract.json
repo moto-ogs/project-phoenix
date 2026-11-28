@@ -139689,6 +139689,32 @@
       ]
     },
     {
+      "name": "templateRosterMaintenanceExpiredOfferingResponse",
+      "go_type": "timetablehttp.templateRosterMaintenanceExpiredOfferingResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "successor",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "templateRosterMaintenanceOfferingResponse"
+          }
+        }
+      ]
+    },
+    {
       "name": "templateRosterMaintenanceOfferingResponse",
       "go_type": "timetablehttp.templateRosterMaintenanceOfferingResponse",
       "fields": [
@@ -139766,6 +139792,17 @@
             "elem": {
               "kind": "ref",
               "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "expired_offerings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceExpiredOfferingResponse"
             }
           }
         },

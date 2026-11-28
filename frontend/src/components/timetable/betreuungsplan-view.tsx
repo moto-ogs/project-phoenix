@@ -86,6 +86,7 @@ import { MonthPlannerGrid } from "~/components/timetable/month-planner-grid";
 import { PeriodSwitcherDropdown } from "~/components/timetable/period-switcher-dropdown";
 import { TemplateList } from "~/components/timetable/template-list";
 import { ConnectOfferingModal } from "~/components/timetable/connect-offering-modal";
+import { expiredSourceConnection } from "~/lib/roster-maintenance";
 import { useRosterDeviations } from "~/components/timetable/use-roster-deviations";
 import { OfferingGapHints } from "~/components/timetable/offering-gap-hints";
 import { BookingLeftoverHints } from "~/components/timetable/booking-leftover-hints";
@@ -2226,6 +2227,11 @@ function TimetablesContent() {
           canManage={canManageSchedules}
           fetchParticipantNames={!canReadTenantRosters}
           seriesRosterMaintenance={selectedSeriesTemplate?.rosterMaintenance}
+          seriesExpiredConnection={
+            selectedSeriesTemplate
+              ? expiredSourceConnection(selectedSeriesTemplate)
+              : null
+          }
           seriesRosterDeviation={
             selectedSeriesTemplate
               ? rosterDeviations.get(selectedSeriesTemplate.id)

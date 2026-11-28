@@ -1159,6 +1159,19 @@ export const templateProtectedStudentAssignmentResponseSchema: z.ZodType<templat
   student_ids: nullable(arr(int64String)),
 });
 
+/** Go: timetablehttp.templateRosterMaintenanceExpiredOfferingResponse */
+export interface templateRosterMaintenanceExpiredOfferingResponse {
+  id: string;
+  name: string;
+  successor?: templateRosterMaintenanceOfferingResponse;
+}
+
+export const templateRosterMaintenanceExpiredOfferingResponseSchema: z.ZodType<templateRosterMaintenanceExpiredOfferingResponse, unknown> = object<templateRosterMaintenanceExpiredOfferingResponse>({
+  id: int64String,
+  name: str,
+  successor: optional(templateRosterMaintenanceOfferingResponseSchema),
+});
+
 /** Go: timetablehttp.templateRosterMaintenanceResponse */
 export interface templateRosterMaintenanceResponse {
   mode: string;
@@ -1167,6 +1180,7 @@ export interface templateRosterMaintenanceResponse {
   school_classes?: string[];
   inactive_offerings?: templateRosterMaintenanceOfferingResponse[];
   invalid_offerings?: templateRosterMaintenanceOfferingResponse[];
+  expired_offerings?: templateRosterMaintenanceExpiredOfferingResponse[];
   dynamic_targets: boolean;
   care_offerings_disabled: boolean;
 }
@@ -1178,6 +1192,7 @@ export const templateRosterMaintenanceResponseSchema: z.ZodType<templateRosterMa
   school_classes: optional(arr(str)),
   inactive_offerings: optional(arr(templateRosterMaintenanceOfferingResponseSchema)),
   invalid_offerings: optional(arr(templateRosterMaintenanceOfferingResponseSchema)),
+  expired_offerings: optional(arr(templateRosterMaintenanceExpiredOfferingResponseSchema)),
   dynamic_targets: bool,
   care_offerings_disabled: bool,
 });

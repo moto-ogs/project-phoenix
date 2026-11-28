@@ -22,6 +22,7 @@ func (m *BookingMaterialization) TemplateRosterMaintenanceFeeds(ctx context.Cont
 		return nil, fmt.Errorf("template roster maintenance: list offerings: %w", err)
 	}
 	index := newRosterFeedIndex(offerings, templates)
+	index.addSuccessorCandidates(templates)
 	validation, err := m.loadRosterFeedValidation(ctx, index)
 	if err != nil {
 		return nil, err
@@ -35,6 +36,7 @@ func (m *BookingMaterialization) TemplateRosterMaintenanceFeeds(ctx context.Cont
 		return nil, err
 	}
 	linkedByRoot := linkedOfferingsByRoot(offerings, rootByGroup)
+	byName := offeringsByName(index.offerings)
 	for _, query := range templates {
 		root, ok := rootByGroup[query.TemplateID]
 		if !ok {
@@ -42,6 +44,9 @@ func (m *BookingMaterialization) TemplateRosterMaintenanceFeeds(ctx context.Cont
 		}
 		feeds, err := validation.templateFeeds(query, linkedByRoot[root], index.offerings, invalid.forTemplate(query.TemplateID))
 		if err != nil {
+			return nil, err
+		}
+		if err := validation.markExpiredSources(&feeds, query, index.offerings, byName); err != nil {
 			return nil, err
 		}
 		feeds.CareOfferingsEnabled = enabled

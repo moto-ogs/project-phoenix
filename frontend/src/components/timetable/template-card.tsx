@@ -20,6 +20,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import type { RosterDeviation } from "~/lib/roster-deviation";
+import { expiredSourceConnection } from "~/lib/roster-maintenance";
 import { getGermanWeekdayShort } from "~/lib/timetable-helpers";
 import type { TimetableTemplate } from "~/lib/timetable-types";
 import { RosterMaintenanceBadge } from "./roster-maintenance-badge";
@@ -201,6 +202,8 @@ export function TemplateCard({
                 ? (confirmed) => onSetManualRoster(template, confirmed)
                 : undefined
             }
+            expiredSources={template.rosterMaintenance?.expiredOfferings}
+            expiredConnection={expiredSourceConnection(template)}
           />
         ) : null}
 
