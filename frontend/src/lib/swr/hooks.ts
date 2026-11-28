@@ -465,22 +465,26 @@ function useScopedSWR<T, E>(
   // function itself changes: a reader that loaded idle with a stable
   // function never polled after a write's reload brought a sending state,
   // and an inline function restarted the timer on every render (#8271).
+  // A number or no interval passes through untouched, so a provider's
+  // interval still applies.
   const interval = reader.refreshInterval ?? base.refreshInterval;
-  const refreshInterval =
+  const dataInterval =
     typeof interval === "function"
-      ? interval(
-          fullKey === null
-            ? undefined
-            : (cache.get(fullKey)?.data as T | undefined),
-        )
-      : interval;
+      ? {
+          refreshInterval: interval(
+            fullKey === null
+              ? undefined
+              : (cache.get(fullKey)?.data as T | undefined),
+          ),
+        }
+      : {};
 
   // The public fetcher contract has no SWR key argument. In particular a
   // factory's optional params must not receive the full scoped cache key.
   const response = useSWR<T, E>(fullKey, () => fetcher(), {
     ...(base as SWRConfiguration<T, E>),
     ...reader,
-    refreshInterval,
+    ...dataInterval,
     keepPreviousData: keep,
     use: [generationLockMiddleware],
   });
