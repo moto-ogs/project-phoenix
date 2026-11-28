@@ -192,8 +192,14 @@ export const studentKeys = {
   holidayGuest: (id: string) => `holiday-guest:${encodeURIComponent(id)}`,
   carePlanDay: (id: string, date: string) =>
     `${STUDENT_KEY_FAMILIES.carePlanDay}${encodeURIComponent(id)}-${date}`,
+  /** Every per-day care-plan read of one child. */
+  carePlanDayFamily: (id: string) =>
+    `${STUDENT_KEY_FAMILIES.carePlanDay}${encodeURIComponent(id)}-`,
   carePlanWeek: (id: string, from: string, to: string) =>
     `${STUDENT_KEY_FAMILIES.carePlanWeek}${encodeURIComponent(id)}-${from}-${to}`,
+  /** Every per-week care-plan read of one child. */
+  carePlanWeekFamily: (id: string) =>
+    `${STUDENT_KEY_FAMILIES.carePlanWeek}${encodeURIComponent(id)}-`,
   statusDays: (id: string, from: string, to: string) =>
     `${STUDENT_KEY_FAMILIES.statusDays}${encodeURIComponent(id)}-${from}-${to}`,
   statusDayOverview: (params: {

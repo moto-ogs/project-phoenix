@@ -57,8 +57,10 @@ import {
   useSwrLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { studentKeys } from "~/lib/swr/portal-keys";
 import { formErrorMessage } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -164,6 +166,8 @@ export default function StudentGuardianManager({
   readOnly = false,
   onUpdate,
 }: StudentGuardianManagerProps) {
+  const invalidateFamily = useInvalidateFamily();
+  const tenantMutate = useTenantMutate();
   const guardiansResource = useSWRAuth(
     tenantContactKeys.studentGuardians(studentId),
     () => fetchStudentGuardians(studentId),
@@ -411,10 +415,25 @@ export default function StudentGuardianManager({
     const { guardianData, relationshipData, phoneNumbers } = first;
     // Withdrawing the pickup permission removes the contact's pickup days of
     // today and later (#8206); read them first, so the message names them.
-    const removedPickupDays =
-      editingGuardian.canPickup && !relationshipData.canPickup
-        ? await upcomingPickupDaysOf(studentId, editingGuardian.id)
-        : [];
+    const withdrawal = editingGuardian.canPickup && !relationshipData.canPickup;
+    let removedPickupDays: string[] = [];
+    if (withdrawal) {
+      try {
+        removedPickupDays = await upcomingPickupDaysOf(
+          studentId,
+          editingGuardian.id,
+        );
+      } catch (err) {
+        // This read only completes the success message. It must not keep the
+        // permission withdrawal, or any accompanying guardian change, from
+        // being saved.
+        logger.error("pickup_withdrawal_days_lookup_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          student_id: studentId,
+          guardian_id: editingGuardian.id,
+        });
+      }
+    }
     // A number the form added carries a temporary id; only stored ids stay.
     const storedPhoneIds = new Set(
       (editingGuardian.phoneNumbers ?? []).map((phone) => phone.id),
@@ -432,6 +451,23 @@ export default function StudentGuardianManager({
       },
       editingGuardian.version ?? "",
     );
+
+    if (withdrawal) {
+      // This write enters Care Plan through People Directory and therefore
+      // does not emit the pickup-schedule event that normally refreshes these
+      // readers. Refresh only this child's cached pickup plans.
+      void Promise.all([
+        tenantMutate(studentKeys.pickupData(studentId)),
+        invalidateFamily(studentKeys.carePlanDayFamily(studentId)),
+        invalidateFamily(studentKeys.carePlanWeekFamily(studentId)),
+        invalidateFamily(tenantStudentKeys.careWeekFamily(studentId)),
+      ]).catch((err: unknown) => {
+        logger.error("pickup_withdrawal_cache_refresh_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          student_id: studentId,
+        });
+      });
+    }
 
     // Reload guardians
     await guardiansAfterWrite.refresh();
