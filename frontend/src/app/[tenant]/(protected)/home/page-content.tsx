@@ -26,6 +26,7 @@ import { RosterDeviationTodos } from "~/components/home/roster-deviation-todos";
 import { SchoolVacationHintsCore } from "~/components/timetable/school-vacation-hints-core";
 import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
 import { DevicePinWarning } from "~/components/devices/device-pin-warning";
+import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
 import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -603,28 +604,32 @@ function HomeContent() {
       }
       actions={
         editing ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={saving}
-              onClick={cancelEditing}
-              tooltip="Verwirft deine Änderungen an der Startseite."
-            >
-              Abbrechen
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              disabled={saving}
-              onClick={save}
-              tooltip="Speichert die neue Anordnung deiner Startseite."
-            >
-              Fertig
-            </Button>
-          </>
+          // App: Abbrechen und Fertig stehen in der Aktionsleiste (unten);
+          // im „…“ der Kopfkarte wären sie nicht zu sehen.
+          appHead ? undefined : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={saving}
+                onClick={cancelEditing}
+                tooltip="Verwirft deine Änderungen an der Startseite."
+              >
+                Abbrechen
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={saving}
+                onClick={save}
+                tooltip="Speichert die neue Anordnung deiner Startseite."
+              >
+                Fertig
+              </Button>
+            </>
+          )
         ) : appHead ? undefined : (
           // Auf allen Breiten nur das Symbol (#4346): als Textknopf war
           // „Anpassen" größer als alles, wofür man die Startseite öffnet.
@@ -660,7 +665,35 @@ function HomeContent() {
         desktop={boardContent}
         app={
           editing ? (
-            boardContent
+            <>
+              {boardContent}
+              <ActionBar
+                secondary={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={saving}
+                    onClick={cancelEditing}
+                    tooltip="Verwirft deine Änderungen an der Startseite."
+                  >
+                    Abbrechen
+                  </Button>
+                }
+              >
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  className="flex-1"
+                  disabled={saving}
+                  onClick={save}
+                  tooltip="Speichert die neue Anordnung deiner Startseite."
+                >
+                  Fertig
+                </Button>
+              </ActionBar>
+            </>
           ) : (
             // Die App-Fassung der Übersicht (#8070): Jetzt, Zu erledigen,
             // Vorschauen.
