@@ -108,7 +108,13 @@ func (t *TraegerStaff) adoptAtSchool(ctx context.Context, actor workforce.Traege
 		return err
 	}
 	school := domain.StaffPerson{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: subject.Birthday}
-	adopted := record.PersonForSchool(school)
+	adopted, err := record.PersonForSchool(school)
+	if refused, ok := errors.AsType[*domain.StaffPersonError](err); ok {
+		return &workforce.TraegerStaffPersonError{Field: refused.Field, Cause: err}
+	}
+	if err != nil {
+		return err
+	}
 	changes := []domain.FieldChange{
 		{Field: domain.StaffFieldFirstName, OldValue: school.FirstName, NewValue: adopted.FirstName},
 		{Field: domain.StaffFieldLastName, OldValue: school.LastName, NewValue: adopted.LastName},

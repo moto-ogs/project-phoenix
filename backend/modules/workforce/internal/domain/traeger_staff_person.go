@@ -130,11 +130,15 @@ func (r TraegerStaffRecord) PersonDifferences(school StaffPerson) []string {
 // PersonForSchool is the person „Für diese Schule übernehmen“ writes into
 // a school (#8208): the record's names and its birthday, or the school's
 // birthday where the record keeps none, so that the take-over never empties
-// a value the school knows.
-func (r TraegerStaffRecord) PersonForSchool(school StaffPerson) StaffPerson {
+// a value the school knows. A name longer than a school's person takes (200
+// characters, the record allows 255) is a StaffPersonError.
+func (r TraegerStaffRecord) PersonForSchool(school StaffPerson) (StaffPerson, error) {
 	adopted := StaffPerson{FirstName: textnorm.Name(r.FirstName), LastName: textnorm.Name(r.LastName), Birthday: r.Birthday}
+	if field, ok := invalidStaffName(adopted.FirstName, adopted.LastName, maxHireNameLength); ok {
+		return StaffPerson{}, &StaffPersonError{Field: field, Reason: "a school takes at most 200 characters"}
+	}
 	if adopted.Birthday == "" {
 		adopted.Birthday = school.Birthday
 	}
-	return adopted
+	return adopted, nil
 }

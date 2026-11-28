@@ -99,10 +99,20 @@ func TestPersonDifferencesAndTheTakeOverForOneSchool(t *testing.T) {
 	assert.Empty(t, record.PersonDifferences(StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}))
 	assert.Equal(t, []string{StaffFieldFirstName, StaffFieldBirthday},
 		record.PersonDifferences(StaffPerson{FirstName: "Mira", LastName: "Müller", Birthday: ""}))
-	assert.Equal(t, StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}, record.PersonForSchool(StaffPerson{FirstName: "Mira"}))
+	adopted, err := record.PersonForSchool(StaffPerson{FirstName: "Mira"})
+	require.NoError(t, err)
+	assert.Equal(t, StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1990-04-12"}, adopted)
 
 	record.Birthday = ""
 	school := StaffPerson{FirstName: "Myra", LastName: "Müller", Birthday: "1985-01-02"}
 	assert.Empty(t, record.PersonDifferences(school), "a birthday the record lacks is no difference")
-	assert.Equal(t, "1985-01-02", record.PersonForSchool(school).Birthday, "the take-over keeps the school's birthday")
+	adopted, err = record.PersonForSchool(school)
+	require.NoError(t, err)
+	assert.Equal(t, "1985-01-02", adopted.Birthday, "the take-over keeps the school's birthday")
+
+	record.LastName = strings.Repeat("ü", 201)
+	_, err = record.PersonForSchool(school)
+	refused, ok := errors.AsType[*StaffPersonError](err)
+	require.True(t, ok, "a name the school cannot take is a field error, not a failed write")
+	assert.Equal(t, StaffFieldLastName, refused.Field)
 }
