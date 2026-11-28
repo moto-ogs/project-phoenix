@@ -441,6 +441,8 @@ function StudentListAppContent({
           />
         }
         onClick={() => setSheetId(id)}
+        // Ziel der Touren (#3748), wie die Karte am Desktop.
+        tourTarget="student-card"
       />
     );
   };

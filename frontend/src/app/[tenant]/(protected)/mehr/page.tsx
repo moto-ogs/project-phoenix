@@ -179,7 +179,8 @@ function MenuRows({
     );
     return (
       <Fragment key={item.href}>
-        <li>
+        {/* Ziel der geführten Touren (#3748), wie in der Seitenleiste. */}
+        <li data-setup-tour={`nav-${item.href}`}>
           <ListRowLink
             href={
               database
@@ -551,6 +552,8 @@ function MorePageContent({
       <CollectionGroup
         key={section.key}
         title={section.title}
+        // Ziel der Touren (#3748): Station „Gruppe öffnen“ auf dem Handy.
+        tourTarget={`mobile-nav-group-${section.key}`}
         collapsible={
           canCollapse
             ? {

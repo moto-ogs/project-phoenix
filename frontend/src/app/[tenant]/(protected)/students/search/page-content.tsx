@@ -3086,6 +3086,8 @@ function SearchPageContent() {
                             className="gap-2"
                             onClick={schoolCheckin.toggleActive}
                             disabled={schoolCheckin.isBulkRunning}
+                            // Ziel der Tour „An- und abmelden“ (#3748).
+                            data-checkin-toggle=""
                             tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
                           >
                             <ListChecks className="size-5" aria-hidden="true" />

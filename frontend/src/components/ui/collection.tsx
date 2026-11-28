@@ -78,6 +78,7 @@ export function CollectionGroup({
   meta,
   sticky = false,
   collapsible,
+  tourTarget,
   children,
 }: Readonly<{
   title: ReactNode;
@@ -97,6 +98,8 @@ export function CollectionGroup({
    * Zugeklappt fehlen die Zeilen im Baum. Ohne bleibt die Gruppe, wie sie war.
    */
   collapsible?: CollectionGroupCollapsible;
+  /** Ziel der geführten Touren (`data-setup-tour`) am Kopf der Gruppe. */
+  tourTarget?: string;
   children: ReactNode;
 }>) {
   const headRef = useRef<HTMLDivElement>(null);
@@ -121,6 +124,7 @@ export function CollectionGroup({
     >
       <div
         ref={headRef}
+        data-setup-tour={tourTarget}
         className={cn(
           sticky ? `sticky ${Z_LAYER.sticky}` : "relative",
           "app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-gray-100 bg-gray-50/95 px-4 py-1.5",
@@ -259,6 +263,8 @@ export type CollectionRowProps = RowTarget & {
    * („Mia geht heute um 13:30 Uhr.“), nicht für Namen in langen Listen.
    */
   readonly wrap?: boolean;
+  /** Ziel der geführten Touren (`data-setup-tour`) an der Zeile. */
+  readonly tourTarget?: string;
 };
 
 /**
@@ -277,6 +283,7 @@ export function CollectionRow({
   onClick,
   "aria-label": ariaLabel,
   wrap = false,
+  tourTarget,
 }: CollectionRowProps) {
   // Das Ziel spannt sich über die ganze Zeile (Pseudo-Element), damit die
   // Hauptaktion kein Kind des Links ist.
@@ -325,6 +332,7 @@ export function CollectionRow({
     <li
       data-collection-row=""
       data-selected={selected || undefined}
+      data-setup-tour={tourTarget}
       className={cn(
         "relative flex min-h-14 items-center gap-3 px-4 py-2 [-webkit-tap-highlight-color:transparent]",
         interactive &&

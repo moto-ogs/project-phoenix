@@ -312,6 +312,9 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         target: '[data-setup-tour="student-card"]',
         title: "Die Karte eines Kindes",
         text: "Schon die Karte zeigt das Wichtigste: wo das Kind gerade ist, wann es kommt und geht und wie es nach Hause kommt. Wähle eine Karte. Dann siehst du alle Angaben.",
+        // Auf dem Handy öffnet die Zeile erst das Kind-Blatt (#8070).
+        mobileText:
+          "Die Zeile zeigt das Wichtigste: wo das Kind gerade ist und wann es geht. Tippe auf ein Kind und dann auf „Ganze Akte öffnen“. Dann siehst du alle Angaben.",
         advance: "click",
         missingText:
           "Hier steht noch kein Kind. Prüfe die Suche oder die Filter.",
