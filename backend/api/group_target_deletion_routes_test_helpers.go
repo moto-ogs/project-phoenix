@@ -5,6 +5,7 @@ package api
 import (
 	"net/http"
 
+	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	schoolstructurehttp "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	activitiesAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
@@ -22,9 +23,10 @@ type GroupTargetDeletionRoutes struct {
 }
 
 // NewGroupTargetDeletionRoutesForTests builds both route resources over the
-// test database, as the production router mounts them.
+// test database with the bindings the production router mounts
+// (serve_mounts_school.go).
 func NewGroupTargetDeletionRoutesForTests(db transactionruntime.Database, unit tenant.UnitOfWork) (GroupTargetDeletionRoutes, error) {
-	structure, _, people, _, err := NewGroupsTestModule(db, unit)
+	structure, _, _, _, err := NewGroupsTestModule(db, unit)
 	if err != nil {
 		return GroupTargetDeletionRoutes{}, err
 	}
@@ -33,7 +35,7 @@ func NewGroupTargetDeletionRoutesForTests(db transactionruntime.Database, unit t
 		return GroupTargetDeletionRoutes{}, err
 	}
 	return GroupTargetDeletionRoutes{
-		Groups: schoolstructurehttp.NewResource(structure.Education, people.People, transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes),
+		Groups: schoolstructurehttp.NewResource(structure.Education, peopleCompose.NewGroupRoutePeople(users), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes),
 		Activities: activitiesAPI.NewResource(activities, module.Timetable, NewTimetableSupervisorDirectory(users), caller, TimetableHTTPTransactions).
 			Router(ProtectedTenantRoutes),
 	}, nil
