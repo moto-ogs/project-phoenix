@@ -174,15 +174,34 @@ export default function AnfragenPage() {
     [handleParentCount],
   );
 
-  // `?reiter=mitarbeitende` öffnet die Anträge des Teams, etwa aus der
-  // Startkarte „Offene Anfragen“ (#8268). Ohne den Reiter gilt der erste
-  // sichtbare (unten).
+  // Der Reiter steht in der Adresse (`?reiter=mitarbeitende`), damit die
+  // Startkarte „Offene Anfragen“ direkt die Anträge des Teams öffnet (#8268),
+  // auch wenn Next die Seite mit ihrem alten Zustand wiederherstellt: ändert
+  // sich die Adresse, folgt die Auswahl. Ein Wechsel schreibt die Adresse per
+  // History, ohne neue Navigation (wie `?tab=` am Kind).
   const searchParams = useSearchParams();
-  const [selectedTab, setSelectedTab] = useState<AnfragenTabId>(() =>
+  const requestedTab: AnfragenTabId =
     searchParams?.get("reiter") === "mitarbeitende"
       ? "mitarbeitende"
-      : "eltern",
-  );
+      : "eltern";
+  const [selectedTab, setSelectedTab] = useState(requestedTab);
+  const [followedTab, setFollowedTab] = useState(requestedTab);
+  if (followedTab !== requestedTab) {
+    setFollowedTab(requestedTab);
+    setSelectedTab(requestedTab);
+  }
+  const selectTab = (tab: AnfragenTabId) => {
+    setSelectedTab(tab);
+    const query = new URLSearchParams(window.location.search);
+    if (tab === "eltern") query.delete("reiter");
+    else query.set("reiter", tab);
+    const qs = query.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+    );
+  };
   // Fällt die Auswahl aus den sichtbaren Reitern (z. B. Session noch am
   // Laden), gilt der erste sichtbare — so flackert nie ein leerer Inhalt.
   const activeTab = visibleTabs.some((tab) => tab.id === selectedTab)
@@ -552,7 +571,7 @@ export default function AnfragenPage() {
               // Der Suchbegriff des einen Reiters passt nie zum anderen (Kind
               // gegen Teammitglied), also beim Wechsel leeren.
               onChange: (tabId) => {
-                setSelectedTab(tabId as AnfragenTabId);
+                selectTab(tabId as AnfragenTabId);
                 setSearchTerm("");
               },
               items: visibleTabs.map((tab) => ({

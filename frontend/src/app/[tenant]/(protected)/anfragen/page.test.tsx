@@ -168,6 +168,8 @@ describe("AnfragenPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchState.params = new URLSearchParams();
+    // Ein Reiterwechsel schreibt die Adresse; kein Test erbt sie.
+    window.history.replaceState(null, "", "/");
     waitlistState.waitlists = undefined;
     mockUseTimetableEnabled.mockReturnValue(true);
     mockUseSession.mockReturnValue(sessionWith(["users:update"]));
@@ -532,6 +534,29 @@ describe("AnfragenPage", () => {
     searchState.params = new URLSearchParams("reiter=mitarbeitende");
 
     render(<AnfragenPage />);
+
+    expect(absenceProbe().view).toBe("open");
+    expect(screen.queryByTestId("aggregated-list")).toBeNull();
+  });
+
+  // Next stellt die Seite beim nächsten Besuch mit ihrem alten Zustand wieder
+  // her: der Link der Startkarte muss trotzdem den Team-Reiter öffnen.
+  it("folgt beim erneuten Besuch dem Reiter in der Adresse", () => {
+    mockUseSession.mockReturnValue(
+      sessionWith(["users:update", "vacation:approve"]),
+    );
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+    const { rerender } = render(<AnfragenPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Eltern" }));
+    expect(screen.getByTestId("aggregated-list")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    // Next gleicht useSearchParams mit der History ab.
+    searchState.params = new URLSearchParams(window.location.search);
+    rerender(<AnfragenPage />);
+
+    searchState.params = new URLSearchParams("reiter=mitarbeitende");
+    rerender(<AnfragenPage />);
 
     expect(absenceProbe().view).toBe("open");
     expect(screen.queryByTestId("aggregated-list")).toBeNull();
