@@ -170,7 +170,7 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 // (#8279).
 func (d *Decisions) followRenewedStudent(ctx context.Context, renewal *existingStudentRenewal) error {
 	student := renewal.student
-	if err := d.followRewrittenClass(ctx, student.ID, renewal.previousSchoolClass, student.SchoolClass); err != nil {
+	if err := d.followRewrittenClass(ctx, student.ID, renewal.previousSchoolClass, student.SchoolClass, student.EnrolledFrom); err != nil {
 		return fmt.Errorf("decision: approval class change: %w", err)
 	}
 	if !renewal.grantedPlace || renewal.previousSchoolClass != student.SchoolClass {

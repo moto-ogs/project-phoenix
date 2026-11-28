@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -126,6 +128,45 @@ func TestDecisionService_ChildWithoutCarePlaceJoinsItsClassWithThePlace(t *testi
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []int64{now.ID, later.ID}, classSwitchRoster(t, env, newYear), "the class switch grants the place and the child joins")
 	assert.Equal(t, []int64{now.ID}, classSwitchRoster(t, env, next), "no day before the switch")
+}
+
+// TestDecisionService_InactiveExistingStudentRenewalJoinsClassFromFutureCareStart
+// pins #8279 for a class-changing renewal of a child who is not currently in
+// care: although the class is written at approval, the child may join targeted
+// Regeltermine only from the renewal's future care start.
+func TestDecisionService_InactiveExistingStudentRenewalJoinsClassFromFutureCareStart(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	futureStart := calendar.NewDate(2030, 8, 1)
+	env.sourcePhase.Kind = capability.PhaseKindSchoolYear
+	env.sourcePhase.ServiceStartDate = capability.Date(futureStart)
+	env.sourcePhase.ServiceEndDate = capability.Date(calendar.NewDate(2031, 7, 31))
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+
+	occurrences := newJoinedClassOccurrences(t, env)
+	class2 := occurrences.template(t, "target_school_class", "2")
+	beforeCare := occurrences.on(t, class2, decisionTestToday.AddDays(1))
+	fromCareStart := occurrences.on(t, class2, futureStart)
+
+	existing := testpkg.CreateTestStudent(t, env.db, "Ole", "Pause", "1a")
+	student, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.repos.Student.FindByID, any(existing.ID))
+	require.NoError(t, err)
+	student.Status = peopleValues.StudentStatusInactive
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Student.Update, student))
+
+	requestID, childID := submitReEnrollment(t, env, "Eltern", "Pause", "renewal-future-class@example.com", nil,
+		"Ole", "Pause", map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true})
+	matchChildToExistingStudent(t, env, childID, existing.ID)
+
+	_, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: requestID, ChildID: childID, Status: capability.DecisionApproved, ReviewedBy: env.creatorID,
+	})
+	require.NoError(t, err)
+
+	assert.Empty(t, classSwitchRoster(t, env, beforeCare), "the child must not join before care starts")
+	assert.Equal(t, []int64{existing.ID}, classSwitchRoster(t, env, fromCareStart), "the child joins when care starts")
 }
 
 // joinedClassOccurrences builds Regeltermine with a Klasse or Jahrgang target

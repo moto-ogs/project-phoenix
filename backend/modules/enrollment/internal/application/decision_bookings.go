@@ -52,15 +52,18 @@ func (d *Decisions) followClassChanges(ctx context.Context, previousClasses map[
 
 // followRewrittenClass keeps the class-filtered rosters in step once a
 // decision rewrote one child's class: the offering-sourced templates (#2147)
-// and the Regeltermine with a Klasse or Jahrgang target (#6841).
-func (d *Decisions) followRewrittenClass(ctx context.Context, studentID int64, previous, current string) error {
+// and the Regeltermine with a Klasse or Jahrgang target (#6841). It follows
+// from the care start at the earliest, so a future enrollment never enters a
+// planned roster before its care begins.
+func (d *Decisions) followRewrittenClass(ctx context.Context, studentID int64, previous, current string, careFrom *calendar.Date) error {
 	if previous == current {
 		return nil
 	}
-	if err := d.resyncOfferingSourcedTemplates(ctx, d.todayDate()); err != nil {
+	from := d.effectiveRosterFollowStart(careFrom)
+	if err := d.resyncOfferingSourcedTemplates(ctx, from); err != nil {
 		return fmt.Errorf("resync sourced templates after class change: %w", err)
 	}
-	if err := d.followClassChanges(ctx, map[int64]string{studentID: previous}, d.todayDate()); err != nil {
+	if err := d.followClassChanges(ctx, map[int64]string{studentID: previous}, from); err != nil {
 		return fmt.Errorf("follow class change on targeted templates: %w", err)
 	}
 	return nil
@@ -77,14 +80,18 @@ func (d *Decisions) followJoinedClass(ctx context.Context, studentID int64, scho
 	if schoolClass == "" {
 		return nil
 	}
+	if err := d.followClassChanges(ctx, map[int64]string{studentID: ""}, d.effectiveRosterFollowStart(careFrom)); err != nil {
+		return fmt.Errorf("follow joined class on targeted templates: %w", err)
+	}
+	return nil
+}
+
+func (d *Decisions) effectiveRosterFollowStart(careFrom *calendar.Date) calendar.Date {
 	from := d.todayDate()
 	if careFrom != nil && careFrom.After(from) {
 		from = *careFrom
 	}
-	if err := d.followClassChanges(ctx, map[int64]string{studentID: ""}, from); err != nil {
-		return fmt.Errorf("follow joined class on targeted templates: %w", err)
-	}
-	return nil
+	return from
 }
 
 // materializeEnrollmentsForApproval writes the roster rows of the child's
