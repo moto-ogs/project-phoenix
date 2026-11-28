@@ -112,3 +112,38 @@ schaltet dabei mit.
   folgen der Breite (`max-sm:`, `compact:`), nicht der Zeigerart.
 - `pointer-queries.test.ts` prüft die Abfragetexte und dass sie Finger und
   Maus trennen, unabhängig von der Breite.
+
+## Nachtrag 2026-11-28: App-Oberfläche unter 40rem, iPad und Desktop unverändert (#8070)
+
+Der Prototyp zum Mobile-Zielbild
+([#8070](https://github.com/moto-ogs/project-phoenix/issues/8070), PR
+[#8114](https://github.com/moto-ogs/project-phoenix/pull/8114)) baute die
+Personal-Seiten Startseite, Alle Kinder, Kindakte, Aufsicht, Zeiterfassung,
+Tagesplan, Mehr und Nachrichten als App-Oberfläche. Er probierte zunächst
+eigene Fassungen für das iPad hoch und quer (Liste neben Detail) aus. Danach
+gilt:
+
+1. **Die App-Oberfläche gilt nur unter `sm` (40rem, 640 px).** Das ist die
+   Grenze, an der schon Blatt statt Popover gilt (Punkt 1). CSS schaltet mit
+   den Varianten `app:` (gleich `phone:`) und `desk:` aus
+   `frontend/src/styles/globals.css`, JS mit `useDeviceContext()`,
+   `useIsApp()` und `DeviceSwitch` aus `frontend/src/lib/device-context.tsx`.
+   Genau eine der beiden Oberflächen trifft zu; vor der Hydration blendet CSS
+   um, damit Server und Client gleich rendern.
+2. **iPad und Desktop bleiben unverändert.** Ab 40rem rendert der bisherige
+   Code ohne App-Regel. Die iPad-Fassungen (`tablet:`, `split:`,
+   `SplitView`) sind entfernt. Das folgt Punkt 5: keine iPad-Klasse und
+   keine Regeln nach Ausrichtung. Pixel-Vergleiche gegen `development` auf
+   allen umgebauten Seiten bei 820 × 1180, 1180 × 820, 1280 und 1440 px
+   Breite müssen 0 abweichende Pixel zeigen.
+3. **Die App baut aus Kit-Bausteinen.** Seiten ordnen in der App keine eigenen
+   Muster an. Sie nutzen die Kopfkarte samt schmalem Kopf beim Rollen
+   (`TenantPage` mit den `app…`-Props), Listen als `Collection` mit
+   `CollectionGroup` und `CollectionRow`, Angaben im Blatt (`OverlaySheet`),
+   die Hauptaktion in der `ActionBar` über der Pill-Navigation
+   (`MobileBottomNav`). Was der Desktop zeigt, bleibt am Telefon
+   erreichbar: gekürzt in der Zeile oder vollständig im Blatt.
+
+Die Zeigerart entscheidet weiter die Bedienmaße (Punkt 3). Das Telefon
+bekommt seine Trefferflächen über `pointer-coarse:` und die Kit-Bausteine,
+nicht über `app:`.
