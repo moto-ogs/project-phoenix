@@ -44,18 +44,19 @@ func newGroupFixture(t *testing.T) (*groupFixture, func(context.Context, func(co
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	svc := messaging.NewService(messaging.Config{
-		Leaders:       communicationtest.Leaders{},
-		UserContext:   owners.StaffStudentReads{},
-		Session:       api.CommunicationSession{},
-		ThreadRepo:    messaging.NewThreadRepository(reposMessages.ParentMessageThread),
-		MessageRepo:   messaging.NewMessageRepository(parentStore.NewParentMessageRepository(db)),
-		ReadRepo:      messaging.NewReadRepository(reposMessages.ParentMessageRead),
-		Persons:       newPersons(reposPeople, reposAccounts, db),
-		Settings:      configModels.NewParentMessagingValues(stubSettings{messagingEnabled: true}),
-		Broadcaster:   broadcaster,
-		Logger:        slog.Default(),
-		GroupThreads:  parentStore.NewGroupThreadStore(db),
-		GroupAudience: owners.NewParentGroupAudience(testpkg.NewDatabase(t, db)),
+		Leaders:          communicationtest.Leaders{},
+		UserContext:      owners.StaffStudentReads{},
+		Session:          api.CommunicationSession{},
+		ThreadRepo:       messaging.NewThreadRepository(reposMessages.ParentMessageThread),
+		MessageRepo:      messaging.NewMessageRepository(parentStore.NewParentMessageRepository(db)),
+		ReadRepo:         messaging.NewReadRepository(reposMessages.ParentMessageRead),
+		Persons:          newPersons(reposPeople, reposAccounts, db),
+		Settings:         configModels.NewParentMessagingValues(stubSettings{messagingEnabled: true}),
+		Broadcaster:      broadcaster,
+		Logger:           slog.Default(),
+		GroupThreads:     parentStore.NewGroupThreadStore(db),
+		GroupAudience:    owners.NewParentGroupAudience(testpkg.NewDatabase(t, db)),
+		GroupTargetNames: owners.NewParentGroupTargetNamesForTests(t, testpkg.NewDatabase(t, db)),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	// Both families' children are in class 1a.
 	a := testpkg.CreateTestParentGuardianChain(t, db)
@@ -404,6 +405,61 @@ func TestGroupThreadListsQueryBudgetStaysFlat(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, guardianRows, 3)
 	querybudgets.AssertQueryBudget(t, "modules.communication.parent_group_threads.list_for_guardian", guardianCounter.Measurement(guardianCounter.Queries()))
+}
+
+// TestGroupTargetThreadListsQueryBudgetStaysFlat: lists with group and AG
+// threads read the current target names (#8207) with one batched lookup per
+// target kind, however many group and AG threads exist.
+func TestGroupTargetThreadListsQueryBudgetStaysFlat(t *testing.T) {
+	t.Parallel()
+	f, run := newGroupFixture(t)
+	db := testpkg.SetupTestDB(t)
+	exec := func(query string, args ...any) {
+		t.Helper()
+		_, err := db.NewRaw(query, args...).Exec(testpkg.Ctx(t))
+		require.NoError(t, err)
+	}
+	createTargetThreads := func(suffix string) {
+		t.Helper()
+		group := testpkg.CreateTestEducationGroup(t, db, "Gruppe "+suffix)
+		ag := testpkg.CreateTestActivityGroup(t, db, "AG "+suffix)
+		exec(`UPDATE users.student_school_memberships SET group_id = ? WHERE student_profile_id = ?`, group.ID, f.a.StudentID)
+		exec(`INSERT INTO activities.student_enrollments (tenant_id, activity_group_id, student_id, valid_from) VALUES (?, ?, ?, '2020-01-01')`, f.a.TenantID, ag.ID, f.a.StudentID)
+		for _, target := range []communication.ParentGroupTarget{
+			{Type: communication.ParentGroupTargetGroup, RefID: &group.ID, Label: "Gruppe " + group.Name},
+			{Type: communication.ParentGroupTargetActivityGroup, RefID: &ag.ID, Label: "AG " + ag.Name},
+		} {
+			require.NoError(t, run(adminCtx(t, f.staff), func(ctx context.Context) error {
+				_, err := f.svc.CreateParentGroupThread(ctx, communication.ParentGroupThreadInput{Target: target, Title: suffix, Body: "Hallo"})
+				return err
+			}))
+		}
+	}
+	measure := func(threads int) (staff, guardian querybudgets.Measurement) {
+		t.Helper()
+		counter := testpkg.CaptureQueriesForContext(t, db)
+		rows, err := testpkg.MeasuredTenantQuery0(t, counter.Context(adminCtx(t, f.staff)), db, counter, f.svc.ListParentGroupThreads)
+		require.NoError(t, err)
+		require.Len(t, rows, threads)
+		guardianCounter := testpkg.CaptureQueriesForContext(t, db)
+		guardianRows, err := testpkg.MeasuredTenantQuery0(t, guardianCounter.Context(testpkg.Ctx(t)), db, guardianCounter,
+			func(ctx context.Context) ([]communication.PortalGuardianGroupThread, error) {
+				return f.portal.PortalListGroupThreads(ctx, f.a.AccountID, []int64{f.a.StudentID}, []int64{f.a.TenantID})
+			})
+		require.NoError(t, err)
+		require.Len(t, guardianRows, threads)
+		return counter.Measurement(counter.Queries()), guardianCounter.Measurement(guardianCounter.Queries())
+	}
+
+	createTargetThreads("Eins")
+	firstStaff, firstGuardian := measure(2)
+	createTargetThreads("Zwei")
+	createTargetThreads("Drei")
+	staff, guardian := measure(6)
+	require.Len(t, staff.Statements, len(firstStaff.Statements), "the staff list stays flat")
+	require.Len(t, guardian.Statements, len(firstGuardian.Statements), "the guardian list stays flat")
+	querybudgets.AssertQueryBudget(t, "modules.communication.parent_group_threads.list_group_targets", staff)
+	querybudgets.AssertQueryBudget(t, "modules.communication.parent_group_threads.list_for_guardian_group_targets", guardian)
 }
 
 type groupRetentionDays int
