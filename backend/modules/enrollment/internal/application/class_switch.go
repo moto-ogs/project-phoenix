@@ -69,7 +69,7 @@ func (d *Decisions) replanApprovedChildClass(ctx context.Context, run *approvedC
 // approval: a manual class edit or a grade transition in between wins and the
 // plan is dropped. Like an approval that changes a class, it takes the
 // class-writes and recurrence gates first and resyncs the offering-sourced
-// templates from asOf, so the Jahrgang-filtered rosters follow the new class.
+// templates from asOf, so their rosters follow a new class or place.
 func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Date) (int, error) {
 	// Take the same gates an approved-child sync uses before reading the
 	// plans. Otherwise an edit can replace a plan after this worker's read,
@@ -84,25 +84,11 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 	if len(due) == 0 {
 		return 0, nil
 	}
-	applied := 0
-	previousClasses := make(map[int64]string, len(due))
-	for _, change := range due {
-		outcome, err := d.applyDueClassSwitch(ctx, change)
-		if err != nil {
-			return applied, err
-		}
-		if outcome.applied {
-			applied++
-			previousClasses[*change.CreatedStudentID] = change.From
-		}
-		// A child without an OGS place stood in no Regeltermin (ADR 0282):
-		// with its place it joins those of its class, whatever class it
-		// had before (#8279).
-		if outcome.grantedPlace {
-			previousClasses[*change.CreatedStudentID] = ""
-		}
+	applied, previousClasses, resyncOfferingSourcedTemplates, err := d.applyDueClassSwitches(ctx, due)
+	if err != nil {
+		return applied, err
 	}
-	if applied > 0 {
+	if resyncOfferingSourcedTemplates {
 		if err := d.resyncOfferingSourcedTemplates(ctx, asOf); err != nil {
 			return applied, fmt.Errorf("class switch: resync sourced templates: %w", err)
 		}
@@ -111,6 +97,36 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 		return applied, fmt.Errorf("class switch: follow class changes on targeted templates: %w", err)
 	}
 	return applied, nil
+}
+
+// applyDueClassSwitches applies the due switches and records the previous
+// class for every child whose targeted roster must follow. A place grant needs
+// the offering-sourced resync too: it changes the child's eligibility even
+// when the school already changed its class and the planned switch is skipped.
+func (d *Decisions) applyDueClassSwitches(ctx context.Context, due []enrollmentNative.DueClassSwitch) (int, map[int64]string, bool, error) {
+	applied := 0
+	resyncOfferingSourcedTemplates := false
+	previousClasses := make(map[int64]string, len(due))
+	for _, change := range due {
+		outcome, err := d.applyDueClassSwitch(ctx, change)
+		if err != nil {
+			return applied, nil, false, err
+		}
+		if outcome.applied {
+			applied++
+			previousClasses[*change.CreatedStudentID] = change.From
+		}
+		if outcome.applied || outcome.grantedPlace {
+			resyncOfferingSourcedTemplates = true
+		}
+		// A child without an OGS place stood in no Regeltermin (ADR 0282):
+		// with its place it joins those of its class, whatever class it
+		// had before (#8279).
+		if outcome.grantedPlace {
+			previousClasses[*change.CreatedStudentID] = ""
+		}
+	}
+	return applied, previousClasses, resyncOfferingSourcedTemplates, nil
 }
 
 // applyDueClassSwitch applies one due switch and clears its plan. Only a
