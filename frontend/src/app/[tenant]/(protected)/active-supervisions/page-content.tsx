@@ -873,8 +873,10 @@ function MeinRaumPageContent() {
   // „Aktiv“ neben „Eigene Aufsicht“ sagte am Telefon zweimal dasselbe: Die
   // eigene Aufsicht läuft. Der Zustand steht dort nur, wenn er abweicht
   // („Beendet“).
+  // Ebenso bei einer fremden Aufsicht: „Läuft seit …“ in der Titelzeile sagt
+  // es schon, und „Aktiv“ ließ die Chipzeile in eine dritte Zeile umbrechen.
   const appRunStateBadge =
-    ownSupervisionBadge &&
+    (ownSupervisionBadge || appHasRunningRoster) &&
     currentTimetableRoster?.instance.status !== "completed"
       ? null
       : runStateBadge;
