@@ -14,6 +14,11 @@ import (
 // gone, or that the caller's school does not hold, keeps the label the thread
 // was opened with. One name lookup for all threads; without names every
 // group and AG thread keeps its stored label.
+//
+// A group or AG the lookup no longer finds was deleted (both are deleted for
+// good, ids are not reused): its thread reads closed with the reason
+// ParentGroupThreadClosedGroupDeleted (#8213). The thread follows its target
+// at read time, so every deletion path closes it in its own transaction.
 func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, threads ...*ParentGroupThread) error {
 	var groupIDs, activityIDs []int64
 	for _, thread := range threads {
@@ -28,7 +33,8 @@ func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, 
 		}
 	}
 	var groups, activities map[int64]string
-	if names != nil && len(groupIDs)+len(activityIDs) > 0 {
+	looked := names != nil && len(groupIDs)+len(activityIDs) > 0
+	if looked {
 		var err error
 		if groups, activities, err = names.GroupTargetNames(ctx, groupIDs, activityIDs); err != nil {
 			return fmt.Errorf("messaging: group thread target names: %w", err)
@@ -37,9 +43,29 @@ func LabelParentGroupThreads(ctx context.Context, names ParentGroupTargetNames, 
 	for _, thread := range threads {
 		if thread != nil {
 			thread.Target.Label = currentGroupTargetLabel(thread.Target, groups, activities)
+			if looked && groupTargetGone(thread.Target, groups, activities) {
+				thread.ClosedReason = ParentGroupThreadClosedGroupDeleted
+			}
 		}
 	}
 	return nil
+}
+
+// groupTargetGone reports whether the lookup no longer found the group or AG
+// of a thread. A class thread has no row to lose.
+func groupTargetGone(target ParentGroupTarget, groups, activities map[int64]string) bool {
+	if target.RefID == nil {
+		return false
+	}
+	switch target.Type {
+	case ParentGroupTargetGroup:
+		_, found := groups[*target.RefID]
+		return !found
+	case ParentGroupTargetActivityGroup:
+		_, found := activities[*target.RefID]
+		return !found
+	}
+	return false
 }
 
 func currentGroupTargetLabel(target ParentGroupTarget, groups, activities map[int64]string) string {

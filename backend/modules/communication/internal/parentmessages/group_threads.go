@@ -161,7 +161,11 @@ func (s *Service) PostParentGroupMessage(ctx context.Context, threadID int64, bo
 	if err != nil {
 		return nil, err
 	}
-	if thread.ClosedAt != nil {
+	// A thread whose group or AG was deleted is closed as well (#8213).
+	if err := deliveryPorts.LabelParentGroupThreads(ctx, s.GroupTargetNames, thread); err != nil {
+		return nil, err
+	}
+	if thread.Closed() {
 		return nil, deliveryPorts.ErrParentGroupThreadClosed
 	}
 	if err := s.requireEnabled(ctx); err != nil {

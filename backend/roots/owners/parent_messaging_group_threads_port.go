@@ -71,7 +71,7 @@ func (p parentGroupThreads) GroupThreadTitles(ctx context.Context, threadIDs []i
 func parentGroupThread(thread communication.ParentGroupThread) parentportal.GroupThread {
 	return parentportal.GroupThread{
 		ID: thread.ID, TenantID: thread.TenantID, Title: thread.Title, TargetLabel: thread.Target.Label,
-		ClosedAt: thread.ClosedAt, LastMessageAt: thread.LastMessageAt,
+		ClosedAt: thread.ClosedAt, ClosedReason: thread.ClosedReason, LastMessageAt: thread.LastMessageAt,
 	}
 }
 

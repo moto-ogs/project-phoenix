@@ -31,6 +31,7 @@ export function parentGroupMessagesTopic(): HelpTopic {
     ],
     differences: [
       "Steht dort `Diese Gruppennachricht ist geschlossen`? Dann kannst du nicht mehr antworten. Schreibe der OGS im Chat zu deinem Kind.",
+      "Steht dort `Die Gruppe wurde gelöscht.`? Dann gibt es die Gruppe nicht mehr. Du kannst die Nachricht weiter lesen, aber nicht mehr antworten.",
     ],
     related: [HELP_TOPICS.parentMessages, HELP_TOPICS.parentNotifications],
   };

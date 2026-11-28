@@ -62077,6 +62077,13 @@
           }
         },
         {
+          "name": "closed_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "last_message_at",
           "optional": true,
           "schema": {
@@ -62129,6 +62136,13 @@
           "name": "closed",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -62208,6 +62222,13 @@
           "name": "closed",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -104973,6 +104994,13 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "closed_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {

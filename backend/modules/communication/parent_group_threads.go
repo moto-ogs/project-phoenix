@@ -14,6 +14,11 @@ const (
 	ParentGroupTargetActivityGroup = "activity_group"
 )
 
+// ParentGroupThreadClosedGroupDeleted is the reason a thread is closed when
+// its group or AG was deleted (#8213). Nothing stores it: the thread reads
+// closed from the moment its target is gone, in the deleting transaction.
+const ParentGroupThreadClosedGroupDeleted = "group_deleted"
+
 var (
 	ErrParentGroupThreadNotFound     = errors.New("messaging: group thread not found")
 	ErrParentGroupThreadClosed       = errors.New("messaging: group thread is closed")
@@ -35,13 +40,22 @@ type ParentGroupTarget struct {
 // ParentGroupThread is a thread the OGS writes to every family of a group,
 // class or AG. Families answer only the OGS, in their child's conversation.
 type ParentGroupThread struct {
-	ID            int64
-	TenantID      int64
-	Target        ParentGroupTarget
-	Title         string
-	ClosedAt      *time.Time
+	ID       int64
+	TenantID int64
+	Target   ParentGroupTarget
+	Title    string
+	ClosedAt *time.Time
+	// ClosedReason names why the thread takes no new messages without a
+	// close by the OGS: ParentGroupThreadClosedGroupDeleted. Empty otherwise.
+	ClosedReason  string
 	LastMessageAt *time.Time
 	CreatedAt     time.Time
+}
+
+// Closed reports whether the thread takes no new messages: the OGS closed
+// it, or its group or AG is gone.
+func (t ParentGroupThread) Closed() bool {
+	return t.ClosedAt != nil || t.ClosedReason != ""
 }
 
 // ParentGroupMessage is one OGS message of a group thread.

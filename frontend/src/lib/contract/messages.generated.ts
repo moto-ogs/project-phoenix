@@ -125,6 +125,7 @@ export interface StaffGroupThreadSummaryResponse {
   target_label: string;
   title: string;
   closed_at?: string;
+  closed_reason?: string;
   last_message_at?: string;
   created_at: string;
   last_message_body: string;
@@ -141,6 +142,7 @@ export const StaffGroupThreadSummaryResponseSchema: z.ZodType<StaffGroupThreadSu
   target_label: str,
   title: str,
   closed_at: optional(instant),
+  closed_reason: optional(str),
   last_message_at: optional(instant),
   created_at: instant,
   last_message_body: str,
@@ -177,6 +179,7 @@ export interface GroupThreadResponse {
   target_label: string;
   title: string;
   closed_at?: string;
+  closed_reason?: string;
   last_message_at?: string;
   created_at: string;
 }
@@ -188,6 +191,7 @@ export const GroupThreadResponseSchema: z.ZodType<GroupThreadResponse, unknown> 
   target_label: str,
   title: str,
   closed_at: optional(instant),
+  closed_reason: optional(str),
   last_message_at: optional(instant),
   created_at: instant,
 });

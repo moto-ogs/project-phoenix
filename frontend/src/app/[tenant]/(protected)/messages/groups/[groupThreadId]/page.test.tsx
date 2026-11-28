@@ -175,6 +175,39 @@ describe("Gruppennachricht: Objektseite", () => {
     ).toBeInTheDocument();
   });
 
+  // #8213: eine gelöschte Gruppe schließt ihre Gruppennachricht.
+  it("nennt die gelöschte Gruppe und bietet weder Eingabe noch Schließen an", () => {
+    const deleted = detail(false);
+    state.detail = {
+      ...deleted,
+      thread: { ...deleted.thread, closed_reason: "group_deleted" },
+    };
+    render(<GroupMessagePage />);
+    expect(
+      screen.getByText(
+        "Die Gruppe wurde gelöscht. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Wer bringt einen Kuchen mit?"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        statusLine(
+          "Gruppe Bären",
+          "1 von 2 Familien gelesen",
+          "Gruppe gelöscht",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Nachricht" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Weitere Aktionen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("aktualisiert die offene Ansicht nach einer Nachricht aus einem anderen Tab", async () => {
     render(<GroupMessagePage />);
     expect(

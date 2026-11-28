@@ -22,11 +22,14 @@ var (
 // GroupThread is a group thread (#4784) as a guardian sees it: the OGS
 // writes to a group, class or AG; the guardian answers only the OGS.
 type GroupThread struct {
-	ID            int64
-	TenantID      int64
-	Title         string
-	TargetLabel   string
-	ClosedAt      *time.Time
+	ID          int64
+	TenantID    int64
+	Title       string
+	TargetLabel string
+	ClosedAt    *time.Time
+	// ClosedReason is "group_deleted" when the group or AG of the thread
+	// was deleted (#8213); empty otherwise.
+	ClosedReason  string
 	LastMessageAt *time.Time
 }
 

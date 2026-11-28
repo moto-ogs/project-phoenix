@@ -1,5 +1,6 @@
 "use client";
 
+import { isGroupThreadGroupDeleted } from "~/lib/group-thread-closure";
 import { useLocale } from "next-intl";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -90,7 +91,9 @@ function GroupThreadRow({ thread }: Readonly<{ thread: GroupThreadSummary }>) {
         <>
           {thread.closed && (
             <span className="text-xs font-medium text-gray-500">
-              {t("closed")}
+              {isGroupThreadGroupDeleted(thread)
+                ? t("groupDeleted")
+                : t("closed")}
             </span>
           )}
           <UnreadBadge count={thread.unread} />

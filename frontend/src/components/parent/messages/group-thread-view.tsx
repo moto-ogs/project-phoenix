@@ -52,6 +52,7 @@ import {
   parentReadersLine,
 } from "~/lib/messaging-status";
 import { parentPath } from "~/lib/parent-url";
+import { isGroupThreadGroupDeleted } from "~/lib/group-thread-closure";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
 
@@ -321,7 +322,11 @@ export function ParentGroupThreadView({
         ) : thread.closed ? (
           <div className="space-y-2">
             <p className="text-sm leading-6 text-gray-600">
-              {/* Ohne Kind mit OGS-Platz gibt es keinen Chat (#4803). */}
+              {/* Ohne Kind mit OGS-Platz gibt es keinen Chat (#4803). Eine
+                  gelöschte Gruppe nennt den Grund zuerst (#8213). */}
+              {isGroupThreadGroupDeleted(thread)
+                ? `${t("groupDeletedReason")} `
+                : null}
               {chatLink ? t("closedNote") : t("closedNoteWithoutChat")}
             </p>
             {chatLink}
