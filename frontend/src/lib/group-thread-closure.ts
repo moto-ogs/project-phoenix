@@ -5,7 +5,7 @@
  */
 import type { GroupThreadResponse } from "~/lib/contract/messages.generated";
 
-export const GROUP_THREAD_GROUP_DELETED = "group_deleted";
+const GROUP_THREAD_GROUP_DELETED = "group_deleted";
 
 type GroupThreadClosure = Readonly<
   Partial<Pick<GroupThreadResponse, "closed_at" | "closed_reason">>
