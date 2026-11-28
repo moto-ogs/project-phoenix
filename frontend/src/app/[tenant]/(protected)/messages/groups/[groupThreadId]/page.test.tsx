@@ -215,7 +215,7 @@ describe("Gruppennachricht: Objektseite", () => {
     render(<GroupMessagePage />);
     expect(
       screen.getByText(
-        "Klasse 4a gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.",
+        "Die Kinder dieser Klasse 4a haben die OGS zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.",
       ),
     ).toBeInTheDocument();
     expect(

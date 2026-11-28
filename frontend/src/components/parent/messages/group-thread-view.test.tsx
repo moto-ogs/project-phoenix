@@ -344,7 +344,7 @@ describe("ParentGroupThreadView (#4784)", () => {
     expect(screen.getByLabelText("Antwort")).toBeInTheDocument();
   });
 
-  it("nennt den Grund, wenn die Klasse im neuen Schuljahr nicht mehr besteht", async () => {
+  it("nennt den Grund, wenn die Klasse die OGS verlassen hat", async () => {
     mockedThread.mockResolvedValue({
       ...sommerfest,
       closed: true,
@@ -356,7 +356,7 @@ describe("ParentGroupThreadView (#4784)", () => {
 
     expect(
       await screen.findByText(
-        "Die Klasse 4a gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen.",
+        "Die Kinder dieser Klasse 4a haben die OGS zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();

@@ -380,7 +380,7 @@ function GroupMessageContent() {
           {classLeft ? (
             <Alert
               type="info"
-              message={`${schoolClassLabel(classMove.from_class)} gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.`}
+              message={`Die Kinder dieser ${schoolClassLabel(classMove.from_class)} haben die OGS zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen. Eltern können nicht mehr antworten.`}
             />
           ) : closed ? (
             <Alert

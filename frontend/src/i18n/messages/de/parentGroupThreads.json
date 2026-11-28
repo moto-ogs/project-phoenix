@@ -18,5 +18,5 @@
   "errorObjectList": "die Gruppennachrichten",
   "closedNoteWithoutChat": "Diese Gruppennachricht ist geschlossen.",
   "classMoved": "Klasse wurde versetzt: jetzt {className}",
-  "classLeft": "Die Klasse {className} gibt es im neuen Schuljahr nicht mehr. Darum ist diese Gruppennachricht geschlossen."
+  "classLeft": "Die Kinder dieser Klasse {className} haben {careAcc} zum Schuljahreswechsel verlassen. Darum ist diese Gruppennachricht geschlossen."
 }

@@ -18,5 +18,5 @@
   "errorObjectList": "the group messages",
   "closedNoteWithoutChat": "This group message is closed.",
   "classMoved": "Class moved up: now {className}",
-  "classLeft": "Class {className} does not continue in the new school year. That is why this group message is closed."
+  "classLeft": "The children of this class {className} left {careAcc} at the change of school year. That is why this group message is closed."
 }
