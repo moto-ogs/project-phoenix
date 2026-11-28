@@ -20,16 +20,6 @@ import (
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// ClosingDayShiftsTest is the serving root's binding of the school's closing
-// days to the series shifts (#8205), over db and the day clock today:
-// Calendar writes closing days with the plans bound, Planning plans series,
-// and Router serves /staff-shifts, including /staff-shifts/break-day-shifts.
-type ClosingDayShiftsTest struct {
-	Calendar schoolcalendar.Calendar
-	Planning workforce.StaffShiftPlanning
-	Router   http.Handler
-}
-
 // closingDayShiftsFederalState pins the tenant's federal state: the series
 // skip its statutory holidays as in production.
 type closingDayShiftsFederalState struct{}
@@ -38,20 +28,23 @@ func (closingDayShiftsFederalState) ResolveString(context.Context, string) (stri
 	return "DE-NW", nil
 }
 
-// NewClosingDayShiftsTest composes the closing days, the Dienstplan and its
-// route the way the serving root does.
-func NewClosingDayShiftsTest(database transactionruntime.Database, today func() timezone.Date) (*ClosingDayShiftsTest, error) {
+// NewClosingDayShiftsTest composes the binding of the school's closing days
+// to the series shifts (#8205) the way the serving root does, over database
+// and the day clock today: the School Calendar that writes closing days with
+// the plans bound, the Dienstplan that plans series, and its /staff-shifts
+// route, including /staff-shifts/break-day-shifts.
+func NewClosingDayShiftsTest(database transactionruntime.Database, today func() timezone.Date) (schoolcalendar.Calendar, workforce.StaffShiftPlanning, http.Handler, error) {
 	records, err := newSchoolCalendarWithAdministration(database, closingDayShiftsFederalState{}, func(context.Context) error { return nil }, nil, schoolCalendarCompose.AdministrationDependencies{})
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	timetable, err := NewTimetableTestRepositories(database)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	rooms, err := owners.NewTimetableRoomRows(database)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	shifts, err := workforceCompose.NewShiftPlanning(workforceCompose.ShiftPlanningDependencies{
 		ShiftMoveAudit: owners.NewShiftMoveAudit(NewTimetableDeviationAudit(database).DeviationEvent),
@@ -62,16 +55,16 @@ func NewClosingDayShiftsTest(database transactionruntime.Database, today func() 
 		DB: database.Pool(), LockStaffAssignments: ShiftPlanningTestStaffRowLock(database), Today: today,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	calendar, err := newSchoolCalendarWithAdministration(database, closingDayShiftsFederalState{}, func(context.Context) error { return nil }, nil,
-		schoolCalendarCompose.AdministrationDependencies{ClosingDayPlans: owners.NewSchoolCalendarClosingDayPlans(shifts.BreakDays)})
+		schoolCalendarCompose.AdministrationDependencies{ClosingDayPlans: shifts.BreakDays})
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	caller, _, err := newStaffIdentityForTests(database)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	planning := shifts.Planning(nil)
 	resource := newStaffShiftsResource(staffShiftsDependencies{
@@ -80,5 +73,5 @@ func NewClosingDayShiftsTest(database transactionruntime.Database, today func() 
 	})
 	router := chi.NewRouter()
 	router.Mount("/staff-shifts", resource.Router())
-	return &ClosingDayShiftsTest{Calendar: calendar, Planning: planning, Router: router}, nil
+	return calendar, planning, router, nil
 }

@@ -2,7 +2,6 @@ package planning
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -24,47 +23,39 @@ const breakDayListHorizonDays = 400
 // breakDayClockLayout renders the shift window as "HH:MM", like the shift routes.
 const breakDayClockLayout = "15:04"
 
-// BreakDayShiftRecords are the shift reads and the bulk write of the
-// break-day follow-up; the Workforce capability satisfies them.
-type BreakDayShiftRecords interface {
-	ShiftReads
-	ApplyBreakDayShiftStates(ctx context.Context, states []workforce.BreakDayShiftState) error
-}
-
-// BreakDayDependencies are the collaborators of NewSeriesBreakDays; all are
-// required.
-type BreakDayDependencies struct {
-	Shifts   BreakDayShiftRecords
-	Absences SickReportReader
-	Calendar SchoolBreakCalendarReader
-	// LockStaffShifts is the per-staff shift gate shared with every shift write.
-	LockStaffShifts func(ctx context.Context, staffID int64) error
-	Today           func() calendar.Date
-}
-
-// NewSeriesBreakDays binds the break-day follow-up and its list.
-func NewSeriesBreakDays(deps BreakDayDependencies) (workforce.SeriesBreakDays, error) {
-	if deps.Shifts == nil || deps.Absences == nil || deps.Calendar == nil || deps.LockStaffShifts == nil || deps.Today == nil {
-		return nil, errors.New("shift planning: the break-day follow-up needs the shifts, the absences, the calendar, the shift lock and the day clock")
+// NewSeriesBreakDays binds the break-day follow-up and its list over the
+// Workforce rows and the School Calendar's reads. Without the calendar there
+// is nothing to follow: it answers nil, as the series then skip no day either.
+func NewSeriesBreakDays(records Records, reads SeriesCalendarReads, lock func(context.Context, int64) error, today func() calendar.Date) workforce.SeriesBreakDays {
+	if records == nil || reads == nil || lock == nil || today == nil {
+		return nil
 	}
-	return &seriesBreakDays{deps: deps}, nil
+	return &seriesBreakDays{records: records, calendar: schoolCalendarNonWorkingDays{calendar: reads}, lock: lock, today: today}
 }
 
-type seriesBreakDays struct{ deps BreakDayDependencies }
+// seriesBreakDays reads and writes the shifts through records, the absences
+// in force too, and the window's calendar once per call. lock is the
+// per-staff shift gate shared with every shift write.
+type seriesBreakDays struct {
+	records  Records
+	calendar SchoolBreakCalendarReader
+	lock     func(ctx context.Context, staffID int64) error
+	today    func() calendar.Date
+}
 
 // FollowBreakDays reconciles the series shifts of [from, to] from tomorrow
 // on. It locks the people with series shifts in the window, ascending, then
 // reads their shifts again under the locks and writes every change in one
 // statement.
 func (b *seriesBreakDays) FollowBreakDays(ctx context.Context, from, to calendar.Date) error {
-	if tomorrow := b.deps.Today().AddDays(1); from.Before(tomorrow) {
+	if tomorrow := b.today().AddDays(1); from.Before(tomorrow) {
 		from = tomorrow
 	}
 	if to.Before(from) {
 		return nil
 	}
 	window := workforce.StaffShiftFilter{From: from.String(), To: to.String()}
-	unlocked, err := b.deps.Shifts.ReadShifts(ctx, window)
+	unlocked, err := b.records.ReadShifts(ctx, window)
 	if err != nil {
 		return fmt.Errorf("break days: read shifts: %w", err)
 	}
@@ -73,16 +64,16 @@ func (b *seriesBreakDays) FollowBreakDays(ctx context.Context, from, to calendar
 		return nil
 	}
 	for _, staffID := range staffIDs {
-		if err := b.deps.LockStaffShifts(ctx, staffID); err != nil {
+		if err := b.lock(ctx, staffID); err != nil {
 			return fmt.Errorf("break days: lock shifts of staff %d: %w", staffID, err)
 		}
 	}
 	window.StaffIDs = staffIDs
-	shifts, err := b.deps.Shifts.ReadShifts(ctx, window)
+	shifts, err := b.records.ReadShifts(ctx, window)
 	if err != nil {
 		return fmt.Errorf("break days: read locked shifts: %w", err)
 	}
-	breaks, err := b.deps.Calendar.SchoolBreakCalendar(ctx, from, to)
+	breaks, err := b.calendar.SchoolBreakCalendar(ctx, from, to)
 	if err != nil {
 		return err
 	}
@@ -91,7 +82,7 @@ func (b *seriesBreakDays) FollowBreakDays(ctx context.Context, from, to calendar
 	if err != nil {
 		return err
 	}
-	if err := b.deps.Shifts.ApplyBreakDayShiftStates(ctx, append(states, restored...)); err != nil {
+	if err := b.records.ApplyBreakDayShiftStates(ctx, append(states, restored...)); err != nil {
 		return fmt.Errorf("break days: write shift states: %w", err)
 	}
 	return nil
@@ -100,9 +91,9 @@ func (b *seriesBreakDays) FollowBreakDays(ctx context.Context, from, to calendar
 // BreakDayShifts lists the active series shifts that stand on a day their
 // series leaves out, from tomorrow on.
 func (b *seriesBreakDays) BreakDayShifts(ctx context.Context) ([]workforce.SeriesBreakDayShift, error) {
-	from := b.deps.Today().AddDays(1)
+	from := b.today().AddDays(1)
 	to := from.AddDays(breakDayListHorizonDays)
-	breaks, err := b.deps.Calendar.SchoolBreakCalendar(ctx, from, to)
+	breaks, err := b.calendar.SchoolBreakCalendar(ctx, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +103,7 @@ func (b *seriesBreakDays) BreakDayShifts(ctx context.Context) ([]workforce.Serie
 		return result, nil
 	}
 	active := false
-	shifts, err := b.deps.Shifts.ReadShifts(ctx, workforce.StaffShiftFilter{
+	shifts, err := b.records.ReadShifts(ctx, workforce.StaffShiftFilter{
 		Dates: dates, Cancelled: &active,
 		Order: shiftOrder(workforce.StaffShiftOrderDate, workforce.StaffShiftOrderStartTime),
 	})
@@ -146,7 +137,7 @@ func (b *seriesBreakDays) restoreStates(ctx context.Context, shifts, reopened []
 	for _, shift := range reopened {
 		ids = append(ids, shift.ID)
 	}
-	covers, err := b.deps.Shifts.ReadShifts(ctx, workforce.StaffShiftFilter{OriginShiftIDs: ids})
+	covers, err := b.records.ReadShifts(ctx, workforce.StaffShiftFilter{OriginShiftIDs: ids})
 	if err != nil {
 		return nil, fmt.Errorf("break days: read covers: %w", err)
 	}
@@ -173,7 +164,7 @@ func (b *seriesBreakDays) restoreStates(ctx context.Context, shifts, reopened []
 // absenceDays reads the absences in force of the reopened shifts' people
 // once and indexes their full absence days per person.
 func (b *seriesBreakDays) absenceDays(ctx context.Context, reopened []*workforce.ShiftRecord, from, to calendar.Date) (map[int64]map[calendar.Date]absenceStamp, error) {
-	absences, err := b.deps.Absences.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
+	absences, err := b.records.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		StaffIDs: breakSeriesStaff(reopened), Statuses: workforce.PlanEffectiveAbsenceStatuses(),
 		OverlapFrom: from.String(), OverlapTo: to.String(),
 	})

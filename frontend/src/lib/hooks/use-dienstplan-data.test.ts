@@ -333,6 +333,8 @@ describe("useDienstplanData", () => {
       "dienstplan-shifts-",
       // Abwesenheiten, die noch im Plan fehlen (#7021).
       "absence-plan-gaps",
+      // Serienschichten an Schließtagen (#8205).
+      "timetable-break-day-shifts",
       "vertretung-week-",
       "vertretung-gaps-",
       "staff-pending-absences-",

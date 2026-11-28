@@ -1,8 +1,17 @@
 package staffshifts
 
 import (
+	"context"
 	"net/http"
+
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
+
+// BreakDayShifts lists the series shifts left on closing days and in the
+// Ferien (#8205); workforce.SeriesBreakDays satisfies it.
+type BreakDayShifts interface {
+	BreakDayShifts(ctx context.Context) ([]workforce.SeriesBreakDayShift, error)
+}
 
 // listBreakDayShifts handles GET /api/staff-shifts/break-day-shifts: the
 // planned shifts of series that leave out Ferien and closing days, standing

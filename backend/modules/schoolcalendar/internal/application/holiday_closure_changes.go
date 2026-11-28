@@ -68,7 +68,7 @@ func (s *Service) followClosingDayPlans(ctx context.Context, previous, current *
 	if from.IsZero() {
 		return nil
 	}
-	if err := plans.FollowClosingDays(ctx, from, to); err != nil {
+	if err := plans.FollowBreakDays(ctx, from, to); err != nil {
 		return fmt.Errorf("school calendar: follow closing day in the plans: %w", err)
 	}
 	return nil

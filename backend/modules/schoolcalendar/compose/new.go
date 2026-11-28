@@ -58,19 +58,16 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 
 // AdministrationDependencies are the collaborators of the period administration.
 type AdministrationDependencies struct {
-	DB      *bun.DB
-	Observe func(Observation)
-	// RecurrenceGate serializes the administration against recurrence writes (shared lock).
-	RecurrenceGate func(context.Context) error
+	DB             *bun.DB
+	Observe        func(Observation)
+	RecurrenceGate func(context.Context) error // serializes the administration against recurrence writes (shared lock)
 	// CareOfferingGuard refuses a change (replacement set) or removal (nil) a linked care offering still needs (ErrCalendarPeriodRequiredByCareOffering).
 	CareOfferingGuard func(ctx context.Context, periodID int64, replacement *schoolcalendar.CalendarPeriodFields) error
 	// Today names the current day in YYYY-MM-DD; nil is the Berlin day, the school's day.
 	Today func() string
-	// ClosingDayNotices tells the school of a changed closing day (#7144).
+	// ClosingDayNotices tells the school of a changed closing day (#7144), ClosingDayPlans its series shifts (#8205).
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
-	// ClosingDayPlans carries a changed closing day into the series shifts
-	// that leave closing days out (#8205).
-	ClosingDayPlans schoolcalendar.ClosingDayPlans
+	ClosingDayPlans   schoolcalendar.ClosingDayPlans
 }
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
@@ -84,8 +81,7 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	}
 	return application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
-		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
-		ClosingDayPlans: dependencies.ClosingDayPlans,
+		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices, ClosingDayPlans: dependencies.ClosingDayPlans,
 	}, dependencies.Observe)
 }
 

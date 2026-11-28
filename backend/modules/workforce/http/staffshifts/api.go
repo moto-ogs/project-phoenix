@@ -82,14 +82,8 @@ type Resource struct {
 	runtime   Runtime
 }
 
-// BreakDayShifts lists the series shifts left on closing days and in the
-// Ferien (#8205); workforce.SeriesBreakDays satisfies it.
-type BreakDayShifts interface {
-	BreakDayShifts(ctx context.Context) ([]workforce.SeriesBreakDayShift, error)
-}
-
-// NewResource wires the dependencies. breakDays may be nil in a composition
-// without the School Calendar; GET /break-day-shifts is then not mounted.
+// NewResource wires the dependencies; a nil breakDays leaves out
+// GET /break-day-shifts.
 func NewResource(planning workforce.StaffShiftPlanning, breakDays BreakDayShifts, runtime Runtime) *Resource {
 	return &Resource{planning: planning, breakDays: breakDays, runtime: runtime}
 }

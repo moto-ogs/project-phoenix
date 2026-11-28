@@ -84,22 +84,18 @@ type ShiftPlanningDependencies struct {
 	WorkSchedules StaffWorkScheduleReader
 	WorkModels    WorkTimeModelReader
 	Holidays      planning.HolidayDatesReader
-	// NonWorkingDays lets series skip statutory holidays, Ferien and closing
-	// days (#3820), bound to the School Calendar. Optional: nil plans every
-	// occurrence.
+	// NonWorkingDays: series skip holidays, Ferien and closing days (#3820, #8205); nil plans every day.
 	NonWorkingDays planning.SeriesCalendarReads
 	// CategoryLinker syncs the optional Kategorie-Schichtart mapping, whose FK
 	// lives with the Timetable owner. Optional: nil leaves mappings untouched.
 	CategoryLinker planning.CategoryLinker
-	// DB carries the per-staff advisory lock that makes the overlap check safe
-	// under concurrency.
+	// DB carries the per-staff advisory lock that makes the overlap check safe under concurrency.
 	DB                   *bun.DB
 	LockStaffAssignments func(ctx context.Context, staffIDs []int64) error // staff rows, ascending, one batch (#7683)
 	// Broadcaster and Logger are optional.
 	Broadcaster realtime.Broadcaster
 	Logger      *slog.Logger
-	// Today is the calendar-day clock the materializer and the sick state of
-	// shift writes compare against; required.
+	// Today is the day clock of the materializer and the sick state of shift writes; required.
 	Today func() calendar.Date
 	// PlanRules (nil: ArbZG defaults) and WorkingTimeAudit feed the working-time check (ADR 0242).
 	PlanRules        planning.PlanRuleSettings
@@ -113,10 +109,7 @@ type ShiftPlanning struct {
 	Assignments workforce.StaffAssignmentQuery
 	Overview    workforce.StaffScheduleOverviewQuery
 
-	// BreakDays carries a change of the school's closing days into the
-	// planned series shifts and lists the ones left on such days (#8205).
-	// Nil without the School Calendar's non-working days.
-	BreakDays workforce.SeriesBreakDays
+	BreakDays workforce.SeriesBreakDays // series shifts on closing days (#8205)
 
 	shifts   planning.StaffShiftService
 	series   planning.StaffShiftSeriesService
@@ -171,20 +164,8 @@ func NewShiftPlanning(deps ShiftPlanningDependencies) (*ShiftPlanning, error) {
 		Holidays: deps.Holidays, TargetOverrides: deps.Workforce,
 	})
 
-	var breakDays workforce.SeriesBreakDays
-	if deps.NonWorkingDays != nil {
-		var err error
-		breakDays, err = planning.NewSeriesBreakDays(planning.BreakDayDependencies{
-			Shifts: deps.Workforce, Absences: deps.Workforce, Calendar: planning.SchoolCalendarBreaks(deps.NonWorkingDays),
-			LockStaffShifts: lockStaffShifts, Today: deps.Today,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &ShiftPlanning{
-		BreakDays:   breakDays,
+		BreakDays:   planning.NewSeriesBreakDays(deps.Workforce, deps.NonWorkingDays, lockStaffShifts, deps.Today),
 		ShiftTypes:  planning.NewShiftTypeAdministration(shiftTypes, deps.CategoryLinker),
 		Assignments: planning.NewStaffAssignmentQuery(assignments),
 		Overview:    planning.NewStaffScheduleOverviewQuery(overview),

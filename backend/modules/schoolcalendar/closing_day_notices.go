@@ -39,7 +39,7 @@ type ClosingDayNotices interface {
 // school's closing days out (#8205): Workforce's series shifts. It joins
 // the caller's transaction, so the plans follow the closing day in the same
 // commit, and a refusal rolls the closing day back. from and to span every
-// day the change opened or closed.
+// day the change opened or closed. Workforce's SeriesBreakDays satisfies it.
 type ClosingDayPlans interface {
-	FollowClosingDays(ctx context.Context, from, to calendar.Date) error
+	FollowBreakDays(ctx context.Context, from, to calendar.Date) error
 }

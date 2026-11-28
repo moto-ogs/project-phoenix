@@ -37,9 +37,12 @@ import (
 // A changed closing day cancels or plans again the unchanged series shifts
 // of the days it closed or opened, in the same transaction (#8205).
 func buildCalendarAdministration(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), records schoolcalendar.Days, lock timetable.RecurrenceWriteLock, offerings careplan.CareOfferingGuards, notifications owners.DeliveryNotifications, breakDays workforce.SeriesBreakDays) (schoolcalendar.Calendar, error) {
+	if breakDays == nil {
+		return nil, errors.New("calendar administration: Workforce's series break days are required")
+	}
 	return schoolCalendarCompose.NewAdministration(records, schoolCalendarCompose.AdministrationDependencies{
 		DB: db.Pool(), Observe: observe, RecurrenceGate: lock.LockRecurrenceWrites,
-		ClosingDayPlans: owners.NewSchoolCalendarClosingDayPlans(breakDays),
+		ClosingDayPlans: breakDays,
 		ClosingDayNotices: owners.NewSchoolCalendarClosingDayNotices(notifications, func(ctx context.Context) int64 {
 			return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
 		}),

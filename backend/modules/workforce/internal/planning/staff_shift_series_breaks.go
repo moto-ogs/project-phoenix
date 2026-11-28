@@ -55,15 +55,6 @@ func SchoolCalendarNonWorkingDays(calendar SeriesCalendarReads) SeriesNonWorking
 	return schoolCalendarNonWorkingDays{calendar: calendar}
 }
 
-// SchoolCalendarBreaks binds the break-day follow-up's calendar read to the
-// School Calendar (#8205).
-func SchoolCalendarBreaks(calendar SeriesCalendarReads) SchoolBreakCalendarReader {
-	if calendar == nil {
-		return nil
-	}
-	return schoolCalendarNonWorkingDays{calendar: calendar}
-}
-
 type schoolCalendarNonWorkingDays struct{ calendar SeriesCalendarReads }
 
 // SeriesNonWorkingDays reads holidays, closing days and the active Ferien

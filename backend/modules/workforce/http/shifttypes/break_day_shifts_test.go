@@ -32,20 +32,21 @@ import (
 var breakDayToday = calendar.NewDate(2026, 9, 14)
 
 type breakDayEnv struct {
-	db     *bun.DB
-	test   *api.ClosingDayShiftsTest
-	router chi.Router
-	token  string
-	tenant int64
+	db       *bun.DB
+	calendar schoolcalendar.Calendar
+	planning workforce.StaffShiftPlanning
+	router   chi.Router
+	token    string
+	tenant   int64
 }
 
 func setupBreakDayEnv(t *testing.T, db *bun.DB) *breakDayEnv {
 	t.Helper()
-	composition, err := api.NewClosingDayShiftsTest(testpkg.NewDatabase(t, db), func() calendar.Date { return breakDayToday })
+	closingDays, planning, router, err := api.NewClosingDayShiftsTest(testpkg.NewDatabase(t, db), func() calendar.Date { return breakDayToday })
 	require.NoError(t, err)
 	return &breakDayEnv{
-		db: db, test: composition, tenant: testpkg.Tenant(t), token: managerToken(t, 0),
-		router: testpkg.MountedQueryBudgetRouter("/api", testpkg.TenantRuntimeMiddleware(t, db)(composition.Router)),
+		db: db, calendar: closingDays, planning: planning, tenant: testpkg.Tenant(t), token: managerToken(t, 0),
+		router: testpkg.MountedQueryBudgetRouter("/api", testpkg.TenantRuntimeMiddleware(t, db)(router)),
 	}
 }
 
@@ -63,7 +64,7 @@ func (e *breakDayEnv) planSeries(t *testing.T, tenantID int64, includeBreaks boo
 	period := testpkg.CreateTestWeekCyclePeriodForTenant(t, e.db, tenantID, fmt.Sprintf("Schuljahr-%d", suffix),
 		breakDayToday, calendar.NewDate(2026, 10, 2), 1, nil)
 	e.inTenant(t, tenantID, func(ctx context.Context) error {
-		_, err := e.test.Planning.CreateSeries(ctx, workforce.CreateStaffShiftSeries{StaffShiftSeriesInput: workforce.StaffShiftSeriesInput{
+		_, err := e.planning.CreateSeries(ctx, workforce.CreateStaffShiftSeries{StaffShiftSeriesInput: workforce.StaffShiftSeriesInput{
 			StaffID: staff.ID, Weekdays: []int{1, 2, 3, 4, 5}, StartTime: "08:00:00", EndTime: "12:00:00",
 			CalendarPeriodID: period.ID, ValidFrom: breakDayToday.String(), IncludeSchoolBreaks: includeBreaks, ActorStaffID: staff.ID,
 		}})
@@ -132,7 +133,7 @@ func TestClosingDayCancelsAndRestoresUnchangedSeriesShifts(t *testing.T) {
 	foreign := testpkg.NewTenantScope(t, db)
 	env.planSeries(t, foreign.TenantID, false)
 	env.inTenant(t, foreign.TenantID, func(ctx context.Context) error {
-		_, err := env.test.Calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
+		_, err := env.calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
 			StartDate: "2026-09-22", EndDate: "2026-09-22", Reason: "Fortbildung der anderen Schule",
 		}})
 		return err
@@ -143,7 +144,7 @@ func TestClosingDayCancelsAndRestoresUnchangedSeriesShifts(t *testing.T) {
 	adjustedID, err := strconv.ParseInt(before["2026-09-24"].ID, 10, 64)
 	require.NoError(t, err)
 	env.inTenant(t, env.tenant, func(ctx context.Context) error {
-		_, err := env.test.Planning.UpdateShift(ctx, workforce.UpdateStaffShift{ID: adjustedID, StaffShiftInput: workforce.StaffShiftInput{
+		_, err := env.planning.UpdateShift(ctx, workforce.UpdateStaffShift{ID: adjustedID, StaffShiftInput: workforce.StaffShiftInput{
 			StaffID: staffID, Date: "2026-09-24", StartTime: "09:00:00", EndTime: "12:00:00", ActorStaffID: staffID,
 		}})
 		return err
@@ -151,7 +152,7 @@ func TestClosingDayCancelsAndRestoresUnchangedSeriesShifts(t *testing.T) {
 
 	var closingDay schoolcalendar.ClosingDay
 	env.inTenant(t, env.tenant, func(ctx context.Context) error {
-		closingDay, err = env.test.Calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
+		closingDay, err = env.calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
 			StartDate: "2026-09-23", EndDate: "2026-09-24", Reason: "Pädagogischer Tag",
 		}})
 		return err
@@ -172,7 +173,7 @@ func TestClosingDayCancelsAndRestoresUnchangedSeriesShifts(t *testing.T) {
 		Break: workforce.BreakDayClosingDay, Adjusted: true,
 	}, listed[0])
 
-	env.inTenant(t, env.tenant, func(ctx context.Context) error { return env.test.Calendar.DeleteClosingDay(ctx, closingDay.ID) })
+	env.inTenant(t, env.tenant, func(ctx context.Context) error { return env.calendar.DeleteClosingDay(ctx, closingDay.ID) })
 
 	reopened := env.week(t, staffID)
 	assert.False(t, reopened["2026-09-23"].Cancelled, "deleting the closing day plans the shift again")
@@ -200,7 +201,7 @@ func TestBreakDayShiftsNeedThePlanningRightAndStayFlat(t *testing.T) {
 		// A new series leaves an existing closing day out, so every round
 		// plans and adjusts its people on an open day and closes it after.
 		if closingDayID != 0 {
-			env.inTenant(t, env.tenant, func(ctx context.Context) error { return env.test.Calendar.DeleteClosingDay(ctx, closingDayID) })
+			env.inTenant(t, env.tenant, func(ctx context.Context) error { return env.calendar.DeleteClosingDay(ctx, closingDayID) })
 		}
 		for i := 0; i < people-round; i++ {
 			staffID := env.planSeries(t, env.tenant, false)
@@ -208,14 +209,14 @@ func TestBreakDayShiftsNeedThePlanningRightAndStayFlat(t *testing.T) {
 			id, err := strconv.ParseInt(week["2026-09-24"].ID, 10, 64)
 			require.NoError(t, err)
 			env.inTenant(t, env.tenant, func(ctx context.Context) error {
-				_, err := env.test.Planning.UpdateShift(ctx, workforce.UpdateStaffShift{ID: id, StaffShiftInput: workforce.StaffShiftInput{
+				_, err := env.planning.UpdateShift(ctx, workforce.UpdateStaffShift{ID: id, StaffShiftInput: workforce.StaffShiftInput{
 					StaffID: staffID, Date: "2026-09-24", StartTime: "09:00:00", EndTime: "12:00:00", ActorStaffID: staffID,
 				}})
 				return err
 			})
 		}
 		env.inTenant(t, env.tenant, func(ctx context.Context) error {
-			day, err := env.test.Calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
+			day, err := env.calendar.CreateClosingDay(ctx, schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
 				StartDate: "2026-09-24", EndDate: "2026-09-24", Reason: "Betriebsausflug",
 			}})
 			closingDayID = day.ID
