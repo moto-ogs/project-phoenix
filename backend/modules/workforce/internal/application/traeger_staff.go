@@ -272,10 +272,29 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 		Contracts:                 publicContracts(contracts, names, openFrom),
 	}
 	nameEmployers(detail.Employments, employers, record)
+	markSchoolPersons(detail.Employments, record, reads)
 	for _, change := range changes {
 		detail.Changes = append(detail.Changes, publicChange(change, names))
 	}
 	return detail, nil
+}
+
+// markSchoolPersons names at each live Einsatzort the person the school
+// keeps where it differs from the record (#8208), from the reads the view
+// made anyway.
+func markSchoolPersons(employments []workforce.TraegerStaffEmployment, record domain.TraegerStaffRecord, reads map[int64]schoolRead) {
+	for i := range employments {
+		member, ok := reads[employments[i].SchoolID.Int64()].members[employments[i].StaffID.Int64()]
+		if !ok {
+			continue
+		}
+		school := domain.StaffPerson{FirstName: member.FirstName, LastName: member.LastName, Birthday: member.Birthday}
+		if fields := record.PersonDifferences(school); len(fields) > 0 {
+			employments[i].SchoolPerson = &workforce.TraegerStaffSchoolPerson{
+				FirstName: member.FirstName, LastName: member.LastName, Birthday: member.Birthday, Fields: fields,
+			}
+		}
+	}
 }
 
 // employers names who employs at each Einsatzort of the record where that

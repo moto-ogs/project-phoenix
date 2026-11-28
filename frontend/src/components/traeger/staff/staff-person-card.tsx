@@ -3,7 +3,9 @@
 // Die Karte „Person“ einer Personalakte (#7379): Vorname, Nachname und
 // Geburtstag, wie sie beim Träger stehen. Die Personalverwaltung korrigiert
 // sie hier; jeder geänderte Wert steht mit seinem alten Wert im Verlauf.
-// Die Schulen behalten ihre eigenen Angaben (ADR 0089 Abschnitt 3).
+// Die Schulen behalten ihre eigenen Angaben (ADR 0089 Abschnitt 3); wo eine
+// Schule anders führt, nennt die Karte sie und bietet die Übernahme an
+// (#8208).
 
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useRef, useState, type FormEvent } from "react";
@@ -31,6 +33,7 @@ import {
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
 import { schoolCount, STAFF_FIELD_LABELS } from "./staff-record-format";
+import { StaffSchoolPersons } from "./staff-school-persons";
 
 const logger = createLogger({ component: "TraegerStaffPersonCard" });
 
@@ -276,6 +279,7 @@ export function StaffPersonCard({
               {schoolCount(record.employments.length)}
             </DataField>
           </DataGrid>
+          <StaffSchoolPersons record={record} onAdopted={onSaved} />
         </>
       )}
     </SectionCard>

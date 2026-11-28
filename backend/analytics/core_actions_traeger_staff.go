@@ -21,8 +21,10 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	// The payroll values of another employer (#8041).
 	{http.MethodPut, "/traeger/staff-exports/payroll/employers/{schoolId}"}: notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/person"}:                  notCaptured,
-	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}:       notCaptured,
-	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:               notCaptured,
+	// The record's person taken over by one school (#8208).
+	{http.MethodPut, "/traeger/staff-records/{id}/school-persons/{schoolId}"}: notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}:         notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:                 notCaptured,
 	// The Nachweise of the records (#4707).
 	{http.MethodPost, "/traeger/staff-proofs/types"}:                   notCaptured,
 	{http.MethodPut, "/traeger/staff-proofs/types/{id}"}:               notCaptured,

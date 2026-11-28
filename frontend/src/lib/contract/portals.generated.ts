@@ -625,6 +625,7 @@ export const portalRoutes = {
     traegerStaffRecords["PUT /traeger/staff-records/{id}/financial"],
     traegerStaffRecords["PUT /traeger/staff-records/{id}/person"],
     traegerStaffRecords["PUT /traeger/staff-records/{id}/personnel-number"],
+    traegerStaffRecords["PUT /traeger/staff-records/{id}/school-persons/{schoolId}"],
   ],
   parent: [
     analyticsConsent["GET /analytics-consent/"],

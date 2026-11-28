@@ -35,6 +35,21 @@ export const IDResponseSchema: z.ZodType<IDResponse, unknown> = object<IDRespons
   id: int64String,
 });
 
+/** Go: workforce.TraegerStaffSchoolPerson */
+export interface TraegerStaffSchoolPerson {
+  first_name: string;
+  last_name: string;
+  birthday: string;
+  fields: string[] | null;
+}
+
+export const TraegerStaffSchoolPersonSchema: z.ZodType<TraegerStaffSchoolPerson, unknown> = object<TraegerStaffSchoolPerson>({
+  first_name: str,
+  last_name: str,
+  birthday: str,
+  fields: nullable(arr(str)),
+});
+
 /** Go: workforce.TraegerStaffEmployment */
 export interface TraegerStaffEmployment {
   school_id: string;
@@ -46,6 +61,7 @@ export interface TraegerStaffEmployment {
   employer_body: string;
   employer_personnel_number: string | null;
   employer_number_version: string;
+  school_person: TraegerStaffSchoolPerson | null;
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
@@ -58,6 +74,7 @@ export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unk
   employer_body: str,
   employer_personnel_number: nullable(str),
   employer_number_version: str,
+  school_person: nullable(TraegerStaffSchoolPersonSchema),
 });
 
 /** Go: workforce.TraegerStaffFinancial */
@@ -587,6 +604,11 @@ export interface PersonnelNumberRequest {
   personnel_number?: string | null;
 }
 
+/** Go: traegerstaff.SchoolPersonRequest */
+export interface SchoolPersonRequest {
+  expected_version?: string;
+}
+
 export const routes = {
   "DELETE /traeger/staff-records/{id}": {
     method: "DELETE",
@@ -756,5 +778,12 @@ export const routes = {
     portals: ["org"],
     request: requestBody<PersonnelNumberRequest>(),
     response: success(TraegerStaffRecordDetailSchema),
+  },
+  "PUT /traeger/staff-records/{id}/school-persons/{schoolId}": {
+    method: "PUT",
+    pattern: "/traeger/staff-records/{id}/school-persons/{schoolId}",
+    portals: ["org"],
+    request: requestBody<SchoolPersonRequest>(),
+    response: noData,
   },
 } as const;

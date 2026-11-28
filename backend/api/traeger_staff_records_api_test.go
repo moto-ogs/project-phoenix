@@ -571,6 +571,78 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
+	// #8208, Kopie oder Verbindung: the schools keep their own person (ADR
+	// 0089 section 3). The record names each school whose person differs
+	// after a correction, and „Für diese Schule übernehmen“ writes the
+	// record's values into that school only.
+	t.Run("a correction names the differing schools and one school takes it over", func(t *testing.T) {
+		type schoolPersonsBody struct {
+			PersonVersion string `json:"person_version"`
+			Employments   []struct {
+				SchoolID     wireID `json:"school_id"`
+				SchoolPerson *struct {
+					FirstName string   `json:"first_name"`
+					LastName  string   `json:"last_name"`
+					Birthday  string   `json:"birthday"`
+					Fields    []string `json:"fields"`
+				} `json:"school_person"`
+			} `json:"employments"`
+		}
+		read := func() (schoolPersonsBody, map[int64][]string) {
+			t.Helper()
+			rec := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record.ID), nil)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			body := decode[schoolPersonsBody](t, rec)
+			differing := map[int64][]string{}
+			for _, employment := range body.Employments {
+				if employment.SchoolPerson != nil {
+					differing[int64(employment.SchoolID)] = employment.SchoolPerson.Fields
+				}
+			}
+			return body, differing
+		}
+		rec := traegerUpdatePerson(t, router, office.token, record.ID, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		body, differing := read()
+		assert.Equal(t, map[int64][]string{north: {"first_name", "last_name", "birthday"}, south: {"first_name", "birthday"}}, differing,
+			"each school whose person differs from the corrected record is named with its fields")
+		for _, employment := range body.Employments {
+			if int64(employment.SchoolID) == north {
+				assert.Equal(t, "Mira", employment.SchoolPerson.FirstName, "the record shows what the school keeps")
+				assert.Equal(t, "Sommer", employment.SchoolPerson.LastName)
+			}
+		}
+
+		path := fmt.Sprintf("/traeger/staff-records/%d/school-persons/%d", record.ID, north)
+		for _, version := range []string{"stale", ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"expected_version": version})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		other := newTraegerOffice(t, db, portal, "Träger Übernahme", identityaccess.TraegerRolePersonnel)
+		staffRelease(t, db, other.organization)
+		rec = traegerJSON(t, router, other.token, http.MethodPut, path, map[string]any{"expected_version": body.PersonVersion})
+		assertStaffRefusal(t, rec, http.StatusNotFound, "workforce.traeger_staff_record_not_found")
+		readOnly := newTraegerOffice(t, db, portal, "Träger Lesen", identityaccess.TraegerRoleReadOnly)
+		rec = traegerJSON(t, router, readOnly.token, http.MethodPut, path, map[string]any{"expected_version": body.PersonVersion})
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/school-persons/%d", record.ID, other.schools[0]),
+			map[string]any{"expected_version": body.PersonVersion})
+		assertStaffRefusal(t, rec, http.StatusNotFound, "workforce.traeger_staff_record_not_found")
+		schoolPerson := `SELECT COUNT(*) FROM users.persons p JOIN users.staff_school_memberships s ON s.person_id = p.id
+			WHERE s.id = ? AND p.first_name = ? AND p.last_name = ? AND p.birthday IS NOT DISTINCT FROM ?::date`
+		assert.Equal(t, 1, staffSchoolValue(t, db, schoolPerson, miraNorth.ID, "Mira", "Sommer", nil), "no refused take-over wrote")
+
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"expected_version": body.PersonVersion})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, 1, staffSchoolValue(t, db, schoolPerson, miraNorth.ID, "Myra", "Sommer-Berg", "1990-04-12"), "the school follows the record")
+		assert.Equal(t, 1, staffSchoolValue(t, db, schoolPerson, miraSouth.ID, "Mira", "Sommer-Berg", nil), "the other school keeps its own person")
+		assert.Equal(t, 3, staffSchoolValue(t, db, `SELECT COUNT(*) FROM audit.staff_master_data_changes
+			WHERE tenant_id = ? AND staff_id = ? AND section = 'person' AND note = 'Aus der Personalakte des Trägers übernommen'`, north, miraNorth.ID),
+			"the school's audit names every changed field and where it came from")
+		_, differing = read()
+		assert.Equal(t, map[int64][]string{south: {"first_name", "birthday"}}, differing, "only the school that kept its own person still differs")
+	})
+
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {
 		overviewOnly := newTraegerOffice(t, db, portal, "Träger Übersicht", identityaccess.TraegerRoleReadOnly)
 		rec := traegerJSON(t, router, overviewOnly.token, http.MethodGet, "/traeger/staff-records/", nil)

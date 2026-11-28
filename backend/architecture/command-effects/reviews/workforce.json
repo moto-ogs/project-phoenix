@@ -10671,6 +10671,39 @@
       "target_owner": "audit-platform"
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches *modules/peopledirectory/compose.Directory.SetPersonDetails (people-directory) through modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool. „Für diese Schule übernehmen“ (#8208) writes the record's names and birthday into the locked person of one Einsatzort, in that school's tenant transaction after the Träger read (ADR 0105), with a Stammdaten audit entry per changed field; participates in the caller unit like TraegerStaff.handOverNumber.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches modules/peopledirectory.Capability.SetPersonDetails (people-directory) through modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool. „Für diese Schule übernehmen“ (#8208) writes the record's names and birthday into the locked person of one Einsatzort, in that school's tenant transaction after the Träger read (ADR 0105), with a Stammdaten audit entry per changed field; participates in the caller unit like TraegerStaff.handOverNumber.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.AdoptPersonAtSchool",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches modules/peopledirectory.Owner.SetPersonDetails (people-directory) through modules/workforce/internal/application.TraegerStaff.AdoptPersonAtSchool. „Für diese Schule übernehmen“ (#8208) writes the record's names and birthday into the locked person of one Einsatzort, in that school's tenant transaction after the Träger read (ADR 0105), with a Stammdaten audit entry per changed field; participates in the caller unit like TraegerStaff.handOverNumber.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
       "classification": "query",
       "effect": "query",

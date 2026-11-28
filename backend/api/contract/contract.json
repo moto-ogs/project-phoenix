@@ -25755,6 +25755,18 @@
         "kind": "ref",
         "ref": "TraegerStaffRecordDetail"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/staff-records/{id}/school-persons/{schoolId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolPersonRequest"
+      },
+      "no_data": true
     }
   ],
   "outside": [
@@ -98388,6 +98400,20 @@
       ]
     },
     {
+      "name": "SchoolPersonRequest",
+      "go_type": "traegerstaff.SchoolPersonRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolPlan",
       "go_type": "traegercatalog.SchoolPlan",
       "fields": [
@@ -117253,6 +117279,14 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "school_person",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "TraegerStaffSchoolPerson"
+          }
         }
       ]
     },
@@ -117957,6 +117991,40 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerStaffSchoolPerson",
+      "go_type": "workforce.TraegerStaffSchoolPerson",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fields",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]

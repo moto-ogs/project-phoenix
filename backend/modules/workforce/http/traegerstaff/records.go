@@ -64,6 +64,7 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Put("/{id}/personnel-number", rs.personnelNumber)
 		staff.Put("/{id}/employer-numbers/{schoolId}", rs.employerNumber)
 		staff.Put("/{id}/person", rs.person)
+		staff.Put("/{id}/school-persons/{schoolId}", rs.schoolPerson)
 		staff.Get("/{id}/financial", rs.financial)
 		staff.Post("/{id}/financial/reveal", rs.revealFinancial)
 		staff.Put("/{id}/financial", rs.updateFinancial)
@@ -301,6 +302,37 @@ func (rs *RecordsResource) person(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, nil, "Staff record person updated successfully")
+}
+
+// SchoolPersonRequest takes the record's name and birthday over into the
+// person of one Einsatzort (#8208). ExpectedVersion is the record's
+// person_version the view showed; a person changed since is refused with
+// general.changed_since_read (ADR 0311).
+type SchoolPersonRequest struct {
+	ExpectedVersion string `json:"expected_version"`
+}
+
+func (req *SchoolPersonRequest) Bind(*http.Request) error { return nil }
+
+func (rs *RecordsResource) schoolPerson(w http.ResponseWriter, r *http.Request) {
+	session, id, ok := actorAndRecord(w, r)
+	if !ok {
+		return
+	}
+	schoolID, ok := common.ParseInt64IDWithError(w, r, "schoolId", "invalid school ID")
+	if !ok {
+		return
+	}
+	req := &SchoolPersonRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
+		return
+	}
+	if err := rs.records.AdoptPersonAtSchool(r.Context(), session, id, schoolID, req.ExpectedVersion); err != nil {
+		renderError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, nil, "Staff record person adopted at the school successfully")
 }
 
 func (rs *RecordsResource) financial(w http.ResponseWriter, r *http.Request) {
