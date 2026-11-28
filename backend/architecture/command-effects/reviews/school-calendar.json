@@ -2049,6 +2049,17 @@
       "target_owner": "identity-access"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.SeriesBreakDays.FollowBreakDays",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayPlans.FollowBreakDays",
+      "reason": "Guarded owner command joined by command participation (ADR 0067 addendum, #8205): a create, change or deletion of a school closing day hands the days it opened or closed to Workforce in the school's tenant transaction. Workforce takes its own staff-shift gates ascending (the closing day write holds no ordered lock before them), reads the series shifts and the school calendar again under the gates, and cancels or plans again only unchanged series shifts from tomorrow on in one statement of its own adapter. A refusal fails the closing day write. No separate cross-owner protocol, re-read of School Calendar state under foreign locks or after-commit orchestration.",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.SeriesBreakDays.FollowBreakDays",
+      "target_owner": "workforce"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolclosingdaysview/internal/adapters/postgres.Reader.ListCareCalendarRanges",
       "classification": "query",
       "effect": "query",

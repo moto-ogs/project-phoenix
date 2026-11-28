@@ -5166,6 +5166,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff-shifts/break-day-shifts",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SeriesBreakDayShift"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff-shifts/overview",
       "portals": [
         "tenant"
@@ -26614,6 +26628,13 @@
       "values": [
         "school",
         "you"
+      ]
+    },
+    {
+      "name": "SeriesBreakDayKind",
+      "values": [
+        "closing_day",
+        "holiday_period"
       ]
     },
     {
@@ -100440,6 +100461,55 @@
           "name": "reason",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeriesBreakDayShift",
+      "go_type": "workforce.SeriesBreakDayShift",
+      "fields": [
+        {
+          "name": "shift_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "break",
+          "schema": {
+            "kind": "enum",
+            "ref": "SeriesBreakDayKind"
+          }
+        },
+        {
+          "name": "adjusted",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

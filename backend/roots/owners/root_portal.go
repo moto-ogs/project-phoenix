@@ -52,6 +52,7 @@ func BuildParentPortal(
 	organizations organizationtenancy.Query, contractNotices parentportal.ContractNoticesPort, contractSigning carecontract.InboxSigning,
 	contractHolidays carecontract.SchoolHolidays,
 	mandates parentportal.SEPAMandatesPort, dayChanges parentportal.ChildDayChanges,
+	groupNames communication.ParentGroupTargetNames,
 ) (*parentportal.Portal, error) {
 	surveys, err := communication.SurveysOf(announcements)
 	if err != nil {
@@ -89,7 +90,7 @@ func BuildParentPortal(
 		ParentRequestShares:       BindParentRequestShareRecords(peopleCompose.NewParentRequestShareEventRepository(db.Pool(), env.Now)),
 		ParentRequestEvents:       NewParentRequestEvents(peopleCompose.NewParentRequestEventRepository(db.Pool(), env.Now)), StudentAudit: NewParentStudentAudit(services.StudentAudit),
 		MessageThreadRepo: BindParentMessageThreadAccess(messaging.ParentMessageThread), MessageRepo: BindParentMessageReads(messages), MessageReadRepo: BindParentMessageInboxReads(messaging.ParentMessageRead),
-		GroupThreads: BindParentGroupThreads(parentStore.NewGroupThreadPortal(db.Pool())), MessageAttachments: BindParentMessageAttachments(communicationCompose.NewPortalMessageAttachments(db.Pool())),
+		GroupThreads: BindParentGroupThreads(parentStore.NewGroupThreadPortal(db.Pool(), groupNames)), MessageAttachments: BindParentMessageAttachments(communicationCompose.NewPortalMessageAttachments(db.Pool())),
 		Surveys: BindParentSurveys(surveys),
 		Conversations: BindParentConversationCore(communicationCompose.NewParentConversationCore(communicationCompose.ParentConversationConfig{
 			ThreadRepo: messaging.ParentMessageThread, MessageRepo: messages, ReadRepo: messaging.ParentMessageRead,

@@ -57,6 +57,8 @@ func shiftReadRecord(value domain.StaffShift) *workforce.ShiftRecord {
 		plannedEnd := shiftReadClock(value.SeriesEndTime)
 		shift.SeriesEndTime = &plannedEnd
 	}
+	shift.SeriesIncludesBreaks = value.SeriesIncludesBreaks
+	shift.SeriesCalendarPeriodID = value.SeriesCalendarPeriodID
 	shift.SeriesOccurrenceDate = nil
 	if value.SeriesOccurrenceDate != "" {
 		occurrence := calendar.Date(value.SeriesOccurrenceDate)

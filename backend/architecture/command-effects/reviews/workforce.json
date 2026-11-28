@@ -22483,6 +22483,16 @@
       "target_owner": "facilities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ClosingDayDates",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ClosingDayDates",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Calendar.ClosingDayDates; modules/schoolcalendar.Calendar (supplied contract method), bound for the series break-day follow-up and its list (#8205). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ClosingDayDates",
+      "target_owner": "school-calendar"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ClosingDayDates",
       "classification": "query",
       "effect": "query",
@@ -22493,6 +22503,16 @@
       "target_owner": "school-calendar"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ListCalendarPeriods",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Calendar.ListCalendarPeriods; modules/schoolcalendar.Calendar (supplied contract method), bound for the series break-day follow-up and its list (#8205). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "classification": "query",
       "effect": "query",
@@ -22500,6 +22520,16 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Days.ListCalendarPeriods; modules/schoolcalendar.Days (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.TenantHolidayDates",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.TenantHolidayDates",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Calendar.TenantHolidayDates; modules/schoolcalendar.Calendar (supplied contract method), bound for the series break-day follow-up and its list (#8205). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {

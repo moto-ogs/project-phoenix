@@ -124,6 +124,9 @@ type Config struct {
 	// audience resolves a group, class or AG to its reachable families.
 	GroupThreads  GroupThreadStore
 	GroupAudience deliveryPorts.ParentGroupAudienceReads
+	// GroupTargetNames gives each thread the current name of its group or
+	// AG (#8207). Without it a thread shows the name it was opened with.
+	GroupTargetNames deliveryPorts.ParentGroupTargetNames
 
 	// Attachments stores the photos and files of messages (#6685). Without
 	// it uploads are refused; messages without files are unaffected.

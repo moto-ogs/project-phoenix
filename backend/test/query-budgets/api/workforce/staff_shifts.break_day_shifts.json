@@ -1,0 +1,7 @@
+{
+  "scenario": "api.workforce.staff_shifts.break_day_shifts",
+  "max": 6,
+  "exact": true,
+  "description": "GET /api/staff-shifts/break-day-shifts (#8205): real Workforce planning composition and protected tenant router. Complete request capture: BEGIN, combined tenant role/config, one SELECT of the school's and the Träger's closing days, one SELECT of the active Ferien periods, one tenant-scoped SELECT of the active shifts on those days with their series, and COMMIT. Exact for 1 and 3 listed shifts; writes nothing.",
+  "route": "GET /api/staff-shifts/break-day-shifts"
+}

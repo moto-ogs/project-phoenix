@@ -1,0 +1,6 @@
+{
+  "scenario": "modules.communication.parent_group_threads.list_for_guardian_group_targets",
+  "max": 3,
+  "exact": true,
+  "description": "Group and AG threads (#8207): the list statement plus one batched name\nlookup for the groups and one for the AGs, so a renamed target shows its\ncurrent name, however many threads exist."
+}

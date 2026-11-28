@@ -7,13 +7,25 @@ import (
 )
 
 // GroupThreadPortal is the guardian side of the group threads in the public
-// vocabulary the parent portal workflow binds.
-type GroupThreadPortal struct{ Store *GroupThreadStore }
+// vocabulary the parent portal workflow binds. Names gives each thread the
+// current name of its group or AG (#8207).
+type GroupThreadPortal struct {
+	Store *GroupThreadStore
+	Names communication.ParentGroupTargetNames
+}
 
 var _ communication.PortalGroupThreads = GroupThreadPortal{}
 
 func (p GroupThreadPortal) PortalListGroupThreads(ctx context.Context, accountID int64, studentIDs, tenantIDs []int64) ([]communication.PortalGuardianGroupThread, error) {
-	return p.Store.ListThreadsForGuardian(ctx, accountID, studentIDs, tenantIDs)
+	rows, err := p.Store.ListThreadsForGuardian(ctx, accountID, studentIDs, tenantIDs)
+	if err != nil {
+		return nil, err
+	}
+	threads := make([]*communication.ParentGroupThread, 0, len(rows))
+	for i := range rows {
+		threads = append(threads, &rows[i].Thread)
+	}
+	return rows, communication.LabelParentGroupThreads(ctx, p.Names, threads...)
 }
 
 func (p GroupThreadPortal) PortalCountUnreadGroupThreads(ctx context.Context, accountID int64, studentIDs, tenantIDs []int64) (int, error) {
@@ -41,6 +53,9 @@ func (p GroupThreadPortal) PortalReadGroupThread(ctx context.Context, threadID, 
 	}
 	advanced, err := p.Store.MarkGuardianRead(ctx, threadID, accountID, messages[len(messages)-1].ID)
 	if err != nil {
+		return nil, false, err
+	}
+	if err := communication.LabelParentGroupThreads(ctx, p.Names, thread); err != nil {
 		return nil, false, err
 	}
 	return &communication.PortalGuardianGroupThreadView{Thread: *thread, Messages: messages, StudentIDs: children}, advanced, nil

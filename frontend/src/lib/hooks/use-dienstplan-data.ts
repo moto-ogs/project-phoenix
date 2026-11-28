@@ -38,6 +38,7 @@ export const PLAN_CACHE_KEY_PREFIXES = [
   "dienstplan-overview-",
   "dienstplan-shifts-",
   timetableKeys.absencePlanGaps,
+  timetableKeys.breakDayShifts,
   VERTRETUNG_WEEK_KEY_PREFIX,
   VERTRETUNG_GAPS_KEY_PREFIX,
   "staff-pending-absences-",

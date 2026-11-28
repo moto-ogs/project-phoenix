@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
@@ -21,8 +22,9 @@ import (
 // staff member writing to a class.
 
 // NewParentGroupThreadTestPort binds the guardian side of the group threads.
+// The threads read the current names of their groups and AGs (#8207).
 func NewParentGroupThreadTestPort(db transactionruntime.Database) parentService.GroupThreads {
-	return owners.BindParentGroupThreads(parentStore.NewGroupThreadPortal(db.Pool()))
+	return owners.BindParentGroupThreads(parentStore.NewGroupThreadPortal(db.Pool(), owners.NewParentGroupTargetNamesForTests(failFastTB{}, db)))
 }
 
 // CreateParentGroupClassThreadForTest writes a group thread to a class as the
@@ -30,6 +32,19 @@ func NewParentGroupThreadTestPort(db transactionruntime.Database) parentService.
 func CreateParentGroupClassThreadForTest(ctx context.Context, db transactionruntime.Database, staffAccountID int64, class, title, body string) (int64, error) {
 	detail, err := parentGroupThreadsForTest(db, staffAccountID).CreateParentGroupThread(ctx, communication.ParentGroupThreadInput{
 		Target: communication.ParentGroupTarget{Type: communication.ParentGroupTargetClass, RefText: &class, Label: collation.SchoolClassLabel(class)},
+		Title:  title, Body: body,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return detail.Thread.ID, nil
+}
+
+// CreateParentGroupGroupThreadForTest writes a group thread to an education
+// group as the staff account, inside the caller's school transaction.
+func CreateParentGroupGroupThreadForTest(ctx context.Context, db transactionruntime.Database, staffAccountID, groupID int64, label, title, body string) (int64, error) {
+	detail, err := parentGroupThreadsForTest(db, staffAccountID).CreateParentGroupThread(ctx, communication.ParentGroupThreadInput{
+		Target: communication.ParentGroupTarget{Type: communication.ParentGroupTargetGroup, RefID: &groupID, Label: label},
 		Title:  title, Body: body,
 	})
 	if err != nil {
@@ -51,7 +66,7 @@ func parentGroupThreadsForTest(db transactionruntime.Database, staffAccountID in
 		ThreadRepo: messages.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db.Pool()),
 		ReadRepo: messages.ParentMessageRead, UserContext: owners.StaffStudentReads{}, Session: groupThreadTestSession(staffAccountID),
 		Settings: groupThreadTestSettings{}, DB: db.Pool(), Logger: slog.Default(),
-		GroupAudience: owners.NewParentGroupAudience(db),
+		GroupAudience: owners.NewParentGroupAudience(db), GroupTargetNames: owners.NewParentGroupTargetNamesForTests(failFastTB{}, db),
 	}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	return groups
 }
@@ -78,4 +93,13 @@ func (groupThreadTestSettings) CareFacilityTerm(context.Context) (string, error)
 }
 func (groupThreadTestSettings) CareFacilityArticle(context.Context) (string, error) {
 	return "die", nil
+}
+
+// failFastTB stops a helper that has no test handle when its composition
+// fails; the composition is static, so it fails on every run or never.
+type failFastTB struct{}
+
+func (failFastTB) Helper() {}
+func (failFastTB) Fatalf(format string, args ...any) {
+	panic(fmt.Sprintf(format, args...))
 }

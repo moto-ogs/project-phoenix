@@ -158,6 +158,7 @@ interface RenderOverrides {
   todayIso?: string;
   /** Without onCellClick the grid is a display only (#7351). */
   readOnly?: boolean;
+  breakDayShifts?: ReadonlyMap<string, "closing_day" | "holiday_period">;
 }
 
 function gridElement(
@@ -178,6 +179,7 @@ function gridElement(
       todayIso={overrides.todayIso ?? TODAY}
       closingDays={overrides.closingDays}
       typesById={overrides.typesById ?? new Map()}
+      breakDayShifts={overrides.breakDayShifts}
       shiftTypes={overrides.shiftTypes ?? []}
       reducedPath={overrides.reducedPath}
       canWriteAbsences={overrides.canWriteAbsences ?? true}
@@ -390,6 +392,46 @@ describe("DienstplanResourceGrid status mapping", () => {
     expect(screen.getByText("Fällt aus · Abwesenheit")).toBeInTheDocument();
     expect(screen.getByText("abwesend")).toBeInTheDocument();
     expect(screen.queryByText("krank")).not.toBeInTheDocument();
+  });
+
+  // #8205: a series shift that stands on a closing day carries a warning
+  // with icon and text; a shift a closing day cancelled reads its reason.
+  it("warns at a series shift on a closing day or in the Ferien", () => {
+    const closing = baseShift({ id: "71", seriesId: "5", detached: true });
+    const ferien = baseShift({
+      id: "72",
+      seriesId: "5",
+      startTime: "13:00",
+      endTime: "15:00",
+    });
+    renderGrid({
+      shiftsByStaff: shiftMap("2026-07-06", [closing, ferien]),
+      breakDayShifts: new Map([
+        ["71", "closing_day"],
+        ["72", "holiday_period"],
+      ]),
+    });
+
+    expect(screen.getByText("Schließtag: Schicht prüfen")).toBeInTheDocument();
+    expect(screen.getByText("Ferien: Schicht prüfen")).toBeInTheDocument();
+  });
+
+  it("reads a shift a closing day cancelled as Fällt aus · Schließtag, without a warning", () => {
+    const shift = baseShift({
+      id: "73",
+      seriesId: "5",
+      cancelled: true,
+      changeReason: "Schließtag",
+    });
+    renderGrid({
+      shiftsByStaff: shiftMap("2026-07-06", [shift]),
+      breakDayShifts: new Map([["73", "closing_day"]]),
+    });
+
+    expect(screen.getByText("Fällt aus · Schließtag")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Schließtag: Schicht prüfen"),
+    ).not.toBeInTheDocument();
   });
 
   it("labels a replacement shift as Vertretung with its reason", () => {

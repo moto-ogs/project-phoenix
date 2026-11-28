@@ -224,6 +224,9 @@ type ShiftStore interface {
 	// with their identities.
 	CreateStaffShifts(context.Context, []domain.StaffShift) ([]domain.StaffShift, domain.OperationStats, error)
 	UpdateStaffShift(context.Context, domain.StaffShift) (domain.StaffShift, bool, domain.OperationStats, error)
+	// ApplyStaffShiftBreakDayStates writes the states of the break-day
+	// follow-up (#8205) in one statement.
+	ApplyStaffShiftBreakDayStates(context.Context, []domain.StaffShiftBreakDayState) (int64, domain.OperationStats, error)
 	// SetStaffShiftSickAbsence writes only the sick-absence association.
 	SetStaffShiftSickAbsence(ctx context.Context, shiftID int64, absenceID *int64) (int64, domain.OperationStats, error)
 	DeleteStaffShift(context.Context, int64) (domain.OperationStats, error)

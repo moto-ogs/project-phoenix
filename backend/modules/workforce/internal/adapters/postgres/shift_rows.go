@@ -26,10 +26,15 @@ type staffShiftRow struct {
 	SeriesOccurrenceDate *calendarDate `bun:"series_occurrence_date,type:date"`
 	SeriesStartTime      *time.Time    `bun:"series_start_time,scanonly"`
 	SeriesEndTime        *time.Time    `bun:"series_end_time,scanonly"`
-	Cancelled            bool          `bun:"cancelled,notnull,default:false"`
-	ChangeReason         *string       `bun:"change_reason"`
-	OriginShiftID        *int64        `bun:"origin_shift_id"`
-	SickAbsenceID        *int64        `bun:"sick_absence_id"`
+	// SeriesIncludesBreaks and SeriesCalendarPeriodID are the linked series'
+	// opt-in into Ferien and closing days and its period (#8205); listings
+	// read them through the series join.
+	SeriesIncludesBreaks   *bool   `bun:"series_include_school_breaks,scanonly"`
+	SeriesCalendarPeriodID *int64  `bun:"series_calendar_period_id,scanonly"`
+	Cancelled              bool    `bun:"cancelled,notnull,default:false"`
+	ChangeReason           *string `bun:"change_reason"`
+	OriginShiftID          *int64  `bun:"origin_shift_id"`
+	SickAbsenceID          *int64  `bun:"sick_absence_id"`
 	// CreatedBy is NULL for a shift the Träger-Portal planned (#4708).
 	CreatedBy        int64     `bun:"created_by,nullzero"`
 	UpdatedBy        *int64    `bun:"updated_by"`
@@ -145,6 +150,12 @@ func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
 	}
 	if row.SeriesEndTime != nil {
 		value.SeriesEndTime = wallClockString(*row.SeriesEndTime)
+	}
+	if row.SeriesIncludesBreaks != nil {
+		value.SeriesIncludesBreaks = *row.SeriesIncludesBreaks
+	}
+	if row.SeriesCalendarPeriodID != nil {
+		value.SeriesCalendarPeriodID = *row.SeriesCalendarPeriodID
 	}
 	return value
 }

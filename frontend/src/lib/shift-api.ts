@@ -6,9 +6,11 @@
 import { bffJson } from "./bff-fetch";
 import type * as staffShiftsContract from "./contract/staff-shifts.generated";
 import {
+  mapBreakDayShift,
   mapOwnAssignment,
   mapStaffScheduleOverview,
   mapStaffShift,
+  type BreakDayShift,
   type OwnAssignment,
   type StaffScheduleOverview,
   type StaffShift,
@@ -254,6 +256,18 @@ class StaffShiftService {
       errorMessage: "Schichten konnten nicht geladen werden",
     });
     return (rows ?? []).map(mapStaffShift);
+  }
+
+  /** Serienschichten, die an einem Schließtag oder in den Ferien stehen (#8205). */
+  async listBreakDayShifts(): Promise<BreakDayShift[]> {
+    const rows = await bffJson(
+      "tenant",
+      "GET /api/staff-shifts/break-day-shifts",
+      {
+        errorMessage: "Schichten an Schließtagen konnten nicht geladen werden",
+      },
+    );
+    return (rows ?? []).map(mapBreakDayShift);
   }
 
   async getOverview(from: string, to: string): Promise<StaffScheduleOverview> {

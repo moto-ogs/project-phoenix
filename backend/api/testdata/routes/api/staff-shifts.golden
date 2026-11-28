@@ -1,6 +1,7 @@
 DELETE /api/staff-shifts/series/{id}
 DELETE /api/staff-shifts/{id}
 GET /api/staff-shifts/
+GET /api/staff-shifts/break-day-shifts
 GET /api/staff-shifts/overview
 GET /api/staff-shifts/series/{id}
 POST /api/staff-shifts/
