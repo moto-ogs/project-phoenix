@@ -8,6 +8,7 @@ import { useShellAuth } from "~/lib/shell-auth-context";
 import { useSWRAuth } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
+import { useRefusalGuard } from "./use-confirmed-resource";
 import {
   unreadCountState,
   type UseUnreadCountResult,
@@ -51,10 +52,11 @@ export function useEnrollmentsUnread(): UseUnreadCountResult {
   );
   const loaded = enabled && data !== undefined;
   const shownError = enabled ? error : undefined;
+  const { refusal } = useRefusalGuard(readKey);
   return {
     unreadCount: enabled ? (data ?? 0) : 0,
     isLoading: enabled && isLoading,
-    state: unreadCountState(readKey, loaded, shownError),
+    state: unreadCountState(readKey, loaded, shownError, refusal),
     error: shownError,
     refresh: async () => {
       await mutate();

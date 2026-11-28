@@ -55,8 +55,11 @@ export function useChangeRequestsPending(): UseUnreadCountResult {
   );
   // A group lead's review area comes from the server (#8268). Until it
   // answers, the source is unsettled, not „nothing pending“; a refusal or an
-  // answer without review area leaves it inactive.
-  if (!inStaffShell || canReviewParentRequests) return reader;
+  // answer without review area leaves it inactive, also when a later check
+  // fails (the answer held outranks it).
+  if (!inStaffShell || canReviewParentRequests || access.settled) {
+    return reader;
+  }
   if (access.isLoading) return { ...reader, state: "loading" };
   if (access.error !== undefined && !isReadRefusal(access.error)) {
     return {

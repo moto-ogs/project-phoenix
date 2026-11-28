@@ -111,10 +111,16 @@ export function OpenRequestsBlock() {
       : "die Liste der offenen Anfragen",
     () => Promise.all(failed.map(({ reader }) => reader.refresh())),
   );
-  // Bis der Katalogtext des Ladefehlers da ist, steht das Skelett.
-  const failureAlert = loadError ? (
-    <LoadErrorAlert error={loadError} actionLayout="responsive" />
-  ) : null;
+  // Der Fehlertext kommt aus dem Katalog und ist einen Moment unterwegs;
+  // bis dahin steht das Skelett, nie die Entwarnung.
+  const alert =
+    failure !== undefined && loadError ? (
+      <LoadErrorAlert error={loadError} actionLayout="responsive" />
+    ) : null;
+  let body: "rows" | "failed" | "loading" | "empty" = "empty";
+  if (open.length > 0) body = "rows";
+  else if (alert) body = "failed";
+  else if (failure !== undefined || loading) body = "loading";
 
   return (
     <HomeCard
@@ -131,55 +137,47 @@ export function OpenRequestsBlock() {
         </HomeCardLink>
       }
     >
-      {(() => {
-        if (open.length > 0) {
-          return (
-            <div className="space-y-3" data-home-card-fit="">
-              <ul className="space-y-2">
-                {open.map((source) => (
-                  <li key={source.key}>
-                    <ListRow
-                      href={source.href}
-                      trailing={
-                        <StatusBadge
-                          tone="warning"
-                          label={`${source.reader.unreadCount} ${source.badge ?? "offen"}`}
-                        />
-                      }
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-gray-900">
-                          {source.label}
-                        </span>
-                        <span className="block truncate text-xs text-gray-500">
-                          {source.hint}
-                        </span>
-                      </span>
-                    </ListRow>
-                  </li>
-                ))}
-              </ul>
-              {failure === undefined ? null : failureAlert}
-            </div>
-          );
-        }
-        if (failure !== undefined && failureAlert) {
-          return <div data-home-card-fit="">{failureAlert}</div>;
-        }
-        if (failure !== undefined || loading) {
-          return (
-            <SkeletonRegion label="Offene Anfragen werden geladen">
-              <SkeletonRows rows={2} />
-            </SkeletonRegion>
-          );
-        }
-        return (
-          <HomeCardEmpty
-            title="Nichts wartet auf eine Entscheidung"
-            description="Neue Anfragen von Eltern und aus dem Team erscheinen hier."
-          />
-        );
-      })()}
+      {body === "rows" && (
+        <div className="space-y-3" data-home-card-fit="">
+          <ul className="space-y-2">
+            {open.map((source) => (
+              <li key={source.key}>
+                <ListRow
+                  href={source.href}
+                  trailing={
+                    <StatusBadge
+                      tone="warning"
+                      label={`${source.reader.unreadCount} ${source.badge ?? "offen"}`}
+                    />
+                  }
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-gray-900">
+                      {source.label}
+                    </span>
+                    <span className="block truncate text-xs text-gray-500">
+                      {source.hint}
+                    </span>
+                  </span>
+                </ListRow>
+              </li>
+            ))}
+          </ul>
+          {alert}
+        </div>
+      )}
+      {body === "failed" && <div data-home-card-fit="">{alert}</div>}
+      {body === "loading" && (
+        <SkeletonRegion label="Offene Anfragen werden geladen">
+          <SkeletonRows rows={2} />
+        </SkeletonRegion>
+      )}
+      {body === "empty" && (
+        <HomeCardEmpty
+          title="Nichts wartet auf eine Entscheidung"
+          description="Neue Anfragen von Eltern und aus dem Team erscheinen hier."
+        />
+      )}
     </HomeCard>
   );
 }

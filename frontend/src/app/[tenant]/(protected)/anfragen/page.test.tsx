@@ -175,6 +175,7 @@ describe("AnfragenPage", () => {
             mockUseSession().data ?? null,
             "group_leader",
           ),
+          settled: true,
           isLoading: false,
           error: undefined,
           refresh: vi.fn(),

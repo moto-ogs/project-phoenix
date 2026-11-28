@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { isReadRefusal } from "~/lib/access-refusal";
 import { onSWRScopeReset, useSWRAuth, useSWRCacheKey } from "~/lib/swr";
+import { useRefusalGuard } from "./use-confirmed-resource";
 
 /**
  * Shared badge hook: one count read through the shared cache (useSWRAuth),
@@ -52,8 +53,9 @@ export type UseUnreadCountOptions<T = number> = BaseOptions<T> & CountOf<T>;
  * waiting" needs every applicable source `known`.
  *
  * - `inactive`: the source does not apply to this person: gate closed
- *   (right, module, portal) or the server refused the read. Never shown as
- *   a failure, so a refusal reveals nothing.
+ *   (right, module, portal) or a refusal of the read is in force, also when
+ *   a later read of the key failed otherwise. Never shown as a failure, so
+ *   a refusal reveals nothing.
  * - `loading`: no answer of this session yet.
  * - `failed`: the read failed and no answer of this session is held.
  * - `known`: a confirmed answer, also while a later refresh failed: SWR
@@ -192,10 +194,11 @@ export function useUnreadCount<T = number>(
   let unreadCount = 0;
   if (loaded) unreadCount = count ? count(data) : (data as number);
   const shownError = readKey === null ? undefined : error;
+  const { refusal } = useRefusalGuard(readKey);
   return {
     unreadCount,
     isLoading: readKey !== null && isLoading,
-    state: unreadCountState(readKey, loaded, shownError),
+    state: unreadCountState(readKey, loaded, shownError, refusal),
     refresh,
     loaded,
     error: shownError,
@@ -204,17 +207,20 @@ export function useUnreadCount<T = number>(
 
 /**
  * The state of a count read through useSWRAuth under `readKey` (null while
- * the gate is closed). Shared with the badges that read SWR themselves.
+ * the gate is closed). `refusal` is the key's refusal in force
+ * (useRefusalGuard): it outlasts a later failure of another kind. Shared
+ * with the badges that read SWR themselves.
  */
 export function unreadCountState(
   readKey: string | null,
   loaded: boolean,
   error: unknown,
+  refusal: unknown,
 ): UnreadCountState {
   if (readKey === null) return "inactive";
   // useSWRAuth withdraws the data of a refused key, so a refusal is checked
   // before the answer.
-  if (isReadRefusal(error)) return "inactive";
+  if (refusal !== undefined || isReadRefusal(error)) return "inactive";
   if (loaded) return "known";
   return error === undefined ? "loading" : "failed";
 }

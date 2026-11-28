@@ -50,6 +50,8 @@ export function useChangeRequestAccess() {
 
   return {
     ...access,
+    /** Whether the server answered the review-area check (or none is needed). */
+    settled: !needsParentReviewAccess || data !== undefined,
     isLoading:
       status === "loading" ||
       (needsParentReviewAccess &&

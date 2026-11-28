@@ -249,6 +249,24 @@ describe("useUnreadCount — state", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.state).toBe("inactive");
   });
+
+  // The refusal holds for the key until a read succeeds: a later failure of
+  // another kind must not surface the refused source as a failure.
+  it("stays inactive when a refused key later fails otherwise", async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("forbidden", 403, { code: "general.permission" }),
+      )
+      .mockRejectedValue(new ApiError("down", 503));
+    const { result } = render({ fetcher, onError: vi.fn() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(() => result.current.refresh());
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe("inactive");
+  });
 });
 
 // ---------------------------------------------------------------------------

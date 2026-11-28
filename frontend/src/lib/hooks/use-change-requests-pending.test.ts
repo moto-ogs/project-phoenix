@@ -131,6 +131,7 @@ describe("useChangeRequestsPending", () => {
       mockUseUnreadCount.mockReturnValue(inactive);
       mockUseChangeRequestAccess.mockReturnValue({
         canReviewParentRequests: false,
+        settled: false,
         isLoading: false,
         error: undefined,
         refresh: vi.fn(),
@@ -156,7 +157,13 @@ describe("useChangeRequestsPending", () => {
     });
 
     it("stays inactive once the server granted no review area", () => {
-      expect(stateWith({}).state).toBe("inactive");
+      expect(stateWith({ settled: true }).state).toBe("inactive");
+    });
+
+    // The answer held outranks a later failed check (focus revalidation).
+    it("stays inactive when a later check fails after an answer", () => {
+      const error = new ApiError("down", 503);
+      expect(stateWith({ settled: true, error }).state).toBe("inactive");
     });
 
     it("stays inactive outside the teacher shell", () => {
