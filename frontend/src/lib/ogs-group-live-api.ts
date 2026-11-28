@@ -48,7 +48,7 @@ export interface OgsPickupInfo {
     name: string;
     oneTime: boolean;
     /** Die Abholerlaubnis gilt an diesem Tag nicht mehr (#8206). */
-    permissionWithdrawn: boolean;
+    permissionWithdrawn?: true;
   };
   notes?: string;
   dayNotes: Array<{ id: string; content: string }>;
@@ -148,8 +148,9 @@ export function mapOgsGroupLiveResponse(
         ? {
             name: pt.day_pickup_person.name,
             oneTime: pt.day_pickup_person.one_time,
-            permissionWithdrawn:
-              pt.day_pickup_person.permission_withdrawn ?? false,
+            ...(pt.day_pickup_person.permission_withdrawn
+              ? { permissionWithdrawn: true as const }
+              : {}),
           }
         : undefined,
       notes: pt.notes,
