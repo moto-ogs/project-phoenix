@@ -16,19 +16,16 @@ import {
 
 /**
  * Fetches the combined number of pending parent change requests (master-data +
- * care schedule) for the tenant. Mirrors fetchUnreadCount: returns 0 on any
- * failure so a badge fetch can never break the sidebar.
+ * care schedule) for the tenant. A failure stays a failure (#8268): the
+ * shared badge reader keeps the last confirmed count and the start page
+ * tells a failed read from a confirmed 0. The sidebar shows no badge then.
  */
 export async function fetchPendingChangeRequestCount(): Promise<number> {
-  try {
-    const counts = await bffJson(
-      "tenant",
-      "GET /api/students/change-requests/pending-count",
-    );
-    return counts?.pending_count ?? 0;
-  } catch {
-    return 0;
-  }
+  const counts = await bffJson(
+    "tenant",
+    "GET /api/students/change-requests/pending-count",
+  );
+  return counts?.pending_count ?? 0;
 }
 
 export async function fetchChangeRequestAccess(): Promise<ParentRequestReviewAccess> {

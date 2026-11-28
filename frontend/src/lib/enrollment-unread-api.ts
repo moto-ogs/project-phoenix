@@ -31,19 +31,15 @@ export function announceEnrollmentReadChange() {
 }
 
 /**
- * Ungelesene Anmeldungen der Person; 0 bei Fehlern oder ohne Recht.
- * Bewusst still: das Badge lädt ohne Handlung der Person (kein Toast ohne
- * Handlung, #2501), 0 blendet es nur aus. Der Bereich selbst zeigt seine
- * Ladefehler vor Ort.
+ * Ungelesene Anmeldungen der Person. Ein Fehler bleibt ein Fehler (#8268):
+ * das Badge bleibt ohne bestätigte Zahl leer (kein Toast ohne Handlung,
+ * #2501), die Startseite meldet den Teilausfall in ihrer Karte, und der
+ * Bereich selbst zeigt seine Ladefehler vor Ort.
  */
 export async function fetchUnreadEnrollmentCount(): Promise<number> {
-  try {
-    const counts = await bffJson(
-      "tenant",
-      "GET /api/enrollment/admin/requests/unread-count",
-    );
-    return counts?.unread_count ?? 0;
-  } catch {
-    return 0;
-  }
+  const counts = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/requests/unread-count",
+  );
+  return counts?.unread_count ?? 0;
 }

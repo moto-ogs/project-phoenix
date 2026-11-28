@@ -8,6 +8,10 @@ import { useShellAuth } from "~/lib/shell-auth-context";
 import { useSWRAuth } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
+import {
+  unreadCountState,
+  type UseUnreadCountResult,
+} from "./use-unread-count";
 
 /**
  * Zähler der ungelesenen Anmeldungen für den Bereich „Anmeldungen" und die
@@ -20,7 +24,7 @@ import { useModuleBooked } from "~/lib/tenant-context";
  * gezählt wird nach dem Markieren und Öffnen (announceEnrollmentReadChange)
  * und beim Zurückkehren ins Fenster.
  */
-export function useEnrollmentsUnread() {
+export function useEnrollmentsUnread(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   const { mode } = useShellAuth();
   const accountId = session?.user?.id;
@@ -32,8 +36,11 @@ export function useEnrollmentsUnread() {
     mode === "teacher" &&
     onlineAnmeldungBooked &&
     hasPermission(session, "config:manage");
-  const { data, isLoading, mutate } = useSWRAuth<number>(
-    enabled ? shellResourceKeys.enrollmentsUnread(accountId) : null,
+  const readKey = enabled
+    ? shellResourceKeys.enrollmentsUnread(accountId)
+    : null;
+  const { data, error, isLoading, mutate } = useSWRAuth<number>(
+    readKey,
     fetchUnreadEnrollmentCount,
     {
       revalidateOnFocus: true,
@@ -42,9 +49,13 @@ export function useEnrollmentsUnread() {
       keepPreviousData: false,
     },
   );
+  const loaded = enabled && data !== undefined;
+  const shownError = enabled ? error : undefined;
   return {
     unreadCount: enabled ? (data ?? 0) : 0,
     isLoading: enabled && isLoading,
+    state: unreadCountState(readKey, loaded, shownError),
+    error: shownError,
     refresh: async () => {
       await mutate();
     },

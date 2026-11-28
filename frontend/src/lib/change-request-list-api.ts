@@ -589,20 +589,16 @@ export async function getFamilyProtection(
 }
 
 /**
- * Zahl der offenen Anmeldungsänderungen für das Badge (#2435). Wie die übrigen
- * Badge-Abrufe: ein Fehler ergibt 0, damit ein Zähler nie die Seitenleiste
- * beschädigt.
+ * Zahl der offenen Anmeldungsänderungen für das Badge (#2435). Ein Fehler
+ * bleibt ein Fehler (#8268): eine 0 hieße „nichts offen“, und die Startseite
+ * meldete dann Entwarnung. Das Badge bleibt ohne bestätigte Zahl leer.
  */
 export async function fetchPendingEnrollmentChangeRequestCount(): Promise<number> {
-  try {
-    const data = await bffJson(
-      "tenant",
-      "GET /api/enrollment/admin/change-requests/pending-count",
-    );
-    return data.pending_count;
-  } catch {
-    return 0;
-  }
+  const data = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/change-requests/pending-count",
+  );
+  return data.pending_count;
 }
 
 export function mapEnrollmentRequestPage(

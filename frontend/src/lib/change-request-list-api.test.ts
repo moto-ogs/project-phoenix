@@ -332,26 +332,33 @@ describe("pending enrollment change request count", () => {
     );
   });
 
-  it("falls back to 0 when the envelope has no data at all", async () => {
+  // Eine Antwort ohne Umschlag ist kaputt, nicht „nichts offen“ (#8268).
+  it("rejects when the envelope has no data at all", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({}), { status: 200 }),
     );
 
-    await expect(fetchPendingEnrollmentChangeRequestCount()).resolves.toBe(0);
+    await expect(
+      fetchPendingEnrollmentChangeRequestCount(),
+    ).rejects.toMatchObject({ status: 502 });
   });
 
-  it("falls back to 0 on an error response", async () => {
+  // Ein Fehler ist keine bestätigte 0 (#8268): die Startseite meldete sonst
+  // Entwarnung. Der gemeinsame Leser hält das Badge dann neutral.
+  it("rejects on an error response instead of reporting 0", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("nope", { status: 403 }),
     );
 
-    await expect(fetchPendingEnrollmentChangeRequestCount()).resolves.toBe(0);
+    await expect(
+      fetchPendingEnrollmentChangeRequestCount(),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
-  it("falls back to 0 when the request itself fails", async () => {
+  it("rejects when the request itself fails", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
 
-    await expect(fetchPendingEnrollmentChangeRequestCount()).resolves.toBe(0);
+    await expect(fetchPendingEnrollmentChangeRequestCount()).rejects.toThrow();
   });
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { isReadRefusal } from "~/lib/access-refusal";
 import { fetchPendingChangeRequestCount } from "~/lib/change-requests-api";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
@@ -29,7 +30,8 @@ import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 export function useChangeRequestsPending(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   const { mode } = useShellAuth();
-  const { canReviewParentRequests } = useChangeRequestAccess();
+  const access = useChangeRequestAccess();
+  const { canReviewParentRequests } = access;
   // Do NOT gate the badge on parent messaging (operations.parent_notes_enabled).
   // Master-data requests (Track B) are gated on their OWN flag
   // (operations.parent_master_data_request_enabled) and are still created — and
@@ -40,17 +42,31 @@ export function useChangeRequestsPending(): UseUnreadCountResult {
   // is the source of truth: it returns 0 when nothing is pending, so no
   // feature-flag gate is needed here — an empty count clears the badge on its own.
   const accountId = session?.user?.id;
-  return useUnreadCount(
+  const inStaffShell =
+    status === "authenticated" && mode === "teacher" && !!accountId;
+  const reader = useUnreadCount(
     accountId ? shellResourceKeys.changeRequestsPending(accountId) : null,
     {
-      enabled:
-        status === "authenticated" &&
-        mode === "teacher" &&
-        !!accountId &&
-        canReviewParentRequests,
+      enabled: inStaffShell && canReviewParentRequests,
       fetcher: fetchPendingChangeRequestCount,
       eventNames: ["messages-unread-refresh", CHANGE_REQUESTS_REFRESH_EVENT],
       eventDebounceMs: 500,
     },
   );
+  // A group lead's review area comes from the server (#8268). Until it
+  // answers, the source is unsettled, not „nothing pending“; a refusal or an
+  // answer without review area leaves it inactive.
+  if (!inStaffShell || canReviewParentRequests) return reader;
+  if (access.isLoading) return { ...reader, state: "loading" };
+  if (access.error !== undefined && !isReadRefusal(access.error)) {
+    return {
+      ...reader,
+      state: "failed",
+      error: access.error,
+      refresh: async () => {
+        await access.refresh();
+      },
+    };
+  }
+  return reader;
 }

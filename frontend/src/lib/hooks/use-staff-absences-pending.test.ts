@@ -112,13 +112,15 @@ describe("useStaffAbsencesPending", () => {
     expect(capturedOptions().enabled).toBe(false);
   });
 
-  it("counts the pending rows via the fetcher and swallows errors as 0", async () => {
+  // A failure is no confirmed 0 (#8268): it reaches the shared reader.
+  it("counts the pending rows via the fetcher and passes failures on", async () => {
     mockIsAdmin.mockReturnValue(true);
     mockListPending.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
     const opts = capturedOptions();
     await expect(opts.fetcher()).resolves.toBe(2);
-    mockListPending.mockRejectedValueOnce(new Error("403"));
-    await expect(opts.fetcher()).resolves.toBe(0);
+    const failure = new Error("403");
+    mockListPending.mockRejectedValueOnce(failure);
+    await expect(opts.fetcher()).rejects.toBe(failure);
   });
 
   it("wires the absence refresh event", () => {
