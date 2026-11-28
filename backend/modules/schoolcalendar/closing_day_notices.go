@@ -34,3 +34,12 @@ type ClosingDayRange struct {
 type ClosingDayNotices interface {
 	NotifyClosingDayChanged(ctx context.Context, notice ClosingDayNotice) error
 }
+
+// ClosingDayPlans is the consumer-owned port to the plans that leave the
+// school's closing days out (#8205): Workforce's series shifts. It joins
+// the caller's transaction, so the plans follow the closing day in the same
+// commit, and a refusal rolls the closing day back. from and to span every
+// day the change opened or closed. Workforce's SeriesBreakDays satisfies it.
+type ClosingDayPlans interface {
+	FollowBreakDays(ctx context.Context, from, to calendar.Date) error
+}

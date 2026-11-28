@@ -16153,6 +16153,14 @@
       "target_owner": "facilities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ClosingDayDates",
+      "binding_digest": "9f9cacdd49d9f9946c495f686097c80b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ClosingDayDates",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ClosingDayDates",
+      "target_owner": "school-calendar"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ClosingDayDates",
       "binding_digest": "da76f1d01906d1a13fefa0db975b31a4",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ClosingDayDates",
@@ -16161,11 +16169,27 @@
       "target_owner": "school-calendar"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
+      "binding_digest": "be76ce51004640ad1f1db9fa311cbd2c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ListCalendarPeriods",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "binding_digest": "4e1fb2a23e30ab2a7763c9a580cf7271",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.ListCalendarPeriods",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.TenantHolidayDates",
+      "binding_digest": "5595a2e4f3ec82ac79cdfc63fee25204",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.SeriesCalendarReads.TenantHolidayDates",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {

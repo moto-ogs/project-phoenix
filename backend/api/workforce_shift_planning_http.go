@@ -30,6 +30,9 @@ import (
 // The shared middleware opens the tenant transaction from the request context.
 type staffShiftsDependencies struct {
 	Planning workforce.StaffShiftPlanning
+	// BreakDays lists the series shifts on closing days (#8205); nil leaves
+	// that route unmounted, as in compositions without the School Calendar.
+	BreakDays staffshiftsHTTP.BreakDayShifts
 
 	// ResolveStaffID identifies the staff record of the acting admin.
 	ResolveStaffID func(context.Context) (int64, error)
@@ -44,7 +47,7 @@ func newStaffShiftsResource(deps staffShiftsDependencies) *staffshiftsHTTP.Resou
 	if deps.Planning == nil || deps.ResolveStaffID == nil || deps.ActorAccountID == nil {
 		panic("staff-shifts HTTP composition: all dependencies are required")
 	}
-	return staffshiftsHTTP.NewResource(deps.Planning, staffShiftsRuntime(deps))
+	return staffshiftsHTTP.NewResource(deps.Planning, deps.BreakDays, staffShiftsRuntime(deps))
 }
 
 func staffShiftsRuntime(deps staffShiftsDependencies) staffshiftsHTTP.Runtime {

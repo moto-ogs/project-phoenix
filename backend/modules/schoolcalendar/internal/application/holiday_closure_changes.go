@@ -38,7 +38,40 @@ func (s *Service) recordHolidayClosureChange(ctx context.Context, stats *domain.
 	if err != nil {
 		return err
 	}
+	if err := s.followClosingDayPlans(ctx, previous, current); err != nil {
+		return err
+	}
 	return s.noticeClosingDayChange(ctx, closingDayID, reason, previous, current, change.Today)
+}
+
+// followClosingDayPlans hands the days a change opened or closed to the
+// plans that leave closing days out (#8205), in the transaction that wrote
+// the change. A change that keeps the days changes no plan; the plans keep
+// every day up to today themselves.
+func (s *Service) followClosingDayPlans(ctx context.Context, previous, current *domain.HolidayClosureRange) error {
+	plans := s.administration.ClosingDayPlans
+	if plans == nil || sameClosingDays(previous, current) {
+		return nil
+	}
+	var from, to calendar.Date
+	for _, r := range []*domain.HolidayClosureRange{previous, current} {
+		if r == nil {
+			continue
+		}
+		if from.IsZero() || r.StartsOn.Before(from) {
+			from = r.StartsOn
+		}
+		if to.IsZero() || r.EndsOn.After(to) {
+			to = r.EndsOn
+		}
+	}
+	if from.IsZero() {
+		return nil
+	}
+	if err := plans.FollowBreakDays(ctx, from, to); err != nil {
+		return fmt.Errorf("school calendar: follow closing day in the plans: %w", err)
+	}
+	return nil
 }
 
 // closingDayNoticePushDays is how far ahead a changed closing day may lie and

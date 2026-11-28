@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -61,35 +62,101 @@ type schoolCalendarNonWorkingDays struct{ calendar SeriesCalendarReads }
 // a break for it: a series planned over a Ferien period exists for that
 // holiday care.
 func (c schoolCalendarNonWorkingDays) SeriesNonWorkingDays(ctx context.Context, from, to calendar.Date, seriesPeriodID int64) (SeriesNonWorkingDays, error) {
+	breaks, err := c.read(ctx, from, to, seriesPeriodID)
+	if err != nil {
+		return SeriesNonWorkingDays{}, err
+	}
+	return breaks.ForSeries(seriesPeriodID), nil
+}
+
+// SchoolBreakCalendar reads the window once for every series (#8205).
+func (c schoolCalendarNonWorkingDays) SchoolBreakCalendar(ctx context.Context, from, to calendar.Date) (SchoolBreakCalendar, error) {
+	return c.read(ctx, from, to, 0)
+}
+
+func (c schoolCalendarNonWorkingDays) read(ctx context.Context, from, to calendar.Date, excludePeriodID int64) (SchoolBreakCalendar, error) {
 	holidays, err := c.calendar.TenantHolidayDates(ctx, from.String(), to.String())
 	if err != nil {
-		return SeriesNonWorkingDays{}, fmt.Errorf("load holidays for series: %w", err)
+		return SchoolBreakCalendar{}, fmt.Errorf("load holidays for series: %w", err)
 	}
 	closing, err := c.calendar.ClosingDayDates(ctx, from.String(), to.String())
 	if err != nil {
-		return SeriesNonWorkingDays{}, fmt.Errorf("load closing days for series: %w", err)
+		return SchoolBreakCalendar{}, fmt.Errorf("load closing days for series: %w", err)
 	}
 	ferien, err := c.calendar.ListCalendarPeriods(ctx, schoolcalendar.CalendarPeriodFilter{
 		PeriodType: schoolcalendar.PeriodTypeHoliday, ActiveOnly: true,
-		OverlappingFrom: from.String(), OverlappingTo: to.String(), ExcludeID: seriesPeriodID,
+		OverlappingFrom: from.String(), OverlappingTo: to.String(), ExcludeID: excludePeriodID,
 	})
 	if err != nil {
-		return SeriesNonWorkingDays{}, fmt.Errorf("load holiday periods for series: %w", err)
+		return SchoolBreakCalendar{}, fmt.Errorf("load holiday periods for series: %w", err)
 	}
-	days := SeriesNonWorkingDays{Holidays: dateSet(holidays), Breaks: dateSet(closing)}
+	result := SchoolBreakCalendar{From: from, To: to, Holidays: dateSet(holidays), ClosingDays: dateSet(closing)}
 	for _, period := range ferien {
-		start, end := calendar.Date(period.StartDate), calendar.Date(period.EndDate)
-		if start.Before(from) {
-			start = from
+		result.HolidayPeriods = append(result.HolidayPeriods, BreakPeriod{
+			ID: period.ID, StartDate: calendar.Date(period.StartDate), EndDate: calendar.Date(period.EndDate),
+		})
+	}
+	return result, nil
+}
+
+// SchoolBreakCalendar is the school calendar of one window, read once for
+// every series that plans in it (#8205): the statutory holidays, the closing
+// days of the school and its Träger and the active Ferien periods.
+type SchoolBreakCalendar struct {
+	From, To       calendar.Date
+	Holidays       map[calendar.Date]bool
+	ClosingDays    map[calendar.Date]bool
+	HolidayPeriods []BreakPeriod
+}
+
+// BreakPeriod is one active Ferien period of the school calendar.
+type BreakPeriod struct {
+	ID                 int64
+	StartDate, EndDate calendar.Date
+}
+
+// SchoolBreakCalendarReader reads the school calendar of [from, to] once.
+type SchoolBreakCalendarReader interface {
+	SchoolBreakCalendar(ctx context.Context, from, to calendar.Date) (SchoolBreakCalendar, error)
+}
+
+// ForSeries is the window's non-working days of a series bound to the
+// calendar period seriesPeriodID: its own period is never a break for it.
+func (c SchoolBreakCalendar) ForSeries(seriesPeriodID int64) SeriesNonWorkingDays {
+	days := SeriesNonWorkingDays{Holidays: c.Holidays, Breaks: make(map[calendar.Date]bool, len(c.ClosingDays))}
+	for day := range c.ClosingDays {
+		days.Breaks[day] = true
+	}
+	for _, period := range c.HolidayPeriods {
+		if period.ID == seriesPeriodID {
+			continue
 		}
-		if end.After(to) {
-			end = to
+		start, end := period.StartDate, period.EndDate
+		if start.Before(c.From) {
+			start = c.From
+		}
+		if end.After(c.To) {
+			end = c.To
 		}
 		for day := start; !day.After(end); day = day.AddDays(1) {
 			days.Breaks[day] = true
 		}
 	}
-	return days, nil
+	return days
+}
+
+// breakKind names why a series bound to seriesPeriodID leaves day out as a
+// break: a closing day wins over the Ferien. Empty when it does not.
+func (c SchoolBreakCalendar) breakKind(day calendar.Date, seriesPeriodID int64) string {
+	if c.ClosingDays[day] {
+		return workforce.BreakDayClosingDay
+	}
+	for _, period := range c.HolidayPeriods {
+		if period.ID != seriesPeriodID && !day.Before(period.StartDate) && !day.After(period.EndDate) {
+			return workforce.BreakDayHolidayPeriod
+		}
+	}
+	return ""
 }
 
 func dateSet(values map[string]bool) map[calendar.Date]bool {

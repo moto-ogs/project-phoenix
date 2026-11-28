@@ -2428,6 +2428,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",
       "Eine Serie lässt Ferien, Schließtage und Feiertage aus. Arbeitet die Person auch in den Ferien, setze bei der Serie das Häkchen `Auch in den Ferien und an Schließtagen planen`.",
       "An Feiertagen plant eine Serie nie eine Schicht.",
+      // #8205: ein später eingetragener Schließtag folgt den Serien.
+      "Trägst du später einen Schließtag ein, sagt moto die Schichten dieser Serien an dem Tag ab. Sie zeigen dann `Fällt aus · Schließtag`. Löschst du den Schließtag wieder, plant moto sie wieder ein. Tage bis heute bleiben, wie sie sind.",
       // #4709: der Vertretungspool des Trägers.
       "Fehlt jemand, findest du im Drei-Punkte-Menü `Springer des Trägers`. Dort blockst du eine Fachkraft deines Trägers für einen Tag.",
     ],
@@ -2440,6 +2442,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       // #7021: Abwesenheiten von vor #6847 übernimmt die Leitung selbst.
       "Steht über dem Plan `Abwesenheiten fehlen im Plan`? Diese Abwesenheiten gelten schon, die Personen stehen aber noch im Plan. Wähle `In den Plan übernehmen` oder `Alle übernehmen`. Abgesagte Schichten und Vertretungen bleiben, wie sie sind. Soll die Person doch arbeiten, wähle `Ausblenden`.",
       "Ist ein Tag nicht vollständig durch Schichten abgedeckt, weist moto darauf hin.",
+      // #8205: Schichten, die moto an Schließtagen nicht absagt.
+      "Steht über dem Plan `Schichten an Schließtagen`? Diese Schichten stehen an einem Schließtag oder in den Ferien. Von Hand geänderte Schichten sagt moto nicht ab. Auch Schließtage des Trägers und geänderte Ferien sagen Schichten noch nicht ab. An der Schicht steht `Schließtag: Schicht prüfen`. Wähle `Woche ansehen` und sag die Schicht ab, wenn an dem Tag niemand arbeiten soll.",
     ],
     troubleshootingDetails: [
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
@@ -4630,8 +4634,8 @@ export const leadRosterDeviationTopic =
         "Soll die Kinderliste so bleiben? Wähle `Liste so lassen`. Dann verschwindet der Hinweis für diesen Regeltermin.",
         "Die Karte des Regeltermins zeigt dann `Die Kinderliste bleibt bewusst so.` Den Hinweis holst du zurück: Wähle dort oder in einem Termin des Regeltermins `Hinweis wieder zeigen`.",
         "Kommen Kinder über `Klasse` oder `Jahrgang` in den Regeltermin? Beim Bearbeiten steht unter der Kinderliste, wer so außerdem kommt.",
-        // #6841: Klassen- und Gruppenwechsel erreichen auch geplante Termine.
-        "Wechselt ein Kind die Klasse oder Gruppe, passt moto auch die schon geplanten Termine an. Vergangene Tage bleiben, wie sie waren.",
+        // #6841, #8204: Klassen- und Gruppenwechsel und neue Kinder erreichen auch geplante Termine.
+        "Kommt ein Kind neu dazu oder wechselt es die Klasse oder Gruppe, passt moto auch die schon geplanten Termine an. Vergangene Tage bleiben, wie sie waren.",
         "`Manuell` heißt: An- und Abmeldungen werden nicht übernommen. Die Kinder pflegst du selbst.",
         "Die Startseite zeigt die Aufgabe `Regeltermine prüfen`, solange ein Regeltermin abweicht.",
         "Wechselst du beim Bearbeiten die `Zielgruppe` auf `Angebot`, zeigt moto dieselbe Vorschau pro Wochentag.",

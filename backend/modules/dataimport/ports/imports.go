@@ -183,9 +183,11 @@ type RowWriteFollowUp interface {
 }
 
 // CohortChange is one child whose Klasse or Gruppe an update row changed,
-// with the values before the write (#6951).
+// with the values before the write (#6951), or a child a create row filed
+// with a Klasse or Gruppe (#8204): Created, with no values before.
 type CohortChange struct {
 	StudentID           int64
+	Created             bool
 	SchoolClassChanged  bool
 	PreviousSchoolClass string
 	GroupChanged        bool
@@ -242,11 +244,12 @@ type StudentImportDeps struct {
 	// with it. Required for a dry run.
 	CountsTowardChildQuota func(status, enrolledFrom, enrolledUntil, day string) bool
 	// LockCohortWrites takes the shared class-writes gate and then the
-	// recurrence gate before an update attempt locks any child, and
+	// recurrence gate before an attempt writes any child, and
 	// FollowCohortChanges moves the children whose Klasse or Gruppe the
 	// attempt changed between the Regeltermine from the given day on: the
 	// offering-sourced ones and those with a Klasse, Jahrgang or Gruppe
-	// target (#6951). Either nil skips the follow-up.
+	// target (#6951). A child the attempt created joins those it is in
+	// (#8204). Either nil skips the follow-up.
 	LockCohortWrites    func(context.Context) error
 	FollowCohortChanges func(context.Context, []CohortChange, calendar.Date) error
 }

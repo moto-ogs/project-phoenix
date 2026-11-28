@@ -53,4 +53,17 @@ describe("RosterMaintenanceBadge", () => {
     );
     expect(screen.getByText("Teils automatisch")).toBeInTheDocument();
   });
+
+  it("tells that new children of the Klasse or Gruppe join the planned dates", () => {
+    // #8204: a new child follows the target like a class change does.
+    render(
+      <RosterMaintenanceBadge state={{ ...base, dynamicTargets: true }} />,
+    );
+
+    const bubble = screen.getByRole("tooltip");
+    expect(bubble).toHaveTextContent(
+      "Kommt ein Kind neu dazu oder wechselt es Klasse oder Gruppe, passt moto die kommenden Termine an.",
+    );
+    expect(bubble).not.toHaveTextContent("später geplanten Terminen");
+  });
 });
