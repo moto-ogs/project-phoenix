@@ -311,6 +311,28 @@ func TestCareNoticeMailRefusesMissingAddressAndChangedPayer(t *testing.T) {
 	}
 }
 
+// A notice keeps its issued recipient. Linking the party to a parents
+// account afterwards makes its copied address stale, so the office must
+// create a current notice instead of mailing the signed address.
+func TestCareNoticeMailRefusesTheSignedAddressAfterThePartyGetsAnAccount(t *testing.T) {
+	t.Parallel()
+	f, contract, run, _ := releasedNoticeRun(t, "Träger Bescheid Kontoadresse später")
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	_, signed := linkPartyAccount(t, f, contract, fmt.Sprintf("eva.bescheid.%d@example.org", contract))
+	require.Equal(t, signed, run.Notices[0].Recipient.Email, "the notice copied the signed address before the account existed")
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost,
+		careNoticeRunPath(int64(run.ID), "/notices/"+strconv.FormatInt(contract, 10)+"/mail"), nil)
+	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "parent_billing.care_notice_recipient_changed")
+
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
+	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
+	assert.Equal(t, careSeriesBody{RecipientChanged: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
+	assert.Empty(t, noticeMails(t, f, int64(run.ID)))
+}
+
 // A payer who deviates from the contract party gets the notice: the release
 // copies the payer, and the send checks the payer of today.
 func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
