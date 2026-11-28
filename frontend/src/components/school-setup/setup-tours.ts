@@ -46,6 +46,11 @@ export interface SetupTourStop {
    */
   skipCount?: number;
   /**
+   * Nur unter `sm` (App, #8070): ein Schritt, den es nur auf dem Handy gibt,
+   * etwa „Ganze Akte öffnen“ im Kind-Blatt. Am Computer entfällt die Station.
+   */
+  mobileOnly?: true;
+  /**
    * Die Stelle darf fehlen, etwa ein Reiter, den nur manche Rollen sehen.
    * Dann entfällt die Station still (mit `skipCount` auch die folgenden),
    * statt „nicht zu sehen“ zu melden.

@@ -314,10 +314,20 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         text: "Schon die Karte zeigt das Wichtigste: wo das Kind gerade ist, wann es kommt und geht und wie es nach Hause kommt. Wähle eine Karte. Dann siehst du alle Angaben.",
         // Auf dem Handy öffnet die Zeile erst das Kind-Blatt (#8070).
         mobileText:
-          "Die Zeile zeigt das Wichtigste: wo das Kind gerade ist und wann es geht. Tippe auf ein Kind und dann auf „Ganze Akte öffnen“. Dann siehst du alle Angaben.",
+          "Die Zeile zeigt das Wichtigste: wo das Kind gerade ist und wann es geht. Tippe auf ein Kind.",
         advance: "click",
         missingText:
           "Hier steht noch kein Kind. Prüfe die Suche oder die Filter.",
+      },
+      {
+        // Auf dem Handy öffnet die Zeile erst das Kind-Blatt (#8070); am
+        // Computer führt die Karte direkt in die Akte.
+        target: '[data-setup-tour="child-sheet-record"]',
+        title: "Ganze Akte öffnen",
+        text: "Das Blatt zeigt das Wichtigste. Wähle „Ganze Akte öffnen“. Dann siehst du alle Angaben.",
+        advance: "click",
+        mobileOnly: true,
+        skipOnBack: true,
       },
       {
         target: '[role="tablist"]',

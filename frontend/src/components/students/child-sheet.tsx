@@ -125,6 +125,8 @@ export function ChildSheet({
       size="md"
       className="w-full"
       tooltip="Öffnet die ganze Akte mit allen Angaben."
+      // Ziel der Tour „Ein Kind finden“ auf dem Handy (#3748).
+      data-setup-tour="child-sheet-record"
     >
       Ganze Akte öffnen
     </ButtonLink>

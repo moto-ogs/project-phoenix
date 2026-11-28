@@ -715,11 +715,14 @@ for (const device of VIEWPORTS) {
         expect(stoppedAt, visited.join(" → ")).toBeNull();
         // Die Betreuungskraft sieht jede Station auf den Seiten der Tour. Eine
         // optionale Station (etwa ein Reiter der Kindakte), deren Stelle
-        // fehlt, entfiele sonst still.
+        // fehlt, entfiele sonst still. Schritte nur für das Handy
+        // (`mobileOnly`) gibt es am Computer nicht, auf dem Handy sind sie
+        // Pflicht.
         expect(visited).toEqual(
           expect.arrayContaining(
             tours[step].stops
               .filter((stop) => !stop.nav)
+              .filter((stop) => device.mobile || !stop.mobileOnly)
               .map((stop) => stop.title),
           ),
         );

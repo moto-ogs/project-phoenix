@@ -369,6 +369,12 @@ export function useSetupTour<K extends string>(
   // Seitenwechsel oder wenn ein Fenster aufgeht.
   useEffect(() => {
     if (!stop || !tour || !definition) return undefined;
+    // Ein Schritt nur für das Handy entfällt am Computer, in beide Richtungen:
+    // Zurück geht über ihn hinweg (`skipOnBack`), vorwärts hier.
+    if (stop.mobileOnly && !asSheet && !tour.reviewing) {
+      jump(tour, tour.index + 1, definition.stops.length);
+      return undefined;
+    }
     const targetSelector = targetFor(stop, asSheet);
     // Stationen der Seitenleiste gelten überall. Alle anderen erst, wenn ihre
     // Seite geladen ist: Nach dem Klick in der Seitenleiste steht kurz noch
