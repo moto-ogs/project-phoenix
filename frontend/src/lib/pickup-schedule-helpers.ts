@@ -59,7 +59,7 @@ export interface PickupException {
 }
 
 /** Wer die Elternanfrage hinter einer Abholzeit genehmigt hat (#8209). */
-export interface PickupExceptionOrigin {
+interface PickupExceptionOrigin {
   requestId: string;
   approvedByName: string;
   approvedAt?: string;
