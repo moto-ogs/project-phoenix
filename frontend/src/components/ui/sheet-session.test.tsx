@@ -91,4 +91,23 @@ describe("useSheetSession", () => {
     );
     expect(getByTestId("a").textContent).toBe("closed");
   });
+
+  it("keeps an address the page changed while the sheet was open", async () => {
+    // Ein Filter im Blatt schreibt die Adresse um (`replaceState`). Schließt
+    // das Blatt, darf der Verlauf nicht auf die alte Adresse zurückfallen.
+    window.history.replaceState(null, "", "/kinder");
+    const { getByTestId } = render(<Sheet name="a" />);
+    act(() => setters.a?.(true));
+    window.history.replaceState(window.history.state, "", "/kinder?gruppe=1");
+    act(() => setters.a?.(false));
+    await waitFor(() =>
+      expect(
+        (window.history.state as { motoSheet?: string } | null)?.motoSheet,
+      ).toBeUndefined(),
+    );
+    expect(window.location.pathname + window.location.search).toBe(
+      "/kinder?gruppe=1",
+    );
+    expect(getByTestId("a").textContent).toBe("closed");
+  });
 });
