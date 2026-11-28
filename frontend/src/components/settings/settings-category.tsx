@@ -13,6 +13,7 @@ import {
   hasCategoryLabel,
   filterCategoryItems,
 } from "./settings-filter";
+import { settingsCategoryConcept } from "./settings-category-concepts";
 
 interface SettingsCategoryProps {
   readonly category: SchemaCategory;
@@ -82,6 +83,18 @@ interface SettingsCategoryProps {
   readonly renderAddon?: (setting: ResolvedSetting) => ReactNode;
   /** See `SettingsField` `renderConfirmDetail`. */
   readonly renderConfirmDetail?: (setting: ResolvedSetting) => ReactNode;
+  /**
+   * Shows the concept symbol of the category in the card head (#8221). The
+   * page sets it when its view holds several topic cards (Themenkarten-Regel,
+   * `.claude/rules/frontend-ui-kit.md`). Off by default: the card looks as
+   * before.
+   */
+  readonly withIcon?: boolean;
+  /**
+   * Backend key of the tab the category belongs to. A category without its
+   * own concept takes the concept of this tab (`settingsTabConcept`).
+   */
+  readonly tabKey?: string;
 }
 
 export function SettingsCategory({
@@ -106,6 +119,8 @@ export function SettingsCategory({
   title,
   renderAddon,
   renderConfirmDetail,
+  withIcon = false,
+  tabKey = "",
 }: SettingsCategoryProps) {
   const visibleItems = filterCategoryItems(category, filterQuery);
 
@@ -128,6 +143,9 @@ export function SettingsCategory({
   return (
     <SectionCard
       headingLevel={headingLevel}
+      concept={
+        withIcon ? settingsCategoryConcept(category.key, tabKey) : undefined
+      }
       title={title ?? displayCategoryLabel(category)}
       titleClassName={
         title !== undefined || hasCategoryLabel(category)

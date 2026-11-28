@@ -4,6 +4,7 @@ import { type ReactNode, useCallback } from "react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { mailsConcept } from "~/lib/concepts/mails";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
   GUARDIAN_STOPPED_COPY,
@@ -70,6 +71,7 @@ export function RequestMailStatus({
   title = "E-Mails an die Familie",
   labels = REQUEST_MAIL_LABELS,
   leading,
+  withIcon = false,
 }: Readonly<{
   mails: readonly AdminRequestMail[];
   loadError: ReturnType<typeof useRequestMails>["loadError"];
@@ -77,6 +79,11 @@ export function RequestMailStatus({
   labels?: Readonly<Record<string, string>>;
   /** The symbol of the card, as the other cards of the page carry one. */
   leading?: ReactNode;
+  /**
+   * Shows the mails symbol in the card head (#8221), where the page holds
+   * several topic cards. Off by default: the card looks as before.
+   */
+  withIcon?: boolean;
 }>) {
   return (
     <>
@@ -87,6 +94,7 @@ export function RequestMailStatus({
         <SectionCard
           title={title}
           leading={leading}
+          concept={withIcon ? mailsConcept : undefined}
           description="Hier siehst du, ob die Mails zu dieser Anmeldung angekommen sind."
           className="mb-4"
         >

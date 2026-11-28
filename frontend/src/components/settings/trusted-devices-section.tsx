@@ -13,6 +13,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { Skeleton } from "~/components/ui/skeleton";
 import { SectionCard } from "~/components/ui/section-card";
+import { devicesConcept } from "~/lib/concepts/devices";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -107,12 +108,18 @@ interface TrustedDevicesSectionProps {
   readonly scope?: LoginScope;
   readonly copy?: TrustedDevicesCopy;
   readonly headingLevel?: 2 | 3;
+  /**
+   * Shows the devices symbol in the card head (#8221), where the page holds
+   * several topic cards. Off by default: the card looks as before.
+   */
+  readonly withIcon?: boolean;
 }
 
 export function TrustedDevicesSection({
   scope = "tenant",
   copy = GERMAN_TRUSTED_DEVICES_COPY,
   headingLevel = 3,
+  withIcon = false,
 }: TrustedDevicesSectionProps = {}) {
   const { data: session } = useSession();
   const hasAccess = hasSessionAccess(session);
@@ -187,6 +194,7 @@ export function TrustedDevicesSection({
   return (
     <SectionCard
       headingLevel={headingLevel}
+      concept={withIcon ? devicesConcept : undefined}
       title={copy.title}
       description={copy.description}
     >

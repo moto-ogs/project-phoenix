@@ -122,7 +122,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Data / list table; `expandable`, `renderSubRows`, `summaryRow`; column key `actions` stays pinned. Below `md` it stacks (`stacked` roles); a comparison table (rows of figures to compare, not records to edit) sets `mobileScroll` with a reason | `DataTable`, `DataTableStatusBadge` | `~/components/ui/data-table` |
 | Key figure tile | `StatCard` — default `variant="card"`; `inline` for dense grids in cards | `~/components/ui/stat-card` |
 | Icon tile (symbol on a grey or tinted square/circle) | `IconTile` (`size`, `shape`, `tone`); a concept: `ConceptIconTile` | `~/components/ui/icon-tile` |
-| Any card: page section with heading, explanation, actions, or a plain surface | `SectionCard`, the only card head: `concept`/`icon`/`leading`, `titleSize`, `collapsible`, `flush`, `footer`, `padding="none"`, `loading`; `kicker`: ADR 0149 | `~/components/ui/section-card` |
+| Any card: page section with heading, explanation, actions, or a plain surface | `SectionCard`, the only card head: topic symbol only by `concept` ([Kartenkopf](#kartenkopf-themenkarten)), `leading` for status symbol or special case, `icon`, `titleSize`, `collapsible`, `flush`, `footer`, `padding="none"`, `loading`; `kicker`: ADR 0149 | `~/components/ui/section-card` |
 | Any other framed white container (list wrapper, inner card, skeleton) | the `moto-content-surface` utility + `rounded-2xl border` (inner cards keep `rounded-xl`); never `border-gray-200 bg-white` by hand | `globals.css` |
 | Floating panel at a control, with content | `AnchoredPopover` — `header`, `footer`, `align`, `focusPanelOnOpen`, `swallowOutsideClick` | `~/components/ui/anchored-popover` |
 | Panel at a trigger: popover, below `sm` a bottom sheet (#7797); the only variant, no own phone branch | `ResponsivePanel` (`trigger`, `label`, `returnFocusRef`, content `(asSheet) => …`) | `~/components/ui/responsive-panel` |
@@ -295,19 +295,23 @@ Green shades (from `GROUP_ROOM_SHADES` in `location-helper.ts`): base `#83CD2D`,
 
 ### Concept icons — one symbol per domain concept
 
-Each concept's definition in `lib/concepts/<key>.ts` (collected in `MOTO_CONCEPTS`, `lib/moto-concepts.ts`) is the single source for which symbol and tone it gets. Render it with `<MotoConceptIcon concept={childrenConcept} />` (`~/components/ui/moto-concept-icon`), importing the definition from its own module so a page carries only the glyphs it shows; production code never imports the `MOTO_CONCEPTS` registry at runtime (`moto-concepts.test.ts` fails on it). Never import the Phosphor glyph and pick a tone by hand. The people concepts:
+`lib/concepts/<key>.ts` (registry `MOTO_CONCEPTS`, `lib/moto-concepts.ts`) is the single source of a concept's symbol and tone. Render `<MotoConceptIcon concept={childrenConcept} />` (`~/components/ui/moto-concept-icon`) with the definition imported from its own module, so a page carries only its glyphs; production code imports the registry only as a type (`moto-concepts.test.ts`). Never pair a Phosphor glyph and tone by hand. The people concepts:
 
-| Concept     | Key        | Phosphor glyph           | Tone         |
-| ----------- | ---------- | ------------------------ | ------------ |
-| Kind        | `children` | `UserIcon` (one head)    | `greenVivid` |
-| Eltern      | `parents`  | `UsersIcon` (two heads)  | `blue`       |
-| Gruppe      | `groups`   | `UsersThreeIcon` (three) | `greenDeep`  |
-| Personal    | `staff`    | `IdentificationCardIcon` | `orange`     |
-| Klassentag  | `classDay` | `ChalkboardTeacherIcon`  | `blue`       |
+| Concept | Key | Phosphor glyph | Tone |
+|---|---|---|---|
+| Kind | `children` | `UserIcon` (one head) | `greenVivid` |
+| Eltern | `parents` | `UsersIcon` (two heads) | `blue` |
+| Gruppe | `groups` | `UsersThreeIcon` (three) | `greenDeep` |
+| Personal | `staff` | `IdentificationCardIcon` | `orange` |
+| Klassentag | `classDay` | `ChalkboardTeacherIcon` | `blue` |
 
 - One head always means a child, two heads parents, three heads a group, also where the icon is monochrome (sidebar entries, tab triggers, help tiles in `HELP_ICONS`): keep the glyph, drop the tone.
 - Deliberate exceptions: the profile menu (`UserIcon` = the signed-in user) and the neutral gray meta icons on the child card (`tone="neutral"`, same glyph as the concept).
-- Need a new concept? Add a module under `lib/concepts/` and its entry in `MOTO_CONCEPTS`; don't define a one-off glyph/tone pair.
+- New concept: a module under `lib/concepts/` plus its `MOTO_CONCEPTS` entry, never a one-off glyph/tone pair.
+
+### Kartenkopf: Themenkarten
+
+A card head carries a concept symbol only as a **Themenkarte** (#8220): directly on the page or in a tab, beside one more Themenkarte of its **Ansicht**, with a topic of its own; then all of them do. A **Statussymbol** stays on `leading`. Terms, special cases, `withIcon`, examples: [`THEMENKARTEN-SPEC.md`](../../frontend/src/components/ui/THEMENKARTEN-SPEC.md).
 
 ### Spacing & padding
 
@@ -348,31 +352,31 @@ No text over a control or other text: the Storybook test checks every story at 1
 ## Detection
 
 **CI-enforced ratchet** (since #1629): `frontend/scripts/oxlint-plugin-ui-kit.mjs` fails `pnpm run check`. Since #6183 every rule is hard-zero. Hard-zero: `no-generic-brand-colors` (all chromatic Tailwind hues), `no-hand-rolled-overlay` (`fixed inset-0` outside `ui/`), `no-hand-rolled-surface` (unprefixed `rounded-xl/2xl` + `border` + `bg-white` on one element, across branches; #2933; outside `ui/` also `rounded-md/lg`, `bg-white/NN`, unfilled frames, #5594), `no-rounded-3xl` (off-scale radius, `rounded-t-3xl` too), `require-checkbox-label` (unlabeled shared checkboxes; label-shaped `ChoiceTile` counts). Non-card match (white pill): disable comment, reason in the PR. Test/stories files are exempt from class-string rules.
-`bauart/*` covers parents (not start page/child card skeletons); `ParentPage`: `loading`/`empty`/`error`. #5606: `no-tabs-override`, `no-section-card-title-size`, `no-empty-state-surface`, `no-hand-rolled-avatar`. Tenant scaffold (#2619): `no-hand-rolled-page-card` (`moto-content-surface` + `rounded-2xl` outside `ui/`; hard-zero, #5594; 4 #2619 parent files exempt), `no-tabs-as-value-switcher` (`ui/Tabs` as value choice), `no-tiny-text` (sub-12px text; hard-zero, floor `text-xs`). #5141 (hard-zero): `green-fill-white-text` (on opaque green: white text, dark fill steps). #5577: `no-dynamic-color-class`, `no-white-on-warm-fill` (white on orange only `-strong`). #5531: [Buttons](#buttons). #5579: `no-shadcn-tokens`, `no-raw-z-index` (`z-[n]`). #5580: `no-select-override` (no look classes on selects/`DateRangePicker`). #5581: `no-important-override` (`!` on kit components; hard-zero), `no-section-card-bleed`. #5605: `no-control-height-override` (`h-8`/`h-9`/`!size-*`). #5582: `no-hand-rolled-icon-tile` (also in `ui/`). #5583: `no-shadow-kit-name` (local name = kit export). #5584 (hard-zero): `no-hand-rolled-pill`, `no-pill-dot`, `no-hex-alpha-tint`. #5596 (hard-zero): `no-hand-rolled-weekday-toggle` (weekday `.map` to a checkbox label or pressed button), `no-hand-rolled-removable-chip` (chip with its own X), `no-hand-rolled-number-stepper` (minus/plus by a field). #5599: `no-hand-rolled-dropzone` (`onDrop`), `no-hand-rolled-copy-field` (framed `<code>`, `navigator.clipboard`). #5597: `no-hand-rolled-empty-state` (`border-dashed` + `text-center`). #5602: `no-hand-rolled-sticky-bar`, `no-arbitrary-slide-over-width`, `no-slide-over-row-override`. #5595 (hard-zero): `no-hand-rolled-toggle-control` (`role="switch|checkbox"`, painted box), `no-hand-rolled-fieldset` (framed `<fieldset>`), `no-hand-rolled-choice-tile` (framed `<label>` around Checkbox/Radio). #5217 (hard-zero): `no-raw-input` (hand-built `<input>`/`<textarea>` outside `RAW_INPUT_KIT_PRIMITIVES`; `type="hidden"`/`"file"` stay native; no kit counterpart (OTP grid): `oxlint-disable-next-line ui-kit/no-raw-input -- <reason>`). Jump to the first failed field only via `FormErrorAlert`.
+`bauart/*` covers parents (not start page/child card skeletons); `ParentPage`: `loading`/`empty`/`error`. #5606: `no-tabs-override`, `no-section-card-title-size`, `no-empty-state-surface`, `no-hand-rolled-avatar`. Tenant scaffold (#2619): `no-hand-rolled-page-card` (`moto-content-surface` + `rounded-2xl` outside `ui/`; #5594; 4 #2619 parent files exempt), `no-tabs-as-value-switcher` (`ui/Tabs` as value choice), `no-tiny-text` (sub-12px text; floor `text-xs`). #5141: `green-fill-white-text` (on opaque green: white text, dark fill steps). #5577: `no-dynamic-color-class`, `no-white-on-warm-fill` (white on orange only `-strong`). #5531: [Buttons](#buttons). #5579: `no-shadcn-tokens`, `no-raw-z-index` (`z-[n]`). #5580: `no-select-override` (no look classes on selects/`DateRangePicker`). #5581: `no-important-override` (`!` on kit components), `no-section-card-bleed`. #5605: `no-control-height-override` (`h-8`/`h-9`/`!size-*`). #5582: `no-hand-rolled-icon-tile` (also in `ui/`). #5583: `no-shadow-kit-name` (local name = kit export). #5584: `no-hand-rolled-pill`, `no-pill-dot`, `no-hex-alpha-tint`. #5596: `no-hand-rolled-weekday-toggle` (weekday `.map` to a checkbox label or pressed button), `no-hand-rolled-removable-chip` (chip with its own X), `no-hand-rolled-number-stepper` (minus/plus by a field). #5599: `no-hand-rolled-dropzone` (`onDrop`), `no-hand-rolled-copy-field` (framed `<code>`, `navigator.clipboard`). #5597: `no-hand-rolled-empty-state` (`border-dashed` + `text-center`). #5602: `no-hand-rolled-sticky-bar`, `no-arbitrary-slide-over-width`, `no-slide-over-row-override`. #5595: `no-hand-rolled-toggle-control` (`role="switch|checkbox"`, painted box), `no-hand-rolled-fieldset` (framed `<fieldset>`), `no-hand-rolled-choice-tile` (framed `<label>` around Checkbox/Radio). #5217: `no-raw-input` (hand-built `<input>`/`<textarea>` outside `RAW_INPUT_KIT_PRIMITIVES`; `type="hidden"`/`"file"` stay native; no kit counterpart (OTP grid): `oxlint-disable-next-line ui-kit/no-raw-input -- <reason>`). Jump to the first failed field only via `FormErrorAlert`.
 
-`ui-kit/no-hand-rolled-field-label` (#5589, hard-zero since #5590).
+`ui-kit/no-hand-rolled-field-label` (#5589, #5590).
 
-`ui-kit/no-tenant-kicker` (#5607, hard-zero): `kicker`/`eyebrow`, or `SectionLabel`, pill, small bold coloured text (also `text-[var(--…)]`) right before `h1`/`h2`.
+`ui-kit/no-tenant-kicker` (#5607): `kicker`/`eyebrow`, or `SectionLabel`, pill, small bold coloured text (also `text-[var(--…)]`) right before `h1`/`h2`.
 
-`ui-kit/no-uppercase-label` (#5590, hard-zero): `uppercase` + `tracking-*` outside `ui/`; exempt by path: `/start`, NFC print guide, three #2619 parent files.
+`ui-kit/no-uppercase-label` (#5590): `uppercase` + `tracking-*` outside `ui/`; exempt by path: `/start`, NFC print guide, three #2619 parent files.
 
-`ui-kit/no-hand-rolled-notice` (#5591, #5609, hard-zero): tinted fill + radius + padding, with or without border (unless another hue): a notice is `Alert` (warning orange), a surface `InsetPanel`.
+`ui-kit/no-hand-rolled-notice` (#5591, #5609): tinted fill + radius + padding, with or without border (unless another hue): a notice is `Alert` (warning orange), a surface `InsetPanel`.
 
-`ui-kit/no-radix-outside-kit` (#5604, hard-zero): `@radix-ui/*` only under `components/ui/`.
+`ui-kit/no-radix-outside-kit` (#5604): `@radix-ui/*` only under `components/ui/`.
 
-`ui-kit/no-arbitrary-shadow`, `no-hand-rolled-list-row`, `no-hand-rolled-framed-list`, `no-hand-rolled-nav-row` (#5593, hard-zero): no `shadow-[…]`, own list row, framed list, full-width arrow row outside `ui/`; #2619 todo list exempt.
+`ui-kit/no-arbitrary-shadow`, `no-hand-rolled-list-row`, `no-hand-rolled-framed-list`, `no-hand-rolled-nav-row` (#5593): no `shadow-[…]`, own list row, framed list, full-width arrow row outside `ui/`; #2619 todo list exempt.
 
-`ui-kit/no-hand-rolled-inset` (#5592, hard-zero): radius + `bg-gray-50` + padding, and surface chains in module constants. Three #2619 parent files are exempt by path.
+`ui-kit/no-hand-rolled-inset` (#5592): radius + `bg-gray-50` + padding, and surface chains in module constants. Three #2619 parent files are exempt by path.
 
-`ui-kit/no-raw-table` (#5600, hard-zero): no `<table>` outside `ui/`.
+`ui-kit/no-raw-table` (#5600): no `<table>` outside `ui/`.
 
-`ui-kit/no-kit-domain-import` (#5586, hard-zero): `components/ui/` imports no other component folder and calls no `fetch`/`useSWR*`; context comes through props and slots. `~/lib`: `KIT_PURE_LIB_MODULES`, types. Planning pieces live in `ui/planning/`. `no-hand-rolled-surface` applies in `ui/` too.
+`ui-kit/no-kit-domain-import` (#5586): `components/ui/` imports no other component folder and calls no `fetch`/`useSWR*`; context comes through props and slots. `~/lib`: `KIT_PURE_LIB_MODULES`, types. Planning pieces live in `ui/planning/`. `no-hand-rolled-surface` applies in `ui/` too.
 
-`ui-kit/no-hand-rolled-menu` / `-popover` (#5601, hard-zero): `role="menu|menuitem*|listbox|option"`, `<datalist>` / `moto-popover-surface` only in `ui/`.
+`ui-kit/no-hand-rolled-menu` / `-popover` (#5601): `role="menu|menuitem*|listbox|option"`, `<datalist>` / `moto-popover-surface` only in `ui/`.
 
-`ui-kit/no-own-spinner` (#5588, hard-zero): no `animate-spin` or icon-package spinner outside `ui/`. `bauart/no-own-skeleton` also fails `<Skeleton>` rows in an own surface and radius classes on it. The scaffold test fails visible loading text in `page.tsx`.
+`ui-kit/no-own-spinner` (#5588): no `animate-spin` or icon-package spinner outside `ui/`. `bauart/no-own-skeleton` also fails `<Skeleton>` rows in an own surface and radius classes on it. The scaffold test fails visible loading text in `page.tsx`.
 
-`ui-kit/no-hand-rolled-dot` (hard-zero): no hand-built dot or colour bar outside `ui/`; `ui-kit/no-status-dot-outside-plans`: `StatusDot` only in the plugin's legends and plans (ADR 0149).
+`ui-kit/no-hand-rolled-dot`: no hand-built dot or colour bar outside `ui/`; `ui-kit/no-status-dot-outside-plans`: `StatusDot` only in the plugin's legends and plans (ADR 0149).
 
 `moto-content-surface` and `moto-popover-surface` are unlayered, so they beat Tailwind border, background, shadow and ring utilities on the same element; `ui-kit/no-dead-surface-utility` fails such utilities beside them (focus: `outline-2`, override: `!`). With a tinted branch (`danger ? "border-moto-red/20 bg-moto-red-soft" : …`), `moto-content-surface` goes in the neutral branch only. It is its own stacking context: floating parts portal to `body`.
 
