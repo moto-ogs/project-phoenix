@@ -237,7 +237,12 @@ func (s *Scheduler) runMaterializationForTenant(tenantCtx context.Context, tenan
 	if err != nil {
 		// Keep the today-mark so every subsequent minute does not retry a
 		// known-failing run. It naturally expires on the next scheduler day.
-		s.getLogger().Error("timetable materialization failed for tenant",
+		// A school without a federal state is not configured, no failure.
+		level := slog.LevelError
+		if schoolNotConfigured(err) {
+			level = slog.LevelWarn
+		}
+		s.getLogger().Log(tenantCtx, level, "timetable materialization failed for tenant",
 			slog.Int64("tenant_id", tenantID),
 			slog.String("error", err.Error()),
 		)
