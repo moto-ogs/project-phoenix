@@ -159,11 +159,13 @@ export function ConnectOfferingModal({
         ? tenantDailyKeys.offeringPreview(deviation.templateId, selection, from)
         : null,
     fetcher: () =>
-      timetableService.getOfferingPreview(
-        deviation.templateId,
-        selection,
-        from,
-      ),
+      from === undefined
+        ? timetableService.getOfferingPreview(deviation.templateId, selection)
+        : timetableService.getOfferingPreview(
+            deviation.templateId,
+            selection,
+            from,
+          ),
     token: (shown) => shown.fingerprint,
     follow: false,
     // The dialog closes after connecting: no read of the old preview.
