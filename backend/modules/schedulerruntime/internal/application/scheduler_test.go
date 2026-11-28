@@ -2158,6 +2158,36 @@ func TestCheckAndRunMaterialization_MaterializerError(t *testing.T) {
 	assert.Equal(t, 1, m.materializeCalls, "materializer is invoked even if it errors")
 }
 
+// A school without a federal state is not configured: its weekly run warns
+// instead of logging an error (#7174 removed the default state).
+func TestCheckAndRunMaterialization_SchoolWithoutFederalStateWarns(t *testing.T) {
+	t.Parallel()
+
+	m := &fakeMaterializer{
+		returnErr: fmt.Errorf("load holidays: %w", codedRejection{code: codeFederalStateMissing}),
+	}
+	logs := &levelCounter{counts: map[slog.Level]int{}}
+	s := unitScheduler(&unitSchedulerDependencies{
+		logger:       slog.New(logs),
+		materializer: m,
+		now:          fixedMaterializationTime,
+		settings: &fakeSettingsResolver{
+			boolValues: map[string]bool{
+				settingTimetableMaterializationEnabled: true,
+			},
+			intValues: map[string]int{
+				settingTimetableMaterializationWeekday:    materializationTestWeekday,
+				settingTimetableMaterializationWeeksAhead: 1,
+			},
+		}})
+
+	s.checkAndRunMaterializationWithContext(context.Background(), &ScheduledTask{Name: "test"})
+
+	assert.Equal(t, 1, m.materializeCalls)
+	assert.Zero(t, logs.count(slog.LevelError), "a missing federal state is no error")
+	assert.Equal(t, 1, logs.count(slog.LevelWarn))
+}
+
 func TestCheckAndRunMaterialization_OnlyRacedCounter(t *testing.T) {
 	t.Parallel()
 
